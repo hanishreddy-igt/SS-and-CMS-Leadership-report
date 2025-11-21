@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Briefcase, Calendar, ArrowUpDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Project, ProjectLead, TeamMember } from '@shared/schema';
 
@@ -10,6 +14,7 @@ interface ProjectsDashboardProps {
   projects: Project[];
   projectLeads: ProjectLead[];
   teamMembers: TeamMember[];
+  onEditProject: (id: string, updates: Partial<Omit<Project, 'id'>>) => void;
 }
 
 type SortOrder = 'asc' | 'desc';
@@ -18,10 +23,21 @@ export default function ProjectsDashboard({
   projects,
   projectLeads,
   teamMembers,
+  onEditProject,
 }: ProjectsDashboardProps) {
   const [filterLead, setFilterLead] = useState<string>('all');
   const [filterMember, setFilterMember] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    customer: '',
+    leadId: '',
+    teamMemberIds: [] as string[],
+    startDate: '',
+    endDate: '',
+  });
+  const [searchQuery, setSearchQuery] = useState('');
 
   const totalTeamMembers = teamMembers.length;
   const totalLeads = projectLeads.length;
@@ -51,6 +67,41 @@ export default function ProjectsDashboard({
   const toggleSort = () => {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
+
+  const startEdit = (project: Project) => {
+    setEditingProject(project);
+    setEditFormData({
+      name: project.name,
+      customer: project.customer,
+      leadId: project.leadId,
+      teamMemberIds: project.teamMemberIds,
+      startDate: project.startDate,
+      endDate: project.endDate,
+    });
+    setSearchQuery('');
+  };
+
+  const handleSaveEdit = () => {
+    if (editingProject && editFormData.name && editFormData.customer && editFormData.leadId && 
+        editFormData.teamMemberIds.length > 0 && editFormData.startDate && editFormData.endDate) {
+      onEditProject(editingProject.id, editFormData);
+      setEditingProject(null);
+      setSearchQuery('');
+    }
+  };
+
+  const toggleTeamMember = (memberId: string) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      teamMemberIds: prev.teamMemberIds.includes(memberId)
+        ? prev.teamMemberIds.filter((id) => id !== memberId)
+        : [...prev.teamMemberIds, memberId],
+    }));
+  };
+
+  const filteredTeamMembers = teamMembers.filter((member) =>
+    member.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -146,8 +197,155 @@ export default function ProjectsDashboard({
             {sortedProjects.map((project) => (
               <Card key={project.id} data-testid={`project-card-${project.id}`}>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-xl">{project.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{project.customer}</p>
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1">
+                      <CardTitle className="text-xl">{project.name}</CardTitle>
+                      <p className="text-sm text-muted-foreground">{project.customer}</p>
+                    </div>
+                    <Dialog open={editingProject?.id === project.id} onOpenChange={(open) => !open && setEditingProject(null)}>
+                      <DialogTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => startEdit(project)}
+                          data-testid={`button-edit-project-${project.id}`}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Edit Project</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-name">Project Name</Label>
+                            <Input
+                              id="edit-name"
+                              data-testid="input-edit-project-name"
+                              value={editFormData.name}
+                              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-customer">Customer</Label>
+                            <Input
+                              id="edit-customer"
+                              data-testid="input-edit-customer"
+                              value={editFormData.customer}
+                              onChange={(e) => setEditFormData({ ...editFormData, customer: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-lead">Project Lead</Label>
+                            <Select
+                              value={editFormData.leadId}
+                              onValueChange={(value) => setEditFormData({ ...editFormData, leadId: value })}
+                            >
+                              <SelectTrigger id="edit-lead" data-testid="select-edit-lead">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {projectLeads.map((lead) => (
+                                  <SelectItem key={lead.id} value={lead.id}>
+                                    {lead.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label>Team Members</Label>
+                              {editFormData.teamMemberIds.length > 0 && (
+                                <Badge variant="secondary" data-testid="badge-edit-selected-count">
+                                  {editFormData.teamMemberIds.length} selected
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                type="text"
+                                placeholder="Search team members..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 pr-9"
+                                data-testid="input-edit-search-members"
+                              />
+                              {searchQuery && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setSearchQuery('')}
+                                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                                  data-testid="button-edit-clear-search"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                            <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
+                              {filteredTeamMembers.length > 0 ? (
+                                filteredTeamMembers.map((member) => (
+                                  <div key={member.id} className="flex items-center gap-2">
+                                    <Checkbox
+                                      id={`edit-member-${member.id}`}
+                                      data-testid={`checkbox-edit-member-${member.id}`}
+                                      checked={editFormData.teamMemberIds.includes(member.id)}
+                                      onCheckedChange={() => toggleTeamMember(member.id)}
+                                    />
+                                    <Label htmlFor={`edit-member-${member.id}`} className="font-normal cursor-pointer">
+                                      {member.name}
+                                    </Label>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4">
+                                  No team members found matching "{searchQuery}"
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-start-date">Start Date</Label>
+                              <Input
+                                id="edit-start-date"
+                                data-testid="input-edit-start-date"
+                                type="date"
+                                value={editFormData.startDate}
+                                onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-end-date">End Date</Label>
+                              <Input
+                                id="edit-end-date"
+                                data-testid="input-edit-end-date"
+                                type="date"
+                                value={editFormData.endDate}
+                                onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => setEditingProject(null)}
+                              data-testid="button-cancel-edit"
+                            >
+                              Cancel
+                            </Button>
+                            <Button onClick={handleSaveEdit} data-testid="button-save-edit">
+                              Save Changes
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">

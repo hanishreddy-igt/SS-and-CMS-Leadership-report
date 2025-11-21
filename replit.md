@@ -6,13 +6,18 @@ A comprehensive project management and reporting application for managing teams,
 ## Recent Changes (November 21, 2025)
 
 ### Latest Updates
-1. **Projects Tab**: Added search functionality for team members in "Add New Project" section
-   - Search bar to filter through large lists of team members (e.g., 50+ members)
-   - Clear button to reset search
-   - Selected count badge showing how many team members are selected
-2. **View Reports Tab**: Added export functionality (PDF and CSV) to save reports before deleting
-3. **View Reports Tab**: Added "Delete All Reports" button to reset for next week (with confirmation dialog)
-4. **Week Starting Date**: Automatically updates each week - calculates Monday of current week dynamically
+1. **Dashboard Tab**: Added edit functionality for projects
+   - Edit button on each project card
+   - Full edit dialog with all project fields
+   - Search functionality for team members during editing
+   - Updates reflect immediately across the application
+2. **Jira Tempo Integration**: Created comprehensive integration guide (see JIRA_INTEGRATION_GUIDE.md)
+   - Detailed instructions for connecting to Tempo API
+   - Automatic timesheet data import for weekly reports
+   - Hours by project (Epic) and team member
+   - Sample code and implementation steps
+3. **Projects Tab**: Added search functionality for team members in "Add New Project" section
+4. **View Reports Tab**: Added export functionality (PDF and CSV) and "Delete All Reports" button
 
 ### Previous Updates
 1. **Projects Tab**: Removed "Existing Projects" section (redundant with Dashboard tab)
@@ -50,6 +55,7 @@ A comprehensive project management and reporting application for managing teams,
 #### 3. Dashboard Tab
 - Overview statistics: Total Projects, Team Members, Project Leads
 - Project cards with lead and team member information
+- **Edit Functionality**: Click edit button on any project card to modify all project details
 - **Filters**: By project lead, by team member
 - **Sorting**: By end date (ascending/descending)
 

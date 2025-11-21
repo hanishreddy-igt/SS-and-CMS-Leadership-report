@@ -122,6 +122,11 @@ export default function Home() {
     toast({ title: 'Success', description: 'Project added' });
   };
 
+  const handleEditProject = (id: string, updates: Partial<Omit<Project, 'id'>>) => {
+    setProjects(projects.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+    toast({ title: 'Success', description: 'Project updated' });
+  };
+
   const handleSubmitReport = (report: Omit<WeeklyReport, 'id' | 'submittedAt'>) => {
     const newReport: WeeklyReport = {
       ...report,
@@ -211,6 +216,7 @@ export default function Home() {
               projects={projects}
               projectLeads={projectLeads}
               teamMembers={teamMembers}
+              onEditProject={handleEditProject}
             />
           </TabsContent>
 
