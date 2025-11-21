@@ -8,17 +8,19 @@ import type {
   InsertProject,
   WeeklyReport,
   InsertWeeklyReport,
+  Person,
+  InsertPerson,
 } from "@shared/schema";
 
 export interface IStorage {
-  // Team Members
+  // Team Members (using unified people)
   getTeamMembers(): Promise<TeamMember[]>;
   getTeamMember(id: string): Promise<TeamMember | undefined>;
   createTeamMember(member: InsertTeamMember): Promise<TeamMember>;
   updateTeamMember(id: string, member: Partial<InsertTeamMember>): Promise<TeamMember | undefined>;
   deleteTeamMember(id: string): Promise<boolean>;
 
-  // Project Leads
+  // Project Leads (using unified people)
   getProjectLeads(): Promise<ProjectLead[]>;
   getProjectLead(id: string): Promise<ProjectLead | undefined>;
   createProjectLead(lead: InsertProjectLead): Promise<ProjectLead>;
@@ -41,72 +43,71 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private teamMembers: Map<string, TeamMember>;
-  private projectLeads: Map<string, ProjectLead>;
+  // Unified people storage - same person can be both team member and project lead
+  private people: Map<string, Person>;
   private projects: Map<string, Project>;
   private weeklyReports: Map<string, WeeklyReport>;
 
   constructor() {
-    this.teamMembers = new Map();
-    this.projectLeads = new Map();
+    this.people = new Map();
     this.projects = new Map();
     this.weeklyReports = new Map();
   }
 
-  // Team Members
+  // Team Members (uses unified people storage)
   async getTeamMembers(): Promise<TeamMember[]> {
-    return Array.from(this.teamMembers.values());
+    return Array.from(this.people.values());
   }
 
   async getTeamMember(id: string): Promise<TeamMember | undefined> {
-    return this.teamMembers.get(id);
+    return this.people.get(id);
   }
 
   async createTeamMember(insertMember: InsertTeamMember): Promise<TeamMember> {
     const id = randomUUID();
     const member: TeamMember = { ...insertMember, id };
-    this.teamMembers.set(id, member);
+    this.people.set(id, member);
     return member;
   }
 
   async updateTeamMember(id: string, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
-    const member = this.teamMembers.get(id);
+    const member = this.people.get(id);
     if (!member) return undefined;
     const updated = { ...member, ...updates };
-    this.teamMembers.set(id, updated);
+    this.people.set(id, updated);
     return updated;
   }
 
   async deleteTeamMember(id: string): Promise<boolean> {
-    return this.teamMembers.delete(id);
+    return this.people.delete(id);
   }
 
-  // Project Leads
+  // Project Leads (uses unified people storage)
   async getProjectLeads(): Promise<ProjectLead[]> {
-    return Array.from(this.projectLeads.values());
+    return Array.from(this.people.values());
   }
 
   async getProjectLead(id: string): Promise<ProjectLead | undefined> {
-    return this.projectLeads.get(id);
+    return this.people.get(id);
   }
 
   async createProjectLead(insertLead: InsertProjectLead): Promise<ProjectLead> {
     const id = randomUUID();
     const lead: ProjectLead = { ...insertLead, id };
-    this.projectLeads.set(id, lead);
+    this.people.set(id, lead);
     return lead;
   }
 
   async updateProjectLead(id: string, updates: Partial<InsertProjectLead>): Promise<ProjectLead | undefined> {
-    const lead = this.projectLeads.get(id);
+    const lead = this.people.get(id);
     if (!lead) return undefined;
     const updated = { ...lead, ...updates };
-    this.projectLeads.set(id, updated);
+    this.people.set(id, updated);
     return updated;
   }
 
   async deleteProjectLead(id: string): Promise<boolean> {
-    return this.projectLeads.delete(id);
+    return this.people.delete(id);
   }
 
   // Projects

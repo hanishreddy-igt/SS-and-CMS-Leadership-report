@@ -159,43 +159,6 @@ export default function ProjectManagement({
           </form>
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Existing Projects ({projects.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {projects.map((project) => {
-              const lead = projectLeads.find((l) => l.id === project.leadId);
-              return (
-                <div
-                  key={project.id}
-                  className="border rounded-md p-4 hover-elevate"
-                  data-testid={`project-${project.id}`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold">{project.name}</h3>
-                      <p className="text-sm text-muted-foreground">{project.customer}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Lead: {lead?.name || 'Unknown'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Team: {project.teamMemberIds.length} members
-                      </p>
-                    </div>
-                    <div className="text-right text-sm text-muted-foreground">
-                      <div>{project.startDate}</div>
-                      <div>{project.endDate}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

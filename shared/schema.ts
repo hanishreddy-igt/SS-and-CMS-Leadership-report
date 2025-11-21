@@ -3,12 +3,8 @@ import { pgTable, text, varchar, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const teamMembers = pgTable("team_members", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-});
-
-export const projectLeads = pgTable("project_leads", {
+// Unified people table - supports both team members and project leads
+export const people = pgTable("people", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
 });
@@ -36,19 +32,22 @@ export const weeklyReports = pgTable("weekly_reports", {
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
 
-export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({ id: true });
-export const insertProjectLeadSchema = createInsertSchema(projectLeads).omit({ id: true });
+export const insertPersonSchema = createInsertSchema(people).omit({ id: true });
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true });
 export const insertWeeklyReportSchema = createInsertSchema(weeklyReports).omit({ id: true, submittedAt: true });
 
-export type TeamMember = typeof teamMembers.$inferSelect;
-export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
-export type ProjectLead = typeof projectLeads.$inferSelect;
-export type InsertProjectLead = z.infer<typeof insertProjectLeadSchema>;
+export type Person = typeof people.$inferSelect;
+export type InsertPerson = z.infer<typeof insertPersonSchema>;
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type WeeklyReport = typeof weeklyReports.$inferSelect;
 export type InsertWeeklyReport = z.infer<typeof insertWeeklyReportSchema>;
+
+// Type aliases for backward compatibility
+export type TeamMember = Person;
+export type ProjectLead = Person;
+export type InsertTeamMember = InsertPerson;
+export type InsertProjectLead = InsertPerson;
 
 export type TeamMemberFeedback = {
   memberId: string;
