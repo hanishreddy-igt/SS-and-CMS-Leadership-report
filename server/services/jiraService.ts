@@ -183,17 +183,17 @@ export class JiraService {
 
       const customer = this.extractCustomer(epic, projectKey);
 
+      const teamMemberObjects = Array.from(teamMembers.entries())
+        .filter(([id]) => id !== lead.accountId)
+        .map(([id, name]) => ({ id, name }));
+
       const project: ImportedProject = {
         name: epicName,
         customer,
         leadId: lead.accountId,
         leadName: lead.displayName,
-        teamMemberIds: Array.from(teamMembers.keys()).filter(
-          (id) => id !== lead.accountId
-        ),
-        teamMemberNames: Array.from(teamMembers.values()).filter(
-          (name) => name !== lead.displayName
-        ),
+        teamMemberIds: teamMemberObjects.map((m) => m.id),
+        teamMemberNames: teamMemberObjects.map((m) => m.name),
         startDate: createdDate.toISOString().split('T')[0],
         endDate: dueDate.toISOString().split('T')[0],
         epicKey,
