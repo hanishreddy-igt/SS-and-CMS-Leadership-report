@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Project, ProjectLead, TeamMember } from '@shared/schema';
 
@@ -15,6 +15,7 @@ interface ProjectsDashboardProps {
   projectLeads: ProjectLead[];
   teamMembers: TeamMember[];
   onEditProject: (id: string, updates: Partial<Omit<Project, 'id'>>) => void;
+  onImportFromJira: (projectKey?: string) => Promise<boolean>;
 }
 
 type SortOrder = 'asc' | 'desc';
@@ -24,6 +25,7 @@ export default function ProjectsDashboard({
   projectLeads,
   teamMembers,
   onEditProject,
+  onImportFromJira,
 }: ProjectsDashboardProps) {
   const [filterLead, setFilterLead] = useState<string>('all');
   const [filterMember, setFilterMember] = useState<string>('all');
@@ -38,6 +40,9 @@ export default function ProjectsDashboard({
     endDate: '',
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [jiraProjectKey, setJiraProjectKey] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
   const totalTeamMembers = teamMembers.length;
   const totalLeads = projectLeads.length;
@@ -103,6 +108,17 @@ export default function ProjectsDashboard({
     member.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleImport = async () => {
+    setIsImporting(true);
+    const success = await onImportFromJira(jiraProjectKey || undefined);
+    setIsImporting(false);
+    
+    if (success) {
+      setShowImportDialog(false);
+      setJiraProjectKey('');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -153,7 +169,58 @@ export default function ProjectsDashboard({
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <CardTitle className="text-2xl">All Projects ({sortedProjects.length})</CardTitle>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+              <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="default" className="gap-2" data-testid="button-import-jira">
+                    <Download className="h-4 w-4" />
+                    Import from Jira
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Import Projects from Jira</DialogTitle>
+                    <DialogDescription>
+                      Import epics from Jira as projects. Leave project key empty to import all epics.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="jira-project-key">Jira Project Key (Optional)</Label>
+                      <Input
+                        id="jira-project-key"
+                        data-testid="input-jira-project-key"
+                        placeholder="e.g., PROJ"
+                        value={jiraProjectKey}
+                        onChange={(e) => setJiraProjectKey(e.target.value.toUpperCase())}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Leave empty to import all epics from all projects
+                      </p>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowImportDialog(false);
+                          setJiraProjectKey('');
+                        }}
+                        disabled={isImporting}
+                        data-testid="button-cancel-import"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleImport}
+                        disabled={isImporting}
+                        data-testid="button-confirm-import"
+                      >
+                        {isImporting ? 'Importing...' : 'Import'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Select value={filterLead} onValueChange={setFilterLead}>
                 <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-lead">
                   <SelectValue placeholder="Filter by lead" />

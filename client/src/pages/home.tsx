@@ -127,6 +127,58 @@ export default function Home() {
     toast({ title: 'Success', description: 'Project updated' });
   };
 
+  const handleImportFromJira = async (projectKey?: string) => {
+    try {
+      const response = await fetch('/api/jira/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ projectKey }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to import from Jira');
+      }
+
+      const existingLeadIds = new Set(projectLeads.map((l) => l.id));
+      const existingMemberIds = new Set(teamMembers.map((m) => m.id));
+
+      const newLeads = result.data.leads.filter((l: ProjectLead) => !existingLeadIds.has(l.id));
+      const newMembers = result.data.teamMembers.filter((m: TeamMember) => !existingMemberIds.has(m.id));
+
+      if (newLeads.length > 0) {
+        setProjectLeads([...projectLeads, ...newLeads]);
+      }
+      if (newMembers.length > 0) {
+        setTeamMembers([...teamMembers, ...newMembers]);
+      }
+
+      const importedProjects = result.data.projects.map((p: any) => ({
+        ...p,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      }));
+
+      setProjects([...projects, ...importedProjects]);
+
+      toast({
+        title: 'Success',
+        description: `${result.message}. Added ${newLeads.length} leads and ${newMembers.length} team members.`,
+      });
+
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Import Failed',
+        description: error.message || 'Failed to import from Jira. Check your Jira credentials.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const handleSubmitReport = (report: Omit<WeeklyReport, 'id' | 'submittedAt'>) => {
     const newReport: WeeklyReport = {
       ...report,
@@ -217,6 +269,7 @@ export default function Home() {
               projectLeads={projectLeads}
               teamMembers={teamMembers}
               onEditProject={handleEditProject}
+              onImportFromJira={handleImportFromJira}
             />
           </TabsContent>
 
