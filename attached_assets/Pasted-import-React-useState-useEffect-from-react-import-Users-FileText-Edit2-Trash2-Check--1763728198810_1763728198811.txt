@@ -1,0 +1,1355 @@
+import React, { useState, useEffect } from 'react';
+import { Users, FileText, Edit2, Trash2, Check, X, UserCheck } from 'lucide-react';
+
+const WeeklyLeadershipTool = () => {
+  const [activeTab, setActiveTab] = useState('team');
+  const [projects, setProjects] = useState([]);
+  const [weeklyReports, setWeeklyReports] = useState([]);
+  const [projectLeads, setProjectLeads] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState(null);
+
+  const getCurrentWeekStart = () => {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [projectsData, reportsData, leadsData, membersData] = await Promise.all([
+        window.storage.get('leadership-projects', true).catch(() => null),
+        window.storage.get('leadership-reports', true).catch(() => null),
+        window.storage.get('leadership-leads', true).catch(() => null),
+        window.storage.get('leadership-members', true).catch(() => null)
+      ]);
+
+      setProjects(projectsData ? JSON.parse(projectsData.value) : []);
+      setWeeklyReports(reportsData ? JSON.parse(reportsData.value) : []);
+      setProjectLeads(leadsData ? JSON.parse(leadsData.value) : []);
+      setTeamMembers(membersData ? JSON.parse(membersData.value) : []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+    setLoading(false);
+  };
+
+  const saveProjects = async (data) => {
+    try {
+      await window.storage.set('leadership-projects', JSON.stringify(data), true);
+      setProjects(data);
+      showStatus('Projects saved successfully', 'success');
+    } catch (error) {
+      showStatus('Error saving projects', 'error');
+    }
+  };
+
+  const saveReports = async (data) => {
+    try {
+      await window.storage.set('leadership-reports', JSON.stringify(data), true);
+      setWeeklyReports(data);
+      showStatus('Reports saved successfully', 'success');
+    } catch (error) {
+      showStatus('Error saving reports', 'error');
+    }
+  };
+
+  const saveLeads = async (data) => {
+    try {
+      await window.storage.set('leadership-leads', JSON.stringify(data), true);
+      setProjectLeads(data);
+      showStatus('Project leads saved successfully', 'success');
+    } catch (error) {
+      showStatus('Error saving project leads', 'error');
+    }
+  };
+
+  const saveMembers = async (data) => {
+    try {
+      await window.storage.set('leadership-members', JSON.stringify(data), true);
+      setTeamMembers(data);
+      showStatus('Team members saved successfully', 'success');
+    } catch (error) {
+      showStatus('Error saving team members', 'error');
+    }
+  };
+
+  const showStatus = (message, type) => {
+    setStatusMessage({ message, type });
+    setTimeout(() => setStatusMessage(null), 3000);
+  };
+
+  const TabButton = ({ name, label, icon: Icon }) => (
+    <button
+      onClick={() => setActiveTab(name)}
+      className={`flex items-center space-x-2 px-4 py-2 rounded-t-lg font-medium transition-colors ${
+        activeTab === name
+          ? 'bg-white text-blue-600 border-t-2 border-l border-r border-blue-600'
+          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+      }`}
+    >
+      <Icon size={18} />
+      <span>{label}</span>
+    </button>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+        <div className="text-xl text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8 text-gray-800">Weekly Leadership Report Tool V2</h1>
+
+        {statusMessage && (
+          <div className={`mb-4 p-4 rounded-lg ${
+            statusMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}>
+            {statusMessage.message}
+          </div>
+        )}
+
+        <div className="flex space-x-2 mb-6">
+          <TabButton name="team" label="Team Management" icon={Users} />
+          <TabButton name="projects" label="Add Projects" icon={Edit2} />
+          <TabButton name="dashboard" label="Projects Dashboard" icon={FileText} />
+          <TabButton name="submit" label="Submit Report" icon={Edit2} />
+          <TabButton name="view" label="View Reports" icon={FileText} />
+          <TabButton name="status" label="Report Status" icon={UserCheck} />
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          {activeTab === 'team' && (
+            <TeamManagement
+              teamMembers={teamMembers}
+              projectLeads={projectLeads}
+              saveMembers={saveMembers}
+              saveLeads={saveLeads}
+            />
+          )}
+          {activeTab === 'projects' && (
+            <ProjectManagement
+              projects={projects}
+              projectLeads={projectLeads}
+              teamMembers={teamMembers}
+              saveProjects={saveProjects}
+            />
+          )}
+          {activeTab === 'dashboard' && (
+            <ProjectsDashboard
+              projects={projects}
+              projectLeads={projectLeads}
+              teamMembers={teamMembers}
+            />
+          )}
+          {activeTab === 'submit' && (
+            <SubmitReport
+              projects={projects}
+              projectLeads={projectLeads}
+              weeklyReports={weeklyReports}
+              saveReports={saveReports}
+              getCurrentWeekStart={getCurrentWeekStart}
+            />
+          )}
+          {activeTab === 'view' && (
+            <ViewReports
+              weeklyReports={weeklyReports}
+              projectLeads={projectLeads}
+              teamMembers={teamMembers}
+              saveReports={saveReports}
+            />
+          )}
+          {activeTab === 'status' && (
+            <ReportStatus
+              projects={projects}
+              weeklyReports={weeklyReports}
+              projectLeads={projectLeads}
+              getCurrentWeekStart={getCurrentWeekStart}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TeamManagement = ({ teamMembers, projectLeads, saveMembers, saveLeads }) => {
+  const [newMember, setNewMember] = useState('');
+  const [newLead, setNewLead] = useState('');
+  const [editingMemberId, setEditingMemberId] = useState(null);
+  const [editingLeadId, setEditingLeadId] = useState(null);
+  const [editValue, setEditValue] = useState('');
+
+  const addMember = () => {
+    if (newMember.trim()) {
+      const member = { id: Date.now(), name: newMember.trim() };
+      saveMembers([...teamMembers, member]);
+      setNewMember('');
+    }
+  };
+
+  const addLead = () => {
+    if (newLead.trim()) {
+      const lead = { id: Date.now(), name: newLead.trim() };
+      saveLeads([...projectLeads, lead]);
+      setNewLead('');
+    }
+  };
+
+  const deleteMember = (id) => {
+    saveMembers(teamMembers.filter(m => m.id !== id));
+  };
+
+  const deleteLead = (id) => {
+    saveLeads(projectLeads.filter(l => l.id !== id));
+  };
+
+  const startEditMember = (member) => {
+    setEditingMemberId(member.id);
+    setEditValue(member.name);
+  };
+
+  const startEditLead = (lead) => {
+    setEditingLeadId(lead.id);
+    setEditValue(lead.name);
+  };
+
+  const saveEditMember = (id) => {
+    saveMembers(teamMembers.map(m => m.id === id ? { ...m, name: editValue } : m));
+    setEditingMemberId(null);
+  };
+
+  const saveEditLead = (id) => {
+    saveLeads(projectLeads.map(l => l.id === id ? { ...l, name: editValue } : l));
+    setEditingLeadId(null);
+  };
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Team Members</h2>
+        <div className="flex space-x-2 mb-4">
+          <input
+            type="text"
+            value={newMember}
+            onChange={(e) => setNewMember(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addMember()}
+            placeholder="Enter team member name"
+            className="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={addMember}
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium"
+          >
+            Add Member
+          </button>
+        </div>
+        <div className="space-y-2">
+          {teamMembers.map(member => (
+            <div key={member.id} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+              {editingMemberId === member.id ? (
+                <div className="flex-1 flex space-x-2">
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="flex-1 px-3 py-1 border rounded"
+                  />
+                  <button onClick={() => saveEditMember(member.id)} className="text-green-600 hover:text-green-800">
+                    <Check size={20} />
+                  </button>
+                  <button onClick={() => setEditingMemberId(null)} className="text-red-600 hover:text-red-800">
+                    <X size={20} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="font-medium">{member.name}</span>
+                  <div className="flex space-x-2">
+                    <button onClick={() => startEditMember(member)} className="text-blue-600 hover:text-blue-800">
+                      <Edit2 size={18} />
+                    </button>
+                    <button onClick={() => deleteMember(member.id)} className="text-red-600 hover:text-red-800">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Project Leads</h2>
+        <div className="flex space-x-2 mb-4">
+          <input
+            type="text"
+            value={newLead}
+            onChange={(e) => setNewLead(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addLead()}
+            placeholder="Enter project lead name"
+            className="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={addLead}
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium"
+          >
+            Add Lead
+          </button>
+        </div>
+        <div className="space-y-2">
+          {projectLeads.map(lead => (
+            <div key={lead.id} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+              {editingLeadId === lead.id ? (
+                <div className="flex-1 flex space-x-2">
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="flex-1 px-3 py-1 border rounded"
+                  />
+                  <button onClick={() => saveEditLead(lead.id)} className="text-green-600 hover:text-green-800">
+                    <Check size={20} />
+                  </button>
+                  <button onClick={() => setEditingLeadId(null)} className="text-red-600 hover:text-red-800">
+                    <X size={20} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="font-medium">{lead.name}</span>
+                  <div className="flex space-x-2">
+                    <button onClick={() => startEditLead(lead)} className="text-blue-600 hover:text-blue-800">
+                      <Edit2 size={18} />
+                    </button>
+                    <button onClick={() => deleteLead(lead.id)} className="text-red-600 hover:text-red-800">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProjectManagement = ({ projects, projectLeads, teamMembers, saveProjects }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    customer: '',
+    leadId: '',
+    teamMemberIds: [],
+    startDate: '',
+    endDate: ''
+  });
+  const [editingId, setEditingId] = useState(null);
+
+  // Safety checks
+  if (!projects || !projectLeads || !teamMembers) {
+    return <div className="text-center py-12">Loading...</div>;
+  }
+
+  const handleSubmit = () => {
+    if (formData.name && formData.customer && formData.leadId && formData.startDate && formData.endDate) {
+      const lead = projectLeads.find(l => l.id === parseInt(formData.leadId));
+      if (editingId) {
+        saveProjects(projects.map(p => 
+          p.id === editingId ? { ...p, ...formData, leadName: lead.name } : p
+        ));
+        setEditingId(null);
+      } else {
+        const project = {
+          id: Date.now(),
+          ...formData,
+          leadName: lead.name
+        };
+        saveProjects([...projects, project]);
+      }
+      setFormData({ name: '', customer: '', leadId: '', teamMemberIds: [], startDate: '', endDate: '' });
+    }
+  };
+
+  const deleteProject = (id) => {
+    saveProjects(projects.filter(p => p.id !== id));
+  };
+
+  const startEdit = (project) => {
+    setFormData({
+      name: project.name,
+      customer: project.customer,
+      leadId: project.leadId,
+      teamMemberIds: project.teamMemberIds || [],
+      startDate: project.startDate || '',
+      endDate: project.endDate || ''
+    });
+    setEditingId(project.id);
+  };
+
+  const toggleTeamMember = (memberId) => {
+    setFormData(prev => ({
+      ...prev,
+      teamMemberIds: prev.teamMemberIds.includes(memberId)
+        ? prev.teamMemberIds.filter(id => id !== memberId)
+        : [...prev.teamMemberIds, memberId]
+    }));
+  };
+
+  const getTeamMemberNames = (memberIds) => {
+    if (!memberIds || memberIds.length === 0) return 'None assigned';
+    return memberIds
+      .map(id => teamMembers.find(m => m.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Add Projects</h2>
+      
+      <div className="space-y-4 bg-gray-50 p-6 rounded-lg">
+        <div>
+          <label className="block text-sm font-medium mb-2">Project Name *</label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({...formData, name: e.target.value})}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Customer *</label>
+          <input
+            type="text"
+            value={formData.customer}
+            onChange={(e) => setFormData({...formData, customer: e.target.value})}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Start Date *</label>
+            <input
+              type="date"
+              value={formData.startDate}
+              onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+              className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">End Date *</label>
+            <input
+              type="date"
+              value={formData.endDate}
+              onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+              className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Project Lead *</label>
+          <select
+            value={formData.leadId}
+            onChange={(e) => setFormData({...formData, leadId: e.target.value})}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select a lead</option>
+            {projectLeads.map(lead => (
+              <option key={lead.id} value={lead.id}>{lead.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Team Members</label>
+          <div className="w-full px-4 py-3 border rounded bg-white min-h-[42px] max-h-40 overflow-y-auto">
+            {teamMembers.length === 0 ? (
+              <span className="text-gray-400">No team members available</span>
+            ) : (
+              <div className="space-y-2">
+                {teamMembers.map(member => (
+                  <label key={member.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                    <input
+                      type="checkbox"
+                      checked={formData.teamMemberIds.includes(member.id)}
+                      onChange={() => toggleTeamMember(member.id)}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm">{member.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={handleSubmit}
+          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium"
+        >
+          {editingId ? 'Update Project' : 'Add Project'}
+        </button>
+        {editingId && (
+          <button
+            onClick={() => {
+              setEditingId(null);
+              setFormData({ name: '', customer: '', leadId: '', teamMemberIds: [], startDate: '', endDate: '' });
+            }}
+            className="ml-2 bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500 font-medium"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {projects.map(project => (
+          <div key={project.id} className="flex items-center justify-between bg-white border p-4 rounded-lg shadow-sm">
+            <div>
+              <h3 className="font-bold text-lg">{project.name}</h3>
+              <p className="text-gray-600">Customer: {project.customer}</p>
+              <p className="text-gray-600">Lead: {project.leadName}</p>
+              <p className="text-gray-600">Team: {getTeamMemberNames(project.teamMemberIds)}</p>
+              <p className="text-gray-600">Duration: {project.startDate} to {project.endDate}</p>
+            </div>
+            <div className="flex space-x-2">
+              <button onClick={() => startEdit(project)} className="text-blue-600 hover:text-blue-800">
+                <Edit2 size={20} />
+              </button>
+              <button onClick={() => deleteProject(project.id)} className="text-red-600 hover:text-red-800">
+                <Trash2 size={20} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SubmitReport = ({ projects, projectLeads, weeklyReports, saveReports, getCurrentWeekStart }) => {
+  const [formData, setFormData] = useState({
+    leadId: '',
+    projectId: '',
+    weekStart: getCurrentWeekStart(),
+    health: 'green',
+    workstream: '',
+    deliverables: '',
+    metrics: '',
+    teamNotes: '',
+    feedback: ''
+  });
+
+  // Safety checks
+  if (!projects || !projectLeads) {
+    return <div className="text-center py-12">Loading...</div>;
+  }
+
+  // Filter projects based on selected lead
+  const filteredProjects = formData.leadId 
+    ? projects.filter(p => p.leadId === formData.leadId)
+    : [];
+
+  const handleSubmit = () => {
+    const project = projects.find(p => p.id === parseInt(formData.projectId));
+    if (project && formData.workstream && formData.deliverables) {
+      const report = {
+        id: Date.now(),
+        ...formData,
+        projectName: project.name,
+        customer: project.customer,
+        leadName: project.leadName,
+        teamMemberIds: project.teamMemberIds || [],
+        submittedDate: new Date().toISOString()
+      };
+      saveReports([...weeklyReports, report]);
+      setFormData({
+        leadId: '',
+        projectId: '',
+        weekStart: getCurrentWeekStart(),
+        health: 'green',
+        workstream: '',
+        deliverables: '',
+        metrics: '',
+        teamNotes: '',
+        feedback: ''
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Submit Weekly Report</h2>
+      
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Project Lead *</label>
+            <select
+              value={formData.leadId}
+              onChange={(e) => setFormData({...formData, leadId: e.target.value, projectId: ''})}
+              className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a project lead first</option>
+              {projectLeads.map(lead => (
+                <option key={lead.id} value={lead.id}>{lead.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Project *</label>
+            <select
+              value={formData.projectId}
+              onChange={(e) => setFormData({...formData, projectId: e.target.value})}
+              className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!formData.leadId}
+            >
+              <option value="">
+                {formData.leadId ? 'Select a project' : 'Select a lead first'}
+              </option>
+              {filteredProjects.map(project => (
+                <option key={project.id} value={project.id}>
+                  {project.name} - {project.customer}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Week Starting</label>
+          <input
+            type="date"
+            value={formData.weekStart}
+            onChange={(e) => setFormData({...formData, weekStart: e.target.value})}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Health Status</label>
+          <div className="flex space-x-4">
+            {[
+              { value: 'green', label: 'On Track', color: 'bg-green-100 border-green-500 text-green-800' },
+              { value: 'yellow', label: 'At Risk', color: 'bg-yellow-100 border-yellow-500 text-yellow-800' },
+              { value: 'red', label: 'Critical', color: 'bg-red-100 border-red-500 text-red-800' }
+            ].map(status => (
+              <button
+                key={status.value}
+                onClick={() => setFormData({...formData, health: status.value})}
+                className={`flex-1 border-2 p-3 rounded-lg text-center font-medium ${
+                  formData.health === status.value ? status.color : 'bg-white border-gray-300'
+                }`}
+              >
+                {status.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Current Workstream/Phase *</label>
+          <input
+            type="text"
+            value={formData.workstream}
+            onChange={(e) => setFormData({...formData, workstream: e.target.value})}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Key Deliverables This Week *</label>
+          <textarea
+            value={formData.deliverables}
+            onChange={(e) => setFormData({...formData, deliverables: e.target.value})}
+            rows={3}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Metrics/Progress</label>
+          <textarea
+            value={formData.metrics}
+            onChange={(e) => setFormData({...formData, metrics: e.target.value})}
+            rows={2}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Team Performance Notes</label>
+          <textarea
+            value={formData.teamNotes}
+            onChange={(e) => setFormData({...formData, teamNotes: e.target.value})}
+            rows={2}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Feedback/Blockers</label>
+          <textarea
+            value={formData.feedback}
+            onChange={(e) => setFormData({...formData, feedback: e.target.value})}
+            rows={2}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <button
+          onClick={handleSubmit}
+          className="bg-blue-600 text-white px-8 py-3 rounded hover:bg-blue-700 font-medium text-lg"
+        >
+          Submit Report
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const ViewReports = ({ weeklyReports, projectLeads, teamMembers, saveReports }) => {
+  const [filterHealth, setFilterHealth] = useState('all');
+  const [filterLead, setFilterLead] = useState('all');
+  const [filterMember, setFilterMember] = useState('all');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // Safety checks
+  if (!weeklyReports || !projectLeads || !teamMembers) {
+    return <div className="text-center py-12">Loading...</div>;
+  }
+
+  const filteredReports = weeklyReports.filter(report => {
+    const healthMatch = filterHealth === 'all' || report.health === filterHealth;
+    const leadMatch = filterLead === 'all' || report.leadId === filterLead;
+    const memberMatch = filterMember === 'all' || (report.teamMemberIds && report.teamMemberIds.includes(parseInt(filterMember)));
+    return healthMatch && leadMatch && memberMatch;
+  });
+
+  const getHealthLabel = (health) => {
+    switch (health) {
+      case 'green': return 'On Track';
+      case 'yellow': return 'At Risk';
+      case 'red': return 'Critical';
+      default: return 'Unknown';
+    }
+  };
+
+  const getHealthColor = (health) => {
+    switch (health) {
+      case 'green': return 'bg-green-100 text-green-800 border-green-300';
+      case 'yellow': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'red': return 'bg-red-100 text-red-800 border-red-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getTeamMemberNames = (memberIds) => {
+    if (!memberIds || memberIds.length === 0) return 'None';
+    return memberIds
+      .map(id => teamMembers.find(m => m.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+  };
+
+  const downloadReports = () => {
+    if (filteredReports.length === 0) return;
+
+    const headers = [
+      'Week Of',
+      'Project Name',
+      'Customer',
+      'Project Lead',
+      'Team Members',
+      'Health Status',
+      'Current Workstream/Phase',
+      'Key Deliverables',
+      'Metrics',
+      'Team Performance Notes',
+      'Feedback/Blockers',
+      'Submitted Date'
+    ];
+
+    const csvRows = [headers.join(',')];
+
+    filteredReports.forEach(report => {
+      const row = [
+        report.weekStart,
+        `"${report.projectName.replace(/"/g, '""')}"`,
+        `"${report.customer.replace(/"/g, '""')}"`,
+        `"${report.leadName.replace(/"/g, '""')}"`,
+        `"${getTeamMemberNames(report.teamMemberIds).replace(/"/g, '""')}"`,
+        getHealthLabel(report.health),
+        `"${report.workstream.replace(/"/g, '""')}"`,
+        `"${report.deliverables.replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+        `"${(report.metrics || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+        `"${(report.teamNotes || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+        `"${(report.feedback || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+        new Date(report.submittedDate).toLocaleString()
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    const today = new Date().toISOString().split('T')[0];
+    link.setAttribute('href', url);
+    link.setAttribute('download', `weekly-leadership-reports-${today}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Weekly Reports ({filteredReports.length})</h2>
+        <div className="flex space-x-3">
+          {weeklyReports.length > 0 && (
+            <button
+              onClick={downloadReports}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#10B981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '600',
+                fontSize: '16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              📥 Download CSV
+            </button>
+          )}
+          {weeklyReports.length > 0 && (
+            !showClearConfirm ? (
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#EF4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '16px',
+                  cursor: 'pointer'
+                }}
+              >
+                🗑️ Clear All
+              </button>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span>Clear all {weeklyReports.length} reports?</span>
+                <button
+                  onClick={() => {
+                    saveReports([]);
+                    setShowClearConfirm(false);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#EF4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#9CA3AF',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  No
+                </button>
+              </div>
+            )
+          )}
+        </div>
+      </div>
+
+      {weeklyReports.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            💡 <strong>Tip:</strong> Download reports as CSV for permanent storage before clearing. Use "Clear All" at the end of each week to start fresh.
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Filter by Project Lead</label>
+          <select
+            value={filterLead}
+            onChange={(e) => setFilterLead(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Project Leads</option>
+            {projectLeads.map(lead => (
+              <option key={lead.id} value={lead.id}>{lead.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Filter by Team Member</label>
+          <select
+            value={filterMember}
+            onChange={(e) => setFilterMember(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Team Members</option>
+            {teamMembers.map(member => (
+              <option key={member.id} value={member.id}>{member.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Filter by Health Status</label>
+          <select
+            value={filterHealth}
+            onChange={(e) => setFilterHealth(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Reports</option>
+            <option value="green">On Track</option>
+            <option value="yellow">At Risk</option>
+            <option value="red">Critical</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {filteredReports.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg border">
+            <p className="text-gray-500">
+              {weeklyReports.length === 0 
+                ? "No reports yet. Submit your first report!"
+                : "No reports match the selected filters."}
+            </p>
+          </div>
+        ) : (
+          filteredReports.sort((a, b) => new Date(b.submittedDate) - new Date(a.submittedDate)).map((report) => (
+            <div key={report.id} className="bg-white border rounded-lg shadow-sm p-6 space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold">{report.projectName}</h3>
+                  <p className="text-gray-600">Customer: {report.customer}</p>
+                  <p className="text-gray-600">Lead: {report.leadName}</p>
+                  <p className="text-gray-600">Team: {getTeamMemberNames(report.teamMemberIds)}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getHealthColor(report.health)}`}>
+                  {getHealthLabel(report.health)}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Week:</span> {report.weekStart}
+                </div>
+                <div>
+                  <span className="font-medium">Submitted:</span> {new Date(report.submittedDate).toLocaleString()}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div>
+                  <span className="font-medium text-sm">Current Phase:</span>
+                  <p className="text-gray-700">{report.workstream}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-sm">Key Deliverables:</span>
+                  <p className="text-gray-700 whitespace-pre-wrap">{report.deliverables}</p>
+                </div>
+                {report.metrics && (
+                  <div>
+                    <span className="font-medium text-sm">Metrics:</span>
+                    <p className="text-gray-700 whitespace-pre-wrap">{report.metrics}</p>
+                  </div>
+                )}
+                {report.teamNotes && (
+                  <div>
+                    <span className="font-medium text-sm">Team Notes:</span>
+                    <p className="text-gray-700 whitespace-pre-wrap">{report.teamNotes}</p>
+                  </div>
+                )}
+                {report.feedback && (
+                  <div>
+                    <span className="font-medium text-sm">Feedback/Blockers:</span>
+                    <p className="text-gray-700 whitespace-pre-wrap">{report.feedback}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ProjectsDashboard = ({ projects, projectLeads, teamMembers }) => {
+  const [filterLead, setFilterLead] = useState('all');
+  const [filterMember, setFilterMember] = useState('all');
+  const [sortOrder, setSortOrder] = useState('asc');
+
+  // Safety checks
+  if (!projects || !projectLeads || !teamMembers) {
+    return <div className="text-center py-12">Loading...</div>;
+  }
+
+  const getProjectStatus = (endDate) => {
+    if (!endDate) return { color: 'gray', label: 'No End Date', bgColor: 'bg-gray-100', textColor: 'text-gray-800', borderColor: 'border-gray-300' };
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    
+    const diffTime = end - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Red: end date passed or this current week (7 days or less from now)
+    if (diffDays < 0 || diffDays <= 7) {
+      return { 
+        color: 'red', 
+        label: diffDays < 0 ? 'Overdue' : 'Due This Week',
+        bgColor: 'bg-red-100', 
+        textColor: 'text-red-800', 
+        borderColor: 'border-red-300' 
+      };
+    }
+    
+    // Yellow: less than a month (30 days) from now
+    if (diffDays <= 30) {
+      return { 
+        color: 'yellow', 
+        label: 'Due Soon',
+        bgColor: 'bg-yellow-100', 
+        textColor: 'text-yellow-800', 
+        borderColor: 'border-yellow-300' 
+      };
+    }
+    
+    // Green: more than a month from now
+    return { 
+      color: 'green', 
+      label: 'On Track',
+      bgColor: 'bg-green-100', 
+      textColor: 'text-green-800', 
+      borderColor: 'border-green-300' 
+    };
+  };
+
+  const getTeamMemberNames = (memberIds) => {
+    if (!memberIds || memberIds.length === 0) return 'None assigned';
+    return memberIds
+      .map(id => teamMembers.find(m => m.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+  };
+
+  const getDaysRemaining = (endDate) => {
+    if (!endDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    const diffTime = end - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const filteredProjects = projects.filter(project => {
+    const leadMatch = filterLead === 'all' || project.leadId === filterLead;
+    const memberMatch = filterMember === 'all' || (project.teamMemberIds && project.teamMemberIds.includes(parseInt(filterMember)));
+    return leadMatch && memberMatch;
+  });
+
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
+    if (!a.endDate) return 1;
+    if (!b.endDate) return -1;
+    const dateA = new Date(a.endDate);
+    const dateB = new Date(b.endDate);
+    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+  });
+
+  const statusCounts = {
+    green: sortedProjects.filter(p => getProjectStatus(p.endDate).color === 'green').length,
+    yellow: sortedProjects.filter(p => getProjectStatus(p.endDate).color === 'yellow').length,
+    red: sortedProjects.filter(p => getProjectStatus(p.endDate).color === 'red').length,
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Projects Dashboard</h2>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-green-100 border-2 border-green-300 rounded-lg p-6 text-center">
+          <div className="text-4xl font-bold text-green-800">{statusCounts.green}</div>
+          <div className="text-sm text-green-600 font-medium mt-2">On Track</div>
+        </div>
+        <div className="bg-yellow-100 border-2 border-yellow-300 rounded-lg p-6 text-center">
+          <div className="text-4xl font-bold text-yellow-800">{statusCounts.yellow}</div>
+          <div className="text-sm text-yellow-600 font-medium mt-2">Due Soon</div>
+        </div>
+        <div className="bg-red-100 border-2 border-red-300 rounded-lg p-6 text-center">
+          <div className="text-4xl font-bold text-red-800">{statusCounts.red}</div>
+          <div className="text-sm text-red-600 font-medium mt-2">Critical/Overdue</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Filter by Team Lead</label>
+          <select
+            value={filterLead}
+            onChange={(e) => setFilterLead(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Team Leads</option>
+            {projectLeads.map(lead => (
+              <option key={lead.id} value={lead.id}>{lead.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Filter by Team Member</label>
+          <select
+            value={filterMember}
+            onChange={(e) => setFilterMember(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Team Members</option>
+            {teamMembers.map(member => (
+              <option key={member.id} value={member.id}>{member.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Sort by End Date</label>
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="asc">Earliest First</option>
+            <option value="desc">Latest First</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {sortedProjects.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg border">
+            <p className="text-gray-500">No projects match the selected filters.</p>
+          </div>
+        ) : (
+          sortedProjects.map(project => {
+            const status = getProjectStatus(project.endDate);
+            const daysRemaining = getDaysRemaining(project.endDate);
+            
+            return (
+              <div key={project.id} className={`border-2 p-5 rounded-lg shadow-sm ${status.bgColor} ${status.borderColor}`}>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-bold text-xl">{project.name}</h3>
+                    <p className="text-gray-700">Customer: {project.customer}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${status.bgColor} ${status.textColor} border-2 ${status.borderColor}`}>
+                    {status.label}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                  <div>
+                    <span className="font-medium">Project Lead:</span> {project.leadName}
+                  </div>
+                  <div>
+                    <span className="font-medium">Team:</span> {getTeamMemberNames(project.teamMemberIds)}
+                  </div>
+                  <div>
+                    <span className="font-medium">Start Date:</span> {project.startDate || 'Not set'}
+                  </div>
+                  <div>
+                    <span className="font-medium">End Date:</span> {project.endDate || 'Not set'}
+                  </div>
+                </div>
+                
+                {daysRemaining !== null && (
+                  <div className={`text-sm font-medium ${status.textColor}`}>
+                    {daysRemaining < 0 
+                      ? `Overdue by ${Math.abs(daysRemaining)} days` 
+                      : `${daysRemaining} days remaining`}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ReportStatus = ({ projects, weeklyReports, projectLeads, getCurrentWeekStart }) => {
+  const [filterLead, setFilterLead] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  // Safety checks
+  if (!projects || !weeklyReports || !projectLeads) {
+    return <div className="text-center py-12">Loading...</div>;
+  }
+
+  const currentWeek = getCurrentWeekStart();
+  const submittedThisWeek = weeklyReports.filter(r => r.weekStart === currentWeek);
+  
+  const filteredProjects = projects.filter(project => {
+    const leadMatch = filterLead === 'all' || project.leadId === filterLead;
+    return leadMatch;
+  });
+
+  const submittedProjectIds = new Set(submittedThisWeek.map(r => r.projectId));
+  const pendingProjects = filteredProjects.filter(p => !submittedProjectIds.has(p.id.toString()));
+  const submittedProjects = filteredProjects.filter(p => submittedProjectIds.has(p.id.toString()));
+  
+  const displayProjects = filterStatus === 'all' 
+    ? filteredProjects 
+    : filterStatus === 'pending' 
+      ? pendingProjects 
+      : submittedProjects;
+  
+  const completionRate = filteredProjects.length > 0 
+    ? Math.round((submittedProjects.length / filteredProjects.length) * 100)
+    : 0;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Report Status for Week of {currentWeek}</h2>
+      
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <label className="block text-sm font-medium mb-2">Filter by Team Lead</label>
+          <select
+            value={filterLead}
+            onChange={(e) => setFilterLead(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Team Leads</option>
+            {projectLeads.map(lead => (
+              <option key={lead.id} value={lead.id}>{lead.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Filter by Status</label>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Projects</option>
+            <option value="submitted">Submitted</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-blue-100 border-2 border-blue-300 rounded-lg p-6 text-center">
+          <div className="text-4xl font-bold text-blue-800">{filteredProjects.length}</div>
+          <div className="text-sm text-blue-600 font-medium mt-2">Total Projects</div>
+        </div>
+        <div className="bg-green-100 border-2 border-green-300 rounded-lg p-6 text-center">
+          <div className="text-4xl font-bold text-green-800">{submittedProjects.length}</div>
+          <div className="text-sm text-green-600 font-medium mt-2">Reports Submitted</div>
+        </div>
+        <div className="bg-orange-100 border-2 border-orange-300 rounded-lg p-6 text-center">
+          <div className="text-4xl font-bold text-orange-800">{pendingProjects.length}</div>
+          <div className="text-sm text-orange-600 font-medium mt-2">Pending Reports</div>
+        </div>
+      </div>
+
+      <div className="bg-white border rounded-lg p-6">
+        <div className="flex justify-between items-center mb-4">
+          <span className="font-medium">Completion Rate</span>
+          <span className="text-2xl font-bold text-blue-600">{completionRate}%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4">
+          <div
+            className="bg-blue-600 h-4 rounded-full transition-all duration-500"
+            style={{ width: `${completionRate}%` }}
+          />
+        </div>
+      </div>
+
+      {filterStatus !== 'submitted' && pendingProjects.length > 0 && (
+        <div>
+          <h3 className="text-xl font-bold mb-3">Pending Reports ({pendingProjects.length})</h3>
+          <div className="space-y-2">
+            {pendingProjects.map(project => (
+              <div key={project.id} className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
+                <h4 className="font-bold">{project.name}</h4>
+                <p className="text-sm text-gray-600">Customer: {project.customer}</p>
+                <p className="text-sm text-gray-600">Lead: {project.leadName}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {filterStatus !== 'pending' && submittedProjects.length > 0 && (
+        <div>
+          <h3 className="text-xl font-bold mb-3">Submitted This Week ({submittedProjects.length})</h3>
+          <div className="space-y-2">
+            {submittedThisWeek
+              .filter(report => filterLead === 'all' || report.leadId === filterLead)
+              .map(report => (
+                <div key={report.id} className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                  <h4 className="font-bold">{report.projectName}</h4>
+                  <p className="text-sm text-gray-600">Customer: {report.customer}</p>
+                  <p className="text-sm text-gray-600">Lead: {report.leadName}</p>
+                  <p className="text-sm text-gray-600">
+                    Submitted: {new Date(report.submittedDate).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default WeeklyLeadershipTool;
