@@ -5,7 +5,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, Save, X, CheckCircle2, AlertTriangle, AlertCircle, TrendingUp } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Edit2, Save, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, Trash2, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback } from '@shared/schema';
 
 interface ViewReportsProps {
@@ -14,6 +27,7 @@ interface ViewReportsProps {
   teamMembers: TeamMember[];
   projects: Project[];
   onEditReport: (id: string, updates: Partial<WeeklyReport>) => void;
+  onDeleteAllReports: () => void;
 }
 
 const healthStatusConfig = {
@@ -28,6 +42,7 @@ export default function ViewReports({
   teamMembers,
   projects,
   onEditReport,
+  onDeleteAllReports,
 }: ViewReportsProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({
@@ -91,6 +106,103 @@ export default function ViewReports({
     (a, b) => new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
   );
 
+  const exportToCSV = () => {
+    const headers = ['Project', 'Lead', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Submitted'];
+    const rows = sortedReports.map((report) => [
+      getProjectName(report.projectId),
+      getLeadName(report.leadId),
+      report.weekStart,
+      healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus,
+      report.progress.replace(/\n/g, ' '),
+      report.challenges.replace(/\n/g, ' '),
+      report.nextWeek.replace(/\n/g, ' '),
+      new Date(report.submittedAt).toLocaleString(),
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `weekly_reports_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text('Weekly Leadership Reports', 14, 20);
+    
+    // Date
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+    
+    // Summary
+    doc.setFontSize(12);
+    doc.text('Summary', 14, 38);
+    doc.setFontSize(10);
+    doc.text(`Total Reports: ${sortedReports.length}`, 20, 45);
+    doc.text(`On Track: ${onTrackCount} | At Risk: ${atRiskCount} | Critical: ${criticalCount}`, 20, 51);
+
+    // Reports table
+    const tableData = sortedReports.map((report) => {
+      const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
+      const feedbackText = feedback && feedback.length > 0
+        ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('; ')
+        : 'None';
+
+      return [
+        getProjectName(report.projectId),
+        getLeadName(report.leadId),
+        report.weekStart,
+        healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus,
+        report.progress,
+        report.challenges,
+        report.nextWeek,
+        feedbackText,
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 58,
+      head: [['Project', 'Lead', 'Week', 'Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback']],
+      body: tableData,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [66, 66, 66] },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 30 },
+        6: { cellWidth: 30 },
+        7: { cellWidth: 30 },
+      },
+      didDrawPage: (data) => {
+        // Footer
+        doc.setFontSize(8);
+        doc.text(
+          `Page ${data.pageNumber}`,
+          doc.internal.pageSize.width / 2,
+          doc.internal.pageSize.height - 10,
+          { align: 'center' }
+        );
+      },
+    });
+
+    doc.save(`weekly_reports_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -139,46 +251,103 @@ export default function ViewReports({
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <CardTitle className="text-2xl">Weekly Reports ({filteredReports.length})</CardTitle>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Select value={filterLead} onValueChange={setFilterLead}>
-                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-lead">
-                  <SelectValue placeholder="Filter by lead" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Leads</SelectItem>
-                  {projectLeads.map((lead) => (
-                    <SelectItem key={lead.id} value={lead.id}>
-                      {lead.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={filterMember} onValueChange={setFilterMember}>
-                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-member">
-                  <SelectValue placeholder="Filter by member" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Members</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={filterHealth} onValueChange={setFilterHealth}>
-                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-health">
-                  <SelectValue placeholder="Filter by health" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="on-track">On Track</SelectItem>
-                  <SelectItem value="at-risk">At Risk</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <CardTitle className="text-2xl">Weekly Reports ({filteredReports.length})</CardTitle>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Select value={filterLead} onValueChange={setFilterLead}>
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-lead">
+                    <SelectValue placeholder="Filter by lead" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Leads</SelectItem>
+                    {projectLeads.map((lead) => (
+                      <SelectItem key={lead.id} value={lead.id}>
+                        {lead.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterMember} onValueChange={setFilterMember}>
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-member">
+                    <SelectValue placeholder="Filter by member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Members</SelectItem>
+                    {teamMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterHealth} onValueChange={setFilterHealth}>
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-health">
+                    <SelectValue placeholder="Filter by health" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="on-track">On Track</SelectItem>
+                    <SelectItem value="at-risk">At Risk</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={exportToPDF}
+                data-testid="button-export-pdf"
+                className="gap-2"
+                disabled={sortedReports.length === 0}
+              >
+                <FileText className="h-4 w-4" />
+                Save as PDF
+              </Button>
+              <Button
+                variant="outline"
+                onClick={exportToCSV}
+                data-testid="button-export-csv"
+                className="gap-2"
+                disabled={sortedReports.length === 0}
+              >
+                <FileDown className="h-4 w-4" />
+                Save as CSV
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    data-testid="button-delete-all"
+                    className="gap-2"
+                    disabled={weeklyReports.length === 0}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete All Reports
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete All Reports?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all {weeklyReports.length} weekly reports. This action cannot be undone.
+                      Make sure you have saved the reports as PDF or CSV before deleting.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      data-testid="button-confirm-delete"
+                      onClick={onDeleteAllReports}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete All
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </CardHeader>

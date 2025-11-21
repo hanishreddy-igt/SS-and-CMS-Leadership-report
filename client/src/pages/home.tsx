@@ -139,6 +139,11 @@ export default function Home() {
     toast({ title: 'Success', description: 'Report updated' });
   };
 
+  const handleDeleteAllReports = () => {
+    setWeeklyReports([]);
+    toast({ title: 'Success', description: 'All reports deleted' });
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -227,6 +232,7 @@ export default function Home() {
               teamMembers={teamMembers}
               projects={projects}
               onEditReport={handleEditReport}
+              onDeleteAllReports={handleDeleteAllReports}
             />
           </TabsContent>
 
