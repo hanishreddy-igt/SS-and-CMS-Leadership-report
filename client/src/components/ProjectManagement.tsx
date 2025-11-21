@@ -5,6 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Search, X } from 'lucide-react';
 import type { Project, ProjectLead, TeamMember } from '@shared/schema';
 
 interface ProjectManagementProps {
@@ -28,6 +30,7 @@ export default function ProjectManagement({
     startDate: '',
     endDate: '',
   });
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +51,7 @@ export default function ProjectManagement({
         startDate: '',
         endDate: '',
       });
+      setSearchQuery('');
     }
   };
 
@@ -58,6 +62,14 @@ export default function ProjectManagement({
         ? prev.teamMemberIds.filter((id) => id !== memberId)
         : [...prev.teamMemberIds, memberId],
     }));
+  };
+
+  const filteredTeamMembers = teamMembers.filter((member) =>
+    member.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   return (
@@ -112,21 +124,59 @@ export default function ProjectManagement({
             </div>
 
             <div className="space-y-2">
-              <Label>Team Members</Label>
-              <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
-                {teamMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`member-${member.id}`}
-                      data-testid={`checkbox-member-${member.id}`}
-                      checked={formData.teamMemberIds.includes(member.id)}
-                      onCheckedChange={() => toggleTeamMember(member.id)}
-                    />
-                    <Label htmlFor={`member-${member.id}`} className="font-normal cursor-pointer">
-                      {member.name}
-                    </Label>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between">
+                <Label>Team Members</Label>
+                {formData.teamMemberIds.length > 0 && (
+                  <Badge variant="secondary" data-testid="badge-selected-count">
+                    {formData.teamMemberIds.length} selected
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search team members..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-9"
+                  data-testid="input-search-members"
+                />
+                {searchQuery && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={clearSearch}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                    data-testid="button-clear-search"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              <div className="border rounded-md p-4 space-y-2 max-h-64 overflow-y-auto">
+                {filteredTeamMembers.length > 0 ? (
+                  filteredTeamMembers.map((member) => (
+                    <div key={member.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`member-${member.id}`}
+                        data-testid={`checkbox-member-${member.id}`}
+                        checked={formData.teamMemberIds.includes(member.id)}
+                        onCheckedChange={() => toggleTeamMember(member.id)}
+                      />
+                      <Label htmlFor={`member-${member.id}`} className="font-normal cursor-pointer">
+                        {member.name}
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4" data-testid="text-no-results">
+                    No team members found matching "{searchQuery}"
+                  </p>
+                )}
               </div>
             </div>
 

@@ -6,9 +6,13 @@ A comprehensive project management and reporting application for managing teams,
 ## Recent Changes (November 21, 2025)
 
 ### Latest Updates
-1. **View Reports Tab**: Added export functionality (PDF and CSV) to save reports before deleting
-2. **View Reports Tab**: Added "Delete All Reports" button to reset for next week (with confirmation dialog)
-3. **Week Starting Date**: Automatically updates each week - calculates Monday of current week dynamically
+1. **Projects Tab**: Added search functionality for team members in "Add New Project" section
+   - Search bar to filter through large lists of team members (e.g., 50+ members)
+   - Clear button to reset search
+   - Selected count badge showing how many team members are selected
+2. **View Reports Tab**: Added export functionality (PDF and CSV) to save reports before deleting
+3. **View Reports Tab**: Added "Delete All Reports" button to reset for next week (with confirmation dialog)
+4. **Week Starting Date**: Automatically updates each week - calculates Monday of current week dynamically
 
 ### Previous Updates
 1. **Projects Tab**: Removed "Existing Projects" section (redundant with Dashboard tab)
@@ -38,6 +42,9 @@ A comprehensive project management and reporting application for managing teams,
 
 #### 2. Project Management Tab
 - Create new projects with customer, lead, team members, and date range
+- **Search functionality** for team members with real-time filtering
+- **Selected count badge** showing number of team members selected
+- Optimized for large teams (50+ members)
 - Existing projects view removed (see Dashboard instead)
 
 #### 3. Dashboard Tab
