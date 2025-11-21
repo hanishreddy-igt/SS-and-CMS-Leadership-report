@@ -6,16 +6,20 @@ A comprehensive project management and reporting application for managing teams,
 ## Recent Changes (November 21, 2025)
 
 ### Latest Updates
-1. **Dashboard Tab**: Added edit functionality for projects
+1. **Jira Integration - Project Import**: Full integration with Jira to auto-populate Dashboard
+   - "Import from Jira" button on Dashboard tab
+   - Imports epics as projects with all metadata
+   - Automatically extracts and adds team leads from epic assignees
+   - Automatically finds and adds team members from issue assignees
+   - Sets project dates from epic creation and due dates
+   - Maps customer info from epic descriptions
+   - Prevents duplicate people entries
+   - See JIRA_INTEGRATION_GUIDE.md for setup instructions
+2. **Dashboard Tab**: Added edit functionality for projects
    - Edit button on each project card
    - Full edit dialog with all project fields
    - Search functionality for team members during editing
    - Updates reflect immediately across the application
-2. **Jira Tempo Integration**: Created comprehensive integration guide (see JIRA_INTEGRATION_GUIDE.md)
-   - Detailed instructions for connecting to Tempo API
-   - Automatic timesheet data import for weekly reports
-   - Hours by project (Epic) and team member
-   - Sample code and implementation steps
 3. **Projects Tab**: Added search functionality for team members in "Add New Project" section
 4. **View Reports Tab**: Added export functionality (PDF and CSV) and "Delete All Reports" button
 
@@ -54,6 +58,10 @@ A comprehensive project management and reporting application for managing teams,
 
 #### 3. Dashboard Tab
 - Overview statistics: Total Projects, Team Members, Project Leads
+- **Import from Jira**: One-click import of projects from Jira epics
+  - Automatically populates projects with team leads and members
+  - Fetches data directly from Jira REST API
+  - Requires Jira credentials in Replit Secrets (see JIRA_INTEGRATION_GUIDE.md)
 - Project cards with lead and team member information
 - **Edit Functionality**: Click edit button on any project card to modify all project details
 - **Filters**: By project lead, by team member
@@ -93,6 +101,7 @@ A comprehensive project management and reporting application for managing teams,
 - Color-coded status indicators for quick visual feedback
 - Responsive design with mobile-friendly layouts
 - Mock data included with //todo: remove mock functionality comments for easy cleanup
+- Jira integration for automatic project data population (see JIRA_INTEGRATION_GUIDE.md)
 
 ## Development Notes
 - Application uses in-memory storage - data resets on server restart
