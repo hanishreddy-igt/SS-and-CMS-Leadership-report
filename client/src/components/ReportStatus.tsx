@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Clock } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Check, Clock, Briefcase, FileText, ClipboardList } from 'lucide-react';
 import type { Project, WeeklyReport, ProjectLead } from '@shared/schema';
 
 interface ReportStatusProps {
@@ -17,18 +19,36 @@ export default function ReportStatus({
   getCurrentWeekStart,
 }: ReportStatusProps) {
   const currentWeek = getCurrentWeekStart();
+  const [filterLead, setFilterLead] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  const currentWeekReports = weeklyReports.filter((r) => r.weekStart === currentWeek);
+
+  const filteredProjects = projects.filter((project) => {
+    if (filterLead !== 'all' && project.leadId !== filterLead) return false;
+    
+    const hasSubmitted = currentWeekReports.some((r) => r.projectId === project.id);
+    if (filterStatus === 'submitted' && !hasSubmitted) return false;
+    if (filterStatus === 'pending' && hasSubmitted) return false;
+    
+    return true;
+  });
+
+  const totalProjects = filteredProjects.length;
+  const submittedCount = filteredProjects.filter((p) =>
+    currentWeekReports.some((r) => r.projectId === p.id)
+  ).length;
+  const pendingCount = totalProjects - submittedCount;
 
   const getLeadName = (leadId: string) => {
     return projectLeads.find((l) => l.id === leadId)?.name || 'Unknown';
   };
 
   const hasSubmitted = (projectId: string) => {
-    return weeklyReports.some(
-      (r) => r.projectId === projectId && r.weekStart === currentWeek
-    );
+    return currentWeekReports.some((r) => r.projectId === projectId);
   };
 
-  const groupedByLead = projects.reduce((acc, project) => {
+  const groupedByLead = filteredProjects.reduce((acc, project) => {
     const leadName = getLeadName(project.leadId);
     if (!acc[leadName]) {
       acc[leadName] = [];
@@ -39,10 +59,83 @@ export default function ReportStatus({
 
   return (
     <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Projects</p>
+                <p className="text-3xl font-bold" data-testid="text-total-projects">
+                  {totalProjects}
+                </p>
+              </div>
+              <Briefcase className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Reports Submitted</p>
+                <p className="text-3xl font-bold text-green-600" data-testid="text-submitted">
+                  {submittedCount}
+                </p>
+              </div>
+              <FileText className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Reports Pending</p>
+                <p className="text-3xl font-bold text-amber-600" data-testid="text-pending">
+                  {pendingCount}
+                </p>
+              </div>
+              <ClipboardList className="h-8 w-8 text-amber-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Report Status</CardTitle>
-          <p className="text-sm text-muted-foreground">Week starting: {currentWeek}</p>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-2xl">Report Status by Project</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Week starting: {currentWeek}</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={filterLead} onValueChange={setFilterLead}>
+                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-lead">
+                  <SelectValue placeholder="Filter by lead" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Leads</SelectItem>
+                  {projectLeads.map((lead) => (
+                    <SelectItem key={lead.id} value={lead.id}>
+                      {lead.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-status">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">

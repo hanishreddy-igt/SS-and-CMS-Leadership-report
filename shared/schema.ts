@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -28,9 +28,11 @@ export const weeklyReports = pgTable("weekly_reports", {
   projectId: varchar("project_id").notNull(),
   leadId: varchar("lead_id").notNull(),
   weekStart: text("week_start").notNull(),
+  healthStatus: text("health_status").notNull(),
   progress: text("progress").notNull(),
   challenges: text("challenges").notNull(),
   nextWeek: text("next_week").notNull(),
+  teamMemberFeedback: jsonb("team_member_feedback"),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
 
@@ -47,3 +49,10 @@ export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type WeeklyReport = typeof weeklyReports.$inferSelect;
 export type InsertWeeklyReport = z.infer<typeof insertWeeklyReportSchema>;
+
+export type TeamMemberFeedback = {
+  memberId: string;
+  feedback: string;
+};
+
+export type HealthStatus = 'on-track' | 'at-risk' | 'critical';

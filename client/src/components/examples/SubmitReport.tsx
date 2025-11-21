@@ -6,6 +6,12 @@ export default function SubmitReportExample() {
     { id: '2', name: 'Emma Davis' },
   ];
 
+  const teamMembers = [
+    { id: '1', name: 'Alice Johnson' },
+    { id: '2', name: 'Bob Smith' },
+    { id: '3', name: 'Carol Williams' },
+  ];
+
   const projects = [
     {
       id: '1',
@@ -41,6 +47,7 @@ export default function SubmitReportExample() {
     <SubmitReport
       projects={projects}
       projectLeads={projectLeads}
+      teamMembers={teamMembers}
       weeklyReports={weeklyReports}
       onSubmitReport={(report) => console.log('Submit report:', report)}
       getCurrentWeekStart={getCurrentWeekStart}

@@ -55,9 +55,14 @@ export default function Home() {
       projectId: '1',
       leadId: '1',
       weekStart: '2025-11-18',
+      healthStatus: 'on-track',
       progress: 'Completed the homepage redesign and implemented the new navigation structure.',
       challenges: 'Waiting for client feedback on color scheme.',
       nextWeek: 'Start working on the product pages and contact form.',
+      teamMemberFeedback: [
+        { memberId: '1', feedback: 'Great work on the UI components. Keep up the momentum!' },
+        { memberId: '2', feedback: 'Excellent collaboration and quick turnaround on bug fixes.' },
+      ],
       submittedAt: new Date('2025-11-22'),
     },
   ]);
@@ -208,6 +213,7 @@ export default function Home() {
             <SubmitReport
               projects={projects}
               projectLeads={projectLeads}
+              teamMembers={teamMembers}
               weeklyReports={weeklyReports}
               onSubmitReport={handleSubmitReport}
               getCurrentWeekStart={getCurrentWeekStart}
@@ -219,6 +225,7 @@ export default function Home() {
               weeklyReports={weeklyReports}
               projectLeads={projectLeads}
               teamMembers={teamMembers}
+              projects={projects}
               onEditReport={handleEditReport}
             />
           </TabsContent>

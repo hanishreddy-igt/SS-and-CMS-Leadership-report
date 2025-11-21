@@ -149,7 +149,8 @@ export class MemStorage implements IStorage {
   async createWeeklyReport(insertReport: InsertWeeklyReport): Promise<WeeklyReport> {
     const id = randomUUID();
     const report: WeeklyReport = { 
-      ...insertReport, 
+      ...insertReport,
+      teamMemberFeedback: insertReport.teamMemberFeedback ?? null,
       id,
       submittedAt: new Date()
     };

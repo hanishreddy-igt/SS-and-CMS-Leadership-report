@@ -50,9 +50,11 @@ export default function ReportStatusExample() {
       projectId: '1',
       leadId: '1',
       weekStart: getCurrentWeekStart(),
+      healthStatus: 'on-track',
       progress: 'Completed homepage',
       challenges: 'None',
       nextWeek: 'Start product pages',
+      teamMemberFeedback: null,
       submittedAt: new Date(),
     },
   ];
