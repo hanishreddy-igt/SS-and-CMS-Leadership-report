@@ -11,6 +11,9 @@ import type {
   Person,
   InsertPerson,
 } from "@shared/schema";
+import { people, projects, weeklyReports } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Team Members (using unified people)
@@ -172,4 +175,102 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getTeamMembers(): Promise<TeamMember[]> {
+    return await db.select().from(people);
+  }
+
+  async getTeamMember(id: string): Promise<TeamMember | undefined> {
+    const [person] = await db.select().from(people).where(eq(people.id, id));
+    return person || undefined;
+  }
+
+  async createTeamMember(insertMember: InsertTeamMember): Promise<TeamMember> {
+    const [member] = await db.insert(people).values(insertMember).returning();
+    return member;
+  }
+
+  async updateTeamMember(id: string, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
+    const [updated] = await db.update(people).set(updates).where(eq(people.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteTeamMember(id: string): Promise<boolean> {
+    const result = await db.delete(people).where(eq(people.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getProjectLeads(): Promise<ProjectLead[]> {
+    return await db.select().from(people);
+  }
+
+  async getProjectLead(id: string): Promise<ProjectLead | undefined> {
+    const [person] = await db.select().from(people).where(eq(people.id, id));
+    return person || undefined;
+  }
+
+  async createProjectLead(insertLead: InsertProjectLead): Promise<ProjectLead> {
+    const [lead] = await db.insert(people).values(insertLead).returning();
+    return lead;
+  }
+
+  async updateProjectLead(id: string, updates: Partial<InsertProjectLead>): Promise<ProjectLead | undefined> {
+    const [updated] = await db.update(people).set(updates).where(eq(people.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteProjectLead(id: string): Promise<boolean> {
+    const result = await db.delete(people).where(eq(people.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getProjects(): Promise<Project[]> {
+    return await db.select().from(projects);
+  }
+
+  async getProject(id: string): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    return project || undefined;
+  }
+
+  async createProject(insertProject: InsertProject): Promise<Project> {
+    const [project] = await db.insert(projects).values(insertProject).returning();
+    return project;
+  }
+
+  async updateProject(id: string, updates: Partial<InsertProject>): Promise<Project | undefined> {
+    const [updated] = await db.update(projects).set(updates).where(eq(projects.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteProject(id: string): Promise<boolean> {
+    const result = await db.delete(projects).where(eq(projects.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getWeeklyReports(): Promise<WeeklyReport[]> {
+    return await db.select().from(weeklyReports);
+  }
+
+  async getWeeklyReport(id: string): Promise<WeeklyReport | undefined> {
+    const [report] = await db.select().from(weeklyReports).where(eq(weeklyReports.id, id));
+    return report || undefined;
+  }
+
+  async createWeeklyReport(insertReport: InsertWeeklyReport): Promise<WeeklyReport> {
+    const [report] = await db.insert(weeklyReports).values(insertReport).returning();
+    return report;
+  }
+
+  async updateWeeklyReport(id: string, updates: Partial<InsertWeeklyReport>): Promise<WeeklyReport | undefined> {
+    const [updated] = await db.update(weeklyReports).set(updates).where(eq(weeklyReports.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteWeeklyReport(id: string): Promise<boolean> {
+    const result = await db.delete(weeklyReports).where(eq(weeklyReports.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+}
+
+export const storage = new DatabaseStorage();
