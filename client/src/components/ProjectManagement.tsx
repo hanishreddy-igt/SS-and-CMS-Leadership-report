@@ -14,7 +14,7 @@ import type { ProjectLead, TeamMember, InsertProject } from '@shared/schema';
 
 export default function ProjectManagement() {
   const { toast } = useToast();
-  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const [formData, setFormData] = useState({
     name: '',
