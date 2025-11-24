@@ -3,10 +3,26 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { JiraService } from "./services/jiraService";
 import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Team Members routes
-  app.get('/api/team-members', async (_req, res) => {
+  // Setup authentication middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Team Members routes (protected)
+  app.get('/api/team-members', isAuthenticated, async (_req, res) => {
     try {
       const members = await storage.getTeamMembers();
       res.json(members);
@@ -15,7 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/team-members', async (req, res) => {
+  app.post('/api/team-members', isAuthenticated, async (req, res) => {
     try {
       const data = insertPersonSchema.parse(req.body);
       const member = await storage.createTeamMember(data);
@@ -25,7 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/team-members/:id', async (req, res) => {
+  app.patch('/api/team-members/:id', isAuthenticated, async (req, res) => {
     try {
       const data = insertPersonSchema.partial().parse(req.body);
       const member = await storage.updateTeamMember(req.params.id, data);
@@ -38,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/team-members/:id', async (req, res) => {
+  app.delete('/api/team-members/:id', isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteTeamMember(req.params.id);
       if (!success) {
@@ -50,8 +66,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Project Leads routes
-  app.get('/api/project-leads', async (_req, res) => {
+  // Project Leads routes (protected)
+  app.get('/api/project-leads', isAuthenticated, async (_req, res) => {
     try {
       const leads = await storage.getProjectLeads();
       res.json(leads);
@@ -60,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/project-leads', async (req, res) => {
+  app.post('/api/project-leads', isAuthenticated, async (req, res) => {
     try {
       const data = insertPersonSchema.parse(req.body);
       const lead = await storage.createProjectLead(data);
@@ -70,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/project-leads/:id', async (req, res) => {
+  app.patch('/api/project-leads/:id', isAuthenticated, async (req, res) => {
     try {
       const data = insertPersonSchema.partial().parse(req.body);
       const lead = await storage.updateProjectLead(req.params.id, data);
@@ -83,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/project-leads/:id', async (req, res) => {
+  app.delete('/api/project-leads/:id', isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteProjectLead(req.params.id);
       if (!success) {
@@ -95,8 +111,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Projects routes
-  app.get('/api/projects', async (_req, res) => {
+  // Projects routes (protected)
+  app.get('/api/projects', isAuthenticated, async (_req, res) => {
     try {
       const projects = await storage.getProjects();
       res.json(projects);
@@ -105,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/projects', async (req, res) => {
+  app.post('/api/projects', isAuthenticated, async (req, res) => {
     try {
       const data = insertProjectSchema.parse(req.body);
       const project = await storage.createProject(data);
@@ -115,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/projects/:id', async (req, res) => {
+  app.patch('/api/projects/:id', isAuthenticated, async (req, res) => {
     try {
       const data = insertProjectSchema.partial().parse(req.body);
       const project = await storage.updateProject(req.params.id, data);
@@ -128,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/projects/:id', async (req, res) => {
+  app.delete('/api/projects/:id', isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteProject(req.params.id);
       if (!success) {
@@ -140,8 +156,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Weekly Reports routes
-  app.get('/api/weekly-reports', async (_req, res) => {
+  // Weekly Reports routes (protected)
+  app.get('/api/weekly-reports', isAuthenticated, async (_req, res) => {
     try {
       const reports = await storage.getWeeklyReports();
       res.json(reports);
@@ -150,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/weekly-reports', async (req, res) => {
+  app.post('/api/weekly-reports', isAuthenticated, async (req, res) => {
     try {
       const data = insertWeeklyReportSchema.parse(req.body);
       const report = await storage.createWeeklyReport(data);
@@ -160,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/weekly-reports/:id', async (req, res) => {
+  app.patch('/api/weekly-reports/:id', isAuthenticated, async (req, res) => {
     try {
       const data = insertWeeklyReportSchema.partial().parse(req.body);
       const report = await storage.updateWeeklyReport(req.params.id, data);
@@ -173,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/weekly-reports/:id', async (req, res) => {
+  app.delete('/api/weekly-reports/:id', isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteWeeklyReport(req.params.id);
       if (!success) {
@@ -185,8 +201,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete all weekly reports
-  app.delete('/api/weekly-reports', async (_req, res) => {
+  // Delete all weekly reports (protected)
+  app.delete('/api/weekly-reports', isAuthenticated, async (_req, res) => {
     try {
       const reports = await storage.getWeeklyReports();
       for (const report of reports) {
@@ -198,8 +214,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import projects from Jira
-  app.post('/api/jira/import', async (req, res) => {
+  // Import projects from Jira (protected)
+  app.post('/api/jira/import', isAuthenticated, async (req, res) => {
     try {
       const { projectKey } = req.body;
 
