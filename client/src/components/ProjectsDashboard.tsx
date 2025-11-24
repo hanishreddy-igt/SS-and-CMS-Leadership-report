@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Project, ProjectLead, TeamMember } from '@shared/schema';
 
@@ -36,6 +36,9 @@ export default function ProjectsDashboard() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [jiraProjectKey, setJiraProjectKey] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const totalTeamMembers = teamMembers.length;
   const totalLeads = projectLeads.length;
@@ -156,6 +159,100 @@ export default function ProjectsDashboard() {
       });
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  // Team member mutations
+  const updateMemberMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      return await apiRequest('PATCH', `/api/team-members/${id}`, { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      toast({ title: 'Success', description: 'Team member updated' });
+      setEditingMemberId(null);
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to update team member',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/team-members/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      toast({ title: 'Success', description: 'Team member deleted' });
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to delete team member',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  // Project lead mutations
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      return await apiRequest('PATCH', `/api/project-leads/${id}`, { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      toast({ title: 'Success', description: 'Project lead updated' });
+      setEditingLeadId(null);
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to update project lead',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/project-leads/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      toast({ title: 'Success', description: 'Project lead deleted' });
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to delete project lead',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const startEditMember = (member: TeamMember) => {
+    setEditingMemberId(member.id);
+    setEditValue(member.name);
+  };
+
+  const startEditLead = (lead: ProjectLead) => {
+    setEditingLeadId(lead.id);
+    setEditValue(lead.name);
+  };
+
+  const saveEditMember = (id: string) => {
+    if (editValue.trim()) {
+      updateMemberMutation.mutate({ id, name: editValue.trim() });
+    }
+  };
+
+  const saveEditLead = (id: string) => {
+    if (editValue.trim()) {
+      updateLeadMutation.mutate({ id, name: editValue.trim() });
     }
   };
 
@@ -487,6 +584,158 @@ export default function ProjectsDashboard() {
                   </div>
                 </CardContent>
               </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* All Team Members Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">All Team Members ({teamMembers.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {teamMembers.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center justify-between bg-muted/50 p-3 rounded-md"
+                data-testid={`member-item-${member.id}`}
+              >
+                {editingMemberId === member.id ? (
+                  <div className="flex-1 flex gap-2">
+                    <Input
+                      data-testid={`input-edit-member-${member.id}`}
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      data-testid={`button-save-member-${member.id}`}
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => saveEditMember(member.id)}
+                      disabled={updateMemberMutation.isPending}
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <Check className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      data-testid={`button-cancel-member-${member.id}`}
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setEditingMemberId(null)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <span data-testid={`text-member-${member.id}`} className="font-medium">
+                      {member.name}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        data-testid={`button-edit-member-${member.id}`}
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => startEditMember(member)}
+                        className="text-primary hover:text-primary"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        data-testid={`button-delete-member-${member.id}`}
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => deleteMemberMutation.mutate(member.id)}
+                        disabled={deleteMemberMutation.isPending}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* All Project Leads Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">All Project Leads ({projectLeads.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {projectLeads.map((lead) => (
+              <div
+                key={lead.id}
+                className="flex items-center justify-between bg-muted/50 p-3 rounded-md"
+                data-testid={`lead-item-${lead.id}`}
+              >
+                {editingLeadId === lead.id ? (
+                  <div className="flex-1 flex gap-2">
+                    <Input
+                      data-testid={`input-edit-lead-${lead.id}`}
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      data-testid={`button-save-lead-${lead.id}`}
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => saveEditLead(lead.id)}
+                      disabled={updateLeadMutation.isPending}
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      <Check className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      data-testid={`button-cancel-lead-${lead.id}`}
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => setEditingLeadId(null)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <span data-testid={`text-lead-${lead.id}`} className="font-medium">
+                      {lead.name}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        data-testid={`button-edit-lead-${lead.id}`}
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => startEditLead(lead)}
+                        className="text-primary hover:text-primary"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        data-testid={`button-delete-lead-${lead.id}`}
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => deleteLeadMutation.mutate(lead.id)}
+                        disabled={deleteLeadMutation.isPending}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
             ))}
           </div>
         </CardContent>

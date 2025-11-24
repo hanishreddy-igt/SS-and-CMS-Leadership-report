@@ -1,7 +1,6 @@
-import { Users, FileText, Edit2, UserCheck, LayoutDashboard } from 'lucide-react';
+import { FileText, UserCheck, LayoutDashboard, FolderKanban } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import TeamManagement from '@/components/TeamManagement';
-import ProjectManagement from '@/components/ProjectManagement';
+import TeamAndProjectManagement from '@/components/TeamAndProjectManagement';
 import ProjectsDashboard from '@/components/ProjectsDashboard';
 import SubmitReport from '@/components/SubmitReport';
 import ViewReports from '@/components/ViewReports';
@@ -20,19 +19,15 @@ export default function Home() {
           </p>
         </div>
 
-        <Tabs defaultValue="team" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 gap-2">
-            <TabsTrigger value="team" data-testid="tab-team" className="gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Team</span>
-            </TabsTrigger>
-            <TabsTrigger value="projects" data-testid="tab-projects" className="gap-2">
-              <Edit2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Projects</span>
-            </TabsTrigger>
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
             <TabsTrigger value="dashboard" data-testid="tab-dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
+            </TabsTrigger>
+            <TabsTrigger value="manage" data-testid="tab-manage" className="gap-2">
+              <FolderKanban className="h-4 w-4" />
+              <span className="hidden sm:inline">Team & Projects</span>
             </TabsTrigger>
             <TabsTrigger value="submit" data-testid="tab-submit" className="gap-2">
               <FileText className="h-4 w-4" />
@@ -48,12 +43,8 @@ export default function Home() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="team">
-            <TeamManagement />
-          </TabsContent>
-
-          <TabsContent value="projects">
-            <ProjectManagement />
+          <TabsContent value="manage">
+            <TeamAndProjectManagement />
           </TabsContent>
 
           <TabsContent value="dashboard">
