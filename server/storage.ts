@@ -87,7 +87,7 @@ export class MemStorage implements IStorage {
 
   // Team Members (uses unified people storage)
   async getTeamMembers(): Promise<TeamMember[]> {
-    return Array.from(this.people.values());
+    return Array.from(this.people.values()).filter(person => person.roles.includes('team-member'));
   }
 
   async getTeamMember(id: string): Promise<TeamMember | undefined> {
@@ -96,7 +96,7 @@ export class MemStorage implements IStorage {
 
   async createTeamMember(insertMember: InsertTeamMember): Promise<TeamMember> {
     const id = randomUUID();
-    const member: TeamMember = { ...insertMember, id };
+    const member: TeamMember = { ...insertMember, id, roles: ['team-member'] };
     this.people.set(id, member);
     return member;
   }
@@ -115,7 +115,7 @@ export class MemStorage implements IStorage {
 
   // Project Leads (uses unified people storage)
   async getProjectLeads(): Promise<ProjectLead[]> {
-    return Array.from(this.people.values());
+    return Array.from(this.people.values()).filter(person => person.roles.includes('project-lead'));
   }
 
   async getProjectLead(id: string): Promise<ProjectLead | undefined> {
@@ -124,7 +124,7 @@ export class MemStorage implements IStorage {
 
   async createProjectLead(insertLead: InsertProjectLead): Promise<ProjectLead> {
     const id = randomUUID();
-    const lead: ProjectLead = { ...insertLead, id };
+    const lead: ProjectLead = { ...insertLead, id, roles: ['project-lead'] };
     this.people.set(id, lead);
     return lead;
   }
@@ -226,7 +226,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTeamMembers(): Promise<TeamMember[]> {
-    return await db.select().from(people);
+    const allPeople = await db.select().from(people);
+    return allPeople.filter(person => person.roles.includes('team-member'));
   }
 
   async getTeamMember(id: string): Promise<TeamMember | undefined> {
@@ -235,7 +236,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTeamMember(insertMember: InsertTeamMember): Promise<TeamMember> {
-    const [member] = await db.insert(people).values(insertMember).returning();
+    const [member] = await db.insert(people).values({
+      ...insertMember,
+      roles: ['team-member']
+    }).returning();
     return member;
   }
 
@@ -250,7 +254,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProjectLeads(): Promise<ProjectLead[]> {
-    return await db.select().from(people);
+    const allPeople = await db.select().from(people);
+    return allPeople.filter(person => person.roles.includes('project-lead'));
   }
 
   async getProjectLead(id: string): Promise<ProjectLead | undefined> {
@@ -259,7 +264,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProjectLead(insertLead: InsertProjectLead): Promise<ProjectLead> {
-    const [lead] = await db.insert(people).values(insertLead).returning();
+    const [lead] = await db.insert(people).values({
+      ...insertLead,
+      roles: ['project-lead']
+    }).returning();
     return lead;
   }
 

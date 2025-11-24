@@ -29,6 +29,7 @@ export const users = pgTable("users", {
 export const people = pgTable("people", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  roles: text("roles").array().notNull().default(sql`'{}'`),
 });
 
 export const projects = pgTable("projects", {
