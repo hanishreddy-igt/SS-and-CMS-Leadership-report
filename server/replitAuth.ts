@@ -63,17 +63,19 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  const email = typeof claims["email"] === "string" ? claims["email"] : null;
+  
   // Validate domain restriction
-  if (!isAllowedDomain(claims["email"])) {
+  if (!isAllowedDomain(email)) {
     throw new Error(`Access denied. Only @${ALLOWED_DOMAINS.join(' and @')} email addresses are allowed.`);
   }
 
   await storage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
+    id: typeof claims["sub"] === "string" ? claims["sub"] : claims["sub"]?.toString(),
+    email: email,
+    firstName: typeof claims["first_name"] === "string" ? claims["first_name"] : null,
+    lastName: typeof claims["last_name"] === "string" ? claims["last_name"] : null,
+    profileImageUrl: typeof claims["profile_image_url"] === "string" ? claims["profile_image_url"] : null,
   });
 }
 
@@ -91,9 +93,10 @@ export async function setupAuth(app: Express) {
   ) => {
     try {
       const claims = tokens.claims();
+      const email = typeof claims?.["email"] === "string" ? claims["email"] : null;
       
       // Validate domain before creating session
-      if (!isAllowedDomain(claims["email"])) {
+      if (!isAllowedDomain(email)) {
         return verified(new Error(`Access denied. Only @${ALLOWED_DOMAINS.join(' and @')} email addresses are allowed.`), false);
       }
 
