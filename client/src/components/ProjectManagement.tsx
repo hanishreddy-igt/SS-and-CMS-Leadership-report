@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,21 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Search, X } from 'lucide-react';
-import type { Project, ProjectLead, TeamMember } from '@shared/schema';
+import type { ProjectLead, TeamMember, InsertProject } from '@shared/schema';
 
-interface ProjectManagementProps {
-  projects: Project[];
-  projectLeads: ProjectLead[];
-  teamMembers: TeamMember[];
-  onAddProject: (project: Omit<Project, 'id'>) => void;
-}
-
-export default function ProjectManagement({
-  projects,
-  projectLeads,
-  teamMembers,
-  onAddProject,
-}: ProjectManagementProps) {
+export default function ProjectManagement() {
+  const { toast } = useToast();
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const [formData, setFormData] = useState({
     name: '',
     customer: '',
@@ -31,6 +25,35 @@ export default function ProjectManagement({
     endDate: '',
   });
   const [searchQuery, setSearchQuery] = useState('');
+
+  const createProjectMutation = useMutation({
+    mutationFn: async (project: InsertProject) => {
+      return await apiRequest('POST', '/api/projects', project);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      toast({ 
+        title: 'Success', 
+        description: 'Project created successfully' 
+      });
+      setFormData({
+        name: '',
+        customer: '',
+        leadId: '',
+        teamMemberIds: [],
+        startDate: '',
+        endDate: '',
+      });
+      setSearchQuery('');
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to create project',
+        variant: 'destructive'
+      });
+    }
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,16 +65,7 @@ export default function ProjectManagement({
       formData.startDate &&
       formData.endDate
     ) {
-      onAddProject(formData);
-      setFormData({
-        name: '',
-        customer: '',
-        leadId: '',
-        teamMemberIds: [],
-        startDate: '',
-        endDate: '',
-      });
-      setSearchQuery('');
+      createProjectMutation.mutate(formData);
     }
   };
 
@@ -203,8 +217,13 @@ export default function ProjectManagement({
               </div>
             </div>
 
-            <Button data-testid="button-add-project" type="submit" className="w-full">
-              Add Project
+            <Button 
+              data-testid="button-add-project" 
+              type="submit" 
+              className="w-full"
+              disabled={createProjectMutation.isPending}
+            >
+              {createProjectMutation.isPending ? 'Adding...' : 'Add Project'}
             </Button>
           </form>
         </CardContent>

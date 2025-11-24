@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,23 +13,13 @@ import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download } f
 import { Button } from '@/components/ui/button';
 import type { Project, ProjectLead, TeamMember } from '@shared/schema';
 
-interface ProjectsDashboardProps {
-  projects: Project[];
-  projectLeads: ProjectLead[];
-  teamMembers: TeamMember[];
-  onEditProject: (id: string, updates: Partial<Omit<Project, 'id'>>) => void;
-  onImportFromJira: (projectKey?: string) => Promise<boolean>;
-}
-
 type SortOrder = 'asc' | 'desc';
 
-export default function ProjectsDashboard({
-  projects,
-  projectLeads,
-  teamMembers,
-  onEditProject,
-  onImportFromJira,
-}: ProjectsDashboardProps) {
+export default function ProjectsDashboard() {
+  const { toast } = useToast();
+  const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const [filterLead, setFilterLead] = useState<string>('all');
   const [filterMember, setFilterMember] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -86,12 +79,32 @@ export default function ProjectsDashboard({
     setSearchQuery('');
   };
 
+  const editProjectMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<Project, 'id'>> }) => {
+      return await apiRequest('PATCH', `/api/projects/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      toast({ 
+        title: 'Success', 
+        description: 'Project updated successfully' 
+      });
+      setEditingProject(null);
+      setSearchQuery('');
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to update project',
+        variant: 'destructive'
+      });
+    }
+  });
+
   const handleSaveEdit = () => {
     if (editingProject && editFormData.name && editFormData.customer && editFormData.leadId && 
         editFormData.teamMemberIds.length > 0 && editFormData.startDate && editFormData.endDate) {
-      onEditProject(editingProject.id, editFormData);
-      setEditingProject(null);
-      setSearchQuery('');
+      editProjectMutation.mutate({ id: editingProject.id, updates: editFormData });
     }
   };
 
@@ -110,12 +123,38 @@ export default function ProjectsDashboard({
 
   const handleImport = async () => {
     setIsImporting(true);
-    const success = await onImportFromJira(jiraProjectKey || undefined);
-    setIsImporting(false);
-    
-    if (success) {
+    try {
+      const response = await fetch('/api/jira/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectKey: jiraProjectKey || undefined }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Import failed');
+      }
+
+      // Invalidate all relevant queries after successful import
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      
+      toast({ 
+        title: 'Success', 
+        description: 'Projects imported from Jira successfully' 
+      });
+      
       setShowImportDialog(false);
       setJiraProjectKey('');
+    } catch (error) {
+      toast({ 
+        title: 'Error', 
+        description: error instanceof Error ? error.message : 'Failed to import from Jira',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -405,8 +444,12 @@ export default function ProjectsDashboard({
                             >
                               Cancel
                             </Button>
-                            <Button onClick={handleSaveEdit} data-testid="button-save-edit">
-                              Save Changes
+                            <Button 
+                              onClick={handleSaveEdit} 
+                              data-testid="button-save-edit"
+                              disabled={editProjectMutation.isPending}
+                            >
+                              {editProjectMutation.isPending ? 'Saving...' : 'Save Changes'}
                             </Button>
                           </div>
                         </div>

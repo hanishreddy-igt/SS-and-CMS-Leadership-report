@@ -1,206 +1,13 @@
-import { useState } from 'react';
 import { Users, FileText, Edit2, UserCheck, LayoutDashboard } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
 import TeamManagement from '@/components/TeamManagement';
 import ProjectManagement from '@/components/ProjectManagement';
 import ProjectsDashboard from '@/components/ProjectsDashboard';
 import SubmitReport from '@/components/SubmitReport';
 import ViewReports from '@/components/ViewReports';
 import ReportStatus from '@/components/ReportStatus';
-import type { TeamMember, ProjectLead, Project, WeeklyReport } from '@shared/schema';
 
 export default function Home() {
-  const { toast } = useToast();
-
-  //todo: remove mock functionality
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    { id: '1', name: 'Alice Johnson' },
-    { id: '2', name: 'Bob Smith' },
-    { id: '3', name: 'Carol Williams' },
-  ]);
-
-  //todo: remove mock functionality
-  const [projectLeads, setProjectLeads] = useState<ProjectLead[]>([
-    { id: '1', name: 'David Brown' },
-    { id: '2', name: 'Emma Davis' },
-  ]);
-
-  //todo: remove mock functionality
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: '1',
-      name: 'Website Redesign',
-      customer: 'Acme Corp',
-      leadId: '1',
-      teamMemberIds: ['1', '2'],
-      startDate: '2025-01-01',
-      endDate: '2025-03-31',
-    },
-    {
-      id: '2',
-      name: 'Mobile App Development',
-      customer: 'TechStart Inc',
-      leadId: '2',
-      teamMemberIds: ['2', '3'],
-      startDate: '2025-02-01',
-      endDate: '2025-06-30',
-    },
-  ]);
-
-  //todo: remove mock functionality
-  const [weeklyReports, setWeeklyReports] = useState<WeeklyReport[]>([
-    {
-      id: '1',
-      projectId: '1',
-      leadId: '1',
-      weekStart: '2025-11-18',
-      healthStatus: 'on-track',
-      progress: 'Completed the homepage redesign and implemented the new navigation structure.',
-      challenges: 'Waiting for client feedback on color scheme.',
-      nextWeek: 'Start working on the product pages and contact form.',
-      teamMemberFeedback: [
-        { memberId: '1', feedback: 'Great work on the UI components. Keep up the momentum!' },
-        { memberId: '2', feedback: 'Excellent collaboration and quick turnaround on bug fixes.' },
-      ],
-      submittedAt: new Date('2025-11-22'),
-    },
-  ]);
-
-  const getCurrentWeekStart = () => {
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(now.setDate(diff));
-    return monday.toISOString().split('T')[0];
-  };
-
-  const handleAddMember = (name: string) => {
-    const newMember: TeamMember = {
-      id: Date.now().toString(),
-      name,
-    };
-    setTeamMembers([...teamMembers, newMember]);
-    toast({ title: 'Success', description: 'Team member added' });
-  };
-
-  const handleEditMember = (id: string, name: string) => {
-    setTeamMembers(teamMembers.map((m) => (m.id === id ? { ...m, name } : m)));
-    toast({ title: 'Success', description: 'Team member updated' });
-  };
-
-  const handleDeleteMember = (id: string) => {
-    setTeamMembers(teamMembers.filter((m) => m.id !== id));
-    toast({ title: 'Success', description: 'Team member deleted' });
-  };
-
-  const handleAddLead = (name: string) => {
-    const newLead: ProjectLead = {
-      id: Date.now().toString(),
-      name,
-    };
-    setProjectLeads([...projectLeads, newLead]);
-    toast({ title: 'Success', description: 'Project lead added' });
-  };
-
-  const handleEditLead = (id: string, name: string) => {
-    setProjectLeads(projectLeads.map((l) => (l.id === id ? { ...l, name } : l)));
-    toast({ title: 'Success', description: 'Project lead updated' });
-  };
-
-  const handleDeleteLead = (id: string) => {
-    setProjectLeads(projectLeads.filter((l) => l.id !== id));
-    toast({ title: 'Success', description: 'Project lead deleted' });
-  };
-
-  const handleAddProject = (project: Omit<Project, 'id'>) => {
-    const newProject: Project = {
-      ...project,
-      id: Date.now().toString(),
-    };
-    setProjects([...projects, newProject]);
-    toast({ title: 'Success', description: 'Project added' });
-  };
-
-  const handleEditProject = (id: string, updates: Partial<Omit<Project, 'id'>>) => {
-    setProjects(projects.map((p) => (p.id === id ? { ...p, ...updates } : p)));
-    toast({ title: 'Success', description: 'Project updated' });
-  };
-
-  const handleImportFromJira = async (projectKey?: string) => {
-    try {
-      const response = await fetch('/api/jira/import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ projectKey }),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to import from Jira');
-      }
-
-      const existingLeadIds = new Set(projectLeads.map((l) => l.id));
-      const existingMemberIds = new Set(teamMembers.map((m) => m.id));
-
-      const newLeads = result.data.leads.filter((l: ProjectLead) => !existingLeadIds.has(l.id));
-      const newMembers = result.data.teamMembers.filter((m: TeamMember) => !existingMemberIds.has(m.id));
-
-      if (newLeads.length > 0) {
-        setProjectLeads([...projectLeads, ...newLeads]);
-      }
-      if (newMembers.length > 0) {
-        setTeamMembers([...teamMembers, ...newMembers]);
-      }
-
-      const importedProjects = result.data.projects.map((p: any) => ({
-        ...p,
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      }));
-
-      setProjects([...projects, ...importedProjects]);
-
-      toast({
-        title: 'Success',
-        description: `${result.message}. Added ${newLeads.length} leads and ${newMembers.length} team members.`,
-      });
-
-      return true;
-    } catch (error: any) {
-      toast({
-        title: 'Import Failed',
-        description: error.message || 'Failed to import from Jira. Check your Jira credentials.',
-        variant: 'destructive',
-      });
-      return false;
-    }
-  };
-
-  const handleSubmitReport = (report: Omit<WeeklyReport, 'id' | 'submittedAt'>) => {
-    const newReport: WeeklyReport = {
-      ...report,
-      id: Date.now().toString(),
-      submittedAt: new Date(),
-    };
-    setWeeklyReports([...weeklyReports, newReport]);
-    toast({ title: 'Success', description: 'Weekly report submitted' });
-  };
-
-  const handleEditReport = (id: string, updates: Partial<WeeklyReport>) => {
-    setWeeklyReports(
-      weeklyReports.map((r) => (r.id === id ? { ...r, ...updates } : r))
-    );
-    toast({ title: 'Success', description: 'Report updated' });
-  };
-
-  const handleDeleteAllReports = () => {
-    setWeeklyReports([]);
-    toast({ title: 'Success', description: 'All reports deleted' });
-  };
-
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -242,66 +49,27 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="team">
-            <TeamManagement
-              teamMembers={teamMembers}
-              projectLeads={projectLeads}
-              onAddMember={handleAddMember}
-              onEditMember={handleEditMember}
-              onDeleteMember={handleDeleteMember}
-              onAddLead={handleAddLead}
-              onEditLead={handleEditLead}
-              onDeleteLead={handleDeleteLead}
-            />
+            <TeamManagement />
           </TabsContent>
 
           <TabsContent value="projects">
-            <ProjectManagement
-              projects={projects}
-              projectLeads={projectLeads}
-              teamMembers={teamMembers}
-              onAddProject={handleAddProject}
-            />
+            <ProjectManagement />
           </TabsContent>
 
           <TabsContent value="dashboard">
-            <ProjectsDashboard
-              projects={projects}
-              projectLeads={projectLeads}
-              teamMembers={teamMembers}
-              onEditProject={handleEditProject}
-              onImportFromJira={handleImportFromJira}
-            />
+            <ProjectsDashboard />
           </TabsContent>
 
           <TabsContent value="submit">
-            <SubmitReport
-              projects={projects}
-              projectLeads={projectLeads}
-              teamMembers={teamMembers}
-              weeklyReports={weeklyReports}
-              onSubmitReport={handleSubmitReport}
-              getCurrentWeekStart={getCurrentWeekStart}
-            />
+            <SubmitReport />
           </TabsContent>
 
           <TabsContent value="view">
-            <ViewReports
-              weeklyReports={weeklyReports}
-              projectLeads={projectLeads}
-              teamMembers={teamMembers}
-              projects={projects}
-              onEditReport={handleEditReport}
-              onDeleteAllReports={handleDeleteAllReports}
-            />
+            <ViewReports />
           </TabsContent>
 
           <TabsContent value="status">
-            <ReportStatus
-              projects={projects}
-              weeklyReports={weeklyReports}
-              projectLeads={projectLeads}
-              getCurrentWeekStart={getCurrentWeekStart}
-            />
+            <ReportStatus />
           </TabsContent>
         </Tabs>
       </div>

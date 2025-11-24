@@ -3,46 +3,142 @@ import { Edit2, Trash2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import type { TeamMember, ProjectLead } from '@shared/schema';
 
-interface TeamManagementProps {
-  teamMembers: TeamMember[];
-  projectLeads: ProjectLead[];
-  onAddMember: (name: string) => void;
-  onEditMember: (id: string, name: string) => void;
-  onDeleteMember: (id: string) => void;
-  onAddLead: (name: string) => void;
-  onEditLead: (id: string, name: string) => void;
-  onDeleteLead: (id: string) => void;
-}
-
-export default function TeamManagement({
-  teamMembers,
-  projectLeads,
-  onAddMember,
-  onEditMember,
-  onDeleteMember,
-  onAddLead,
-  onEditLead,
-  onDeleteLead,
-}: TeamManagementProps) {
+export default function TeamManagement() {
+  const { toast } = useToast();
   const [newMember, setNewMember] = useState('');
   const [newLead, setNewLead] = useState('');
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
 
+  const { data: teamMembers = [], isLoading: isLoadingMembers } = useQuery<TeamMember[]>({
+    queryKey: ['/api/team-members'],
+  });
+
+  const { data: projectLeads = [], isLoading: isLoadingLeads } = useQuery<ProjectLead[]>({
+    queryKey: ['/api/project-leads'],
+  });
+
+  const createMemberMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return await apiRequest('POST', '/api/team-members', { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      toast({ title: 'Success', description: 'Team member added' });
+      setNewMember('');
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to add team member',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      return await apiRequest('PATCH', `/api/team-members/${id}`, { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      toast({ title: 'Success', description: 'Team member updated' });
+      setEditingMemberId(null);
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to update team member',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/team-members/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      toast({ title: 'Success', description: 'Team member deleted' });
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to delete team member',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const createLeadMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return await apiRequest('POST', '/api/project-leads', { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      toast({ title: 'Success', description: 'Project lead added' });
+      setNewLead('');
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to add project lead',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      return await apiRequest('PATCH', `/api/project-leads/${id}`, { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      toast({ title: 'Success', description: 'Project lead updated' });
+      setEditingLeadId(null);
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to update project lead',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/project-leads/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      toast({ title: 'Success', description: 'Project lead deleted' });
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to delete project lead',
+        variant: 'destructive'
+      });
+    },
+  });
+
   const handleAddMember = () => {
     if (newMember.trim()) {
-      onAddMember(newMember.trim());
-      setNewMember('');
+      createMemberMutation.mutate(newMember.trim());
     }
   };
 
   const handleAddLead = () => {
     if (newLead.trim()) {
-      onAddLead(newLead.trim());
-      setNewLead('');
+      createLeadMutation.mutate(newLead.trim());
     }
   };
 
@@ -58,17 +154,19 @@ export default function TeamManagement({
 
   const saveEditMember = (id: string) => {
     if (editValue.trim()) {
-      onEditMember(id, editValue.trim());
-      setEditingMemberId(null);
+      updateMemberMutation.mutate({ id, name: editValue.trim() });
     }
   };
 
   const saveEditLead = (id: string) => {
     if (editValue.trim()) {
-      onEditLead(id, editValue.trim());
-      setEditingLeadId(null);
+      updateLeadMutation.mutate({ id, name: editValue.trim() });
     }
   };
+
+  if (isLoadingMembers || isLoadingLeads) {
+    return <div className="text-center py-8">Loading...</div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -90,8 +188,9 @@ export default function TeamManagement({
             <Button
               data-testid="button-add-member"
               onClick={handleAddMember}
+              disabled={createMemberMutation.isPending}
             >
-              Add Member
+              {createMemberMutation.isPending ? 'Adding...' : 'Add Member'}
             </Button>
           </div>
           <div className="space-y-2">
@@ -114,6 +213,7 @@ export default function TeamManagement({
                       size="icon"
                       variant="ghost"
                       onClick={() => saveEditMember(member.id)}
+                      disabled={updateMemberMutation.isPending}
                       className="text-green-600 hover:text-green-700"
                     >
                       <Check className="h-5 w-5" />
@@ -147,7 +247,8 @@ export default function TeamManagement({
                         data-testid={`button-delete-member-${member.id}`}
                         size="icon"
                         variant="ghost"
-                        onClick={() => onDeleteMember(member.id)}
+                        onClick={() => deleteMemberMutation.mutate(member.id)}
+                        disabled={deleteMemberMutation.isPending}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -179,8 +280,9 @@ export default function TeamManagement({
             <Button
               data-testid="button-add-lead"
               onClick={handleAddLead}
+              disabled={createLeadMutation.isPending}
             >
-              Add Lead
+              {createLeadMutation.isPending ? 'Adding...' : 'Add Lead'}
             </Button>
           </div>
           <div className="space-y-2">
@@ -203,6 +305,7 @@ export default function TeamManagement({
                       size="icon"
                       variant="ghost"
                       onClick={() => saveEditLead(lead.id)}
+                      disabled={updateLeadMutation.isPending}
                       className="text-green-600 hover:text-green-700"
                     >
                       <Check className="h-5 w-5" />
@@ -236,7 +339,8 @@ export default function TeamManagement({
                         data-testid={`button-delete-lead-${lead.id}`}
                         size="icon"
                         variant="ghost"
-                        onClick={() => onDeleteLead(lead.id)}
+                        onClick={() => deleteLeadMutation.mutate(lead.id)}
+                        disabled={deleteLeadMutation.isPending}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />

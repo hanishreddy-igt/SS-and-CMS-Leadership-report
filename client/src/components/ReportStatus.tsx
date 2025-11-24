@@ -1,23 +1,26 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Check, Clock, Briefcase, FileText, ClipboardList } from 'lucide-react';
 import type { Project, WeeklyReport, ProjectLead } from '@shared/schema';
 
-interface ReportStatusProps {
-  projects: Project[];
-  weeklyReports: WeeklyReport[];
-  projectLeads: ProjectLead[];
-  getCurrentWeekStart: () => string;
+function getCurrentWeekStart(): string {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const daysToMonday = (dayOfWeek + 6) % 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysToMonday);
+  monday.setHours(0, 0, 0, 0);
+  return monday.toISOString().split('T')[0];
 }
 
-export default function ReportStatus({
-  projects,
-  weeklyReports,
-  projectLeads,
-  getCurrentWeekStart,
-}: ReportStatusProps) {
+export default function ReportStatus() {
+  const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
+  const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  
   const currentWeek = getCurrentWeekStart();
   const [filterLead, setFilterLead] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');

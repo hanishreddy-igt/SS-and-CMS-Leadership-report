@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,16 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback } from '@shared/schema';
-
-interface SubmitReportProps {
-  projects: Project[];
-  projectLeads: ProjectLead[];
-  teamMembers: TeamMember[];
-  weeklyReports: WeeklyReport[];
-  onSubmitReport: (report: Omit<WeeklyReport, 'id' | 'submittedAt'>) => void;
-  getCurrentWeekStart: () => string;
-}
+import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport } from '@shared/schema';
 
 const healthStatusOptions = [
   { value: 'on-track', label: 'On Track', icon: CheckCircle2, color: 'text-green-600' },
@@ -23,14 +17,22 @@ const healthStatusOptions = [
   { value: 'critical', label: 'Critical', icon: AlertCircle, color: 'text-red-600' },
 ];
 
-export default function SubmitReport({
-  projects,
-  projectLeads,
-  teamMembers,
-  weeklyReports,
-  onSubmitReport,
-  getCurrentWeekStart,
-}: SubmitReportProps) {
+function getCurrentWeekStart(): string {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const daysToMonday = (dayOfWeek + 6) % 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysToMonday);
+  monday.setHours(0, 0, 0, 0);
+  return monday.toISOString().split('T')[0];
+}
+
+export default function SubmitReport() {
+  const { toast } = useToast();
+  const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
+  const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
   const [selectedLead, setSelectedLead] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [healthStatus, setHealthStatus] = useState('');
@@ -55,6 +57,32 @@ export default function SubmitReport({
     );
   };
 
+  const submitReportMutation = useMutation({
+    mutationFn: async (report: InsertWeeklyReport) => {
+      return await apiRequest('POST', '/api/weekly-reports', report);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      toast({ 
+        title: 'Success', 
+        description: 'Weekly report submitted successfully' 
+      });
+      setSelectedProject('');
+      setHealthStatus('');
+      setProgress('');
+      setChallenges('');
+      setNextWeek('');
+      setMemberFeedback({});
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to submit report',
+        variant: 'destructive'
+      });
+    }
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedProject && selectedLead && healthStatus && progress && challenges && nextWeek) {
@@ -62,7 +90,7 @@ export default function SubmitReport({
         .filter(([_, feedback]) => feedback.trim())
         .map(([memberId, feedback]) => ({ memberId, feedback }));
 
-      onSubmitReport({
+      submitReportMutation.mutate({
         projectId: selectedProject,
         leadId: selectedLead,
         weekStart: currentWeek,
@@ -72,12 +100,6 @@ export default function SubmitReport({
         nextWeek,
         teamMemberFeedback: feedback.length > 0 ? feedback : null,
       });
-      setSelectedProject('');
-      setHealthStatus('');
-      setProgress('');
-      setChallenges('');
-      setNextWeek('');
-      setMemberFeedback({});
     }
   };
 
@@ -213,8 +235,13 @@ export default function SubmitReport({
                 </div>
               )}
 
-              <Button data-testid="button-submit-report" type="submit" className="w-full">
-                Submit Report
+              <Button 
+                data-testid="button-submit-report" 
+                type="submit" 
+                className="w-full"
+                disabled={submitReportMutation.isPending}
+              >
+                {submitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
               </Button>
             </>
           )}

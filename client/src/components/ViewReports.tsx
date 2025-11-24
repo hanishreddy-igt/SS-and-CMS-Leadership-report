@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,29 +24,18 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback } from '@shared/schema';
 
-interface ViewReportsProps {
-  weeklyReports: WeeklyReport[];
-  projectLeads: ProjectLead[];
-  teamMembers: TeamMember[];
-  projects: Project[];
-  onEditReport: (id: string, updates: Partial<WeeklyReport>) => void;
-  onDeleteAllReports: () => void;
-}
-
 const healthStatusConfig = {
   'on-track': { label: 'On Track', icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-50' },
   'at-risk': { label: 'At Risk', icon: AlertTriangle, color: 'text-amber-600', bgColor: 'bg-amber-50' },
   'critical': { label: 'Critical', icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
 };
 
-export default function ViewReports({
-  weeklyReports,
-  projectLeads,
-  teamMembers,
-  projects,
-  onEditReport,
-  onDeleteAllReports,
-}: ViewReportsProps) {
+export default function ViewReports() {
+  const { toast } = useToast();
+  const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
+  const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({
     progress: '',
@@ -77,9 +69,49 @@ export default function ViewReports({
     });
   };
 
+  const editReportMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<WeeklyReport> }) => {
+      return await apiRequest('PATCH', `/api/weekly-reports/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      toast({ 
+        title: 'Success', 
+        description: 'Report updated successfully' 
+      });
+      setEditingId(null);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to update report',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const deleteAllReportsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('DELETE', '/api/weekly-reports', {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      toast({ 
+        title: 'Success', 
+        description: 'All reports deleted successfully' 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to delete reports',
+        variant: 'destructive'
+      });
+    }
+  });
+
   const saveEdit = (reportId: string) => {
-    onEditReport(reportId, editData);
-    setEditingId(null);
+    editReportMutation.mutate({ id: reportId, updates: editData });
   };
 
   const cancelEdit = () => {
@@ -340,10 +372,11 @@ export default function ViewReports({
                     <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       data-testid="button-confirm-delete"
-                      onClick={onDeleteAllReports}
+                      onClick={() => deleteAllReportsMutation.mutate()}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      disabled={deleteAllReportsMutation.isPending}
                     >
-                      Delete All
+                      {deleteAllReportsMutation.isPending ? 'Deleting...' : 'Delete All'}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -448,14 +481,16 @@ export default function ViewReports({
                           <Button
                             data-testid={`button-save-report-${report.id}`}
                             onClick={() => saveEdit(report.id)}
+                            disabled={editReportMutation.isPending}
                           >
                             <Save className="h-4 w-4 mr-2" />
-                            Save
+                            {editReportMutation.isPending ? 'Saving...' : 'Save'}
                           </Button>
                           <Button
                             data-testid={`button-cancel-report-${report.id}`}
                             variant="outline"
                             onClick={cancelEdit}
+                            disabled={editReportMutation.isPending}
                           >
                             <X className="h-4 w-4 mr-2" />
                             Cancel
