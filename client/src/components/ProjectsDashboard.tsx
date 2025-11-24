@@ -38,7 +38,8 @@ export default function ProjectsDashboard() {
   const [isImporting, setIsImporting] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
+  const [editMemberValue, setEditMemberValue] = useState('');
+  const [editLeadValue, setEditLeadValue] = useState('');
 
   const totalTeamMembers = teamMembers.length;
   const totalLeads = projectLeads.length;
@@ -236,23 +237,23 @@ export default function ProjectsDashboard() {
 
   const startEditMember = (member: TeamMember) => {
     setEditingMemberId(member.id);
-    setEditValue(member.name);
+    setEditMemberValue(member.name);
   };
 
   const startEditLead = (lead: ProjectLead) => {
     setEditingLeadId(lead.id);
-    setEditValue(lead.name);
+    setEditLeadValue(lead.name);
   };
 
   const saveEditMember = (id: string) => {
-    if (editValue.trim()) {
-      updateMemberMutation.mutate({ id, name: editValue.trim() });
+    if (editMemberValue.trim()) {
+      updateMemberMutation.mutate({ id, name: editMemberValue.trim() });
     }
   };
 
   const saveEditLead = (id: string) => {
-    if (editValue.trim()) {
-      updateLeadMutation.mutate({ id, name: editValue.trim() });
+    if (editLeadValue.trim()) {
+      updateLeadMutation.mutate({ id, name: editLeadValue.trim() });
     }
   };
 
@@ -595,8 +596,13 @@ export default function ProjectsDashboard() {
           <CardTitle className="text-2xl">All Team Members ({teamMembers.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {teamMembers.map((member) => (
+          {teamMembers.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-members">
+              No team members added yet. Add team members in the Team & Projects tab.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {teamMembers.map((member) => (
               <div
                 key={member.id}
                 className="flex items-center justify-between bg-muted/50 p-3 rounded-md"
@@ -607,8 +613,8 @@ export default function ProjectsDashboard() {
                     <Input
                       data-testid={`input-edit-member-${member.id}`}
                       type="text"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      value={editMemberValue}
+                      onChange={(e) => setEditMemberValue(e.target.value)}
                       className="flex-1"
                     />
                     <Button
@@ -660,8 +666,9 @@ export default function ProjectsDashboard() {
                   </>
                 )}
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -671,8 +678,13 @@ export default function ProjectsDashboard() {
           <CardTitle className="text-2xl">All Project Leads ({projectLeads.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {projectLeads.map((lead) => (
+          {projectLeads.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-leads">
+              No project leads added yet. Add project leads in the Team & Projects tab.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {projectLeads.map((lead) => (
               <div
                 key={lead.id}
                 className="flex items-center justify-between bg-muted/50 p-3 rounded-md"
@@ -683,8 +695,8 @@ export default function ProjectsDashboard() {
                     <Input
                       data-testid={`input-edit-lead-${lead.id}`}
                       type="text"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      value={editLeadValue}
+                      onChange={(e) => setEditLeadValue(e.target.value)}
                       className="flex-1"
                     />
                     <Button
@@ -736,8 +748,9 @@ export default function ProjectsDashboard() {
                   </>
                 )}
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

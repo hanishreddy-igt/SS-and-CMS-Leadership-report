@@ -5,7 +5,18 @@ A comprehensive project management and reporting application for managing teams,
 
 ## Recent Changes (November 24, 2025)
 
-### Latest Update: Authentication & Security
+### Latest Update: UI Reorganization
+1. **Consolidated Tab Structure**: Merged Team and Projects tabs into single "Team & Projects" tab
+   - Combined add forms for team members, project leads, and projects in one place
+   - No lists displayed below add forms for cleaner interface
+   - Tab count reduced from 6 to 5 tabs (Dashboard, Team & Projects, Submit, View, Status)
+   
+2. **Enhanced Dashboard**: Added team member and project lead management sections
+   - "All Team Members" section with edit/delete functionality (no filters/sorting)
+   - "All Project Leads" section with edit/delete functionality (no filters/sorting)
+   - Dashboard now serves as central hub for viewing and managing all entities
+
+### Previous Update: Authentication & Security
 1. **Google Authentication**: Implemented Replit Auth with domain restrictions
    - Login required to access the application
    - Domain restricted to @ignitetech.com and @khoros.com email addresses
@@ -58,37 +69,43 @@ A comprehensive project management and reporting application for managing teams,
 
 ### Key Features
 
-#### 1. Team Management Tab
-- Add/edit/delete team members
-- Add/edit/delete project leads
-- Same person can be both a team member and project lead
-
-#### 2. Project Management Tab
-- Create new projects with customer, lead, team members, and date range
+#### 1. Team & Projects Tab
+- **Team Member Management**: Add new team members
+- **Project Lead Management**: Add new project leads
+- **Project Creation**: Create new projects with customer, lead, team members, and date range
 - **Search functionality** for team members with real-time filtering
 - **Selected count badge** showing number of team members selected
 - Optimized for large teams (50+ members)
-- Existing projects view removed (see Dashboard instead)
+- Clean interface with add forms only (no lists)
 
-#### 3. Dashboard Tab
-- Overview statistics: Total Projects, Team Members, Project Leads
+#### 2. Dashboard Tab
+- **Overview Statistics**: Total Projects, Team Members, Project Leads
 - **Import from Jira**: One-click import of projects from Jira epics
   - Automatically populates projects with team leads and members
   - Fetches data directly from Jira REST API
   - Requires Jira credentials in Replit Secrets (see JIRA_INTEGRATION_GUIDE.md)
-- Project cards with lead and team member information
-- **Edit Functionality**: Click edit button on any project card to modify all project details
-- **Filters**: By project lead, by team member
-- **Sorting**: By end date (ascending/descending)
+- **All Projects Section**:
+  - Project cards with lead and team member information
+  - Edit button on each project card to modify all project details
+  - Filters: By project lead, by team member
+  - Sorting: By end date (ascending/descending)
+- **All Team Members Section**:
+  - Grid view of all team members
+  - Edit/delete functionality for each member
+  - No filters or sorting (simple list view)
+- **All Project Leads Section**:
+  - Grid view of all project leads
+  - Edit/delete functionality for each lead
+  - No filters or sorting (simple list view)
 
-#### 4. Submit Report Tab
+#### 3. Submit Report Tab
 - Weekly report submission for project leads
 - Health status selection: On Track, At Risk, Critical
 - Progress, challenges, and next week plans
 - Optional team member feedback for each team member on the project
 - Prevents duplicate submissions for the same week
 
-#### 5. View Reports Tab
+#### 4. View Reports Tab
 - **Overview Stats**: Projects On Track, At Risk, Critical
 - **Filters**: By project lead, team member, health status
 - **Export Options**: Save as PDF or CSV (for archival before deleting)
@@ -97,7 +114,7 @@ A comprehensive project management and reporting application for managing teams,
 - Edit existing reports (progress, challenges, plans, health status)
 - Display team member feedback when available
 
-#### 6. Report Status Tab
+#### 5. Report Status Tab
 - **Dashboard Metrics**: Total Projects, Reports Submitted, Reports Pending
 - **Filters**: By project lead, by submission status (all/submitted/pending)
 - Visual indicators for report submission status
