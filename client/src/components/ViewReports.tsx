@@ -33,7 +33,7 @@ const healthStatusConfig = {
 export default function ViewReports() {
   const { toast } = useToast();
   const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
-  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const [editingId, setEditingId] = useState<string | null>(null);

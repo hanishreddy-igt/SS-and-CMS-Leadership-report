@@ -30,7 +30,7 @@ function getCurrentWeekStart(): string {
 export default function SubmitReport() {
   const { toast } = useToast();
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
-  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
   const [selectedLead, setSelectedLead] = useState('');

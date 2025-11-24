@@ -18,7 +18,7 @@ type SortOrder = 'asc' | 'desc';
 export default function ProjectsDashboard() {
   const { toast } = useToast();
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
-  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const [filterLead, setFilterLead] = useState<string>('all');
   const [filterMember, setFilterMember] = useState<string>('all');
@@ -139,6 +139,7 @@ export default function ProjectsDashboard() {
       // Invalidate all relevant queries after successful import
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
       
       toast({ 
         title: 'Success', 

@@ -19,7 +19,7 @@ function getCurrentWeekStart(): string {
 export default function ReportStatus() {
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
-  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/team-members'] });
+  const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   
   const currentWeek = getCurrentWeekStart();
   const [filterLead, setFilterLead] = useState<string>('all');
