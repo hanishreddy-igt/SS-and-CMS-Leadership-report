@@ -87,6 +87,11 @@ export async function setupAuth(app: Express) {
 
   const config = await getOidcConfig();
 
+  // Use fixed hostname from environment to prevent Host header injection
+  const baseHostname = process.env.REPL_SLUG 
+    ? `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+    : 'localhost:5000';
+
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
@@ -94,13 +99,19 @@ export async function setupAuth(app: Express) {
     try {
       const claims = tokens.claims();
       const email = typeof claims?.["email"] === "string" ? claims["email"] : null;
+      const sub = claims?.["sub"];
+      const userId = typeof sub === "string" ? sub : (sub ? String(sub) : undefined);
       
       // Validate domain before creating session
       if (!isAllowedDomain(email)) {
         return verified(new Error(`Access denied. Only @${ALLOWED_DOMAINS.join(' and @')} email addresses are allowed.`), false);
       }
 
-      const user = {};
+      // Store email domain in user object for revalidation
+      const user: any = { 
+        email: email,
+        userId: userId,
+      };
       updateUserSession(user, tokens);
       await upsertUser(claims);
       verified(null, user);
@@ -109,44 +120,48 @@ export async function setupAuth(app: Express) {
     }
   };
 
-  // Keep track of registered strategies
-  const registeredStrategies = new Set<string>();
-
-  // Helper function to ensure strategy exists for a domain
-  const ensureStrategy = (domain: string) => {
-    const strategyName = `replitauth:${domain}`;
-    if (!registeredStrategies.has(strategyName)) {
-      const strategy = new Strategy(
-        {
-          name: strategyName,
-          config,
-          scope: "openid email profile offline_access",
-          callbackURL: `https://${domain}/api/callback`,
-        },
-        verify,
-      );
-      passport.use(strategy);
-      registeredStrategies.add(strategyName);
-    }
-  };
+  // Register a single strategy with the trusted base URL
+  const strategy = new Strategy(
+    {
+      name: "replitauth",
+      config,
+      scope: "openid email profile offline_access",
+      callbackURL: `https://${baseHostname}/api/callback`,
+    },
+    verify,
+  );
+  passport.use(strategy);
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    passport.authenticate("replitauth", {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    passport.authenticate("replitauth", {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login?error=unauthorized",
-    })(req, res, next);
+    })((req as any), res, (err?: any) => {
+      if (err) return next(err);
+      
+      // Regenerate session after successful login to prevent session fixation
+      const oldSession = req.session;
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) return next(regenerateErr);
+        
+        // Restore user data and passport session
+        Object.assign(req.session, oldSession);
+        req.session.save((saveErr) => {
+          if (saveErr) return next(saveErr);
+          res.redirect("/");
+        });
+      });
+    });
   });
 
   app.get("/api/logout", (req, res) => {
@@ -154,7 +169,7 @@ export async function setupAuth(app: Express) {
       res.redirect(
         client.buildEndSessionUrl(config, {
           client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+          post_logout_redirect_uri: `https://${baseHostname}`,
         }).href
       );
     });
@@ -164,8 +179,34 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated() || !user || !user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  // Revalidate domain restriction on every request
+  const userEmail = user.email;
+  if (!isAllowedDomain(userEmail)) {
+    // Domain no longer allowed - destroy session
+    req.logout(() => {
+      res.status(403).json({ message: "Access denied. Your email domain is not authorized." });
+    });
+    return;
+  }
+
+  // Verify user still exists in database
+  if (user.userId) {
+    try {
+      const dbUser = await storage.getUser(user.userId);
+      if (!dbUser || !isAllowedDomain(dbUser.email)) {
+        req.logout(() => {
+          res.status(403).json({ message: "User account not found or domain not authorized." });
+        });
+        return;
+      }
+    } catch (error) {
+      console.error("Error validating user:", error);
+      return res.status(500).json({ message: "Error validating user" });
+    }
   }
 
   const now = Math.floor(Date.now() / 1000);

@@ -1,9 +1,21 @@
 # Weekly Leadership Report Tool
 
 ## Overview
-A comprehensive project management and reporting application for managing teams, projects, and weekly status reports. Built with React, Express, TypeScript, and in-memory storage.
+A comprehensive project management and reporting application for managing teams, projects, and weekly status reports. Built with React, Express, TypeScript, and PostgreSQL database. **Secured with Google authentication restricted to @ignitetech.com and @khoros.com email domains.**
 
-## Recent Changes (November 21, 2025)
+## Recent Changes (November 24, 2025)
+
+### Latest Update: Authentication & Security
+1. **Google Authentication**: Implemented Replit Auth with domain restrictions
+   - Login required to access the application
+   - Domain restricted to @ignitetech.com and @khoros.com email addresses
+   - Server-side validation ensures only authorized domains can authenticate
+   - Landing page for logged-out users with secure login button
+   - All API endpoints protected with authentication middleware
+   - Session management using PostgreSQL database
+   - User profiles stored with email, name, and profile image
+
+## Previous Changes (November 21, 2025)
 
 ### Latest Updates
 1. **Jira Integration - Project Import**: Full integration with Jira to auto-populate Dashboard
@@ -37,7 +49,9 @@ A comprehensive project management and reporting application for managing teams,
 
 ## Project Architecture
 
-### Database Schema
+### Database Schema (PostgreSQL with Drizzle ORM)
+- **Users**: Authentication user data (email, name, profile image from Google)
+- **Sessions**: Session storage for authentication
 - **People**: Unified table for both team members and project leads (supports dual roles)
 - **Projects**: Stores project information with customer, lead, team members, and dates
 - **Weekly Reports**: Stores weekly progress reports with health status and team feedback
@@ -92,20 +106,30 @@ A comprehensive project management and reporting application for managing teams,
 ## Technology Stack
 - **Frontend**: React, TypeScript, Wouter (routing), TanStack Query
 - **UI**: Shadcn UI components, Tailwind CSS
-- **Backend**: Express, TypeScript
-- **Storage**: In-memory storage (MemStorage)
+- **Backend**: Express, TypeScript, Passport.js
+- **Database**: PostgreSQL (Neon serverless) with Drizzle ORM
+- **Authentication**: Replit Auth (OpenID Connect) with Google login
+- **Session Management**: connect-pg-simple (PostgreSQL session store)
 - **Development**: Vite, tsx
 
 ## User Preferences
 - Material Design approach for data-rich enterprise applications
 - Color-coded status indicators for quick visual feedback
 - Responsive design with mobile-friendly layouts
-- Mock data included with //todo: remove mock functionality comments for easy cleanup
+- **Secure access**: Authentication required with domain restrictions (@ignitetech.com, @khoros.com)
 - Jira integration for automatic project data population (see JIRA_INTEGRATION_GUIDE.md)
 
 ## Development Notes
-- Application uses in-memory storage - data resets on server restart
-- Mock data is initialized in client/src/pages/home.tsx
+- **Database Persistence**: All data persists in PostgreSQL database
+- **Authentication**: Replit Auth with domain restriction implemented in server/replitAuth.ts
+- **Protected Routes**: All API endpoints require authentication (server/routes.ts)
+- **Frontend Protection**: Landing page shown for logged-out users, Home page for logged-in users
 - All components are self-contained in client/src/components/
-- Backend routes are defined in server/routes.ts
 - Storage interface is in server/storage.ts
+
+## Security Features
+- Server-side domain validation for @ignitetech.com and @khoros.com
+- Session-based authentication with PostgreSQL session store
+- All API endpoints protected with isAuthenticated middleware
+- Automatic session refresh using refresh tokens
+- Secure cookie configuration (httpOnly, secure, 7-day TTL)
