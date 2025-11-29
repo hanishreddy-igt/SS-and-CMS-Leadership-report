@@ -85,7 +85,7 @@ export default function SubmitReport() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedProject && selectedLead && healthStatus && progress && challenges && nextWeek) {
+    if (selectedProject && selectedLead && healthStatus && progress && nextWeek) {
       const feedback: TeamMemberFeedback[] = Object.entries(memberFeedback)
         .filter(([_, feedback]) => feedback.trim())
         .map(([memberId, feedback]) => ({ memberId, feedback }));
@@ -96,7 +96,7 @@ export default function SubmitReport() {
         weekStart: currentWeek,
         healthStatus,
         progress,
-        challenges,
+        challenges: challenges || null,
         nextWeek,
         teamMemberFeedback: feedback.length > 0 ? feedback : null,
       });
@@ -112,7 +112,7 @@ export default function SubmitReport() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
           <div className="space-y-2">
-            <Label htmlFor="lead">Select Project Lead</Label>
+            <Label htmlFor="lead">Select Project Lead <span className="text-red-500">*</span></Label>
             <Select value={selectedLead} onValueChange={setSelectedLead}>
               <SelectTrigger id="lead" data-testid="select-report-lead">
                 <SelectValue placeholder="Select your name" />
@@ -129,7 +129,7 @@ export default function SubmitReport() {
 
           {selectedLead && (
             <div className="space-y-2">
-              <Label htmlFor="project">Select Project</Label>
+              <Label htmlFor="project">Select Project <span className="text-red-500">*</span></Label>
               <Select value={selectedProject} onValueChange={setSelectedProject}>
                 <SelectTrigger id="project" data-testid="select-report-project">
                   <SelectValue placeholder="Select project" />
@@ -153,7 +153,7 @@ export default function SubmitReport() {
           {selectedProject && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="health-status">Project Health Status</Label>
+                <Label htmlFor="health-status">Project Health Status <span className="text-red-500">*</span></Label>
                 <Select value={healthStatus} onValueChange={setHealthStatus}>
                   <SelectTrigger id="health-status" data-testid="select-health-status">
                     <SelectValue placeholder="Select health status" />
@@ -175,7 +175,7 @@ export default function SubmitReport() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="progress">Progress This Week</Label>
+                <Label htmlFor="progress">Progress This Week <span className="text-red-500">*</span></Label>
                 <Textarea
                   id="progress"
                   data-testid="textarea-progress"
@@ -199,7 +199,7 @@ export default function SubmitReport() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="next-week">Plans for Next Week</Label>
+                <Label htmlFor="next-week">Plans for Next Week <span className="text-red-500">*</span></Label>
                 <Textarea
                   id="next-week"
                   data-testid="textarea-next-week"

@@ -38,8 +38,8 @@ export const projects = pgTable("projects", {
   customer: text("customer").notNull(),
   leadId: varchar("lead_id").notNull(),
   teamMemberIds: text("team_member_ids").array().notNull(),
-  startDate: text("start_date").notNull(),
-  endDate: text("end_date").notNull(),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
 });
 
 export const weeklyReports = pgTable("weekly_reports", {
@@ -49,7 +49,7 @@ export const weeklyReports = pgTable("weekly_reports", {
   weekStart: text("week_start").notNull(),
   healthStatus: text("health_status").notNull(),
   progress: text("progress").notNull(),
-  challenges: text("challenges").notNull(),
+  challenges: text("challenges"),
   nextWeek: text("next_week").notNull(),
   teamMemberFeedback: jsonb("team_member_feedback"),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),

@@ -120,11 +120,13 @@ export default function TeamAndProjectManagement() {
       projectFormData.name &&
       projectFormData.customer &&
       projectFormData.leadId &&
-      projectFormData.teamMemberIds.length > 0 &&
-      projectFormData.startDate &&
-      projectFormData.endDate
+      projectFormData.teamMemberIds.length > 0
     ) {
-      createProjectMutation.mutate(projectFormData);
+      createProjectMutation.mutate({
+        ...projectFormData,
+        startDate: projectFormData.startDate || null,
+        endDate: projectFormData.endDate || null,
+      });
     }
   };
 
@@ -209,7 +211,7 @@ export default function TeamAndProjectManagement() {
         <CardContent>
           <form onSubmit={handleSubmitProject} className="space-y-4 max-w-2xl">
             <div className="space-y-2">
-              <Label htmlFor="project-name">Project Name</Label>
+              <Label htmlFor="project-name">Project Name <span className="text-red-500">*</span></Label>
               <Input
                 id="project-name"
                 data-testid="input-project-name"
@@ -221,7 +223,7 @@ export default function TeamAndProjectManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customer">Customer</Label>
+              <Label htmlFor="customer">Customer <span className="text-red-500">*</span></Label>
               <Input
                 id="customer"
                 data-testid="input-customer"
@@ -233,7 +235,7 @@ export default function TeamAndProjectManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lead">Project Lead</Label>
+              <Label htmlFor="lead">Project Lead <span className="text-red-500">*</span></Label>
               <Select
                 value={projectFormData.leadId}
                 onValueChange={(value) => setProjectFormData({ ...projectFormData, leadId: value })}
@@ -253,7 +255,7 @@ export default function TeamAndProjectManagement() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Team Members</Label>
+                <Label>Team Members <span className="text-red-500">*</span></Label>
                 {projectFormData.teamMemberIds.length > 0 && (
                   <Badge variant="secondary" data-testid="badge-selected-count">
                     {projectFormData.teamMemberIds.length} selected
