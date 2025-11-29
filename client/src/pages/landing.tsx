@@ -13,7 +13,7 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">Weekly Leadership Report Tool</h1>
+            <h1 className="text-2xl font-bold">CMS & SS Leadership Report</h1>
           </div>
           <Button onClick={handleLogin} data-testid="button-login">
             Sign In
@@ -25,17 +25,17 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-16 max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">
-              Comprehensive Project Management & Reporting
+              Community Managed services & Strategic services Leadership Report
             </h2>
             <p className="text-xl text-muted-foreground mb-8">
-              Manage teams, track projects, and submit weekly progress reports with health status monitoring
+              A tool for the leadership to help understand the status of all CMS and SS account delivery status
             </p>
             <Button size="lg" onClick={handleLogin} data-testid="button-login-hero">
               Get Started - Sign In with Google
             </Button>
             <p className="text-sm text-muted-foreground mt-4">
               <Shield className="inline h-4 w-4 mr-1" />
-              Restricted to @ignitetech.com and @khoros.com email addresses
+              Restricted to @ignitetech.com email addresses
             </p>
           </div>
 
@@ -93,7 +93,6 @@ export default function Landing() {
                 <p>Access is restricted to authorized email domains:</p>
                 <ul className="list-disc list-inside space-y-2 text-muted-foreground">
                   <li>@ignitetech.com</li>
-                  <li>@khoros.com</li>
                 </ul>
                 <p className="text-sm text-muted-foreground">
                   Sign in with your corporate Google account to access the application.
@@ -106,7 +105,7 @@ export default function Landing() {
 
       <footer className="border-t py-6">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          Weekly Leadership Report Tool - Secure Project Management & Reporting
+          CMS & SS Leadership Report - IgniteTech
         </div>
       </footer>
     </div>

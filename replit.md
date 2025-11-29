@@ -1,7 +1,7 @@
-# Weekly Leadership Report Tool
+# Community Managed services & Strategic services Leadership Report
 
 ## Overview
-A comprehensive project management and reporting application for managing teams, projects, and weekly status reports. Built with React, Express, TypeScript, and PostgreSQL database. **Secured with Google authentication restricted to @ignitetech.com and @khoros.com email domains.**
+A tool for the leadership to help understand the status of all CMS and SS account delivery status. Built with React, Express, TypeScript, and PostgreSQL database. **Secured with Google authentication restricted to @ignitetech.com email domain only.**
 
 ## Recent Changes (November 29, 2025)
 
@@ -257,7 +257,7 @@ A comprehensive project management and reporting application for managing teams,
 - Material Design approach for data-rich enterprise applications
 - Color-coded status indicators for quick visual feedback
 - Responsive design with mobile-friendly layouts
-- **Secure access**: Authentication required with domain restrictions (@ignitetech.com, @khoros.com)
+- **Secure access**: Authentication required with domain restriction (@ignitetech.com only)
 - Jira integration for automatic project data population (see JIRA_INTEGRATION_GUIDE.md)
 
 ## Development Notes
@@ -269,7 +269,7 @@ A comprehensive project management and reporting application for managing teams,
 - Storage interface is in server/storage.ts
 
 ## Security Features
-- Server-side domain validation for @ignitetech.com and @khoros.com
+- Server-side domain validation for @ignitetech.com only
 - Session-based authentication with PostgreSQL session store
 - All API endpoints protected with isAuthenticated middleware
 - Automatic session refresh using refresh tokens
