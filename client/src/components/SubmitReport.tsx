@@ -62,8 +62,18 @@ export default function SubmitReport() {
     : [];
 
   const currentWeekReports = weeklyReports.filter((r) => r.weekStart === currentWeek);
-  const totalProjects = projects.length;
-  const submittedCount = projects.filter((p) =>
+  
+  const isProjectEndedCheck = (endDate: string | null | undefined) => {
+    if (!endDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const projectEndDate = new Date(endDate);
+    return projectEndDate < today;
+  };
+  
+  const activeProjects = projects.filter((p) => !isProjectEndedCheck(p.endDate));
+  const totalProjects = activeProjects.length;
+  const submittedCount = activeProjects.filter((p) =>
     currentWeekReports.some((r) => r.projectId === p.id && r.status === 'submitted')
   ).length;
   const pendingCount = totalProjects - submittedCount;
