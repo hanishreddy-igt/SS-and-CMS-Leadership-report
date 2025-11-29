@@ -402,6 +402,51 @@ export default function ViewReports() {
                       </div>
 
                       <div className="space-y-2">
+                        <Label className="text-sm font-medium">By Health Status</Label>
+                        <div className="space-y-1">
+                          {[
+                            { value: 'all', label: 'All Health Status' },
+                            { value: 'on-track', label: 'On Track' },
+                            { value: 'at-risk', label: 'Needs Attention' },
+                            { value: 'critical', label: 'Critical' },
+                          ].map((option) => (
+                            <div
+                              key={option.value}
+                              className="flex items-center gap-2 p-1 hover-elevate rounded cursor-pointer"
+                              onClick={() => setFilterHealth(option.value)}
+                            >
+                              <Checkbox
+                                checked={filterHealth === option.value}
+                                onCheckedChange={() => setFilterHealth(option.value)}
+                                data-testid={`checkbox-health-${option.value}`}
+                              />
+                              <span className="text-sm">{option.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">By Project Status</Label>
+                        <div className="space-y-1">
+                          {projectStatusOptions.map((option) => (
+                            <div
+                              key={option.value}
+                              className="flex items-center gap-2 p-1 hover-elevate rounded cursor-pointer"
+                              onClick={() => setFilterProjectStatus(option.value)}
+                            >
+                              <Checkbox
+                                checked={filterProjectStatus === option.value}
+                                onCheckedChange={() => setFilterProjectStatus(option.value)}
+                                data-testid={`checkbox-project-status-${option.value}`}
+                              />
+                              <span className="text-sm">{option.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
                         <Label className="text-sm font-medium">By Lead</Label>
                         <Input
                           placeholder="Search leads..."
@@ -457,51 +502,6 @@ export default function ViewReports() {
                             ))}
                           </div>
                         </ScrollArea>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">By Health Status</Label>
-                        <div className="space-y-1">
-                          {[
-                            { value: 'all', label: 'All Health Status' },
-                            { value: 'on-track', label: 'On Track' },
-                            { value: 'at-risk', label: 'Needs Attention' },
-                            { value: 'critical', label: 'Critical' },
-                          ].map((option) => (
-                            <div
-                              key={option.value}
-                              className="flex items-center gap-2 p-1 hover-elevate rounded cursor-pointer"
-                              onClick={() => setFilterHealth(option.value)}
-                            >
-                              <Checkbox
-                                checked={filterHealth === option.value}
-                                onCheckedChange={() => setFilterHealth(option.value)}
-                                data-testid={`checkbox-health-${option.value}`}
-                              />
-                              <span className="text-sm">{option.label}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">By Project Status</Label>
-                        <div className="space-y-1">
-                          {projectStatusOptions.map((option) => (
-                            <div
-                              key={option.value}
-                              className="flex items-center gap-2 p-1 hover-elevate rounded cursor-pointer"
-                              onClick={() => setFilterProjectStatus(option.value)}
-                            >
-                              <Checkbox
-                                checked={filterProjectStatus === option.value}
-                                onCheckedChange={() => setFilterProjectStatus(option.value)}
-                                data-testid={`checkbox-project-status-${option.value}`}
-                              />
-                              <span className="text-sm">{option.label}</span>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </PopoverContent>
