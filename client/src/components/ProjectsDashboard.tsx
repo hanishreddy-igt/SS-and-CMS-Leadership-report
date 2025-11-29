@@ -890,8 +890,13 @@ export default function ProjectsDashboard() {
   const renewalProjectsCMS = renewalProjects.filter(p => p.projectType === 'CMS').length;
   const renewalProjectsSS = renewalProjects.filter(p => p.projectType === 'SS').length;
 
-  // Tile click handlers - scroll to projects and apply filter
+  // Tile click handlers - clear all filters first, then apply specific filter and scroll
   const handleLongTermActiveClick = () => {
+    // Clear all existing filters
+    setFilterLeads([]);
+    setFilterMembers([]);
+    setFilterProjectName('');
+    // Apply the status filter
     setFilterProjectStatus(['active']);
     setTimeout(() => {
       const projectsSection = document.getElementById('all-projects-section');
@@ -902,6 +907,11 @@ export default function ProjectsDashboard() {
   };
 
   const handleRenewalsSoonClick = () => {
+    // Clear all existing filters
+    setFilterLeads([]);
+    setFilterMembers([]);
+    setFilterProjectName('');
+    // Apply the status filter
     setFilterProjectStatus(['renewal']);
     setTimeout(() => {
       const projectsSection = document.getElementById('all-projects-section');
