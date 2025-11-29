@@ -153,6 +153,8 @@ export default function SubmitReport() {
     if (statusFilterStatus === 'submitted' && reportStatus !== 'submitted') return false;
     if (statusFilterStatus === 'drafted' && reportStatus !== 'drafted') return false;
     if (statusFilterStatus === 'pending' && reportStatus !== 'pending') return false;
+    // 'awaiting' means pending OR drafted (not submitted yet)
+    if (statusFilterStatus === 'awaiting' && reportStatus === 'submitted') return false;
     
     return true;
   });
@@ -314,11 +316,11 @@ export default function SubmitReport() {
     setStatusFilterLeads(new Set());
     setStatusLeadSearch('');
     
-    // Toggle: if already filtered to 'pending', clear it; otherwise apply it
-    if (statusFilterStatus === 'pending') {
+    // Toggle: if already filtered to 'awaiting' (pending + drafted), clear it; otherwise apply it
+    if (statusFilterStatus === 'awaiting') {
       setStatusFilterStatus('all');
     } else {
-      setStatusFilterStatus('pending');
+      setStatusFilterStatus('awaiting');
     }
     
     setTimeout(() => {
@@ -360,7 +362,7 @@ export default function SubmitReport() {
         </div>
 
         <div 
-          className={`glass-card rounded-xl p-6 cursor-pointer transition-all hover:border-warning/30 ${statusFilterStatus === 'pending' ? 'border-warning/50 ring-1 ring-warning/20' : ''}`}
+          className={`glass-card rounded-xl p-6 cursor-pointer transition-all hover:border-warning/30 ${statusFilterStatus === 'awaiting' ? 'border-warning/50 ring-1 ring-warning/20' : ''}`}
           onClick={handlePendingTileClick}
           data-testid="tile-pending-reports"
         >
