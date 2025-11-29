@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -800,11 +800,11 @@ export default function ProjectsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Active Projects</p>
-                <p className="text-3xl font-bold" data-testid="text-active-projects">
+                <p className="text-3xl font-bold text-green-600" data-testid="text-active-projects">
                   {projects.filter(p => getProjectStatus(p.endDate) !== 'ended').length}
                 </p>
               </div>
-              <Briefcase className="h-8 w-8 text-primary" />
+              <CheckCircle2 className="h-8 w-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -1626,11 +1626,14 @@ export default function ProjectsDashboard() {
         </CardContent>
       </Card>
 
-      {/* All Team Members Section */}
+      {/* Team Members Section */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="text-2xl">All Team Members ({teamMembers.length})</CardTitle>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <UsersRound className="h-6 w-6" />
+              Team Members ({teamMembers.length})
+            </CardTitle>
             <div className="flex gap-2">
               <Dialog open={showAddMemberDialog} onOpenChange={(open) => {
                 setShowAddMemberDialog(open);
@@ -1844,11 +1847,14 @@ export default function ProjectsDashboard() {
         </CardContent>
       </Card>
 
-      {/* All Project Leads Section */}
+      {/* Project Leads Section */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="text-2xl">All Project Leads ({projectLeads.length})</CardTitle>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <UserCog className="h-6 w-6" />
+              Project Leads ({projectLeads.length})
+            </CardTitle>
             <div className="flex gap-2">
               <Dialog open={showAddLeadDialog} onOpenChange={(open) => {
                 setShowAddLeadDialog(open);
