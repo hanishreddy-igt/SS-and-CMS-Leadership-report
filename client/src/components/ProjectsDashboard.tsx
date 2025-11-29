@@ -29,10 +29,14 @@ export default function ProjectsDashboard() {
   const [filterMembers, setFilterMembers] = useState<string[]>([]);
   const [filterProjectName, setFilterProjectName] = useState<string>('');
   const [filterMemberSearch, setFilterMemberSearch] = useState<string>('');
+  const [filterLeadSearch, setFilterLeadSearch] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [sortField, setSortField] = useState<SortField>('endDate');
   
-  // Bulk selection state
+  // Bulk selection state - selection mode toggle
+  const [selectionModeProjects, setSelectionModeProjects] = useState(false);
+  const [selectionModeMembers, setSelectionModeMembers] = useState(false);
+  const [selectionModeLeads, setSelectionModeLeads] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
@@ -175,27 +179,27 @@ export default function ProjectsDashboard() {
     });
   };
   
-  const selectAllProjects = () => {
-    if (selectedProjects.size === sortedProjects.length) {
-      setSelectedProjects(new Set());
-    } else {
+  const selectAllProjects = (selectAll: boolean) => {
+    if (selectAll) {
       setSelectedProjects(new Set(sortedProjects.map(p => p.id)));
+    } else {
+      setSelectedProjects(new Set());
     }
   };
   
-  const selectAllMembers = () => {
-    if (selectedMembers.size === teamMembers.length) {
-      setSelectedMembers(new Set());
-    } else {
+  const selectAllMembers = (selectAll: boolean) => {
+    if (selectAll) {
       setSelectedMembers(new Set(teamMembers.map(m => m.id)));
+    } else {
+      setSelectedMembers(new Set());
     }
   };
   
-  const selectAllLeads = () => {
-    if (selectedLeads.size === projectLeads.length) {
-      setSelectedLeads(new Set());
-    } else {
+  const selectAllLeads = (selectAll: boolean) => {
+    if (selectAll) {
       setSelectedLeads(new Set(projectLeads.map(l => l.id)));
+    } else {
+      setSelectedLeads(new Set());
     }
   };
 
@@ -558,6 +562,23 @@ export default function ProjectsDashboard() {
     setFilterLeads([]);
     setFilterMembers([]);
     setFilterMemberSearch('');
+    setFilterLeadSearch('');
+  };
+  
+  // Exit selection mode and clear selections
+  const exitSelectionModeProjects = () => {
+    setSelectionModeProjects(false);
+    setSelectedProjects(new Set());
+  };
+  
+  const exitSelectionModeMembers = () => {
+    setSelectionModeMembers(false);
+    setSelectedMembers(new Set());
+  };
+  
+  const exitSelectionModeLeads = () => {
+    setSelectionModeLeads(false);
+    setSelectedLeads(new Set());
   };
   
   // Bulk delete mutations
@@ -1031,7 +1052,7 @@ export default function ProjectsDashboard() {
                       </div>
                     </div>
 
-                    {/* Filter by Lead - Multi Select */}
+                    {/* Filter by Lead - Multi Select with Search */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">Filter by Lead</Label>
@@ -1041,8 +1062,32 @@ export default function ProjectsDashboard() {
                           </Badge>
                         )}
                       </div>
-                      <div className="border rounded-md p-2 space-y-1 max-h-32 overflow-y-auto" data-testid="filter-leads-container">
-                        {projectLeads.map((lead) => (
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          placeholder="Search leads..."
+                          value={filterLeadSearch}
+                          onChange={(e) => setFilterLeadSearch(e.target.value)}
+                          className="pl-9 pr-9"
+                          data-testid="input-filter-lead-search"
+                        />
+                        {filterLeadSearch && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setFilterLeadSearch('')}
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="border rounded-md p-2 space-y-1 max-h-[180px] overflow-y-auto" data-testid="filter-leads-container">
+                        {projectLeads
+                          .filter(lead => lead.name.toLowerCase().includes(filterLeadSearch.toLowerCase()))
+                          .map((lead) => (
                           <div key={lead.id} className="flex items-center gap-2">
                             <Checkbox
                               id={`filter-lead-${lead.id}`}
@@ -1058,8 +1103,10 @@ export default function ProjectsDashboard() {
                             </Label>
                           </div>
                         ))}
-                        {projectLeads.length === 0 && (
-                          <p className="text-sm text-muted-foreground text-center py-2">No leads available</p>
+                        {projectLeads.filter(lead => lead.name.toLowerCase().includes(filterLeadSearch.toLowerCase())).length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-2">
+                            {filterLeadSearch ? `No leads matching "${filterLeadSearch}"` : 'No leads available'}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1096,7 +1143,7 @@ export default function ProjectsDashboard() {
                           </Button>
                         )}
                       </div>
-                      <div className="border rounded-md p-2 space-y-1 max-h-32 overflow-y-auto" data-testid="filter-members-container">
+                      <div className="border rounded-md p-2 space-y-1 max-h-[180px] overflow-y-auto" data-testid="filter-members-container">
                         {filteredMembersForFilter.map((member) => (
                           <div key={member.id} className="flex items-center gap-2">
                             <Checkbox
@@ -1133,80 +1180,103 @@ export default function ProjectsDashboard() {
             </p>
           ) : (
             <>
-              {/* Bulk Selection Controls for Projects */}
+              {/* Selection Mode Controls for Projects */}
               <div className="flex items-center gap-4 mb-4 pb-4 border-b">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="select-all-projects"
-                    data-testid="checkbox-select-all-projects"
-                    checked={selectedProjects.size === sortedProjects.length && sortedProjects.length > 0}
-                    onCheckedChange={selectAllProjects}
-                  />
-                  <Label htmlFor="select-all-projects" className="font-normal cursor-pointer">
-                    Select All
-                  </Label>
-                </div>
-                {selectedProjects.size > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{selectedProjects.size} selected</Badge>
+                {!selectionModeProjects ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectionModeProjects(true)}
+                    data-testid="button-enter-selection-projects"
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Select
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button
-                      variant="destructive"
+                      variant="outline"
                       size="sm"
-                      onClick={() => setShowBulkDeleteProjects(true)}
-                      data-testid="button-bulk-delete-projects"
+                      onClick={() => selectAllProjects(selectedProjects.size !== sortedProjects.length)}
+                      data-testid="button-select-all-projects"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete Selected
+                      {selectedProjects.size === sortedProjects.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                    <Badge variant="secondary">{selectedProjects.size} selected</Badge>
+                    {selectedProjects.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowBulkDeleteProjects(true)}
+                        data-testid="button-bulk-delete-projects"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={exitSelectionModeProjects}
+                      data-testid="button-exit-selection-projects"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
                     </Button>
                   </div>
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {sortedProjects.map((project) => (
-                <Card key={project.id} data-testid={`project-card-${project.id}`} className={selectedProjects.has(project.id) ? 'ring-2 ring-primary' : ''}>
+                <Card 
+                  key={project.id} 
+                  data-testid={`project-card-${project.id}`} 
+                  className={`${selectedProjects.has(project.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeProjects ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+                  onClick={selectionModeProjects ? () => toggleProjectSelection(project.id) : undefined}
+                >
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex items-start gap-3 flex-1">
-                        <Checkbox
-                          id={`select-project-${project.id}`}
-                          data-testid={`checkbox-select-project-${project.id}`}
-                          checked={selectedProjects.has(project.id)}
-                          onCheckedChange={() => toggleProjectSelection(project.id)}
-                          className="mt-1"
-                        />
+                        {selectionModeProjects && (
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-1 ${selectedProjects.has(project.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
+                            {selectedProjects.has(project.id) && <Check className="h-3 w-3 text-primary-foreground" />}
+                          </div>
+                        )}
                         <div className="flex-1">
                           <CardTitle className="text-xl">{project.name}</CardTitle>
                           <p className="text-sm text-muted-foreground">{project.customer}</p>
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            data-testid={`button-project-menu-${project.id}`}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={() => startEdit(project)}
-                            data-testid={`button-edit-project-${project.id}`}
-                          >
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => setDeletingProjectId(project.id)}
-                            className="text-destructive focus:text-destructive"
-                            data-testid={`button-delete-project-${project.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {!selectionModeProjects && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              data-testid={`button-project-menu-${project.id}`}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => startEdit(project)}
+                              data-testid={`button-edit-project-${project.id}`}
+                            >
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => setDeletingProjectId(project.id)}
+                              className="text-destructive focus:text-destructive"
+                              data-testid={`button-delete-project-${project.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                       <Dialog open={editingProject?.id === project.id} onOpenChange={(open) => !open && setEditingProject(null)}>
                         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
@@ -1398,17 +1468,6 @@ export default function ProjectsDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl">All Team Members ({teamMembers.length})</CardTitle>
             <div className="flex gap-2">
-              {selectedMembers.size > 0 && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowBulkDeleteMembers(true)}
-                  data-testid="button-bulk-delete-members"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete {selectedMembers.size} Selected
-                </Button>
-              )}
               <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
                 <DialogTrigger asChild>
                   <Button variant="default" className="gap-2" data-testid="button-add-member">
@@ -1468,26 +1527,59 @@ export default function ProjectsDashboard() {
             </p>
           ) : (
             <>
-              {/* Bulk Selection Controls for Members */}
+              {/* Selection Mode Controls for Members */}
               <div className="flex items-center gap-4 mb-4 pb-4 border-b">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="select-all-members"
-                    data-testid="checkbox-select-all-members"
-                    checked={selectedMembers.size === teamMembers.length && teamMembers.length > 0}
-                    onCheckedChange={selectAllMembers}
-                  />
-                  <Label htmlFor="select-all-members" className="font-normal cursor-pointer">
-                    Select All
-                  </Label>
-                </div>
+                {!selectionModeMembers ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectionModeMembers(true)}
+                    data-testid="button-enter-selection-members"
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Select
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => selectAllMembers(selectedMembers.size !== teamMembers.length)}
+                      data-testid="button-select-all-members"
+                    >
+                      {selectedMembers.size === teamMembers.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                    <Badge variant="secondary">{selectedMembers.size} selected</Badge>
+                    {selectedMembers.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowBulkDeleteMembers(true)}
+                        data-testid="button-bulk-delete-members"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={exitSelectionModeMembers}
+                      data-testid="button-exit-selection-members"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {teamMembers.map((member) => (
               <div
                 key={member.id}
-                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md ${selectedMembers.has(member.id) ? 'ring-2 ring-primary' : ''}`}
+                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors ${selectedMembers.has(member.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeMembers ? 'cursor-pointer hover:bg-muted' : ''}`}
                 data-testid={`member-item-${member.id}`}
+                onClick={selectionModeMembers && editingMemberId !== member.id ? () => toggleMemberSelection(member.id) : undefined}
               >
                 {editingMemberId === member.id ? (
                   <div className="flex-1 flex gap-2">
@@ -1497,12 +1589,13 @@ export default function ProjectsDashboard() {
                       value={editMemberValue}
                       onChange={(e) => setEditMemberValue(e.target.value)}
                       className="flex-1"
+                      onClick={(e) => e.stopPropagation()}
                     />
                     <Button
                       data-testid={`button-save-member-${member.id}`}
                       size="icon"
                       variant="ghost"
-                      onClick={() => saveEditMember(member.id)}
+                      onClick={(e) => { e.stopPropagation(); saveEditMember(member.id); }}
                       disabled={updateMemberMutation.isPending}
                       className="text-green-600 hover:text-green-700"
                     >
@@ -1512,7 +1605,7 @@ export default function ProjectsDashboard() {
                       data-testid={`button-cancel-member-${member.id}`}
                       size="icon"
                       variant="ghost"
-                      onClick={() => setEditingMemberId(null)}
+                      onClick={(e) => { e.stopPropagation(); setEditingMemberId(null); }}
                       className="text-destructive hover:text-destructive"
                     >
                       <X className="h-5 w-5" />
@@ -1521,45 +1614,46 @@ export default function ProjectsDashboard() {
                 ) : (
                   <>
                     <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`select-member-${member.id}`}
-                        data-testid={`checkbox-select-member-${member.id}`}
-                        checked={selectedMembers.has(member.id)}
-                        onCheckedChange={() => toggleMemberSelection(member.id)}
-                      />
+                      {selectionModeMembers && (
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedMembers.has(member.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
+                          {selectedMembers.has(member.id) && <Check className="h-3 w-3 text-primary-foreground" />}
+                        </div>
+                      )}
                       <span data-testid={`text-member-${member.id}`} className="font-medium">
                         {member.name}
                       </span>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          data-testid={`button-member-menu-${member.id}`}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          onClick={() => startEditMember(member)}
-                          data-testid={`button-edit-member-${member.id}`}
-                        >
-                          <Edit2 className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => deleteMemberMutation.mutate(member.id)}
-                          disabled={deleteMemberMutation.isPending}
-                          className="text-destructive focus:text-destructive"
-                          data-testid={`button-delete-member-${member.id}`}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {!selectionModeMembers && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            data-testid={`button-member-menu-${member.id}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => startEditMember(member)}
+                            data-testid={`button-edit-member-${member.id}`}
+                          >
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => deleteMemberMutation.mutate(member.id)}
+                            disabled={deleteMemberMutation.isPending}
+                            className="text-destructive focus:text-destructive"
+                            data-testid={`button-delete-member-${member.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </>
                 )}
               </div>
@@ -1576,17 +1670,6 @@ export default function ProjectsDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl">All Project Leads ({projectLeads.length})</CardTitle>
             <div className="flex gap-2">
-              {selectedLeads.size > 0 && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowBulkDeleteLeads(true)}
-                  data-testid="button-bulk-delete-leads"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete {selectedLeads.size} Selected
-                </Button>
-              )}
               <Dialog open={showAddLeadDialog} onOpenChange={setShowAddLeadDialog}>
                 <DialogTrigger asChild>
                   <Button variant="default" className="gap-2" data-testid="button-add-lead">
@@ -1646,26 +1729,59 @@ export default function ProjectsDashboard() {
             </p>
           ) : (
             <>
-              {/* Bulk Selection Controls for Leads */}
+              {/* Selection Mode Controls for Leads */}
               <div className="flex items-center gap-4 mb-4 pb-4 border-b">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="select-all-leads"
-                    data-testid="checkbox-select-all-leads"
-                    checked={selectedLeads.size === projectLeads.length && projectLeads.length > 0}
-                    onCheckedChange={selectAllLeads}
-                  />
-                  <Label htmlFor="select-all-leads" className="font-normal cursor-pointer">
-                    Select All
-                  </Label>
-                </div>
+                {!selectionModeLeads ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectionModeLeads(true)}
+                    data-testid="button-enter-selection-leads"
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Select
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => selectAllLeads(selectedLeads.size !== projectLeads.length)}
+                      data-testid="button-select-all-leads"
+                    >
+                      {selectedLeads.size === projectLeads.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                    <Badge variant="secondary">{selectedLeads.size} selected</Badge>
+                    {selectedLeads.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowBulkDeleteLeads(true)}
+                        data-testid="button-bulk-delete-leads"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={exitSelectionModeLeads}
+                      data-testid="button-exit-selection-leads"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {projectLeads.map((lead) => (
               <div
                 key={lead.id}
-                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md ${selectedLeads.has(lead.id) ? 'ring-2 ring-primary' : ''}`}
+                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors ${selectedLeads.has(lead.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeLeads ? 'cursor-pointer hover:bg-muted' : ''}`}
                 data-testid={`lead-item-${lead.id}`}
+                onClick={selectionModeLeads && editingLeadId !== lead.id ? () => toggleLeadSelection(lead.id) : undefined}
               >
                 {editingLeadId === lead.id ? (
                   <div className="flex-1 flex gap-2">
@@ -1675,12 +1791,13 @@ export default function ProjectsDashboard() {
                       value={editLeadValue}
                       onChange={(e) => setEditLeadValue(e.target.value)}
                       className="flex-1"
+                      onClick={(e) => e.stopPropagation()}
                     />
                     <Button
                       data-testid={`button-save-lead-${lead.id}`}
                       size="icon"
                       variant="ghost"
-                      onClick={() => saveEditLead(lead.id)}
+                      onClick={(e) => { e.stopPropagation(); saveEditLead(lead.id); }}
                       disabled={updateLeadMutation.isPending}
                       className="text-green-600 hover:text-green-700"
                     >
@@ -1690,7 +1807,7 @@ export default function ProjectsDashboard() {
                       data-testid={`button-cancel-lead-${lead.id}`}
                       size="icon"
                       variant="ghost"
-                      onClick={() => setEditingLeadId(null)}
+                      onClick={(e) => { e.stopPropagation(); setEditingLeadId(null); }}
                       className="text-destructive hover:text-destructive"
                     >
                       <X className="h-5 w-5" />
@@ -1699,45 +1816,46 @@ export default function ProjectsDashboard() {
                 ) : (
                   <>
                     <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`select-lead-${lead.id}`}
-                        data-testid={`checkbox-select-lead-${lead.id}`}
-                        checked={selectedLeads.has(lead.id)}
-                        onCheckedChange={() => toggleLeadSelection(lead.id)}
-                      />
+                      {selectionModeLeads && (
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLeads.has(lead.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
+                          {selectedLeads.has(lead.id) && <Check className="h-3 w-3 text-primary-foreground" />}
+                        </div>
+                      )}
                       <span data-testid={`text-lead-${lead.id}`} className="font-medium">
                         {lead.name}
                       </span>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          data-testid={`button-lead-menu-${lead.id}`}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          onClick={() => startEditLead(lead)}
-                          data-testid={`button-edit-lead-${lead.id}`}
-                        >
-                          <Edit2 className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => deleteLeadMutation.mutate(lead.id)}
-                          disabled={deleteLeadMutation.isPending}
-                          className="text-destructive focus:text-destructive"
-                          data-testid={`button-delete-lead-${lead.id}`}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {!selectionModeLeads && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            data-testid={`button-lead-menu-${lead.id}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => startEditLead(lead)}
+                            data-testid={`button-edit-lead-${lead.id}`}
+                          >
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => deleteLeadMutation.mutate(lead.id)}
+                            disabled={deleteLeadMutation.isPending}
+                            className="text-destructive focus:text-destructive"
+                            data-testid={`button-delete-lead-${lead.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </>
                 )}
               </div>

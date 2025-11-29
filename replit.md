@@ -5,11 +5,26 @@ A comprehensive project management and reporting application for managing teams,
 
 ## Recent Changes (November 29, 2025)
 
-### Latest Update: Enhanced UI with Consolidated Controls
+### Latest Update: Improved Selection Mode & Filter UX
+1. **Selection Mode for Bulk Operations**: Cleaner UI without checkboxes on tiles
+   - "Select" button activates selection mode for each section (Projects, Members, Leads)
+   - Click tiles to select/deselect when in selection mode
+   - Visual indicators: ring highlight and subtle background color for selected items
+   - "Select All" / "Deselect All" toggle button
+   - "Delete" button appears when items are selected
+   - "Cancel" button exits selection mode and clears selections
+   - Checkmarks appear only during selection mode
+
+2. **Enhanced Filter UI**: Scrollable filters with search
+   - Filter by Lead now has search functionality (same as Filter by Member)
+   - Both lead and member filter lists are scrollable (5 items visible at a time)
+   - Search helps find leads/members quickly in large lists
+
+### Previous Update: Enhanced UI with Consolidated Controls
 1. **Sort & Filter Popover**: Consolidated all project filter/sort controls into single button
    - "Sort & Filter" button opens popover with all options
-   - Sort by end date (earliest/latest first)
-   - Filter by project name, lead, and team member
+   - Sort by start date or end date (earliest/latest first)
+   - Filter by project name, lead, and team member (multi-select with checkboxes)
    - Badge shows count of active filters
    - "Clear all" button to reset all filters at once
 
@@ -23,6 +38,9 @@ A comprehensive project management and reporting application for managing teams,
    - Delete option in project card dropdown menu
    - Confirmation dialog before deletion
    - Prevents accidental data loss
+
+4. **Missing End Date Warning**: Visual indicator on project cards
+   - Red text with AlertCircle icon appears when end date is missing
 
 ### Previous Update: Unified Teams & Projects Tab with Modal Forms
 1. **Fully Consolidated Tab Structure**: Merged Dashboard and Team & Projects into single "Teams & Projects" tab
