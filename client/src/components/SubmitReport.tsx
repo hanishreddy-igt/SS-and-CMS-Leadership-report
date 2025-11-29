@@ -16,9 +16,9 @@ import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, Clipb
 import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport } from '@shared/schema';
 
 const healthStatusOptions = [
-  { value: 'on-track', label: 'On Track', icon: CheckCircle2, color: 'text-green-600' },
-  { value: 'at-risk', label: 'Needs Attention', icon: AlertTriangle, color: 'text-amber-600' },
-  { value: 'critical', label: 'Critical', icon: AlertCircle, color: 'text-red-600' },
+  { value: 'on-track', label: 'On Track', icon: CheckCircle2, color: 'text-success' },
+  { value: 'at-risk', label: 'Needs Attention', icon: AlertTriangle, color: 'text-warning' },
+  { value: 'critical', label: 'Critical', icon: AlertCircle, color: 'text-destructive' },
 ];
 
 function getCurrentWeekStart(): string {
@@ -675,7 +675,7 @@ export default function SubmitReport() {
                         return (
                           <div
                             key={project.id}
-                            className="flex items-center justify-between border rounded-md p-3"
+                            className="flex items-center justify-between bg-muted/30 border border-white/10 rounded-lg p-4 transition-all hover:bg-muted/50"
                             data-testid={`status-${project.id}`}
                           >
                             <div className="flex-1">
@@ -683,18 +683,24 @@ export default function SubmitReport() {
                               <p className="text-sm text-muted-foreground">{project.customer}</p>
                             </div>
                             {reportStatus === 'submitted' ? (
-                              <div className="flex items-center gap-2 text-green-600">
-                                <Check className="h-5 w-5" />
+                              <div className="flex items-center gap-2 text-success">
+                                <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+                                  <Check className="h-4 w-4" />
+                                </div>
                                 <span className="text-sm font-medium">Submitted</span>
                               </div>
                             ) : reportStatus === 'drafted' ? (
-                              <div className="flex items-center gap-2 text-blue-600">
-                                <PenLine className="h-5 w-5" />
+                              <div className="flex items-center gap-2 text-primary">
+                                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                  <PenLine className="h-4 w-4" />
+                                </div>
                                 <span className="text-sm font-medium">Drafted</span>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2 text-amber-600">
-                                <Clock className="h-5 w-5" />
+                              <div className="flex items-center gap-2 text-warning">
+                                <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center">
+                                  <Clock className="h-4 w-4" />
+                                </div>
                                 <span className="text-sm font-medium">Pending</span>
                               </div>
                             )}

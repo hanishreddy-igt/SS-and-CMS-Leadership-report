@@ -72,18 +72,53 @@
 
 ### Glassmorphism Cards
 
-**Base Card**:
-- Background: bg-navy-800/40 backdrop-blur-xl
-- Border: border border-teal-500/20
-- Shadow: shadow-2xl with colored glow (teal at 10% opacity)
-- Rounded: rounded-xl
-- Padding: p-6
+**CSS Utility Class: `.glass-card`**
+```css
+.glass-card {
+  background: hsl(var(--card) / 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--primary) / 0.1);
+}
+```
+
+**Usage Pattern**:
+- Apply to all Card components: `<Card className="glass-card border-white/10">`
+- Add header border: `<CardHeader className="border-b border-white/5">`
+- Use `rounded-xl` for standalone glass containers (non-Card elements)
+
+**Section Labels: `.section-label`**
+```css
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--primary));
+  margin-bottom: 0.25rem;
+}
+```
 
 **Metric Cards**:
-- Grid layout with large number (text-5xl), label below
-- Trend indicator: Small arrow icon + percentage in green/red
-- Subtle gradient overlay from top (teal/cyan at 5%)
-- Border-left accent: border-l-4 border-teal-500
+- Grid layout with large number (text-3xl font-bold tabular-nums), label below
+- Progress bars: h-2 bg-muted/30 rounded-full overflow-hidden
+- Icon containers: h-14 w-14 rounded-xl bg-{color}/10 flex items-center justify-center
+- Status colors: text-success, text-warning, text-destructive (theme tokens)
+
+**Premium Metric Card Template**:
+```jsx
+<div className="glass-card rounded-xl p-6">
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="section-label">Label</p>
+      <p className="text-3xl font-bold tabular-nums text-success">42</p>
+      <p className="text-sm text-muted-foreground mt-1">Description</p>
+    </div>
+    <div className="h-14 w-14 rounded-xl bg-success/10 flex items-center justify-center">
+      <Icon className="h-7 w-7 text-success" />
+    </div>
+  </div>
+</div>
+```
 
 ### Data Visualization
 

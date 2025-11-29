@@ -35,9 +35,9 @@ import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback } from '@shared/schema';
 
 const healthStatusConfig = {
-  'on-track': { label: 'On Track', icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-50' },
-  'at-risk': { label: 'Needs Attention', icon: AlertTriangle, color: 'text-amber-600', bgColor: 'bg-amber-50' },
-  'critical': { label: 'Critical', icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
+  'on-track': { label: 'On Track', icon: CheckCircle2, color: 'text-success', bgColor: 'bg-success/10' },
+  'at-risk': { label: 'Needs Attention', icon: AlertTriangle, color: 'text-warning', bgColor: 'bg-warning/10' },
+  'critical': { label: 'Critical', icon: AlertCircle, color: 'text-destructive', bgColor: 'bg-destructive/10' },
 };
 
 export default function ViewReports() {
@@ -629,23 +629,23 @@ export default function ViewReports() {
                 const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
 
                 return (
-                  <Card key={report.id} data-testid={`report-${report.id}`}>
-                    <CardHeader>
+                  <Card key={report.id} data-testid={`report-${report.id}`} className="glass-card border-white/10">
+                    <CardHeader className="border-b border-white/5">
                       <div className="flex justify-between items-start gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <CardTitle className="text-lg">
                               {getProjectName(report.projectId)}
                             </CardTitle>
                             {healthConfig && (
-                              <Badge variant="outline" className="gap-1">
+                              <Badge variant="outline" className={`gap-1 ${healthConfig.color.replace('text-', 'border-').replace('-600', '-500/50')}`}>
                                 <HealthIcon className={`h-3 w-3 ${healthConfig.color}`} />
                                 <span className={healthConfig.color}>{healthConfig.label}</span>
                               </Badge>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Week of {report.weekStart} • By {getLeadName(report.leadId)}
+                            Week of <span className="text-primary">{report.weekStart}</span> • By {getLeadName(report.leadId)}
                           </p>
                         </div>
                         {editingId !== report.id && (
