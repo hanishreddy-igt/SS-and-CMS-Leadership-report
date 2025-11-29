@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, Mail, Building2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -90,11 +90,40 @@ export default function ProjectsDashboard() {
   const [leadNameError, setLeadNameError] = useState<string | null>(null);
   const [leadNameWarning, setLeadNameWarning] = useState<string | null>(null);
 
+  // Project Detail Modal State
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [showProjectDetailModal, setShowProjectDetailModal] = useState(false);
+
+  // Email display toggle state - track which lead's email is visible
+  const [visibleLeadEmail, setVisibleLeadEmail] = useState<string | null>(null);
+
   const totalTeamMembers = teamMembers.length;
   const totalLeads = projectLeads.length;
 
   const getLeadName = (leadId: string) => {
     return projectLeads.find((l) => l.id === leadId)?.name || 'Unknown';
+  };
+
+  const getLeadById = (leadId: string) => {
+    return projectLeads.find((l) => l.id === leadId);
+  };
+
+  const handleProjectClick = (project: Project) => {
+    if (!selectionModeProjects) {
+      setSelectedProject(project);
+      setShowProjectDetailModal(true);
+      setVisibleLeadEmail(null);
+    }
+  };
+
+  const closeProjectDetailModal = () => {
+    setShowProjectDetailModal(false);
+    setSelectedProject(null);
+    setVisibleLeadEmail(null);
+  };
+
+  const toggleLeadEmailVisibility = (leadId: string) => {
+    setVisibleLeadEmail(prev => prev === leadId ? null : leadId);
   };
 
   const getTeamMemberNames = (memberIds: string[]) => {
@@ -815,24 +844,50 @@ export default function ProjectsDashboard() {
     }
   });
 
-  const activeProjects = projects.filter(p => getProjectStatus(p.endDate) !== 'ended');
-  const activeProjectsCMS = activeProjects.filter(p => p.projectType === 'CMS').length;
-  const activeProjectsSS = activeProjects.filter(p => p.projectType === 'SS').length;
+  // Long-term active projects = green status (active with no renewal soon)
+  const longTermActiveProjects = projects.filter(p => getProjectStatus(p.endDate) === 'active');
+  const longTermActiveCMS = longTermActiveProjects.filter(p => p.projectType === 'CMS').length;
+  const longTermActiveSS = longTermActiveProjects.filter(p => p.projectType === 'SS').length;
   
   const renewalProjects = projects.filter(p => getProjectStatus(p.endDate) === 'renewal');
   const renewalProjectsCMS = renewalProjects.filter(p => p.projectType === 'CMS').length;
   const renewalProjectsSS = renewalProjects.filter(p => p.projectType === 'SS').length;
 
+  // Tile click handlers - scroll to projects and apply filter
+  const handleLongTermActiveClick = () => {
+    setFilterProjectStatus(['active']);
+    setTimeout(() => {
+      const projectsSection = document.getElementById('all-projects-section');
+      if (projectsSection) {
+        projectsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
+  const handleRenewalsSoonClick = () => {
+    setFilterProjectStatus(['renewal']);
+    setTimeout(() => {
+      const projectsSection = document.getElementById('all-projects-section');
+      if (projectsSection) {
+        projectsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="metric-card metric-card-success">
+        <div 
+          className="metric-card metric-card-success cursor-pointer hover:border-success/30 transition-all"
+          onClick={handleLongTermActiveClick}
+          data-testid="tile-long-term-active"
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="section-label">Active Projects</p>
+              <p className="section-label">Long-term Active Projects</p>
               <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
-              <p className="text-4xl font-bold tabular-nums text-success" data-testid="text-active-projects">
-                {activeProjects.length} <span className="text-xl font-normal text-muted-foreground">({activeProjectsCMS} | {activeProjectsSS})</span>
+              <p className="text-4xl font-bold tabular-nums text-success" data-testid="text-long-term-active">
+                {longTermActiveProjects.length} <span className="text-xl font-normal text-muted-foreground">({longTermActiveCMS} | {longTermActiveSS})</span>
               </p>
             </div>
             <div className="p-3 rounded-xl bg-success/10 border border-success/20">
@@ -841,7 +896,11 @@ export default function ProjectsDashboard() {
           </div>
         </div>
 
-        <div className="metric-card metric-card-warning">
+        <div 
+          className="metric-card metric-card-warning cursor-pointer hover:border-warning/30 transition-all"
+          onClick={handleRenewalsSoonClick}
+          data-testid="tile-renewals-soon"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="section-label">Renewals Soon</p>
@@ -1467,8 +1526,8 @@ export default function ProjectsDashboard() {
                 <Card 
                   key={project.id} 
                   data-testid={`project-card-${project.id}`} 
-                  className={`${selectedProjects.has(project.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeProjects ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
-                  onClick={selectionModeProjects ? () => toggleProjectSelection(project.id) : undefined}
+                  className={`${selectedProjects.has(project.id) ? 'ring-2 ring-primary bg-primary/5' : ''} cursor-pointer hover:bg-muted/50 transition-colors`}
+                  onClick={selectionModeProjects ? () => toggleProjectSelection(project.id) : () => handleProjectClick(project)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start gap-2">
@@ -1493,20 +1552,21 @@ export default function ProjectsDashboard() {
                               size="icon"
                               variant="ghost"
                               data-testid={`button-project-menu-${project.id}`}
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem 
-                              onClick={() => startEdit(project)}
+                              onClick={(e) => { e.stopPropagation(); startEdit(project); }}
                               data-testid={`button-edit-project-${project.id}`}
                             >
                               <Edit2 className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => setDeletingProjectId(project.id)}
+                              onClick={(e) => { e.stopPropagation(); setDeletingProjectId(project.id); }}
                               className="text-destructive focus:text-destructive"
                               data-testid={`button-delete-project-${project.id}`}
                             >
@@ -2287,6 +2347,148 @@ export default function ProjectsDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Project Detail Modal */}
+      <Dialog open={showProjectDetailModal} onOpenChange={(open) => !open && closeProjectDetailModal()}>
+        <DialogContent className="max-w-lg" data-testid="dialog-project-detail">
+          <DialogHeader className="pb-4 border-b">
+            <div className="flex items-center gap-3">
+              {selectedProject && <EndDateIndicator endDate={selectedProject.endDate} />}
+              <DialogTitle className="text-2xl">{selectedProject?.name}</DialogTitle>
+            </div>
+            <DialogDescription className="sr-only">Project details</DialogDescription>
+          </DialogHeader>
+          
+          {selectedProject && (
+            <div className="space-y-6 py-4">
+              {/* Customer Section */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Customer</p>
+                  <p className="text-lg font-semibold" data-testid="text-project-detail-customer">{selectedProject.customer}</p>
+                </div>
+              </div>
+
+              {/* Project Lead Section - with clickable email */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <UserCog className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground">Project Lead</p>
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer group"
+                    onClick={() => toggleLeadEmailVisibility(selectedProject.leadId)}
+                    data-testid="button-toggle-lead-email"
+                  >
+                    <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid="text-project-detail-lead">
+                      {getLeadName(selectedProject.leadId)}
+                    </p>
+                    <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  {visibleLeadEmail === selectedProject.leadId && (
+                    <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid="text-lead-email">
+                      <Mail className="h-3.5 w-3.5" />
+                      {getLeadById(selectedProject.leadId)?.email || 'No email set'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Team Members Section */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Team Members</p>
+                  <div className="flex flex-wrap gap-2" data-testid="container-project-detail-team">
+                    {getTeamMemberNames(selectedProject.teamMemberIds).map((name, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-sm py-1">
+                        {name}
+                      </Badge>
+                    ))}
+                    {selectedProject.teamMemberIds.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No team members assigned</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dates Section */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Project Timeline</p>
+                  <div className="flex items-center gap-2 mt-1" data-testid="text-project-detail-dates">
+                    <span className="text-base">{selectedProject.startDate || 'Not set'}</span>
+                    <span className="text-muted-foreground">to</span>
+                    <span className="text-base">{selectedProject.endDate || 'Not set'}</span>
+                  </div>
+                  {!selectedProject.endDate && (
+                    <div className="flex items-center gap-1.5 mt-1 text-warning text-sm">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      <span>End date is missing</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Project Type Section */}
+              {selectedProject.projectType && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Briefcase className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Project Type</p>
+                    <Badge variant="outline" className="mt-1" data-testid="badge-project-detail-type">
+                      {selectedProject.projectType === 'CMS' ? 'Community Managed Services' : 'Strategic Services'}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Indicator */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  {(() => {
+                    const status = getProjectStatus(selectedProject.endDate);
+                    if (status === 'active') {
+                      return (
+                        <Badge className="mt-1 bg-success/20 text-success border-success/30" data-testid="badge-project-detail-status">
+                          Long-term Active
+                        </Badge>
+                      );
+                    } else if (status === 'renewal') {
+                      return (
+                        <Badge className="mt-1 bg-warning/20 text-warning border-warning/30" data-testid="badge-project-detail-status">
+                          Renewal Soon
+                        </Badge>
+                      );
+                    } else {
+                      return (
+                        <Badge className="mt-1 bg-destructive/20 text-destructive border-destructive/30" data-testid="badge-project-detail-status">
+                          Ended
+                        </Badge>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
