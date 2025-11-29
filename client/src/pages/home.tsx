@@ -1,20 +1,31 @@
-import { FileText, FolderKanban, Eye } from 'lucide-react';
+import { FileText, FolderKanban, Eye, LogOut } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import ProjectsDashboard from '@/components/ProjectsDashboard';
 import SubmitReport from '@/components/SubmitReport';
 import ViewReports from '@/components/ViewReports';
 
 export default function Home() {
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-title">
-            Weekly Leadership Report Tool
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage teams, projects, and weekly progress reports
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="text-title">
+              Community Managed services & Strategic services Leadership Report
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              A tool for the leadership to help understand the status of all CMS and SS account delivery status
+            </p>
+          </div>
+          <Button variant="outline" onClick={handleLogout} data-testid="button-logout" className="shrink-0">
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
         </div>
 
         <Tabs defaultValue="teams-projects" className="space-y-6">
