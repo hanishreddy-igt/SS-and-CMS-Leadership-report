@@ -17,7 +17,7 @@ import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback
 
 const healthStatusOptions = [
   { value: 'on-track', label: 'On Track', icon: CheckCircle2, color: 'text-green-600' },
-  { value: 'at-risk', label: 'At Risk', icon: AlertTriangle, color: 'text-amber-600' },
+  { value: 'at-risk', label: 'Needs Attention', icon: AlertTriangle, color: 'text-amber-600' },
   { value: 'critical', label: 'Critical', icon: AlertCircle, color: 'text-red-600' },
 ];
 
@@ -405,7 +405,7 @@ export default function SubmitReport() {
                       className="h-8"
                       data-testid="input-status-lead-search"
                     />
-                    <ScrollArea className="h-[140px]">
+                    <ScrollArea className="h-[160px] scrollbar-visible">
                       <div className="space-y-1">
                         {filteredLeadsForSearch.map((lead) => (
                           <div

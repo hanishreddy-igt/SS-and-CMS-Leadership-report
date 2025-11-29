@@ -1084,7 +1084,7 @@ export default function ProjectsDashboard() {
                           </Button>
                         )}
                       </div>
-                      <div className="border rounded-md p-2 space-y-1 max-h-[180px] overflow-y-auto" data-testid="filter-leads-container">
+                      <div className="border rounded-md p-2 space-y-1 max-h-[160px] overflow-y-auto scrollbar-visible" data-testid="filter-leads-container">
                         {projectLeads
                           .filter(lead => lead.name.toLowerCase().includes(filterLeadSearch.toLowerCase()))
                           .map((lead) => (
@@ -1143,7 +1143,7 @@ export default function ProjectsDashboard() {
                           </Button>
                         )}
                       </div>
-                      <div className="border rounded-md p-2 space-y-1 max-h-[180px] overflow-y-auto" data-testid="filter-members-container">
+                      <div className="border rounded-md p-2 space-y-1 max-h-[160px] overflow-y-auto scrollbar-visible" data-testid="filter-members-container">
                         {filteredMembersForFilter.map((member) => (
                           <div key={member.id} className="flex items-center gap-2">
                             <Checkbox

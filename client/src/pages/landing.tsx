@@ -65,7 +65,7 @@ export default function Landing() {
                 <BarChart className="h-8 w-8 text-primary mb-2" />
                 <CardTitle>Weekly Reports</CardTitle>
                 <CardDescription>
-                  Submit progress reports with health status (On Track, At Risk, Critical)
+                  Submit progress reports with health status (On Track, Needs Attention, Critical)
                 </CardDescription>
               </CardHeader>
             </Card>

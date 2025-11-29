@@ -36,7 +36,7 @@ import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback
 
 const healthStatusConfig = {
   'on-track': { label: 'On Track', icon: CheckCircle2, color: 'text-green-600', bgColor: 'bg-green-50' },
-  'at-risk': { label: 'At Risk', icon: AlertTriangle, color: 'text-amber-600', bgColor: 'bg-amber-50' },
+  'at-risk': { label: 'Needs Attention', icon: AlertTriangle, color: 'text-amber-600', bgColor: 'bg-amber-50' },
   'critical': { label: 'Critical', icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
 };
 
@@ -234,7 +234,7 @@ export default function ViewReports() {
     doc.text('Summary', 14, 38);
     doc.setFontSize(10);
     doc.text(`Total Reports: ${sortedReports.length}`, 20, 45);
-    doc.text(`On Track: ${onTrackCount} | At Risk: ${atRiskCount} | Critical: ${criticalCount}`, 20, 51);
+    doc.text(`On Track: ${onTrackCount} | Needs Attention: ${atRiskCount} | Critical: ${criticalCount}`, 20, 51);
 
     const tableData = sortedReports.map((report) => {
       const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
@@ -305,8 +305,8 @@ export default function ViewReports() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">At Risk</p>
-                <p className="text-3xl font-bold text-amber-600" data-testid="text-at-risk">
+                <p className="text-sm text-muted-foreground">Needs Attention</p>
+                <p className="text-3xl font-bold text-amber-600" data-testid="text-needs-attention">
                   {atRiskCount}
                 </p>
               </div>
@@ -375,7 +375,7 @@ export default function ViewReports() {
                           className="h-8"
                           data-testid="input-lead-search"
                         />
-                        <ScrollArea className="h-[120px]">
+                        <ScrollArea className="h-[160px] scrollbar-visible">
                           <div className="space-y-1">
                             {filteredLeadsForSearch.map((lead) => (
                               <div
@@ -404,7 +404,7 @@ export default function ViewReports() {
                           className="h-8"
                           data-testid="input-member-search"
                         />
-                        <ScrollArea className="h-[120px]">
+                        <ScrollArea className="h-[160px] scrollbar-visible">
                           <div className="space-y-1">
                             {filteredMembersForSearch.map((member) => (
                               <div
@@ -430,7 +430,7 @@ export default function ViewReports() {
                           {[
                             { value: 'all', label: 'All Status' },
                             { value: 'on-track', label: 'On Track' },
-                            { value: 'at-risk', label: 'At Risk' },
+                            { value: 'at-risk', label: 'Needs Attention' },
                             { value: 'critical', label: 'Critical' },
                           ].map((option) => (
                             <div
@@ -574,7 +574,7 @@ export default function ViewReports() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="on-track">On Track</SelectItem>
-                                <SelectItem value="at-risk">At Risk</SelectItem>
+                                <SelectItem value="at-risk">Needs Attention</SelectItem>
                                 <SelectItem value="critical">Critical</SelectItem>
                               </SelectContent>
                             </Select>
