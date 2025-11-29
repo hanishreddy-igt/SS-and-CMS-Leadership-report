@@ -40,7 +40,10 @@ export const projects = pgTable("projects", {
   teamMemberIds: text("team_member_ids").array().notNull(),
   startDate: text("start_date"),
   endDate: text("end_date"),
+  projectType: text("project_type"),
 });
+
+export type ProjectType = 'CMS' | 'SS';
 
 export const weeklyReports = pgTable("weekly_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

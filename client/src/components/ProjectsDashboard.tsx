@@ -52,6 +52,7 @@ export default function ProjectsDashboard() {
     teamMemberIds: [] as string[],
     startDate: '',
     endDate: '',
+    projectType: '' as string,
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -72,6 +73,7 @@ export default function ProjectsDashboard() {
     teamMemberIds: [] as string[],
     startDate: '',
     endDate: '',
+    projectType: '' as string,
   });
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectFormErrors, setProjectFormErrors] = useState<Record<string, string>>({});
@@ -270,6 +272,7 @@ export default function ProjectsDashboard() {
       teamMemberIds: project.teamMemberIds,
       startDate: project.startDate || '',
       endDate: project.endDate || '',
+      projectType: project.projectType || '',
     });
     setSearchQuery('');
   };
@@ -326,6 +329,7 @@ export default function ProjectsDashboard() {
           ...editFormData,
           startDate: editFormData.startDate || '2025-08-30',
           endDate: editFormData.endDate || null,
+          projectType: editFormData.projectType || null,
         }
       });
     }
@@ -513,6 +517,7 @@ export default function ProjectsDashboard() {
         teamMemberIds: [],
         startDate: '',
         endDate: '',
+        projectType: '',
       });
       setProjectSearchQuery('');
       setProjectFormErrors({});
@@ -668,6 +673,7 @@ export default function ProjectsDashboard() {
         ...projectFormData,
         startDate: projectFormData.startDate || '2025-08-30',
         endDate: projectFormData.endDate || null,
+        projectType: projectFormData.projectType || null,
       });
     } else {
       toast({
@@ -841,6 +847,7 @@ export default function ProjectsDashboard() {
                     teamMemberIds: [],
                     startDate: '',
                     endDate: '',
+                    projectType: '',
                   });
                   setProjectSearchQuery('');
                   setProjectFormErrors({});
@@ -1014,6 +1021,44 @@ export default function ProjectsDashboard() {
                           value={projectFormData.endDate}
                           onChange={(e) => setProjectFormData({ ...projectFormData, endDate: e.target.value })}
                         />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Type of Project</Label>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="project-type-cms"
+                            data-testid="checkbox-project-type-cms"
+                            checked={projectFormData.projectType === 'CMS'}
+                            onCheckedChange={(checked) => {
+                              setProjectFormData({ 
+                                ...projectFormData, 
+                                projectType: checked ? 'CMS' : '' 
+                              });
+                            }}
+                          />
+                          <Label htmlFor="project-type-cms" className="font-normal cursor-pointer">
+                            Community Managed Services (CMS)
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="project-type-ss"
+                            data-testid="checkbox-project-type-ss"
+                            checked={projectFormData.projectType === 'SS'}
+                            onCheckedChange={(checked) => {
+                              setProjectFormData({ 
+                                ...projectFormData, 
+                                projectType: checked ? 'SS' : '' 
+                              });
+                            }}
+                          />
+                          <Label htmlFor="project-type-ss" className="font-normal cursor-pointer">
+                            Strategic Services (SS)
+                          </Label>
+                        </div>
                       </div>
                     </div>
 
@@ -1559,6 +1604,43 @@ export default function ProjectsDashboard() {
                                 />
                               </div>
                             </div>
+                            <div className="space-y-2">
+                              <Label>Type of Project</Label>
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    id="edit-project-type-cms"
+                                    data-testid="checkbox-edit-project-type-cms"
+                                    checked={editFormData.projectType === 'CMS'}
+                                    onCheckedChange={(checked) => {
+                                      setEditFormData({ 
+                                        ...editFormData, 
+                                        projectType: checked ? 'CMS' : '' 
+                                      });
+                                    }}
+                                  />
+                                  <Label htmlFor="edit-project-type-cms" className="font-normal cursor-pointer">
+                                    Community Managed Services (CMS)
+                                  </Label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    id="edit-project-type-ss"
+                                    data-testid="checkbox-edit-project-type-ss"
+                                    checked={editFormData.projectType === 'SS'}
+                                    onCheckedChange={(checked) => {
+                                      setEditFormData({ 
+                                        ...editFormData, 
+                                        projectType: checked ? 'SS' : '' 
+                                      });
+                                    }}
+                                  />
+                                  <Label htmlFor="edit-project-type-ss" className="font-normal cursor-pointer">
+                                    Strategic Services (SS)
+                                  </Label>
+                                </div>
+                              </div>
+                            </div>
                             <div className="flex justify-end gap-2">
                               <Button
                                 variant="outline"
@@ -1607,6 +1689,15 @@ export default function ProjectsDashboard() {
                         <span className="text-muted-foreground">
                           {project.startDate || 'N/A'} - {project.endDate || 'N/A'}
                         </span>
+                      </div>
+                    )}
+
+                    {project.projectType && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        <Badge variant="outline" className="text-xs" data-testid={`badge-project-type-${project.id}`}>
+                          {project.projectType === 'CMS' ? 'Community Managed Services' : 'Strategic Services'}
+                        </Badge>
                       </div>
                     )}
                     
