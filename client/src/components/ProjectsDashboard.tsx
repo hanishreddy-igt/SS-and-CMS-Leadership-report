@@ -824,42 +824,47 @@ export default function ProjectsDashboard() {
   const renewalProjectsSS = renewalProjects.filter(p => p.projectType === 'SS').length;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active Projects (CMS | SS)</p>
-                <p className="text-3xl font-bold text-green-600" data-testid="text-active-projects">
-                  {activeProjects.length} <span className="text-xl font-normal text-muted-foreground">({activeProjectsCMS} | {activeProjectsSS})</span>
-                </p>
-              </div>
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="metric-card metric-card-success">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-1">Active Projects</p>
+              <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
+              <p className="text-4xl font-bold tabular-nums text-emerald-400" data-testid="text-active-projects">
+                {activeProjects.length} <span className="text-xl font-normal text-muted-foreground">({activeProjectsCMS} | {activeProjectsSS})</span>
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Projects with Renewals Soon (CMS | SS)</p>
-                <p className="text-3xl font-bold text-amber-600" data-testid="text-renewals-soon">
-                  {renewalProjects.length} <span className="text-xl font-normal text-muted-foreground">({renewalProjectsCMS} | {renewalProjectsSS})</span>
-                </p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-amber-500" />
+        <div className="metric-card metric-card-warning">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">Renewals Soon</p>
+              <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
+              <p className="text-4xl font-bold tabular-nums text-amber-400" data-testid="text-renewals-soon">
+                {renewalProjects.length} <span className="text-xl font-normal text-muted-foreground">({renewalProjectsCMS} | {renewalProjectsSS})</span>
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <AlertCircle className="h-8 w-8 text-amber-400" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* All Projects Section */}
-      <Card>
-        <CardHeader>
+      <Card className="glass-card border-white/10">
+        <CardHeader className="border-b border-white/5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <CardTitle className="text-2xl">All Projects ({sortedProjects.length})</CardTitle>
+            <div>
+              <p className="section-label">Project Portfolio</p>
+              <CardTitle className="text-2xl">All Projects <span className="text-primary">({sortedProjects.length})</span></CardTitle>
+            </div>
             <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
               {/* Add New Project Button */}
               <Dialog open={showAddProjectDialog} onOpenChange={(open) => {
