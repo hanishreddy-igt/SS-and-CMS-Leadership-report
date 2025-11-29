@@ -9,18 +9,15 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-white/10 backdrop-blur-xl bg-background/80 sticky top-0 z-50">
+      <header className="border-b border-white/5 backdrop-blur-xl bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
-              <Shield className="h-5 w-5 text-primary" />
+            <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+              <Shield className="h-5 w-5 text-muted-foreground" />
             </div>
-            <h1 className="text-xl font-bold">
-              <span className="gradient-text">CMS & SS</span>
-              <span className="text-foreground"> Leadership Report</span>
-            </h1>
+            <h1 className="text-xl font-bold text-foreground">CMS & SS Leadership Report</h1>
           </div>
-          <Button onClick={handleLogin} data-testid="button-login" className="btn-premium">
+          <Button onClick={handleLogin} data-testid="button-login" variant="default">
             Sign In
           </Button>
         </div>
@@ -29,23 +26,23 @@ export default function Landing() {
       <main className="flex-1">
         <section className="executive-header relative overflow-hidden">
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/3 rounded-full blur-3xl" />
+            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-white/2 rounded-full blur-3xl" />
           </div>
           
           <div className="relative z-10 container mx-auto px-6 py-24 max-w-6xl">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-6">
-                <Zap className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-primary">Executive Dashboard</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6">
+                <Zap className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">Executive Dashboard</span>
               </div>
               
-              <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                <span className="gradient-text">Community Managed services</span>
+              <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-foreground">
+                Community Managed Services
                 <br />
-                <span className="text-foreground">& Strategic services</span>
+                & Strategic Services
                 <br />
-                <span className="text-foreground">Leadership Report</span>
+                Leadership Report
               </h2>
               
               <p className="text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
@@ -54,13 +51,13 @@ export default function Landing() {
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Button size="lg" onClick={handleLogin} data-testid="button-login-hero" className="btn-premium text-lg px-8 py-6">
+                <Button size="lg" onClick={handleLogin} data-testid="button-login-hero" variant="default" className="text-lg px-8 py-6">
                   Get Started — Sign In with Google
                 </Button>
               </div>
               
               <div className="flex items-center justify-center gap-2 mt-6 text-sm text-muted-foreground">
-                <Lock className="h-4 w-4 text-primary" />
+                <Lock className="h-4 w-4 text-muted-foreground" />
                 <span>Restricted to @ignitetech.com email addresses</span>
               </div>
             </div>
@@ -73,8 +70,8 @@ export default function Landing() {
                 { label: 'Health Metrics', value: '99%', icon: TrendingUp },
               ].map((stat, i) => (
                 <div key={stat.label} className="metric-card text-center fade-in" style={{ animationDelay: `${i * 100}ms` }}>
-                  <stat.icon className="h-6 w-6 text-primary mx-auto mb-3" />
-                  <p className="text-3xl font-bold gradient-text">{stat.value}</p>
+                  <stat.icon className="h-6 w-6 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-3xl font-bold platinum-text">{stat.value}</p>
                   <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
                 </div>
               ))}
@@ -90,10 +87,10 @@ export default function Landing() {
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="glass-card-hover border-white/10" data-testid="feature-team-management">
+              <Card className="glass-card border-white/5" data-testid="feature-team-management">
                 <CardHeader>
-                  <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 w-fit mb-4">
-                    <Users className="h-6 w-6 text-primary" />
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mb-4">
+                    <Users className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-lg">Team Management</CardTitle>
                   <CardDescription className="text-muted-foreground">
@@ -102,10 +99,10 @@ export default function Landing() {
                 </CardHeader>
               </Card>
 
-              <Card className="glass-card-hover border-white/10" data-testid="feature-project-tracking">
+              <Card className="glass-card border-white/5" data-testid="feature-project-tracking">
                 <CardHeader>
-                  <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 w-fit mb-4">
-                    <FileText className="h-6 w-6 text-cyan-400" />
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mb-4">
+                    <FileText className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-lg">Project Tracking</CardTitle>
                   <CardDescription className="text-muted-foreground">
@@ -114,10 +111,10 @@ export default function Landing() {
                 </CardHeader>
               </Card>
 
-              <Card className="glass-card-hover border-white/10" data-testid="feature-weekly-reports">
+              <Card className="glass-card border-white/5" data-testid="feature-weekly-reports">
                 <CardHeader>
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 w-fit mb-4">
-                    <BarChart className="h-6 w-6 text-emerald-400" />
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mb-4">
+                    <BarChart className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-lg">Weekly Reports</CardTitle>
                   <CardDescription className="text-muted-foreground">
@@ -126,10 +123,10 @@ export default function Landing() {
                 </CardHeader>
               </Card>
 
-              <Card className="glass-card-hover border-white/10" data-testid="feature-jira-integration">
+              <Card className="glass-card border-white/5" data-testid="feature-jira-integration">
                 <CardHeader>
-                  <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 w-fit mb-4">
-                    <Zap className="h-6 w-6 text-violet-400" />
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mb-4">
+                    <Zap className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-lg">Jira Integration</CardTitle>
                   <CardDescription className="text-muted-foreground">
@@ -143,11 +140,10 @@ export default function Landing() {
 
         <section className="py-20 px-6 border-t border-white/5">
           <div className="container mx-auto max-w-4xl">
-            <Card className="glass-card border-white/10 overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-cyan-400 to-primary" />
+            <Card className="glass-card border-white/5 overflow-hidden">
               <CardHeader className="text-center pb-4">
-                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 w-fit mx-auto mb-4">
-                  <Lock className="h-6 w-6 text-primary" />
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mx-auto mb-4">
+                  <Lock className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <CardTitle className="text-2xl">Secure Enterprise Access</CardTitle>
                 <CardDescription className="text-muted-foreground">
@@ -156,8 +152,8 @@ export default function Landing() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4 text-center">
-                  <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/5 border border-primary/20">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-white/5 border border-white/10">
+                    <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                     <span className="font-medium">@ignitetech.com</span>
                   </div>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
@@ -174,7 +170,7 @@ export default function Landing() {
       <footer className="border-t border-white/5 py-8">
         <div className="container mx-auto px-6 text-center">
           <p className="text-sm text-muted-foreground">
-            CMS & SS Leadership Report — <span className="text-primary">IgniteTech</span>
+            CMS & SS Leadership Report — IgniteTech
           </p>
         </div>
       </footer>
