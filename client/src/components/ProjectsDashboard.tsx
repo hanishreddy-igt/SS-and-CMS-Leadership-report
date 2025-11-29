@@ -798,6 +798,14 @@ export default function ProjectsDashboard() {
     }
   });
 
+  const activeProjects = projects.filter(p => getProjectStatus(p.endDate) !== 'ended');
+  const activeProjectsCMS = activeProjects.filter(p => p.projectType === 'CMS').length;
+  const activeProjectsSS = activeProjects.filter(p => p.projectType === 'SS').length;
+  
+  const renewalProjects = projects.filter(p => getProjectStatus(p.endDate) === 'renewal');
+  const renewalProjectsCMS = renewalProjects.filter(p => p.projectType === 'CMS').length;
+  const renewalProjectsSS = renewalProjects.filter(p => p.projectType === 'SS').length;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -805,9 +813,9 @@ export default function ProjectsDashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active Projects</p>
+                <p className="text-sm text-muted-foreground">Active Projects (CMS | SS)</p>
                 <p className="text-3xl font-bold text-green-600" data-testid="text-active-projects">
-                  {projects.filter(p => getProjectStatus(p.endDate) !== 'ended').length}
+                  {activeProjects.length} <span className="text-xl font-normal text-muted-foreground">({activeProjectsCMS} | {activeProjectsSS})</span>
                 </p>
               </div>
               <CheckCircle2 className="h-8 w-8 text-green-500" />
@@ -819,9 +827,9 @@ export default function ProjectsDashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Projects with Renewals Soon</p>
+                <p className="text-sm text-muted-foreground">Projects with Renewals Soon (CMS | SS)</p>
                 <p className="text-3xl font-bold text-amber-600" data-testid="text-renewals-soon">
-                  {projects.filter(p => getProjectStatus(p.endDate) === 'renewal').length}
+                  {renewalProjects.length} <span className="text-xl font-normal text-muted-foreground">({renewalProjectsCMS} | {renewalProjectsSS})</span>
                 </p>
               </div>
               <AlertCircle className="h-8 w-8 text-amber-500" />
