@@ -201,6 +201,13 @@ export default function SubmitReport() {
         title: 'Draft Saved', 
         description: 'Your report has been saved as a draft' 
       });
+      setSelectedProject('');
+      setHealthStatus('');
+      setProgress('');
+      setChallenges('');
+      setNextWeek('');
+      setMemberFeedback({});
+      setExistingDraftId(null);
     },
     onError: (error: Error) => {
       toast({ 
