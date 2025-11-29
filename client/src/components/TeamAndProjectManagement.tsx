@@ -124,7 +124,7 @@ export default function TeamAndProjectManagement() {
     ) {
       createProjectMutation.mutate({
         ...projectFormData,
-        startDate: projectFormData.startDate || null,
+        startDate: projectFormData.startDate || '2025-08-30',
         endDate: projectFormData.endDate || null,
       });
     }

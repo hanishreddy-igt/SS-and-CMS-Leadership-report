@@ -324,7 +324,7 @@ export default function ProjectsDashboard() {
         id: editingProject.id, 
         updates: {
           ...editFormData,
-          startDate: editFormData.startDate || null,
+          startDate: editFormData.startDate || '2025-08-30',
           endDate: editFormData.endDate || null,
         }
       });
@@ -666,7 +666,7 @@ export default function ProjectsDashboard() {
     if (Object.keys(errors).length === 0) {
       createProjectMutation.mutate({
         ...projectFormData,
-        startDate: projectFormData.startDate || null,
+        startDate: projectFormData.startDate || '2025-08-30',
         endDate: projectFormData.endDate || null,
       });
     } else {
