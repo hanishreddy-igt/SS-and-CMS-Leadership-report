@@ -9,7 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Project, ProjectLead, TeamMember, InsertProject } from '@shared/schema';
 
@@ -41,6 +43,7 @@ export default function ProjectsDashboard() {
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [editMemberValue, setEditMemberValue] = useState('');
   const [editLeadValue, setEditLeadValue] = useState('');
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
 
   // Add Project Modal State
   const [showAddProjectDialog, setShowAddProjectDialog] = useState(false);
@@ -123,6 +126,27 @@ export default function ProjectsDashboard() {
       toast({ 
         title: 'Error', 
         description: error.message || 'Failed to update project',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/projects/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      toast({ 
+        title: 'Success', 
+        description: 'Project deleted successfully' 
+      });
+      setDeletingProjectId(null);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to delete project',
         variant: 'destructive'
       });
     }
@@ -417,6 +441,20 @@ export default function ProjectsDashboard() {
   const filteredProjectTeamMembers = teamMembers.filter((member) =>
     member.name.toLowerCase().includes(projectSearchQuery.toLowerCase())
   );
+
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filterProjectName) count++;
+    if (filterLead !== 'all') count++;
+    if (filterMember !== 'all') count++;
+    return count;
+  };
+
+  const clearAllFilters = () => {
+    setFilterProjectName('');
+    setFilterLead('all');
+    setFilterMember('all');
+  };
 
   return (
     <div className="space-y-6">
@@ -730,66 +768,119 @@ export default function ProjectsDashboard() {
                 </DialogContent>
               </Dialog>
 
-              {/* Project Name Filter */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Filter by name..."
-                  value={filterProjectName}
-                  onChange={(e) => setFilterProjectName(e.target.value)}
-                  className="pl-9 pr-9 w-full sm:w-[180px]"
-                  data-testid="input-filter-project-name"
-                />
-                {filterProjectName && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setFilterProjectName('')}
-                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
-                    data-testid="button-clear-filter-name"
-                  >
-                    <X className="h-4 w-4" />
+              {/* Sort & Filter Popover */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2" data-testid="button-sort-filter">
+                    <Filter className="h-4 w-4" />
+                    Sort & Filter
+                    {getActiveFilterCount() > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                        {getActiveFilterCount()}
+                      </Badge>
+                    )}
                   </Button>
-                )}
-              </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Sort & Filter</h4>
+                      {getActiveFilterCount() > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearAllFilters}
+                          className="h-auto py-1 px-2 text-xs"
+                          data-testid="button-clear-all-filters"
+                        >
+                          Clear all
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* Sort by End Date */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Sort by End Date</Label>
+                      <Button
+                        variant="outline"
+                        onClick={toggleSort}
+                        data-testid="button-sort-date"
+                        className="w-full justify-between"
+                      >
+                        <span>End Date</span>
+                        <span className="flex items-center gap-1">
+                          <ArrowUpDown className="h-4 w-4" />
+                          {sortOrder === 'asc' ? 'Earliest First' : 'Latest First'}
+                        </span>
+                      </Button>
+                    </div>
 
-              <Select value={filterLead} onValueChange={setFilterLead}>
-                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-lead">
-                  <SelectValue placeholder="Filter by lead" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Leads</SelectItem>
-                  {projectLeads.map((lead) => (
-                    <SelectItem key={lead.id} value={lead.id}>
-                      {lead.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={filterMember} onValueChange={setFilterMember}>
-                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-member">
-                  <SelectValue placeholder="Filter by member" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Members</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                onClick={toggleSort}
-                data-testid="button-sort-date"
-                className="gap-2"
-              >
-                <ArrowUpDown className="h-4 w-4" />
-                End Date {sortOrder === 'asc' ? '↑' : '↓'}
-              </Button>
+                    {/* Filter by Name */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Filter by Name</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          placeholder="Search projects..."
+                          value={filterProjectName}
+                          onChange={(e) => setFilterProjectName(e.target.value)}
+                          className="pl-9 pr-9"
+                          data-testid="input-filter-project-name"
+                        />
+                        {filterProjectName && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setFilterProjectName('')}
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                            data-testid="button-clear-filter-name"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Filter by Lead */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Filter by Lead</Label>
+                      <Select value={filterLead} onValueChange={setFilterLead}>
+                        <SelectTrigger className="w-full" data-testid="select-filter-lead">
+                          <SelectValue placeholder="All Leads" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Leads</SelectItem>
+                          {projectLeads.map((lead) => (
+                            <SelectItem key={lead.id} value={lead.id}>
+                              {lead.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Filter by Member */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Filter by Member</Label>
+                      <Select value={filterMember} onValueChange={setFilterMember}>
+                        <SelectTrigger className="w-full" data-testid="select-filter-member">
+                          <SelectValue placeholder="All Members" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Members</SelectItem>
+                          {teamMembers.map((member) => (
+                            <SelectItem key={member.id} value={member.id}>
+                              {member.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardHeader>
@@ -808,17 +899,35 @@ export default function ProjectsDashboard() {
                         <CardTitle className="text-xl">{project.name}</CardTitle>
                         <p className="text-sm text-muted-foreground">{project.customer}</p>
                       </div>
-                      <Dialog open={editingProject?.id === project.id} onOpenChange={(open) => !open && setEditingProject(null)}>
-                        <DialogTrigger asChild>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
                             size="icon"
                             variant="ghost"
+                            data-testid={`button-project-menu-${project.id}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
                             onClick={() => startEdit(project)}
                             data-testid={`button-edit-project-${project.id}`}
                           >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => setDeletingProjectId(project.id)}
+                            className="text-destructive focus:text-destructive"
+                            data-testid={`button-delete-project-${project.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Dialog open={editingProject?.id === project.id} onOpenChange={(open) => !open && setEditingProject(null)}>
                         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>Edit Project</DialogTitle>
@@ -1097,27 +1206,35 @@ export default function ProjectsDashboard() {
                     <span data-testid={`text-member-${member.id}`} className="font-medium">
                       {member.name}
                     </span>
-                    <div className="flex gap-2">
-                      <Button
-                        data-testid={`button-edit-member-${member.id}`}
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => startEditMember(member)}
-                        className="text-primary hover:text-primary"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        data-testid={`button-delete-member-${member.id}`}
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => deleteMemberMutation.mutate(member.id)}
-                        disabled={deleteMemberMutation.isPending}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          data-testid={`button-member-menu-${member.id}`}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => startEditMember(member)}
+                          data-testid={`button-edit-member-${member.id}`}
+                        >
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => deleteMemberMutation.mutate(member.id)}
+                          disabled={deleteMemberMutation.isPending}
+                          className="text-destructive focus:text-destructive"
+                          data-testid={`button-delete-member-${member.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </>
                 )}
               </div>
@@ -1230,27 +1347,35 @@ export default function ProjectsDashboard() {
                     <span data-testid={`text-lead-${lead.id}`} className="font-medium">
                       {lead.name}
                     </span>
-                    <div className="flex gap-2">
-                      <Button
-                        data-testid={`button-edit-lead-${lead.id}`}
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => startEditLead(lead)}
-                        className="text-primary hover:text-primary"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        data-testid={`button-delete-lead-${lead.id}`}
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => deleteLeadMutation.mutate(lead.id)}
-                        disabled={deleteLeadMutation.isPending}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          data-testid={`button-lead-menu-${lead.id}`}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => startEditLead(lead)}
+                          data-testid={`button-edit-lead-${lead.id}`}
+                        >
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => deleteLeadMutation.mutate(lead.id)}
+                          disabled={deleteLeadMutation.isPending}
+                          className="text-destructive focus:text-destructive"
+                          data-testid={`button-delete-lead-${lead.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </>
                 )}
               </div>
@@ -1259,6 +1384,39 @@ export default function ProjectsDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Project Confirmation Dialog */}
+      <Dialog open={!!deletingProjectId} onOpenChange={(open) => !open && setDeletingProjectId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Project</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this project? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeletingProjectId(null)}
+              data-testid="button-cancel-delete-project"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deletingProjectId) {
+                  deleteProjectMutation.mutate(deletingProjectId);
+                }
+              }}
+              disabled={deleteProjectMutation.isPending}
+              data-testid="button-confirm-delete-project"
+            >
+              {deleteProjectMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

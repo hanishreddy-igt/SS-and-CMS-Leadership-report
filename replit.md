@@ -5,7 +5,26 @@ A comprehensive project management and reporting application for managing teams,
 
 ## Recent Changes (November 29, 2025)
 
-### Latest Update: Unified Teams & Projects Tab with Modal Forms
+### Latest Update: Enhanced UI with Consolidated Controls
+1. **Sort & Filter Popover**: Consolidated all project filter/sort controls into single button
+   - "Sort & Filter" button opens popover with all options
+   - Sort by end date (earliest/latest first)
+   - Filter by project name, lead, and team member
+   - Badge shows count of active filters
+   - "Clear all" button to reset all filters at once
+
+2. **Dropdown Menus for Actions**: Replaced visible edit/delete buttons with three-dot menus
+   - Project cards: Three-dot menu with Edit and Delete options
+   - Team member tiles: Three-dot menu with Edit and Delete options
+   - Project lead tiles: Three-dot menu with Edit and Delete options
+   - Cleaner, less cluttered interface
+
+3. **Project Deletion**: Added ability to delete projects
+   - Delete option in project card dropdown menu
+   - Confirmation dialog before deletion
+   - Prevents accidental data loss
+
+### Previous Update: Unified Teams & Projects Tab with Modal Forms
 1. **Fully Consolidated Tab Structure**: Merged Dashboard and Team & Projects into single "Teams & Projects" tab
    - Tab count reduced from 5 to 4 tabs (Teams & Projects, Submit, View, Status)
    - Single unified view for all project and team management
