@@ -1,9 +1,8 @@
-import { FileText, UserCheck, FolderKanban } from 'lucide-react';
+import { FileText, FolderKanban, Eye } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProjectsDashboard from '@/components/ProjectsDashboard';
 import SubmitReport from '@/components/SubmitReport';
 import ViewReports from '@/components/ViewReports';
-import ReportStatus from '@/components/ReportStatus';
 
 export default function Home() {
   return (
@@ -19,22 +18,18 @@ export default function Home() {
         </div>
 
         <Tabs defaultValue="teams-projects" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
+          <TabsList className="grid w-full grid-cols-3 gap-2">
             <TabsTrigger value="teams-projects" data-testid="tab-teams-projects" className="gap-2">
               <FolderKanban className="h-4 w-4" />
               <span className="hidden sm:inline">Teams & Projects</span>
             </TabsTrigger>
             <TabsTrigger value="submit" data-testid="tab-submit" className="gap-2">
               <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Submit</span>
+              <span className="hidden sm:inline">Submit Report</span>
             </TabsTrigger>
             <TabsTrigger value="view" data-testid="tab-view" className="gap-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">View</span>
-            </TabsTrigger>
-            <TabsTrigger value="status" data-testid="tab-status" className="gap-2">
-              <UserCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Status</span>
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">View Reports</span>
             </TabsTrigger>
           </TabsList>
 
@@ -48,10 +43,6 @@ export default function Home() {
 
           <TabsContent value="view">
             <ViewReports />
-          </TabsContent>
-
-          <TabsContent value="status">
-            <ReportStatus />
           </TabsContent>
         </Tabs>
       </div>
