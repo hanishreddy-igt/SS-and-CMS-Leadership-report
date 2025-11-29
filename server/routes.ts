@@ -4,6 +4,14 @@ import { storage } from "./storage";
 import { JiraService } from "./services/jiraService";
 import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import OpenAI from "openai";
+
+// Initialize OpenAI client using Replit AI Integrations
+// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+const openai = new OpenAI({
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
@@ -211,6 +219,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, deleted: reports.length });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI Summary endpoint - Generate weekly insights from reports (protected)
+  app.post('/api/weekly-reports/ai-summary', isAuthenticated, async (_req, res) => {
+    try {
+      const reports = await storage.getWeeklyReports();
+      const projects = await storage.getProjects();
+      const leads = await storage.getProjectLeads();
+      
+      if (reports.length === 0) {
+        return res.json({ 
+          summary: null, 
+          message: 'No reports available to analyze' 
+        });
+      }
+
+      // Get only submitted reports for current week
+      const submittedReports = reports.filter(r => r.status === 'submitted');
+      
+      if (submittedReports.length === 0) {
+        return res.json({ 
+          summary: null, 
+          message: 'No submitted reports available to analyze' 
+        });
+      }
+
+      // Build context for AI
+      const reportsContext = submittedReports.map(report => {
+        const project = projects.find(p => p.id === report.projectId);
+        const lead = leads.find(l => l.id === report.leadId);
+        return {
+          project: project?.name || 'Unknown Project',
+          customer: project?.customer || 'Unknown Customer',
+          lead: lead?.name || 'Unknown Lead',
+          healthStatus: report.healthStatus,
+          progress: report.progress,
+          challenges: report.challenges,
+          nextWeek: report.nextWeek,
+          weekStart: report.weekStart
+        };
+      });
+
+      const prompt = `You are an executive assistant analyzing weekly project reports for leadership. Analyze the following ${submittedReports.length} project reports and provide a concise executive summary.
+
+REPORTS DATA:
+${JSON.stringify(reportsContext, null, 2)}
+
+Generate an executive summary in JSON format with the following structure:
+{
+  "overallHealth": "on-track" | "needs-attention" | "critical",
+  "weekHighlights": ["highlight 1", "highlight 2", "highlight 3"],
+  "keyAchievements": ["achievement 1", "achievement 2"],
+  "criticalIssues": ["issue 1", "issue 2"] or [],
+  "attentionNeeded": ["project/area needing attention"] or [],
+  "upcomingFocus": ["focus area 1", "focus area 2"],
+  "executiveSummary": "A 2-3 sentence overview of the week's performance across all projects"
+}
+
+Be concise and focus on actionable insights. If there are no critical issues, return an empty array. Limit each array to 3-4 items maximum.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini", // Using cost-effective model for summaries
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 1024,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from AI');
+      }
+
+      const summary = JSON.parse(content);
+      
+      res.json({ 
+        summary,
+        reportsAnalyzed: submittedReports.length,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('AI Summary error:', error);
+      res.status(500).json({ 
+        error: error.message || 'Failed to generate AI summary',
+        summary: null 
+      });
     }
   });
 

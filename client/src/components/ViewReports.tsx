@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, Save, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, RefreshCw, FileText, Filter, ChevronDown, Calendar, User, Users, Clock } from 'lucide-react';
+import { Edit2, Save, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, RefreshCw, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback } from '@shared/schema';
@@ -71,6 +71,51 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   // Report Detail Modal State
   const [selectedReport, setSelectedReport] = useState<WeeklyReport | null>(null);
   const [showReportDetailModal, setShowReportDetailModal] = useState(false);
+
+  // AI Summary State
+  interface AISummary {
+    overallHealth: 'on-track' | 'needs-attention' | 'critical';
+    weekHighlights: string[];
+    keyAchievements: string[];
+    criticalIssues: string[];
+    attentionNeeded: string[];
+    upcomingFocus: string[];
+    executiveSummary: string;
+  }
+  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
+  const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<string | null>(null);
+  const [reportsAnalyzed, setReportsAnalyzed] = useState<number>(0);
+
+  const generateSummaryMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/weekly-reports/ai-summary');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.summary) {
+        setAiSummary(data.summary);
+        setSummaryGeneratedAt(data.generatedAt);
+        setReportsAnalyzed(data.reportsAnalyzed || 0);
+        toast({
+          title: 'AI Summary Generated',
+          description: `Analyzed ${data.reportsAnalyzed} reports successfully`,
+        });
+      } else {
+        toast({
+          title: 'No Reports to Analyze',
+          description: data.message || 'Submit some reports first',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to Generate Summary',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   const handleReportClick = (report: WeeklyReport) => {
     if (editingId !== report.id) {
@@ -400,8 +445,176 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.save(`weekly_reports_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  const getOverallHealthConfig = (health: string) => {
+    if (health === 'on-track') return { label: 'On Track', color: 'text-success', bgColor: 'bg-success/10', borderColor: 'border-success/30' };
+    if (health === 'needs-attention') return { label: 'Needs Attention', color: 'text-warning', bgColor: 'bg-warning/10', borderColor: 'border-warning/30' };
+    return { label: 'Critical', color: 'text-destructive', bgColor: 'bg-destructive/10', borderColor: 'border-destructive/30' };
+  };
+
   return (
     <div className="space-y-8">
+      {/* AI Summary Section */}
+      <Card className="glass-card border-white/10">
+        <CardHeader className="border-b border-white/5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="section-label">AI-Powered Insights</p>
+                <CardTitle className="text-2xl">Weekly Summary</CardTitle>
+              </div>
+            </div>
+            <Button
+              onClick={() => generateSummaryMutation.mutate()}
+              disabled={generateSummaryMutation.isPending}
+              className="gap-2"
+              data-testid="button-generate-summary"
+            >
+              {generateSummaryMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analyzing Reports...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Generate AI Summary
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {!aiSummary ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium mb-2">No summary generated yet</p>
+              <p className="text-sm">Click "Generate AI Summary" to analyze all submitted reports and get quick insights for the week.</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Executive Summary */}
+              <div className={`p-4 rounded-lg ${getOverallHealthConfig(aiSummary.overallHealth).bgColor} border ${getOverallHealthConfig(aiSummary.overallHealth).borderColor}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className={`${getOverallHealthConfig(aiSummary.overallHealth).bgColor} ${getOverallHealthConfig(aiSummary.overallHealth).color} border-0`}>
+                    {aiSummary.overallHealth === 'on-track' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                    {aiSummary.overallHealth === 'needs-attention' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                    {aiSummary.overallHealth === 'critical' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                    Overall: {getOverallHealthConfig(aiSummary.overallHealth).label}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Based on {reportsAnalyzed} report{reportsAnalyzed !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <p className="text-foreground leading-relaxed">{aiSummary.executiveSummary}</p>
+              </div>
+
+              {/* Insights Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Week Highlights */}
+                {aiSummary.weekHighlights.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      <h4 className="font-medium">Week Highlights</h4>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {aiSummary.weekHighlights.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Key Achievements */}
+                {aiSummary.keyAchievements.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                      <h4 className="font-medium">Key Achievements</h4>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {aiSummary.keyAchievements.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Critical Issues */}
+                {aiSummary.criticalIssues.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <h4 className="font-medium">Critical Issues</h4>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {aiSummary.criticalIssues.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Attention Needed */}
+                {aiSummary.attentionNeeded.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-warning" />
+                      <h4 className="font-medium">Needs Attention</h4>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {aiSummary.attentionNeeded.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Upcoming Focus */}
+                {aiSummary.upcomingFocus.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-primary" />
+                      <h4 className="font-medium">Upcoming Focus</h4>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {aiSummary.upcomingFocus.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Generated timestamp */}
+              {summaryGeneratedAt && (
+                <p className="text-xs text-muted-foreground text-right">
+                  Generated: {new Date(summaryGeneratedAt).toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card id="weekly-reports-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col gap-4">
