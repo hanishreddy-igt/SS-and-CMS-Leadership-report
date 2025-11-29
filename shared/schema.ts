@@ -47,11 +47,12 @@ export const weeklyReports = pgTable("weekly_reports", {
   projectId: varchar("project_id").notNull(),
   leadId: varchar("lead_id").notNull(),
   weekStart: text("week_start").notNull(),
-  healthStatus: text("health_status").notNull(),
-  progress: text("progress").notNull(),
+  healthStatus: text("health_status"),
+  progress: text("progress"),
   challenges: text("challenges"),
-  nextWeek: text("next_week").notNull(),
+  nextWeek: text("next_week"),
   teamMemberFeedback: jsonb("team_member_feedback"),
+  status: text("status").notNull().default('draft'),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
 
@@ -80,3 +81,4 @@ export type TeamMemberFeedback = {
 };
 
 export type HealthStatus = 'on-track' | 'at-risk' | 'critical';
+export type ReportStatus = 'draft' | 'submitted';
