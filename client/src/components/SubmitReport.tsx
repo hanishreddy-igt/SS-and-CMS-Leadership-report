@@ -335,8 +335,10 @@ export default function SubmitReport() {
                         value={lead.id}
                         disabled={allSubmitted}
                       >
-                        {lead.name}
-                        {allSubmitted && ' (Submitted all reports)'}
+                        <span className="flex items-center gap-1">
+                          {lead.name}
+                          {allSubmitted && <span className="font-bold text-red-600">(Submitted all reports)</span>}
+                        </span>
                       </SelectItem>
                     );
                   })}
@@ -362,10 +364,12 @@ export default function SubmitReport() {
                           value={project.id}
                           disabled={isSubmitted || isEnded}
                         >
-                          {project.name}
-                          {isEnded && ' (Project Ended)'}
-                          {isSubmitted && !isEnded && ' (Already submitted)'}
-                          {isDrafted && !isSubmitted && !isEnded && ' (Drafted)'}
+                          <span className="flex items-center gap-1">
+                            {project.name}
+                            {isEnded && <span className="font-bold text-red-600">(Project Ended)</span>}
+                            {isSubmitted && !isEnded && <span className="font-bold text-red-600">(Already submitted)</span>}
+                            {isDrafted && !isSubmitted && !isEnded && <span className="font-bold text-red-600">(Drafted)</span>}
+                          </span>
                         </SelectItem>
                       );
                     })}
