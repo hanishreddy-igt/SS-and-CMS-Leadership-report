@@ -438,24 +438,42 @@ export default function SubmitReport() {
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button 
-                    data-testid="button-save-draft" 
+                    data-testid="button-cancel"
                     type="button"
                     variant="outline"
-                    className="flex-1"
-                    disabled={!canSaveDraft || saveDraftMutation.isPending}
-                    onClick={handleSaveDraft}
+                    onClick={() => {
+                      setSelectedProject('');
+                      setHealthStatus('');
+                      setProgress('');
+                      setChallenges('');
+                      setNextWeek('');
+                      setMemberFeedback({});
+                      setExistingDraftId(null);
+                    }}
                   >
-                    <Save className="h-4 w-4 mr-2" />
-                    {saveDraftMutation.isPending ? 'Saving...' : existingDraftId ? 'Update Draft' : 'Save as Draft'}
+                    Cancel
                   </Button>
-                  <Button 
-                    data-testid="button-submit-report" 
-                    type="submit" 
-                    className="flex-1"
-                    disabled={!canSubmit || submitReportMutation.isPending}
-                  >
-                    {submitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
-                  </Button>
+                  {canSubmit ? (
+                    <Button 
+                      data-testid="button-submit-report" 
+                      type="submit" 
+                      className="flex-1"
+                      disabled={submitReportMutation.isPending}
+                    >
+                      {submitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
+                    </Button>
+                  ) : (
+                    <Button 
+                      data-testid="button-save-draft" 
+                      type="button"
+                      className="flex-1"
+                      disabled={!canSaveDraft || saveDraftMutation.isPending}
+                      onClick={handleSaveDraft}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {saveDraftMutation.isPending ? 'Saving...' : existingDraftId ? 'Update Draft' : 'Save as Draft'}
+                    </Button>
+                  )}
                 </div>
               </>
             )}
