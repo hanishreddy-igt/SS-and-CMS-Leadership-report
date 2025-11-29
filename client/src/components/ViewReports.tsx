@@ -73,12 +73,13 @@ export default function ViewReports() {
   };
 
   const startEdit = (report: WeeklyReport) => {
+    if (report.status !== 'submitted') return;
     setEditingId(report.id);
     setEditData({
-      progress: report.progress,
+      progress: report.progress || '',
       challenges: report.challenges || '',
-      nextWeek: report.nextWeek,
-      healthStatus: report.healthStatus,
+      nextWeek: report.nextWeek || '',
+      healthStatus: report.healthStatus || '',
     });
   };
 
@@ -165,6 +166,7 @@ export default function ViewReports() {
     (filterHealth !== 'all' ? 1 : 0);
 
   const filteredReports = weeklyReports.filter((report) => {
+    if (report.status !== 'submitted') return false;
     if (filterLeads.size > 0 && !filterLeads.has(report.leadId)) return false;
     if (filterHealth !== 'all' && report.healthStatus !== filterHealth) return false;
     
@@ -198,10 +200,10 @@ export default function ViewReports() {
       getProjectName(report.projectId),
       getLeadName(report.leadId),
       report.weekStart,
-      healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus,
-      report.progress.replace(/\n/g, ' '),
+      healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus || '',
+      (report.progress || '').replace(/\n/g, ' '),
       (report.challenges || '').replace(/\n/g, ' '),
-      report.nextWeek.replace(/\n/g, ' '),
+      (report.nextWeek || '').replace(/\n/g, ' '),
       new Date(report.submittedAt).toLocaleString(),
     ]);
 
@@ -246,10 +248,10 @@ export default function ViewReports() {
         getProjectName(report.projectId),
         getLeadName(report.leadId),
         report.weekStart,
-        healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus,
-        report.progress,
+        healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus || '',
+        report.progress || '',
         report.challenges || '',
-        report.nextWeek,
+        report.nextWeek || '',
         feedbackText,
       ];
     });
@@ -638,7 +640,7 @@ export default function ViewReports() {
                           <div>
                             <h4 className="font-medium mb-1">Progress This Week</h4>
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {report.progress}
+                              {report.progress || 'No progress recorded'}
                             </p>
                           </div>
                           {report.challenges && (
@@ -652,7 +654,7 @@ export default function ViewReports() {
                           <div>
                             <h4 className="font-medium mb-1">Plans for Next Week</h4>
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {report.nextWeek}
+                              {report.nextWeek || 'No plans recorded'}
                             </p>
                           </div>
                           {feedback && feedback.length > 0 && (

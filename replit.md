@@ -5,7 +5,34 @@ A comprehensive project management and reporting application for managing teams,
 
 ## Recent Changes (November 29, 2025)
 
-### Latest Update: UI Improvements
+### Latest Update: Draft Report Feature
+1. **Save as Draft Functionality**:
+   - New "Save as Draft" button in Submit Report form
+   - Allows partial report completion before final submission
+   - Drafts persist and can be edited later
+   - Auto-loads draft data when selecting a project with existing draft
+
+2. **Report Status Tracking**:
+   - Reports now have "draft" or "submitted" status
+   - Drafted reports show as "Drafted" (blue) in Report Status by Lead
+   - Submitted reports show as "Submitted" (green)
+   - Pending projects (no report) show as "Pending" (amber)
+
+3. **Metrics Count Only Submitted Reports**:
+   - "Reports Submitted" counts only fully submitted reports
+   - "Reports Pending" includes both drafts and projects without any report
+   - Draft reports don't count toward completion until submitted
+
+4. **Submit Button Validation**:
+   - Submit button only enabled when all required fields are filled
+   - Required fields: Health Status, Progress, Plans for Next Week
+   - Save Draft button enabled once project is selected
+
+5. **Filter Enhancement**:
+   - New "Drafted" option in Report Status by Lead filter
+   - Filter by: All, Submitted, Drafted, or Pending
+
+### Previous Update: UI Improvements
 1. **Renamed "At Risk" to "Needs Attention"**:
    - Updated health status label across entire application
    - More professional and less alarming terminology
