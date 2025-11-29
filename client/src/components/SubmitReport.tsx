@@ -329,11 +329,28 @@ export default function SubmitReport() {
           <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
             <div className="space-y-2">
               <Label htmlFor="lead">Select Project Lead <span className="text-red-500">*</span></Label>
-              <Select value={selectedLead} onValueChange={setSelectedLead}>
+              <Select 
+                value={selectedLead} 
+                onValueChange={(value) => {
+                  if (value === '__none__') {
+                    setSelectedLead('');
+                    setSelectedProject('');
+                    setHealthStatus('');
+                    setProgress('');
+                    setChallenges('');
+                    setNextWeek('');
+                    setMemberFeedback({});
+                    setExistingDraftId(null);
+                  } else {
+                    setSelectedLead(value);
+                  }
+                }}
+              >
                 <SelectTrigger id="lead" data-testid="select-report-lead">
                   <SelectValue placeholder="Select your name" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">--</SelectItem>
                   {projectLeads.map((lead) => {
                     const allSubmitted = hasLeadSubmittedAllReports(lead.id);
                     return (
