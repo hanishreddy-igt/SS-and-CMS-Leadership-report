@@ -360,56 +360,63 @@ export default function ViewReports() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">On Track</p>
-                <p className="text-3xl font-bold text-green-600" data-testid="text-on-track">
-                  {onTrackCount}
-                </p>
-              </div>
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
+    <div className="space-y-8">
+      {/* Premium Health Status Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-card rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="section-label">Health Indicator</p>
+              <p className="text-3xl font-bold tabular-nums text-success" data-testid="text-on-track">
+                {onTrackCount}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">On Track</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="h-14 w-14 rounded-xl bg-success/10 flex items-center justify-center">
+              <CheckCircle2 className="h-7 w-7 text-success" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Needs Attention</p>
-                <p className="text-3xl font-bold text-amber-600" data-testid="text-needs-attention">
-                  {atRiskCount}
-                </p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-amber-600" />
+        <div className="glass-card rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="section-label">Attention Required</p>
+              <p className="text-3xl font-bold tabular-nums text-warning" data-testid="text-needs-attention">
+                {atRiskCount}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Needs Attention</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="h-14 w-14 rounded-xl bg-warning/10 flex items-center justify-center">
+              <AlertTriangle className="h-7 w-7 text-warning" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Critical</p>
-                <p className="text-3xl font-bold text-red-600" data-testid="text-critical">
-                  {criticalCount}
-                </p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-red-600" />
+        <div className="glass-card rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="section-label">Immediate Action</p>
+              <p className="text-3xl font-bold tabular-nums text-destructive" data-testid="text-critical">
+                {criticalCount}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Critical</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="h-14 w-14 rounded-xl bg-destructive/10 flex items-center justify-center">
+              <AlertCircle className="h-7 w-7 text-destructive" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="glass-card border-white/10">
+        <CardHeader className="border-b border-white/5">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <CardTitle className="text-2xl">Weekly Reports ({filteredReports.length})</CardTitle>
+              <div>
+                <p className="section-label">Report Archive</p>
+                <CardTitle className="text-2xl">Weekly Reports <span className="text-primary">({filteredReports.length})</span></CardTitle>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Popover>
                   <PopoverTrigger asChild>

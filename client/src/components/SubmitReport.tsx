@@ -289,43 +289,63 @@ export default function SubmitReport() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Reports Submitted</p>
-                <p className="text-3xl font-bold text-green-600" data-testid="text-submitted">
-                  {submittedCount}/{totalProjects}
-                </p>
-              </div>
-              <FileText className="h-8 w-8 text-green-600" />
+    <div className="space-y-8">
+      {/* Premium Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="glass-card rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="section-label">Weekly Progress</p>
+              <p className="text-3xl font-bold tabular-nums" data-testid="text-submitted">
+                <span className="text-success">{submittedCount}</span>
+                <span className="text-muted-foreground text-lg">/{totalProjects}</span>
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Reports Submitted</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="h-14 w-14 rounded-xl bg-success/10 flex items-center justify-center">
+              <FileText className="h-7 w-7 text-success" />
+            </div>
+          </div>
+          <div className="mt-4 h-2 bg-muted/30 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-success to-primary transition-all duration-500"
+              style={{ width: `${totalProjects ? (submittedCount / totalProjects) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Reports Pending</p>
-                <p className="text-3xl font-bold text-amber-600" data-testid="text-pending">
-                  {pendingCount}/{totalProjects}
-                </p>
-              </div>
-              <ClipboardList className="h-8 w-8 text-amber-600" />
+        <div className="glass-card rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="section-label">Awaiting Submission</p>
+              <p className="text-3xl font-bold tabular-nums" data-testid="text-pending">
+                <span className="text-warning">{pendingCount}</span>
+                <span className="text-muted-foreground text-lg">/{totalProjects}</span>
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Reports Pending</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="h-14 w-14 rounded-xl bg-warning/10 flex items-center justify-center">
+              <ClipboardList className="h-7 w-7 text-warning" />
+            </div>
+          </div>
+          <div className="mt-4 h-2 bg-muted/30 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-warning to-amber-400 transition-all duration-500"
+              style={{ width: `${totalProjects ? (pendingCount / totalProjects) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Submit Weekly Report</CardTitle>
-          <p className="text-sm text-muted-foreground">Week starting: {currentWeek}</p>
+      <Card className="glass-card border-white/10">
+        <CardHeader className="border-b border-white/5">
+          <div>
+            <p className="section-label">Weekly Submission</p>
+            <CardTitle className="text-2xl">Submit Weekly Report</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Week starting: <span className="text-primary font-medium">{currentWeek}</span></p>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
             <div className="space-y-2">
               <Label htmlFor="lead">Select Project Lead <span className="text-red-500">*</span></Label>
@@ -532,12 +552,13 @@ export default function SubmitReport() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="glass-card border-white/10">
+        <CardHeader className="border-b border-white/5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
+              <p className="section-label">Status Overview</p>
               <CardTitle className="text-2xl">Report Status by Lead</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Week starting: {currentWeek}</p>
+              <p className="text-sm text-muted-foreground mt-1">Week starting: <span className="text-primary font-medium">{currentWeek}</span></p>
             </div>
             <Popover>
               <PopoverTrigger asChild>
