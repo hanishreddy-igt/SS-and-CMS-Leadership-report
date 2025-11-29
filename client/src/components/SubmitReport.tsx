@@ -144,6 +144,9 @@ export default function SubmitReport() {
   };
 
   const filteredStatusProjects = projects.filter((project) => {
+    // Exclude ended projects from the status list
+    if (isProjectEndedCheck(project.endDate)) return false;
+    
     if (statusFilterLeads.size > 0 && !statusFilterLeads.has(project.leadId)) return false;
     
     const reportStatus = getProjectReportStatus(project.id);
