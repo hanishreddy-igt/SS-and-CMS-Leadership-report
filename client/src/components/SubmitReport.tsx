@@ -308,7 +308,7 @@ export default function SubmitReport() {
           </div>
           <div className="mt-4 h-2 bg-muted/30 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-success to-primary transition-all duration-500"
+              className="h-full bg-success transition-all duration-500"
               style={{ width: `${totalProjects ? (submittedCount / totalProjects) * 100 : 0}%` }}
             />
           </div>
@@ -330,7 +330,7 @@ export default function SubmitReport() {
           </div>
           <div className="mt-4 h-2 bg-muted/30 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-warning to-amber-400 transition-all duration-500"
+              className="h-full bg-warning transition-all duration-500"
               style={{ width: `${totalProjects ? (pendingCount / totalProjects) * 100 : 0}%` }}
             />
           </div>

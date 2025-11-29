@@ -206,7 +206,7 @@ export default function ProjectsDashboard() {
     if (isMissing) {
       return (
         <span title="Active but renewal soon (missing end date)">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertTriangle className="h-4 w-4 text-warning" />
         </span>
       );
     }
@@ -829,14 +829,14 @@ export default function ProjectsDashboard() {
         <div className="metric-card metric-card-success">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-1">Active Projects</p>
+              <p className="section-label">Active Projects</p>
               <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
-              <p className="text-4xl font-bold tabular-nums text-emerald-400" data-testid="text-active-projects">
+              <p className="text-4xl font-bold tabular-nums text-success" data-testid="text-active-projects">
                 {activeProjects.length} <span className="text-xl font-normal text-muted-foreground">({activeProjectsCMS} | {activeProjectsSS})</span>
               </p>
             </div>
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+            <div className="p-3 rounded-xl bg-success/10 border border-success/20">
+              <CheckCircle2 className="h-8 w-8 text-success" />
             </div>
           </div>
         </div>
@@ -844,14 +844,14 @@ export default function ProjectsDashboard() {
         <div className="metric-card metric-card-warning">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">Renewals Soon</p>
+              <p className="section-label">Renewals Soon</p>
               <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
-              <p className="text-4xl font-bold tabular-nums text-amber-400" data-testid="text-renewals-soon">
+              <p className="text-4xl font-bold tabular-nums text-warning" data-testid="text-renewals-soon">
                 {renewalProjects.length} <span className="text-xl font-normal text-muted-foreground">({renewalProjectsCMS} | {renewalProjectsSS})</span>
               </p>
             </div>
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <AlertCircle className="h-8 w-8 text-amber-400" />
+            <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
+              <AlertCircle className="h-8 w-8 text-warning" />
             </div>
           </div>
         </div>
