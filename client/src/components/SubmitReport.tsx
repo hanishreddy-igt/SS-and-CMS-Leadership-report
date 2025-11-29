@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine } from 'lucide-react';
 import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport } from '@shared/schema';
 
 const healthStatusOptions = [
@@ -45,6 +45,7 @@ export default function SubmitReport() {
   const [challenges, setChallenges] = useState('');
   const [nextWeek, setNextWeek] = useState('');
   const [memberFeedback, setMemberFeedback] = useState<Record<string, string>>({});
+  const [existingDraftId, setExistingDraftId] = useState<string | null>(null);
   
   const [statusFilterLeads, setStatusFilterLeads] = useState<Set<string>>(new Set());
   const [statusFilterStatus, setStatusFilterStatus] = useState<string>('all');
@@ -63,13 +64,19 @@ export default function SubmitReport() {
   const currentWeekReports = weeklyReports.filter((r) => r.weekStart === currentWeek);
   const totalProjects = projects.length;
   const submittedCount = projects.filter((p) =>
-    currentWeekReports.some((r) => r.projectId === p.id)
+    currentWeekReports.some((r) => r.projectId === p.id && r.status === 'submitted')
   ).length;
   const pendingCount = totalProjects - submittedCount;
 
   const hasSubmittedForProject = (projectId: string) => {
     return weeklyReports.some(
-      (r) => r.projectId === projectId && r.weekStart === currentWeek
+      (r) => r.projectId === projectId && r.weekStart === currentWeek && r.status === 'submitted'
+    );
+  };
+
+  const getDraftForProject = (projectId: string) => {
+    return weeklyReports.find(
+      (r) => r.projectId === projectId && r.weekStart === currentWeek && r.status === 'draft'
     );
   };
 
@@ -79,22 +86,52 @@ export default function SubmitReport() {
     return leadsProjects.every((p) => hasSubmittedForProject(p.id));
   };
 
+  useEffect(() => {
+    if (selectedProject) {
+      const draft = getDraftForProject(selectedProject);
+      if (draft) {
+        setExistingDraftId(draft.id);
+        setHealthStatus(draft.healthStatus || '');
+        setProgress(draft.progress || '');
+        setChallenges(draft.challenges || '');
+        setNextWeek(draft.nextWeek || '');
+        if (draft.teamMemberFeedback && Array.isArray(draft.teamMemberFeedback)) {
+          const feedbackMap: Record<string, string> = {};
+          (draft.teamMemberFeedback as TeamMemberFeedback[]).forEach((fb) => {
+            feedbackMap[fb.memberId] = fb.feedback;
+          });
+          setMemberFeedback(feedbackMap);
+        }
+      } else {
+        setExistingDraftId(null);
+        setHealthStatus('');
+        setProgress('');
+        setChallenges('');
+        setNextWeek('');
+        setMemberFeedback({});
+      }
+    }
+  }, [selectedProject, weeklyReports]);
+
+  const getProjectReportStatus = (projectId: string): 'submitted' | 'drafted' | 'pending' => {
+    const report = currentWeekReports.find((r) => r.projectId === projectId);
+    if (!report) return 'pending';
+    return report.status === 'submitted' ? 'submitted' : 'drafted';
+  };
+
   const filteredStatusProjects = projects.filter((project) => {
     if (statusFilterLeads.size > 0 && !statusFilterLeads.has(project.leadId)) return false;
     
-    const hasSubmitted = currentWeekReports.some((r) => r.projectId === project.id);
-    if (statusFilterStatus === 'submitted' && !hasSubmitted) return false;
-    if (statusFilterStatus === 'pending' && hasSubmitted) return false;
+    const reportStatus = getProjectReportStatus(project.id);
+    if (statusFilterStatus === 'submitted' && reportStatus !== 'submitted') return false;
+    if (statusFilterStatus === 'drafted' && reportStatus !== 'drafted') return false;
+    if (statusFilterStatus === 'pending' && reportStatus !== 'pending') return false;
     
     return true;
   });
 
   const getLeadName = (leadId: string) => {
     return projectLeads.find((l) => l.id === leadId)?.name || 'Unknown';
-  };
-
-  const hasSubmitted = (projectId: string) => {
-    return currentWeekReports.some((r) => r.projectId === projectId);
   };
 
   const groupedByLead = filteredStatusProjects.reduce((acc, project) => {
@@ -124,8 +161,34 @@ export default function SubmitReport() {
     setStatusFilterLeads(newSet);
   };
 
+  const saveDraftMutation = useMutation({
+    mutationFn: async ({ report, isUpdate }: { report: InsertWeeklyReport; isUpdate: boolean }) => {
+      if (isUpdate && existingDraftId) {
+        return await apiRequest('PATCH', `/api/weekly-reports/${existingDraftId}`, report);
+      }
+      return await apiRequest('POST', '/api/weekly-reports', report);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      toast({ 
+        title: 'Draft Saved', 
+        description: 'Your report has been saved as a draft' 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to save draft',
+        variant: 'destructive'
+      });
+    }
+  });
+
   const submitReportMutation = useMutation({
-    mutationFn: async (report: InsertWeeklyReport) => {
+    mutationFn: async ({ report, isUpdate }: { report: InsertWeeklyReport; isUpdate: boolean }) => {
+      if (isUpdate && existingDraftId) {
+        return await apiRequest('PATCH', `/api/weekly-reports/${existingDraftId}`, report);
+      }
       return await apiRequest('POST', '/api/weekly-reports', report);
     },
     onSuccess: () => {
@@ -140,6 +203,7 @@ export default function SubmitReport() {
       setChallenges('');
       setNextWeek('');
       setMemberFeedback({});
+      setExistingDraftId(null);
     },
     onError: (error: Error) => {
       toast({ 
@@ -150,25 +214,41 @@ export default function SubmitReport() {
     }
   });
 
+  const buildReportData = (status: 'draft' | 'submitted'): InsertWeeklyReport => {
+    const feedback: TeamMemberFeedback[] = Object.entries(memberFeedback)
+      .filter(([_, feedback]) => feedback.trim())
+      .map(([memberId, feedback]) => ({ memberId, feedback }));
+
+    return {
+      projectId: selectedProject,
+      leadId: selectedLead,
+      weekStart: currentWeek,
+      healthStatus: healthStatus || null,
+      progress: progress || null,
+      challenges: challenges || null,
+      nextWeek: nextWeek || null,
+      teamMemberFeedback: feedback.length > 0 ? feedback : null,
+      status,
+    };
+  };
+
+  const handleSaveDraft = () => {
+    if (selectedProject && selectedLead) {
+      const report = buildReportData('draft');
+      saveDraftMutation.mutate({ report, isUpdate: !!existingDraftId });
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedProject && selectedLead && healthStatus && progress && nextWeek) {
-      const feedback: TeamMemberFeedback[] = Object.entries(memberFeedback)
-        .filter(([_, feedback]) => feedback.trim())
-        .map(([memberId, feedback]) => ({ memberId, feedback }));
-
-      submitReportMutation.mutate({
-        projectId: selectedProject,
-        leadId: selectedLead,
-        weekStart: currentWeek,
-        healthStatus,
-        progress,
-        challenges: challenges || null,
-        nextWeek,
-        teamMemberFeedback: feedback.length > 0 ? feedback : null,
-      });
+      const report = buildReportData('submitted');
+      submitReportMutation.mutate({ report, isUpdate: !!existingDraftId });
     }
   };
+
+  const canSaveDraft = selectedProject && selectedLead;
+  const canSubmit = selectedProject && selectedLead && healthStatus && progress && nextWeek;
 
   const filteredLeadsForSearch = projectLeads.filter(lead =>
     lead.name.toLowerCase().includes(statusLeadSearch.toLowerCase())
@@ -345,14 +425,27 @@ export default function SubmitReport() {
                   </div>
                 )}
 
-                <Button 
-                  data-testid="button-submit-report" 
-                  type="submit" 
-                  className="w-full"
-                  disabled={submitReportMutation.isPending}
-                >
-                  {submitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button 
+                    data-testid="button-save-draft" 
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    disabled={!canSaveDraft || saveDraftMutation.isPending}
+                    onClick={handleSaveDraft}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {saveDraftMutation.isPending ? 'Saving...' : existingDraftId ? 'Update Draft' : 'Save as Draft'}
+                  </Button>
+                  <Button 
+                    data-testid="button-submit-report" 
+                    type="submit" 
+                    className="flex-1"
+                    disabled={!canSubmit || submitReportMutation.isPending}
+                  >
+                    {submitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
+                  </Button>
+                </div>
               </>
             )}
           </form>
@@ -431,6 +524,7 @@ export default function SubmitReport() {
                       {[
                         { value: 'all', label: 'All Status' },
                         { value: 'submitted', label: 'Submitted' },
+                        { value: 'drafted', label: 'Drafted' },
                         { value: 'pending', label: 'Pending' },
                       ].map((option) => (
                         <div
@@ -459,7 +553,7 @@ export default function SubmitReport() {
               <p className="text-muted-foreground text-center py-4">No projects found matching the filters.</p>
             ) : (
               Object.entries(groupedByLead).map(([leadName, leadProjects]) => {
-                const submitted = leadProjects.filter((p) => hasSubmitted(p.id)).length;
+                const submitted = leadProjects.filter((p) => getProjectReportStatus(p.id) === 'submitted').length;
                 const total = leadProjects.length;
                 const isComplete = submitted === total;
 
@@ -476,7 +570,7 @@ export default function SubmitReport() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {leadProjects.map((project) => {
-                        const projectSubmitted = hasSubmitted(project.id);
+                        const reportStatus = getProjectReportStatus(project.id);
                         return (
                           <div
                             key={project.id}
@@ -487,10 +581,15 @@ export default function SubmitReport() {
                               <p className="font-medium">{project.name}</p>
                               <p className="text-sm text-muted-foreground">{project.customer}</p>
                             </div>
-                            {projectSubmitted ? (
+                            {reportStatus === 'submitted' ? (
                               <div className="flex items-center gap-2 text-green-600">
                                 <Check className="h-5 w-5" />
                                 <span className="text-sm font-medium">Submitted</span>
+                              </div>
+                            ) : reportStatus === 'drafted' ? (
+                              <div className="flex items-center gap-2 text-blue-600">
+                                <PenLine className="h-5 w-5" />
+                                <span className="text-sm font-medium">Drafted</span>
                               </div>
                             ) : (
                               <div className="flex items-center gap-2 text-amber-600">
