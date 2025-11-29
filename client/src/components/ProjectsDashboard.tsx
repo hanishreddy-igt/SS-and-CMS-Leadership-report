@@ -891,13 +891,20 @@ export default function ProjectsDashboard() {
   const renewalProjectsSS = renewalProjects.filter(p => p.projectType === 'SS').length;
 
   // Tile click handlers - clear all filters first, then apply specific filter and scroll
+  // If clicking the same tile that's already filtered, toggle it off (clear all filters)
   const handleLongTermActiveClick = () => {
     // Clear all existing filters
     setFilterLeads([]);
     setFilterMembers([]);
     setFilterProjectName('');
-    // Apply the status filter
-    setFilterProjectStatus(['active']);
+    
+    // Toggle: if already filtered to 'active', clear it; otherwise apply it
+    if (filterProjectStatus.includes('active') && filterProjectStatus.length === 1) {
+      setFilterProjectStatus([]);
+    } else {
+      setFilterProjectStatus(['active']);
+    }
+    
     setTimeout(() => {
       const projectsSection = document.getElementById('all-projects-section');
       if (projectsSection) {
@@ -911,8 +918,14 @@ export default function ProjectsDashboard() {
     setFilterLeads([]);
     setFilterMembers([]);
     setFilterProjectName('');
-    // Apply the status filter
-    setFilterProjectStatus(['renewal']);
+    
+    // Toggle: if already filtered to 'renewal', clear it; otherwise apply it
+    if (filterProjectStatus.includes('renewal') && filterProjectStatus.length === 1) {
+      setFilterProjectStatus([]);
+    } else {
+      setFilterProjectStatus(['renewal']);
+    }
+    
     setTimeout(() => {
       const projectsSection = document.getElementById('all-projects-section');
       if (projectsSection) {
