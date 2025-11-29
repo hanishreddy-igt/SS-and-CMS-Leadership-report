@@ -62,6 +62,8 @@ export default function ProjectsDashboard() {
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [editMemberValue, setEditMemberValue] = useState('');
   const [editLeadValue, setEditLeadValue] = useState('');
+  const [editLeadEmailValue, setEditLeadEmailValue] = useState('');
+  const [showEditLeadDialog, setShowEditLeadDialog] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
 
   // Add Project Modal State
@@ -517,13 +519,16 @@ export default function ProjectsDashboard() {
   });
 
   const updateLeadMutation = useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      return await apiRequest('PATCH', `/api/project-leads/${id}`, { name });
+    mutationFn: async ({ id, name, email }: { id: string; name: string; email?: string }) => {
+      return await apiRequest('PATCH', `/api/project-leads/${id}`, { name, email: email || null });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
       toast({ title: 'Success', description: 'Project lead updated' });
       setEditingLeadId(null);
+      setShowEditLeadDialog(false);
+      setEditLeadValue('');
+      setEditLeadEmailValue('');
     },
     onError: () => {
       toast({ 
@@ -592,6 +597,8 @@ export default function ProjectsDashboard() {
   const startEditLead = (lead: ProjectLead) => {
     setEditingLeadId(lead.id);
     setEditLeadValue(lead.name);
+    setEditLeadEmailValue(lead.email || '');
+    setShowEditLeadDialog(true);
   };
 
   const saveEditMember = (id: string) => {
@@ -600,10 +607,21 @@ export default function ProjectsDashboard() {
     }
   };
 
-  const saveEditLead = (id: string) => {
-    if (editLeadValue.trim()) {
-      updateLeadMutation.mutate({ id, name: editLeadValue.trim() });
+  const saveEditLead = () => {
+    if (editingLeadId && editLeadValue.trim()) {
+      updateLeadMutation.mutate({ 
+        id: editingLeadId, 
+        name: editLeadValue.trim(),
+        email: editLeadEmailValue.trim() || undefined
+      });
     }
+  };
+
+  const cancelEditLead = () => {
+    setShowEditLeadDialog(false);
+    setEditingLeadId(null);
+    setEditLeadValue('');
+    setEditLeadEmailValue('');
   };
 
   // Check for duplicate names in team members
@@ -2195,8 +2213,7 @@ export default function ProjectsDashboard() {
                 key={lead.id}
                 className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors cursor-pointer hover:bg-muted ${selectedLeads.has(lead.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}
                 data-testid={`lead-item-${lead.id}`}
-                onClick={(e) => {
-                  if (editingLeadId === lead.id) return;
+                onClick={() => {
                   if (selectionModeLeads) {
                     toggleLeadSelection(lead.id);
                   } else {
@@ -2204,81 +2221,47 @@ export default function ProjectsDashboard() {
                   }
                 }}
               >
-                {editingLeadId === lead.id ? (
-                  <div className="flex-1 flex gap-2">
-                    <Input
-                      data-testid={`input-edit-lead-${lead.id}`}
-                      type="text"
-                      value={editLeadValue}
-                      onChange={(e) => setEditLeadValue(e.target.value)}
-                      className="flex-1"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Button
-                      data-testid={`button-save-lead-${lead.id}`}
-                      size="icon"
-                      variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); saveEditLead(lead.id); }}
-                      disabled={updateLeadMutation.isPending}
-                      className="text-green-600 hover:text-green-700"
-                    >
-                      <Check className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      data-testid={`button-cancel-lead-${lead.id}`}
-                      size="icon"
-                      variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); setEditingLeadId(null); }}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2">
-                      {selectionModeLeads && (
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLeads.has(lead.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
-                          {selectedLeads.has(lead.id) && <Check className="h-3 w-3 text-primary-foreground" />}
-                        </div>
-                      )}
-                      <span data-testid={`text-lead-${lead.id}`} className="font-medium">
-                        {lead.name}
-                      </span>
+                <div className="flex items-center gap-2">
+                  {selectionModeLeads && (
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLeads.has(lead.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
+                      {selectedLeads.has(lead.id) && <Check className="h-3 w-3 text-primary-foreground" />}
                     </div>
-                    {!selectionModeLeads && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            data-testid={`button-lead-menu-${lead.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={(e) => { e.stopPropagation(); startEditLead(lead); }}
-                            data-testid={`button-edit-lead-${lead.id}`}
-                          >
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={(e) => { e.stopPropagation(); deleteLeadMutation.mutate(lead.id); }}
-                            disabled={deleteLeadMutation.isPending}
-                            className="text-destructive focus:text-destructive"
-                            data-testid={`button-delete-lead-${lead.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </>
+                  )}
+                  <span data-testid={`text-lead-${lead.id}`} className="font-medium">
+                    {lead.name}
+                  </span>
+                </div>
+                {!selectionModeLeads && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        data-testid={`button-lead-menu-${lead.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={(e) => { e.stopPropagation(); startEditLead(lead); }}
+                        data-testid={`button-edit-lead-${lead.id}`}
+                      >
+                        <Edit2 className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={(e) => { e.stopPropagation(); deleteLeadMutation.mutate(lead.id); }}
+                        disabled={deleteLeadMutation.isPending}
+                        className="text-destructive focus:text-destructive"
+                        data-testid={`button-delete-lead-${lead.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
               ))}
@@ -2395,7 +2378,9 @@ export default function ProjectsDashboard() {
               {selectedProject && <EndDateIndicator endDate={selectedProject.endDate} />}
               <DialogTitle className="text-2xl">{selectedProject?.name}</DialogTitle>
             </div>
-            <DialogDescription className="sr-only">Project details</DialogDescription>
+            <DialogDescription className="sr-only">
+              View detailed information about this project including customer, lead, team members, and timeline.
+            </DialogDescription>
           </DialogHeader>
           
           {selectedProject && (
@@ -2526,6 +2511,58 @@ export default function ProjectsDashboard() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Lead Dialog */}
+      <Dialog open={showEditLeadDialog} onOpenChange={(open) => !open && cancelEditLead()}>
+        <DialogContent data-testid="dialog-edit-lead">
+          <DialogHeader>
+            <DialogTitle>Edit Project Lead</DialogTitle>
+            <DialogDescription>
+              Update the project lead's name and email address.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-lead-name">Project Lead Name <span className="text-red-500">*</span></Label>
+              <Input
+                id="edit-lead-name"
+                data-testid="input-edit-lead-name"
+                type="text"
+                value={editLeadValue}
+                onChange={(e) => setEditLeadValue(e.target.value)}
+                placeholder="Enter project lead name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-lead-email">Email Address</Label>
+              <Input
+                id="edit-lead-email"
+                data-testid="input-edit-lead-email"
+                type="email"
+                value={editLeadEmailValue}
+                onChange={(e) => setEditLeadEmailValue(e.target.value)}
+                placeholder="Enter email address (optional)"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={cancelEditLead}
+                data-testid="button-cancel-edit-lead"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={saveEditLead}
+                disabled={updateLeadMutation.isPending || !editLeadValue.trim()}
+                data-testid="button-save-edit-lead"
+              >
+                {updateLeadMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
