@@ -5,7 +5,23 @@ A comprehensive project management and reporting application for managing teams,
 
 ## Recent Changes (November 29, 2025)
 
-### Latest Update: Enhanced Filter & Export UX
+### Latest Update: UI Improvements
+1. **Renamed "At Risk" to "Needs Attention"**:
+   - Updated health status label across entire application
+   - More professional and less alarming terminology
+   - Applies to metric cards, filters, dropdowns, and reports
+
+2. **Visible Scrollbars in Filters**:
+   - All filter containers now have clearly visible scrollbars
+   - Custom scrollbar styling with gray track and thumb
+   - Hover effect on scrollbar for better usability
+
+3. **Filter List Height Standardization**:
+   - Filter by Lead and Filter by Member lists show ~5 items at a time
+   - Consistent height across all filter popovers
+   - Improved scrolling experience in dense lists
+
+### Previous Update: Enhanced Filter & Export UX
 1. **Smart Lead Selection in Submit Report**:
    - Leads who have submitted all their project reports are automatically disabled
    - Shows "(Submitted all reports)" label next to disabled leads
