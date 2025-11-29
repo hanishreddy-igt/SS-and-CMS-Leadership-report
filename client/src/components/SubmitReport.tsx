@@ -80,6 +80,12 @@ export default function SubmitReport() {
     );
   };
 
+  const hasDraftForProject = (projectId: string) => {
+    return weeklyReports.some(
+      (r) => r.projectId === projectId && r.weekStart === currentWeek && r.status === 'draft'
+    );
+  };
+
   const hasLeadSubmittedAllReports = (leadId: string) => {
     const leadsProjects = projects.filter((p) => p.leadId === leadId);
     if (leadsProjects.length === 0) return false;
@@ -325,16 +331,21 @@ export default function SubmitReport() {
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    {leadProjects.map((project) => (
-                      <SelectItem
-                        key={project.id}
-                        value={project.id}
-                        disabled={hasSubmittedForProject(project.id)}
-                      >
-                        {project.name}
-                        {hasSubmittedForProject(project.id) && ' (Already submitted)'}
-                      </SelectItem>
-                    ))}
+                    {leadProjects.map((project) => {
+                      const isSubmitted = hasSubmittedForProject(project.id);
+                      const isDrafted = hasDraftForProject(project.id);
+                      return (
+                        <SelectItem
+                          key={project.id}
+                          value={project.id}
+                          disabled={isSubmitted}
+                        >
+                          {project.name}
+                          {isSubmitted && ' (Already submitted)'}
+                          {isDrafted && !isSubmitted && ' (Drafted)'}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
