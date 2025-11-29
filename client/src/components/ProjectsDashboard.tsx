@@ -103,6 +103,30 @@ export default function ProjectsDashboard() {
       .filter(Boolean);
   };
 
+  // Get project status based on end date
+  // 'active' = Green (end date far), 'renewal' = Yellow/Caution (within 2 months or missing), 'ended' = Red (past end date)
+  const getProjectStatus = (endDate: string | null | undefined): 'active' | 'renewal' | 'ended' => {
+    if (!endDate) return 'renewal'; // Missing end date = renewal soon
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    
+    const diffTime = end.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return 'ended';
+    if (diffDays <= 60) return 'renewal'; // Within 2 months
+    return 'active';
+  };
+
+  const getStatusPriority = (status: 'active' | 'renewal' | 'ended'): number => {
+    if (status === 'renewal') return 0; // Active but renewal soon - first
+    if (status === 'active') return 1;  // Active with no renewal soon - second
+    return 2;                            // Ended - last
+  };
+
   const filteredProjects = projects.filter((project) => {
     if (filterLeads.length > 0 && !filterLeads.includes(project.leadId)) return false;
     if (filterMembers.length > 0 && !filterMembers.some(memberId => project.teamMemberIds.includes(memberId))) return false;
@@ -110,12 +134,6 @@ export default function ProjectsDashboard() {
     if (filterProjectStatus.length > 0 && !filterProjectStatus.includes(getProjectStatus(project.endDate))) return false;
     return true;
   });
-
-  const getStatusPriority = (status: 'active' | 'renewal' | 'ended'): number => {
-    if (status === 'renewal') return 0; // Active but renewal soon - first
-    if (status === 'active') return 1;  // Active with no renewal soon - second
-    return 2;                            // Ended - last
-  };
 
   const sortedProjects = [...filteredProjects].sort((a, b) => {
     const statusA = getProjectStatus(a.endDate);
@@ -165,24 +183,6 @@ export default function ProjectsDashboard() {
         ? prev.filter(id => id !== memberId)
         : [...prev, memberId]
     );
-  };
-
-  // Get project status based on end date
-  // 'active' = Green (end date far), 'renewal' = Yellow/Caution (within 2 months or missing), 'ended' = Red (past end date)
-  const getProjectStatus = (endDate: string | null | undefined): 'active' | 'renewal' | 'ended' => {
-    if (!endDate) return 'renewal'; // Missing end date = renewal soon
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
-    end.setHours(0, 0, 0, 0);
-    
-    const diffTime = end.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return 'ended';
-    if (diffDays <= 60) return 'renewal'; // Within 2 months
-    return 'active';
   };
 
   const projectStatusOptions = [
