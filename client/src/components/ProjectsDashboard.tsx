@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,12 @@ import type { Project, ProjectLead, TeamMember, InsertProject, Person } from '@s
 type SortOrder = 'asc' | 'desc';
 type SortField = 'endDate' | 'startDate';
 
-export default function ProjectsDashboard() {
+interface ProjectsDashboardProps {
+  shouldClearFilters?: boolean;
+  onFiltersClear?: () => void;
+}
+
+export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }: ProjectsDashboardProps) {
   const { toast } = useToast();
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
@@ -103,6 +108,17 @@ export default function ProjectsDashboard() {
 
   // Email display toggle state - track which lead's email is visible
   const [visibleLeadEmail, setVisibleLeadEmail] = useState<string | null>(null);
+
+  // Effect to clear all filters when triggered from parent (Active Projects tile)
+  useEffect(() => {
+    if (shouldClearFilters) {
+      setFilterLeads([]);
+      setFilterMembers([]);
+      setFilterProjectName('');
+      setFilterProjectStatus([]);
+      onFiltersClear?.();
+    }
+  }, [shouldClearFilters, onFiltersClear]);
 
   const totalTeamMembers = teamMembers.length;
   const totalLeads = projectLeads.length;

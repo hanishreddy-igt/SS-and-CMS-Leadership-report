@@ -12,6 +12,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('teams-projects');
   const [healthFilter, setHealthFilter] = useState<string>('all');
   const [shouldScrollToProjects, setShouldScrollToProjects] = useState(false);
+  const [shouldClearFilters, setShouldClearFilters] = useState(false);
   
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -20,6 +21,7 @@ export default function Home() {
   const handleActiveProjectsClick = () => {
     setActiveTab('teams-projects');
     setShouldScrollToProjects(true);
+    setShouldClearFilters(true);
   };
 
   const handleHealthTileClick = (healthStatus: string) => {
@@ -179,7 +181,10 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="teams-projects" className="fade-in">
-            <ProjectsDashboard />
+            <ProjectsDashboard 
+              shouldClearFilters={shouldClearFilters} 
+              onFiltersClear={() => setShouldClearFilters(false)} 
+            />
           </TabsContent>
 
           <TabsContent value="submit" className="fade-in">
