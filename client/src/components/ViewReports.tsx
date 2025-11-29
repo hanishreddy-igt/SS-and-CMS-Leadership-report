@@ -390,7 +390,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <p className="section-label">Report Archive</p>
-                <CardTitle className="text-2xl">Weekly Reports <span className="text-primary">({filteredReports.length})</span></CardTitle>
+                <CardTitle 
+                  className="text-2xl cursor-pointer hover:text-primary transition-colors"
+                  onClick={clearAllFilters}
+                  data-testid="title-weekly-reports"
+                >
+                  Weekly Reports <span className="text-primary">({filteredReports.length})</span>
+                </CardTitle>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Popover>
