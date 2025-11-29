@@ -354,26 +354,25 @@ export default function SubmitReport() {
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    {leadProjects.map((project) => {
-                      const isSubmitted = hasSubmittedForProject(project.id);
-                      const isDrafted = hasDraftForProject(project.id);
-                      const isEnded = isProjectEnded(project.endDate);
-                      const shouldStrike = isSubmitted || isEnded;
-                      return (
-                        <SelectItem
-                          key={project.id}
-                          value={project.id}
-                          disabled={isSubmitted || isEnded}
-                        >
-                          <span className="flex items-center gap-1">
-                            <span className={shouldStrike ? 'line-through' : ''}>{project.name}</span>
-                            {isEnded && <span className="font-bold text-red-600">(Project Ended)</span>}
-                            {isSubmitted && !isEnded && <span className="font-bold text-red-600">(Already submitted)</span>}
-                            {isDrafted && !isSubmitted && !isEnded && <span className="font-bold text-red-600">(Drafted)</span>}
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
+                    {leadProjects
+                      .filter((project) => !isProjectEnded(project.endDate))
+                      .map((project) => {
+                        const isSubmitted = hasSubmittedForProject(project.id);
+                        const isDrafted = hasDraftForProject(project.id);
+                        return (
+                          <SelectItem
+                            key={project.id}
+                            value={project.id}
+                            disabled={isSubmitted}
+                          >
+                            <span className="flex items-center gap-1">
+                              <span className={isSubmitted ? 'line-through' : ''}>{project.name}</span>
+                              {isSubmitted && <span className="font-bold text-red-600">(Already submitted)</span>}
+                              {isDrafted && !isSubmitted && <span className="font-bold text-red-600">(Drafted)</span>}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
                   </SelectContent>
                 </Select>
               </div>
