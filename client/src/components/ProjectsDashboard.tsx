@@ -15,7 +15,7 @@ import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Tr
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import type { Project, ProjectLead, TeamMember, InsertProject } from '@shared/schema';
+import type { Project, ProjectLead, TeamMember, InsertProject, Person } from '@shared/schema';
 
 type SortOrder = 'asc' | 'desc';
 type SortField = 'endDate' | 'startDate';
@@ -87,8 +87,13 @@ export default function ProjectsDashboard() {
   // Add Project Lead Modal State
   const [showAddLeadDialog, setShowAddLeadDialog] = useState(false);
   const [newLead, setNewLead] = useState('');
+  const [newLeadEmail, setNewLeadEmail] = useState('');
   const [leadNameError, setLeadNameError] = useState<string | null>(null);
   const [leadNameWarning, setLeadNameWarning] = useState<string | null>(null);
+
+  // Lead Detail Modal State
+  const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Person | null>(null);
+  const [showLeadDetailModal, setShowLeadDetailModal] = useState(false);
 
   // Project Detail Modal State
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -490,13 +495,14 @@ export default function ProjectsDashboard() {
 
   // Project lead mutations
   const createLeadMutation = useMutation({
-    mutationFn: async (name: string) => {
-      return await apiRequest('POST', '/api/project-leads', { name });
+    mutationFn: async ({ name, email }: { name: string; email?: string }) => {
+      return await apiRequest('POST', '/api/project-leads', { name, email: email || null });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
       toast({ title: 'Success', description: 'Project lead added' });
       setNewLead('');
+      setNewLeadEmail('');
       setLeadNameError(null);
       setLeadNameWarning(null);
       setShowAddLeadDialog(false);
@@ -688,8 +694,21 @@ export default function ProjectsDashboard() {
 
   const handleAddLead = () => {
     if (newLead.trim() && !leadNameError) {
-      createLeadMutation.mutate(newLead.trim());
+      createLeadMutation.mutate({ name: newLead.trim(), email: newLeadEmail.trim() || undefined });
     }
+  };
+
+  // Handle lead tile click to show detail popup
+  const handleLeadTileClick = (lead: Person) => {
+    if (!selectionModeLeads) {
+      setSelectedLeadForDetail(lead);
+      setShowLeadDetailModal(true);
+    }
+  };
+
+  const closeLeadDetailModal = () => {
+    setShowLeadDetailModal(false);
+    setSelectedLeadForDetail(null);
   };
 
   const validateProjectForm = () => {
@@ -2041,6 +2060,7 @@ export default function ProjectsDashboard() {
                 setShowAddLeadDialog(open);
                 if (!open) {
                   setNewLead('');
+                  setNewLeadEmail('');
                   setLeadNameError(null);
                   setLeadNameWarning(null);
                 }
@@ -2067,7 +2087,6 @@ export default function ProjectsDashboard() {
                       type="text"
                       value={newLead}
                       onChange={(e) => handleLeadNameChange(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && !leadNameError && handleAddLead()}
                       placeholder="Enter project lead name"
                       className={leadNameError ? 'border-red-500' : leadNameWarning ? 'border-amber-500' : ''}
                     />
@@ -2078,12 +2097,24 @@ export default function ProjectsDashboard() {
                       <p className="text-sm text-amber-600" data-testid="warning-lead-similar">{leadNameWarning}</p>
                     )}
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-lead-email">Email Address</Label>
+                    <Input
+                      id="new-lead-email"
+                      data-testid="input-lead-email"
+                      type="email"
+                      value={newLeadEmail}
+                      onChange={(e) => setNewLeadEmail(e.target.value)}
+                      placeholder="Enter email address (optional)"
+                    />
+                  </div>
                   <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setShowAddLeadDialog(false);
                         setNewLead('');
+                        setNewLeadEmail('');
                         setLeadNameError(null);
                         setLeadNameWarning(null);
                       }}
@@ -2162,9 +2193,16 @@ export default function ProjectsDashboard() {
               {projectLeads.map((lead) => (
               <div
                 key={lead.id}
-                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors ${selectedLeads.has(lead.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeLeads ? 'cursor-pointer hover:bg-muted' : ''}`}
+                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors cursor-pointer hover:bg-muted ${selectedLeads.has(lead.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}
                 data-testid={`lead-item-${lead.id}`}
-                onClick={selectionModeLeads && editingLeadId !== lead.id ? () => toggleLeadSelection(lead.id) : undefined}
+                onClick={(e) => {
+                  if (editingLeadId === lead.id) return;
+                  if (selectionModeLeads) {
+                    toggleLeadSelection(lead.id);
+                  } else {
+                    handleLeadTileClick(lead);
+                  }
+                }}
               >
                 {editingLeadId === lead.id ? (
                   <div className="flex-1 flex gap-2">
@@ -2215,20 +2253,21 @@ export default function ProjectsDashboard() {
                             size="icon"
                             variant="ghost"
                             data-testid={`button-lead-menu-${lead.id}`}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem 
-                            onClick={() => startEditLead(lead)}
+                            onClick={(e) => { e.stopPropagation(); startEditLead(lead); }}
                             data-testid={`button-edit-lead-${lead.id}`}
                           >
                             <Edit2 className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => deleteLeadMutation.mutate(lead.id)}
+                            onClick={(e) => { e.stopPropagation(); deleteLeadMutation.mutate(lead.id); }}
                             disabled={deleteLeadMutation.isPending}
                             className="text-destructive focus:text-destructive"
                             data-testid={`button-delete-lead-${lead.id}`}
@@ -2484,6 +2523,73 @@ export default function ProjectsDashboard() {
                     }
                   })()}
                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lead Detail Modal */}
+      <Dialog open={showLeadDetailModal} onOpenChange={(open) => !open && closeLeadDetailModal()}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-lead-detail">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCog className="h-5 w-5" />
+              Project Lead Details
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              View details about this project lead including their email and projects they manage.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedLeadForDetail && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <UserCog className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold" data-testid="text-lead-detail-name">
+                    {selectedLeadForDetail.name}
+                  </p>
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mt-0.5">
+                    <Mail className="h-3.5 w-3.5" />
+                    <span data-testid="text-lead-detail-email">
+                      {selectedLeadForDetail.email || 'No email set'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Projects managed by this lead */}
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Projects Led</p>
+                {(() => {
+                  const ledProjects = projects.filter(p => p.leadId === selectedLeadForDetail.id);
+                  if (ledProjects.length === 0) {
+                    return (
+                      <p className="text-sm text-muted-foreground italic">No projects assigned</p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2" data-testid="list-lead-projects">
+                      {ledProjects.map(project => (
+                        <div key={project.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
+                          <span className="text-sm font-medium">{project.name}</span>
+                          {(() => {
+                            const status = getProjectStatus(project.endDate);
+                            if (status === 'active') {
+                              return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
+                            } else if (status === 'renewal') {
+                              return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
+                            } else {
+                              return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
+                            }
+                          })()}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
