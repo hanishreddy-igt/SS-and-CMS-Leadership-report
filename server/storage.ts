@@ -182,7 +182,12 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const report: WeeklyReport = { 
       ...insertReport,
+      healthStatus: insertReport.healthStatus ?? null,
+      progress: insertReport.progress ?? null,
+      challenges: insertReport.challenges ?? null,
+      nextWeek: insertReport.nextWeek ?? null,
       teamMemberFeedback: insertReport.teamMemberFeedback ?? null,
+      status: insertReport.status ?? 'draft',
       id,
       submittedAt: new Date()
     };
