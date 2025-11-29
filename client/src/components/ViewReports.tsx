@@ -744,40 +744,67 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                         </>
                       ) : (
                         <>
-                          <div>
-                            <h4 className="font-medium mb-1">Progress This Week</h4>
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {report.progress || 'No progress recorded'}
-                            </p>
-                          </div>
-                          {report.challenges && (
-                            <div>
-                              <h4 className="font-medium mb-1">Challenges & Blockers</h4>
-                              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                {report.challenges}
+                          {/* Progress Section */}
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-success" />
+                              <h4 className="font-medium text-sm">Progress This Week</h4>
+                            </div>
+                            <div className="pl-4 border-l-2 border-success/30">
+                              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                {report.progress || 'No progress recorded'}
                               </p>
                             </div>
-                          )}
-                          <div>
-                            <h4 className="font-medium mb-1">Plans for Next Week</h4>
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {report.nextWeek || 'No plans recorded'}
-                            </p>
                           </div>
+
+                          {/* Challenges Section */}
+                          {report.challenges && (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-warning" />
+                                <h4 className="font-medium text-sm">Challenges & Blockers</h4>
+                              </div>
+                              <div className="pl-4 border-l-2 border-warning/30">
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                  {report.challenges}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Next Week Section */}
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-primary" />
+                              <h4 className="font-medium text-sm">Plans for Next Week</h4>
+                            </div>
+                            <div className="pl-4 border-l-2 border-primary/30">
+                              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                {report.nextWeek || 'No plans recorded'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Team Feedback Section */}
                           {feedback && feedback.length > 0 && (
-                            <div>
-                              <h4 className="font-medium mb-2">Team Member Feedback</h4>
+                            <div className="space-y-2 pt-2 border-t border-white/5">
+                              <div className="flex items-center gap-2">
+                                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                                <h4 className="font-medium text-sm">Team Member Feedback</h4>
+                              </div>
                               <div className="space-y-2">
                                 {feedback.map((f, index) => (
-                                  <div key={index} className="border-l-2 border-primary/30 pl-3">
-                                    <p className="text-sm font-medium">{getMemberName(f.memberId)}</p>
+                                  <div key={index} className="p-2 rounded-md bg-muted/20 border-l-2 border-primary/40">
+                                    <p className="text-xs font-medium text-primary">{getMemberName(f.memberId)}</p>
                                     <p className="text-sm text-muted-foreground">{f.feedback}</p>
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
-                          <p className="text-xs text-muted-foreground">
+
+                          <p className="text-xs text-muted-foreground pt-2 border-t border-white/5">
+                            <Clock className="h-3 w-3 inline mr-1" />
                             Submitted: {new Date(report.submittedAt).toLocaleString()}
                           </p>
                         </>
