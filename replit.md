@@ -5,7 +5,24 @@ A comprehensive project management and reporting application for managing teams,
 
 ## Recent Changes (November 29, 2025)
 
-### Latest Update: Improved Selection Mode & Filter UX
+### Latest Update: Consolidated Submit Report Tab
+1. **Tab Consolidation**: Reduced from 4 tabs to 3 tabs
+   - Renamed "Submit" to "Submit Report"
+   - Renamed "View" to "View Reports"
+   - Merged Status tab into Submit Report tab
+   
+2. **Submit Report Tab Layout**:
+   - **Top Section**: Two metric cards showing "Reports Submitted X/total" and "Reports Pending X/total"
+   - **Middle Section**: Submit Weekly Report form (unchanged)
+   - **Bottom Section**: Report Status by Lead (renamed from "Report Status by Project")
+   
+3. **Report Status by Lead Filter**: Single "Filter" button with popover
+   - Filter by Lead with search and multi-select checkboxes
+   - Filter by Status (All, Submitted, Pending)
+   - Badge shows active filter count
+   - "Clear all" button to reset filters
+
+### Previous Update: Improved Selection Mode & Filter UX
 1. **Selection Mode for Bulk Operations**: Cleaner UI without checkboxes on tiles
    - "Select" button activates selection mode for each section (Projects, Members, Leads)
    - Click tiles to select/deselect when in selection mode
@@ -44,7 +61,7 @@ A comprehensive project management and reporting application for managing teams,
 
 ### Previous Update: Unified Teams & Projects Tab with Modal Forms
 1. **Fully Consolidated Tab Structure**: Merged Dashboard and Team & Projects into single "Teams & Projects" tab
-   - Tab count reduced from 5 to 4 tabs (Teams & Projects, Submit, View, Status)
+   - Tab count previously reduced from 5 to 4 tabs (now further reduced to 3 tabs)
    - Single unified view for all project and team management
    
 2. **Modal-Based Add Forms**: All add functionality now uses popup dialogs
@@ -139,12 +156,18 @@ A comprehensive project management and reporting application for managing teams,
   - Inline validation error messages
   - Forms reset when modal closes
 
-#### 2. Submit Report Tab
-- Weekly report submission for project leads
-- Health status selection: On Track, At Risk, Critical
-- Progress, challenges, and next week plans
-- Optional team member feedback for each team member on the project
-- Prevents duplicate submissions for the same week
+#### 2. Submit Report Tab (Consolidated)
+- **Overview Metrics**: Reports Submitted (X/total), Reports Pending (X/total)
+- **Submit Weekly Report Form**:
+  - Weekly report submission for project leads
+  - Health status selection: On Track, At Risk, Critical
+  - Progress, challenges, and next week plans
+  - Optional team member feedback for each team member on the project
+  - Prevents duplicate submissions for the same week
+- **Report Status by Lead**:
+  - Visual indicators for report submission status per project
+  - Grouped by project lead
+  - Filter button with popover for lead and status filtering
 
 #### 3. View Reports Tab
 - **Overview Stats**: Projects On Track, At Risk, Critical
@@ -154,12 +177,6 @@ A comprehensive project management and reporting application for managing teams,
 - View all weekly reports with full details
 - Edit existing reports (progress, challenges, plans, health status)
 - Display team member feedback when available
-
-#### 4. Report Status Tab
-- **Dashboard Metrics**: Total Projects, Reports Submitted, Reports Pending
-- **Filters**: By project lead, by submission status (all/submitted/pending)
-- Visual indicators for report submission status
-- Grouped by project lead
 
 ## Technology Stack
 - **Frontend**: React, TypeScript, Wouter (routing), TanStack Query
