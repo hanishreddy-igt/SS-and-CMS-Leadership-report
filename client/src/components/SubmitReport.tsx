@@ -92,6 +92,14 @@ export default function SubmitReport() {
     return leadsProjects.every((p) => hasSubmittedForProject(p.id));
   };
 
+  const isProjectEnded = (endDate: string | null | undefined) => {
+    if (!endDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const projectEndDate = new Date(endDate);
+    return projectEndDate < today;
+  };
+
   useEffect(() => {
     if (selectedProject) {
       const draft = getDraftForProject(selectedProject);
@@ -334,15 +342,17 @@ export default function SubmitReport() {
                     {leadProjects.map((project) => {
                       const isSubmitted = hasSubmittedForProject(project.id);
                       const isDrafted = hasDraftForProject(project.id);
+                      const isEnded = isProjectEnded(project.endDate);
                       return (
                         <SelectItem
                           key={project.id}
                           value={project.id}
-                          disabled={isSubmitted}
+                          disabled={isSubmitted || isEnded}
                         >
                           {project.name}
-                          {isSubmitted && ' (Already submitted)'}
-                          {isDrafted && !isSubmitted && ' (Drafted)'}
+                          {isEnded && ' (Project Ended)'}
+                          {isSubmitted && !isEnded && ' (Already submitted)'}
+                          {isDrafted && !isSubmitted && !isEnded && ' (Drafted)'}
                         </SelectItem>
                       );
                     })}
