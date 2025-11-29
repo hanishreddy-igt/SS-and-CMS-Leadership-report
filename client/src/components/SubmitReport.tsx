@@ -358,6 +358,7 @@ export default function SubmitReport() {
                       const isSubmitted = hasSubmittedForProject(project.id);
                       const isDrafted = hasDraftForProject(project.id);
                       const isEnded = isProjectEnded(project.endDate);
+                      const shouldStrike = isSubmitted || isEnded;
                       return (
                         <SelectItem
                           key={project.id}
@@ -365,7 +366,7 @@ export default function SubmitReport() {
                           disabled={isSubmitted || isEnded}
                         >
                           <span className="flex items-center gap-1">
-                            {project.name}
+                            <span className={shouldStrike ? 'line-through' : ''}>{project.name}</span>
                             {isEnded && <span className="font-bold text-red-600">(Project Ended)</span>}
                             {isSubmitted && !isEnded && <span className="font-bold text-red-600">(Already submitted)</span>}
                             {isDrafted && !isSubmitted && !isEnded && <span className="font-bold text-red-600">(Drafted)</span>}
