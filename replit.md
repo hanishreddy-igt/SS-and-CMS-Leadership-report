@@ -5,7 +5,30 @@ A comprehensive project management and reporting application for managing teams,
 
 ## Recent Changes (November 29, 2025)
 
-### Latest Update: Consolidated Submit Report Tab
+### Latest Update: Enhanced Filter & Export UX
+1. **Smart Lead Selection in Submit Report**:
+   - Leads who have submitted all their project reports are automatically disabled
+   - Shows "(Submitted all reports)" label next to disabled leads
+   - Prevents unnecessary form interactions when no reports are pending
+
+2. **Unified Filter Button in View Reports**:
+   - Replaced 3 separate filter dropdowns with single "Filter" button
+   - Popover contains: Lead filter with search, Member filter with search, Status filter
+   - All filters use multi-select checkboxes
+   - Badge shows active filter count
+   - "Clear all" button resets all filters
+
+3. **Consolidated Save Button in View Reports**:
+   - Merged "Save as PDF" and "Save as CSV" into single "Save" dropdown button
+   - Dropdown menu shows both export options
+   - Cleaner, less cluttered interface
+
+4. **Renamed Reset Action**:
+   - Changed "Delete All Reports" to "Reset reports for next week"
+   - Updated dialog messaging to reflect weekly workflow
+   - Better reflects the intended use case of weekly reporting cycles
+
+### Previous Update: Consolidated Submit Report Tab
 1. **Tab Consolidation**: Reduced from 4 tabs to 3 tabs
    - Renamed "Submit" to "Submit Report"
    - Renamed "View" to "View Reports"
