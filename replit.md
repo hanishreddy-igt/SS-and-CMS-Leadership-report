@@ -3,18 +3,28 @@
 ## Overview
 A comprehensive project management and reporting application for managing teams, projects, and weekly status reports. Built with React, Express, TypeScript, and PostgreSQL database. **Secured with Google authentication restricted to @ignitetech.com and @khoros.com email domains.**
 
-## Recent Changes (November 24, 2025)
+## Recent Changes (November 29, 2025)
 
-### Latest Update: UI Reorganization
-1. **Consolidated Tab Structure**: Merged Team and Projects tabs into single "Team & Projects" tab
-   - Combined add forms for team members, project leads, and projects in one place
-   - No lists displayed below add forms for cleaner interface
-   - Tab count reduced from 6 to 5 tabs (Dashboard, Team & Projects, Submit, View, Status)
+### Latest Update: Unified Teams & Projects Tab with Modal Forms
+1. **Fully Consolidated Tab Structure**: Merged Dashboard and Team & Projects into single "Teams & Projects" tab
+   - Tab count reduced from 5 to 4 tabs (Teams & Projects, Submit, View, Status)
+   - Single unified view for all project and team management
    
-2. **Enhanced Dashboard**: Added team member and project lead management sections
-   - "All Team Members" section with edit/delete functionality (no filters/sorting)
-   - "All Project Leads" section with edit/delete functionality (no filters/sorting)
-   - Dashboard now serves as central hub for viewing and managing all entities
+2. **Modal-Based Add Forms**: All add functionality now uses popup dialogs
+   - "Add New Project" button in All Projects section opens modal form
+   - "Add Team Member" button in All Team Members section opens modal form
+   - "Add Project Lead" button in All Project Leads section opens modal form
+   - Forms include validation with inline error messages and toast notifications
+   - Forms properly reset when modal closes (via Cancel, clicking outside, or Escape key)
+
+3. **Project Name Filter**: Added search filter for projects
+   - Text input to filter projects by name in All Projects section
+   - Combines with existing lead and team member filters
+
+4. **Optional Fields Enhancement**: Made start/end dates and challenges optional
+   - Project creation no longer requires start/end dates
+   - Weekly report submission no longer requires challenges/blockers
+   - Red asterisks (*) indicate mandatory fields
 
 ### Previous Update: Authentication & Security
 1. **Google Authentication**: Implemented Replit Auth with domain restrictions
@@ -69,43 +79,37 @@ A comprehensive project management and reporting application for managing teams,
 
 ### Key Features
 
-#### 1. Team & Projects Tab
-- **Team Member Management**: Add new team members
-- **Project Lead Management**: Add new project leads
-- **Project Creation**: Create new projects with customer, lead, team members, and date range
-- **Search functionality** for team members with real-time filtering
-- **Selected count badge** showing number of team members selected
-- Optimized for large teams (50+ members)
-- Clean interface with add forms only (no lists)
-
-#### 2. Dashboard Tab
+#### 1. Teams & Projects Tab (Unified Dashboard)
 - **Overview Statistics**: Total Projects, Team Members, Project Leads
-- **Import from Jira**: One-click import of projects from Jira epics
-  - Automatically populates projects with team leads and members
-  - Fetches data directly from Jira REST API
-  - Requires Jira credentials in Replit Secrets (see JIRA_INTEGRATION_GUIDE.md)
 - **All Projects Section**:
+  - "Add New Project" button opens modal form for project creation
   - Project cards with lead and team member information
   - Edit button on each project card to modify all project details
-  - Filters: By project lead, by team member
+  - Filters: By project name, by project lead, by team member
   - Sorting: By end date (ascending/descending)
+  - Import from Jira: One-click import of projects from Jira epics
 - **All Team Members Section**:
+  - "Add Team Member" button opens modal form
   - Grid view of all team members
   - Edit/delete functionality for each member
-  - No filters or sorting (simple list view)
 - **All Project Leads Section**:
+  - "Add Project Lead" button opens modal form
   - Grid view of all project leads
   - Edit/delete functionality for each lead
-  - No filters or sorting (simple list view)
+- **Form Features**:
+  - Modal dialogs for all add operations
+  - Red asterisks (*) indicate mandatory fields
+  - Inline validation error messages
+  - Forms reset when modal closes
 
-#### 3. Submit Report Tab
+#### 2. Submit Report Tab
 - Weekly report submission for project leads
 - Health status selection: On Track, At Risk, Critical
 - Progress, challenges, and next week plans
 - Optional team member feedback for each team member on the project
 - Prevents duplicate submissions for the same week
 
-#### 4. View Reports Tab
+#### 3. View Reports Tab
 - **Overview Stats**: Projects On Track, At Risk, Critical
 - **Filters**: By project lead, team member, health status
 - **Export Options**: Save as PDF or CSV (for archival before deleting)
@@ -114,7 +118,7 @@ A comprehensive project management and reporting application for managing teams,
 - Edit existing reports (progress, challenges, plans, health status)
 - Display team member feedback when available
 
-#### 5. Report Status Tab
+#### 4. Report Status Tab
 - **Dashboard Metrics**: Total Projects, Reports Submitted, Reports Pending
 - **Filters**: By project lead, by submission status (all/submitted/pending)
 - Visual indicators for report submission status

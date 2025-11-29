@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Project, ProjectLead, TeamMember } from '@shared/schema';
+import type { Project, ProjectLead, TeamMember, InsertProject } from '@shared/schema';
 
 type SortOrder = 'asc' | 'desc';
 
@@ -22,6 +22,7 @@ export default function ProjectsDashboard() {
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const [filterLead, setFilterLead] = useState<string>('all');
   const [filterMember, setFilterMember] = useState<string>('all');
+  const [filterProjectName, setFilterProjectName] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [editFormData, setEditFormData] = useState({
@@ -41,6 +42,27 @@ export default function ProjectsDashboard() {
   const [editMemberValue, setEditMemberValue] = useState('');
   const [editLeadValue, setEditLeadValue] = useState('');
 
+  // Add Project Modal State
+  const [showAddProjectDialog, setShowAddProjectDialog] = useState(false);
+  const [projectFormData, setProjectFormData] = useState({
+    name: '',
+    customer: '',
+    leadId: '',
+    teamMemberIds: [] as string[],
+    startDate: '',
+    endDate: '',
+  });
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
+  const [projectFormErrors, setProjectFormErrors] = useState<Record<string, string>>({});
+
+  // Add Team Member Modal State
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [newMember, setNewMember] = useState('');
+
+  // Add Project Lead Modal State
+  const [showAddLeadDialog, setShowAddLeadDialog] = useState(false);
+  const [newLead, setNewLead] = useState('');
+
   const totalTeamMembers = teamMembers.length;
   const totalLeads = projectLeads.length;
 
@@ -57,12 +79,13 @@ export default function ProjectsDashboard() {
   const filteredProjects = projects.filter((project) => {
     if (filterLead !== 'all' && project.leadId !== filterLead) return false;
     if (filterMember !== 'all' && !project.teamMemberIds.includes(filterMember)) return false;
+    if (filterProjectName && !project.name.toLowerCase().includes(filterProjectName.toLowerCase())) return false;
     return true;
   });
 
   const sortedProjects = [...filteredProjects].sort((a, b) => {
-    const dateA = new Date(a.endDate).getTime();
-    const dateB = new Date(b.endDate).getTime();
+    const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
+    const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
     return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
   });
 
@@ -77,8 +100,8 @@ export default function ProjectsDashboard() {
       customer: project.customer,
       leadId: project.leadId,
       teamMemberIds: project.teamMemberIds,
-      startDate: project.startDate,
-      endDate: project.endDate,
+      startDate: project.startDate || '',
+      endDate: project.endDate || '',
     });
     setSearchQuery('');
   };
@@ -107,8 +130,15 @@ export default function ProjectsDashboard() {
 
   const handleSaveEdit = () => {
     if (editingProject && editFormData.name && editFormData.customer && editFormData.leadId && 
-        editFormData.teamMemberIds.length > 0 && editFormData.startDate && editFormData.endDate) {
-      editProjectMutation.mutate({ id: editingProject.id, updates: editFormData });
+        editFormData.teamMemberIds.length > 0) {
+      editProjectMutation.mutate({ 
+        id: editingProject.id, 
+        updates: {
+          ...editFormData,
+          startDate: editFormData.startDate || null,
+          endDate: editFormData.endDate || null,
+        }
+      });
     }
   };
 
@@ -140,7 +170,6 @@ export default function ProjectsDashboard() {
         throw new Error(errorText || 'Import failed');
       }
 
-      // Invalidate all relevant queries after successful import
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
@@ -164,6 +193,25 @@ export default function ProjectsDashboard() {
   };
 
   // Team member mutations
+  const createMemberMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return await apiRequest('POST', '/api/team-members', { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      toast({ title: 'Success', description: 'Team member added' });
+      setNewMember('');
+      setShowAddMemberDialog(false);
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to add team member',
+        variant: 'destructive'
+      });
+    },
+  });
+
   const updateMemberMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
       return await apiRequest('PATCH', `/api/team-members/${id}`, { name });
@@ -200,6 +248,25 @@ export default function ProjectsDashboard() {
   });
 
   // Project lead mutations
+  const createLeadMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return await apiRequest('POST', '/api/project-leads', { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      toast({ title: 'Success', description: 'Project lead added' });
+      setNewLead('');
+      setShowAddLeadDialog(false);
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to add project lead',
+        variant: 'destructive'
+      });
+    },
+  });
+
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
       return await apiRequest('PATCH', `/api/project-leads/${id}`, { name });
@@ -235,6 +302,38 @@ export default function ProjectsDashboard() {
     },
   });
 
+  // Project mutations
+  const createProjectMutation = useMutation({
+    mutationFn: async (project: InsertProject) => {
+      return await apiRequest('POST', '/api/projects', project);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      toast({ 
+        title: 'Success', 
+        description: 'Project created successfully' 
+      });
+      setProjectFormData({
+        name: '',
+        customer: '',
+        leadId: '',
+        teamMemberIds: [],
+        startDate: '',
+        endDate: '',
+      });
+      setProjectSearchQuery('');
+      setProjectFormErrors({});
+      setShowAddProjectDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to create project',
+        variant: 'destructive'
+      });
+    }
+  });
+
   const startEditMember = (member: TeamMember) => {
     setEditingMemberId(member.id);
     setEditMemberValue(member.name);
@@ -256,6 +355,68 @@ export default function ProjectsDashboard() {
       updateLeadMutation.mutate({ id, name: editLeadValue.trim() });
     }
   };
+
+  const handleAddMember = () => {
+    if (newMember.trim()) {
+      createMemberMutation.mutate(newMember.trim());
+    }
+  };
+
+  const handleAddLead = () => {
+    if (newLead.trim()) {
+      createLeadMutation.mutate(newLead.trim());
+    }
+  };
+
+  const validateProjectForm = () => {
+    const errors: Record<string, string> = {};
+    if (!projectFormData.name.trim()) {
+      errors.name = 'Project name is required';
+    }
+    if (!projectFormData.customer.trim()) {
+      errors.customer = 'Customer is required';
+    }
+    if (!projectFormData.leadId) {
+      errors.leadId = 'Project lead is required';
+    }
+    if (projectFormData.teamMemberIds.length === 0) {
+      errors.teamMemberIds = 'At least one team member is required';
+    }
+    return errors;
+  };
+
+  const handleSubmitProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors = validateProjectForm();
+    setProjectFormErrors(errors);
+    
+    if (Object.keys(errors).length === 0) {
+      createProjectMutation.mutate({
+        ...projectFormData,
+        startDate: projectFormData.startDate || null,
+        endDate: projectFormData.endDate || null,
+      });
+    } else {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const toggleProjectTeamMember = (memberId: string) => {
+    setProjectFormData((prev) => ({
+      ...prev,
+      teamMemberIds: prev.teamMemberIds.includes(memberId)
+        ? prev.teamMemberIds.filter((id) => id !== memberId)
+        : [...prev.teamMemberIds, memberId],
+    }));
+  };
+
+  const filteredProjectTeamMembers = teamMembers.filter((member) =>
+    member.name.toLowerCase().includes(projectSearchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -303,14 +464,223 @@ export default function ProjectsDashboard() {
         </Card>
       </div>
 
+      {/* All Projects Section */}
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <CardTitle className="text-2xl">All Projects ({sortedProjects.length})</CardTitle>
             <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+              {/* Add New Project Button */}
+              <Dialog open={showAddProjectDialog} onOpenChange={(open) => {
+                setShowAddProjectDialog(open);
+                if (!open) {
+                  setProjectFormData({
+                    name: '',
+                    customer: '',
+                    leadId: '',
+                    teamMemberIds: [],
+                    startDate: '',
+                    endDate: '',
+                  });
+                  setProjectSearchQuery('');
+                  setProjectFormErrors({});
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button variant="default" className="gap-2" data-testid="button-add-project">
+                    <Plus className="h-4 w-4" />
+                    Add New Project
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add New Project</DialogTitle>
+                    <DialogDescription>
+                      Create a new project with team members and project lead.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmitProject} className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-project-name">Project Name <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="new-project-name"
+                        data-testid="input-project-name"
+                        type="text"
+                        value={projectFormData.name}
+                        onChange={(e) => {
+                          setProjectFormData({ ...projectFormData, name: e.target.value });
+                          if (projectFormErrors.name) {
+                            setProjectFormErrors({ ...projectFormErrors, name: '' });
+                          }
+                        }}
+                        placeholder="Enter project name"
+                        className={projectFormErrors.name ? 'border-red-500' : ''}
+                      />
+                      {projectFormErrors.name && (
+                        <p className="text-sm text-red-500" data-testid="error-project-name">{projectFormErrors.name}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-customer">Customer <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="new-customer"
+                        data-testid="input-customer"
+                        type="text"
+                        value={projectFormData.customer}
+                        onChange={(e) => {
+                          setProjectFormData({ ...projectFormData, customer: e.target.value });
+                          if (projectFormErrors.customer) {
+                            setProjectFormErrors({ ...projectFormErrors, customer: '' });
+                          }
+                        }}
+                        placeholder="Enter customer name"
+                        className={projectFormErrors.customer ? 'border-red-500' : ''}
+                      />
+                      {projectFormErrors.customer && (
+                        <p className="text-sm text-red-500" data-testid="error-customer">{projectFormErrors.customer}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-lead">Project Lead <span className="text-red-500">*</span></Label>
+                      <Select
+                        value={projectFormData.leadId}
+                        onValueChange={(value) => {
+                          setProjectFormData({ ...projectFormData, leadId: value });
+                          if (projectFormErrors.leadId) {
+                            setProjectFormErrors({ ...projectFormErrors, leadId: '' });
+                          }
+                        }}
+                      >
+                        <SelectTrigger id="new-lead" data-testid="select-lead" className={projectFormErrors.leadId ? 'border-red-500' : ''}>
+                          <SelectValue placeholder="Select project lead" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projectLeads.map((lead) => (
+                            <SelectItem key={lead.id} value={lead.id}>
+                              {lead.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {projectFormErrors.leadId && (
+                        <p className="text-sm text-red-500" data-testid="error-lead">{projectFormErrors.leadId}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Team Members <span className="text-red-500">*</span></Label>
+                        {projectFormData.teamMemberIds.length > 0 && (
+                          <Badge variant="secondary" data-testid="badge-selected-count">
+                            {projectFormData.teamMemberIds.length} selected
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          placeholder="Search team members..."
+                          value={projectSearchQuery}
+                          onChange={(e) => setProjectSearchQuery(e.target.value)}
+                          className="pl-9 pr-9"
+                          data-testid="input-search-members"
+                        />
+                        {projectSearchQuery && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setProjectSearchQuery('')}
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                            data-testid="button-clear-search"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className={`border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto ${projectFormErrors.teamMemberIds ? 'border-red-500' : ''}`}>
+                        {filteredProjectTeamMembers.length > 0 ? (
+                          filteredProjectTeamMembers.map((member) => (
+                            <div key={member.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`new-member-${member.id}`}
+                                data-testid={`checkbox-member-${member.id}`}
+                                checked={projectFormData.teamMemberIds.includes(member.id)}
+                                onCheckedChange={() => {
+                                  toggleProjectTeamMember(member.id);
+                                  if (projectFormErrors.teamMemberIds) {
+                                    setProjectFormErrors({ ...projectFormErrors, teamMemberIds: '' });
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`new-member-${member.id}`} className="font-normal cursor-pointer">
+                                {member.name}
+                              </Label>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-4" data-testid="text-no-results">
+                            No team members found matching "{projectSearchQuery}"
+                          </p>
+                        )}
+                      </div>
+                      {projectFormErrors.teamMemberIds && (
+                        <p className="text-sm text-red-500" data-testid="error-team-members">{projectFormErrors.teamMemberIds}</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="new-start-date">Start Date</Label>
+                        <Input
+                          id="new-start-date"
+                          data-testid="input-start-date"
+                          type="date"
+                          value={projectFormData.startDate}
+                          onChange={(e) => setProjectFormData({ ...projectFormData, startDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="new-end-date">End Date</Label>
+                        <Input
+                          id="new-end-date"
+                          data-testid="input-end-date"
+                          type="date"
+                          value={projectFormData.endDate}
+                          onChange={(e) => setProjectFormData({ ...projectFormData, endDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowAddProjectDialog(false)}
+                        data-testid="button-cancel-add-project"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        data-testid="button-submit-project" 
+                        type="submit"
+                        disabled={createProjectMutation.isPending}
+                      >
+                        {createProjectMutation.isPending ? 'Adding...' : 'Add Project'}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
               <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
                 <DialogTrigger asChild>
-                  <Button variant="default" className="gap-2" data-testid="button-import-jira">
+                  <Button variant="outline" className="gap-2" data-testid="button-import-jira">
                     <Download className="h-4 w-4" />
                     Import from Jira
                   </Button>
@@ -359,6 +729,32 @@ export default function ProjectsDashboard() {
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* Project Name Filter */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Filter by name..."
+                  value={filterProjectName}
+                  onChange={(e) => setFilterProjectName(e.target.value)}
+                  className="pl-9 pr-9 w-full sm:w-[180px]"
+                  data-testid="input-filter-project-name"
+                />
+                {filterProjectName && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setFilterProjectName('')}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                    data-testid="button-clear-filter-name"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
               <Select value={filterLead} onValueChange={setFilterLead}>
                 <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-lead">
                   <SelectValue placeholder="Filter by lead" />
@@ -398,207 +794,266 @@ export default function ProjectsDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sortedProjects.map((project) => (
-              <Card key={project.id} data-testid={`project-card-${project.id}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl">{project.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{project.customer}</p>
+          {sortedProjects.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-projects">
+              No projects found. Click "Add New Project" to create one.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sortedProjects.map((project) => (
+                <Card key={project.id} data-testid={`project-card-${project.id}`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl">{project.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">{project.customer}</p>
+                      </div>
+                      <Dialog open={editingProject?.id === project.id} onOpenChange={(open) => !open && setEditingProject(null)}>
+                        <DialogTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => startEdit(project)}
+                            data-testid={`button-edit-project-${project.id}`}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Edit Project</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-name">Project Name <span className="text-red-500">*</span></Label>
+                              <Input
+                                id="edit-name"
+                                data-testid="input-edit-project-name"
+                                value={editFormData.name}
+                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-customer">Customer <span className="text-red-500">*</span></Label>
+                              <Input
+                                id="edit-customer"
+                                data-testid="input-edit-customer"
+                                value={editFormData.customer}
+                                onChange={(e) => setEditFormData({ ...editFormData, customer: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-lead">Project Lead <span className="text-red-500">*</span></Label>
+                              <Select
+                                value={editFormData.leadId}
+                                onValueChange={(value) => setEditFormData({ ...editFormData, leadId: value })}
+                              >
+                                <SelectTrigger id="edit-lead" data-testid="select-edit-lead">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {projectLeads.map((lead) => (
+                                    <SelectItem key={lead.id} value={lead.id}>
+                                      {lead.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Label>Team Members <span className="text-red-500">*</span></Label>
+                                {editFormData.teamMemberIds.length > 0 && (
+                                  <Badge variant="secondary" data-testid="badge-edit-selected-count">
+                                    {editFormData.teamMemberIds.length} selected
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="text"
+                                  placeholder="Search team members..."
+                                  value={searchQuery}
+                                  onChange={(e) => setSearchQuery(e.target.value)}
+                                  className="pl-9 pr-9"
+                                  data-testid="input-edit-search-members"
+                                />
+                                {searchQuery && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                                    data-testid="button-edit-clear-search"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
+                                {filteredTeamMembers.length > 0 ? (
+                                  filteredTeamMembers.map((member) => (
+                                    <div key={member.id} className="flex items-center gap-2">
+                                      <Checkbox
+                                        id={`edit-member-${member.id}`}
+                                        data-testid={`checkbox-edit-member-${member.id}`}
+                                        checked={editFormData.teamMemberIds.includes(member.id)}
+                                        onCheckedChange={() => toggleTeamMember(member.id)}
+                                      />
+                                      <Label htmlFor={`edit-member-${member.id}`} className="font-normal cursor-pointer">
+                                        {member.name}
+                                      </Label>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-sm text-muted-foreground text-center py-4">
+                                    No team members found matching "{searchQuery}"
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="edit-start-date">Start Date</Label>
+                                <Input
+                                  id="edit-start-date"
+                                  data-testid="input-edit-start-date"
+                                  type="date"
+                                  value={editFormData.startDate}
+                                  onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="edit-end-date">End Date</Label>
+                                <Input
+                                  id="edit-end-date"
+                                  data-testid="input-edit-end-date"
+                                  type="date"
+                                  value={editFormData.endDate}
+                                  onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => setEditingProject(null)}
+                                data-testid="button-cancel-edit"
+                              >
+                                Cancel
+                              </Button>
+                              <Button 
+                                onClick={handleSaveEdit} 
+                                data-testid="button-save-edit"
+                                disabled={editProjectMutation.isPending}
+                              >
+                                {editProjectMutation.isPending ? 'Saving...' : 'Save Changes'}
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
-                    <Dialog open={editingProject?.id === project.id} onOpenChange={(open) => !open && setEditingProject(null)}>
-                      <DialogTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => startEdit(project)}
-                          data-testid={`button-edit-project-${project.id}`}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Edit Project</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-name">Project Name</Label>
-                            <Input
-                              id="edit-name"
-                              data-testid="input-edit-project-name"
-                              value={editFormData.name}
-                              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-customer">Customer</Label>
-                            <Input
-                              id="edit-customer"
-                              data-testid="input-edit-customer"
-                              value={editFormData.customer}
-                              onChange={(e) => setEditFormData({ ...editFormData, customer: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-lead">Project Lead</Label>
-                            <Select
-                              value={editFormData.leadId}
-                              onValueChange={(value) => setEditFormData({ ...editFormData, leadId: value })}
-                            >
-                              <SelectTrigger id="edit-lead" data-testid="select-edit-lead">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {projectLeads.map((lead) => (
-                                  <SelectItem key={lead.id} value={lead.id}>
-                                    {lead.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label>Team Members</Label>
-                              {editFormData.teamMemberIds.length > 0 && (
-                                <Badge variant="secondary" data-testid="badge-edit-selected-count">
-                                  {editFormData.teamMemberIds.length} selected
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="relative">
-                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="text"
-                                placeholder="Search team members..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 pr-9"
-                                data-testid="input-edit-search-members"
-                              />
-                              {searchQuery && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setSearchQuery('')}
-                                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
-                                  data-testid="button-edit-clear-search"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                            <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
-                              {filteredTeamMembers.length > 0 ? (
-                                filteredTeamMembers.map((member) => (
-                                  <div key={member.id} className="flex items-center gap-2">
-                                    <Checkbox
-                                      id={`edit-member-${member.id}`}
-                                      data-testid={`checkbox-edit-member-${member.id}`}
-                                      checked={editFormData.teamMemberIds.includes(member.id)}
-                                      onCheckedChange={() => toggleTeamMember(member.id)}
-                                    />
-                                    <Label htmlFor={`edit-member-${member.id}`} className="font-normal cursor-pointer">
-                                      {member.name}
-                                    </Label>
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="text-sm text-muted-foreground text-center py-4">
-                                  No team members found matching "{searchQuery}"
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="edit-start-date">Start Date</Label>
-                              <Input
-                                id="edit-start-date"
-                                data-testid="input-edit-start-date"
-                                type="date"
-                                value={editFormData.startDate}
-                                onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="edit-end-date">End Date</Label>
-                              <Input
-                                id="edit-end-date"
-                                data-testid="input-edit-end-date"
-                                type="date"
-                                value={editFormData.endDate}
-                                onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
-                              />
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              onClick={() => setEditingProject(null)}
-                              data-testid="button-cancel-edit"
-                            >
-                              Cancel
-                            </Button>
-                            <Button 
-                              onClick={handleSaveEdit} 
-                              data-testid="button-save-edit"
-                              disabled={editProjectMutation.isPending}
-                            >
-                              {editProjectMutation.isPending ? 'Saving...' : 'Save Changes'}
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Lead:</span>
-                    <span className="text-muted-foreground">{getLeadName(project.leadId)}</span>
-                  </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Lead:</span>
+                      <span className="text-muted-foreground">{getLeadName(project.leadId)}</span>
+                    </div>
 
-                  <div className="flex items-start gap-2 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div className="flex-1">
-                      <span className="font-medium">Team:</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {getTeamMemberNames(project.teamMemberIds).map((name, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            {name}
-                          </Badge>
-                        ))}
+                    <div className="flex items-start gap-2 text-sm">
+                      <Users className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <span className="font-medium">Team:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {getTeamMemberNames(project.teamMemberIds).map((name, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {name}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      {project.startDate} - {project.endDate}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    {(project.startDate || project.endDate) && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          {project.startDate || 'N/A'} - {project.endDate || 'N/A'}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* All Team Members Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">All Team Members ({teamMembers.length})</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardTitle className="text-2xl">All Team Members ({teamMembers.length})</CardTitle>
+            <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
+              <DialogTrigger asChild>
+                <Button variant="default" className="gap-2" data-testid="button-add-member">
+                  <UserPlus className="h-4 w-4" />
+                  Add Team Member
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Team Member</DialogTitle>
+                  <DialogDescription>
+                    Add a new team member to the system.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-member-name">Team Member Name <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="new-member-name"
+                      data-testid="input-member-name"
+                      type="text"
+                      value={newMember}
+                      onChange={(e) => setNewMember(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddMember()}
+                      placeholder="Enter team member name"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddMemberDialog(false);
+                        setNewMember('');
+                      }}
+                      data-testid="button-cancel-add-member"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddMember}
+                      disabled={createMemberMutation.isPending || !newMember.trim()}
+                      data-testid="button-submit-member"
+                    >
+                      {createMemberMutation.isPending ? 'Adding...' : 'Add Member'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           {teamMembers.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-members">
-              No team members added yet. Add team members in the Team & Projects tab.
+              No team members added yet. Click "Add Team Member" to add one.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -675,12 +1130,63 @@ export default function ProjectsDashboard() {
       {/* All Project Leads Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">All Project Leads ({projectLeads.length})</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardTitle className="text-2xl">All Project Leads ({projectLeads.length})</CardTitle>
+            <Dialog open={showAddLeadDialog} onOpenChange={setShowAddLeadDialog}>
+              <DialogTrigger asChild>
+                <Button variant="default" className="gap-2" data-testid="button-add-lead">
+                  <UserPlus className="h-4 w-4" />
+                  Add Project Lead
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Project Lead</DialogTitle>
+                  <DialogDescription>
+                    Add a new project lead to the system.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-lead-name">Project Lead Name <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="new-lead-name"
+                      data-testid="input-lead-name"
+                      type="text"
+                      value={newLead}
+                      onChange={(e) => setNewLead(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddLead()}
+                      placeholder="Enter project lead name"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddLeadDialog(false);
+                        setNewLead('');
+                      }}
+                      data-testid="button-cancel-add-lead"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddLead}
+                      disabled={createLeadMutation.isPending || !newLead.trim()}
+                      data-testid="button-submit-lead"
+                    >
+                      {createLeadMutation.isPending ? 'Adding...' : 'Add Lead'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           {projectLeads.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-leads">
-              No project leads added yet. Add project leads in the Team & Projects tab.
+              No project leads added yet. Click "Add Project Lead" to add one.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

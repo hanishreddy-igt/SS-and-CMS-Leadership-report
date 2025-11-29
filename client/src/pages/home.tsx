@@ -1,6 +1,5 @@
-import { FileText, UserCheck, LayoutDashboard, FolderKanban } from 'lucide-react';
+import { FileText, UserCheck, FolderKanban } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import TeamAndProjectManagement from '@/components/TeamAndProjectManagement';
 import ProjectsDashboard from '@/components/ProjectsDashboard';
 import SubmitReport from '@/components/SubmitReport';
 import ViewReports from '@/components/ViewReports';
@@ -19,15 +18,11 @@ export default function Home() {
           </p>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
-            <TabsTrigger value="dashboard" data-testid="tab-dashboard" className="gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </TabsTrigger>
-            <TabsTrigger value="manage" data-testid="tab-manage" className="gap-2">
+        <Tabs defaultValue="teams-projects" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
+            <TabsTrigger value="teams-projects" data-testid="tab-teams-projects" className="gap-2">
               <FolderKanban className="h-4 w-4" />
-              <span className="hidden sm:inline">Team & Projects</span>
+              <span className="hidden sm:inline">Teams & Projects</span>
             </TabsTrigger>
             <TabsTrigger value="submit" data-testid="tab-submit" className="gap-2">
               <FileText className="h-4 w-4" />
@@ -43,11 +38,7 @@ export default function Home() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="manage">
-            <TeamAndProjectManagement />
-          </TabsContent>
-
-          <TabsContent value="dashboard">
+          <TabsContent value="teams-projects">
             <ProjectsDashboard />
           </TabsContent>
 
