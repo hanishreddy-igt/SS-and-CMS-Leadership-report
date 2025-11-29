@@ -11,21 +11,34 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import type { Project, ProjectLead, TeamMember, InsertProject } from '@shared/schema';
 
 type SortOrder = 'asc' | 'desc';
+type SortField = 'endDate' | 'startDate';
 
 export default function ProjectsDashboard() {
   const { toast } = useToast();
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
-  const [filterLead, setFilterLead] = useState<string>('all');
-  const [filterMember, setFilterMember] = useState<string>('all');
+  const [filterLeads, setFilterLeads] = useState<string[]>([]);
+  const [filterMembers, setFilterMembers] = useState<string[]>([]);
   const [filterProjectName, setFilterProjectName] = useState<string>('');
+  const [filterMemberSearch, setFilterMemberSearch] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [sortField, setSortField] = useState<SortField>('endDate');
+  
+  // Bulk selection state
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [showBulkDeleteProjects, setShowBulkDeleteProjects] = useState(false);
+  const [showBulkDeleteMembers, setShowBulkDeleteMembers] = useState(false);
+  const [showBulkDeleteLeads, setShowBulkDeleteLeads] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -80,20 +93,110 @@ export default function ProjectsDashboard() {
   };
 
   const filteredProjects = projects.filter((project) => {
-    if (filterLead !== 'all' && project.leadId !== filterLead) return false;
-    if (filterMember !== 'all' && !project.teamMemberIds.includes(filterMember)) return false;
+    if (filterLeads.length > 0 && !filterLeads.includes(project.leadId)) return false;
+    if (filterMembers.length > 0 && !filterMembers.some(memberId => project.teamMemberIds.includes(memberId))) return false;
     if (filterProjectName && !project.name.toLowerCase().includes(filterProjectName.toLowerCase())) return false;
     return true;
   });
 
   const sortedProjects = [...filteredProjects].sort((a, b) => {
-    const dateA = a.endDate ? new Date(a.endDate).getTime() : 0;
-    const dateB = b.endDate ? new Date(b.endDate).getTime() : 0;
+    const dateField = sortField === 'endDate' ? 'endDate' : 'startDate';
+    const dateA = a[dateField] ? new Date(a[dateField]!).getTime() : 0;
+    const dateB = b[dateField] ? new Date(b[dateField]!).getTime() : 0;
     return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
   });
 
-  const toggleSort = () => {
-    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+  
+  // Filter member search results
+  const filteredMembersForFilter = teamMembers.filter((member) =>
+    member.name.toLowerCase().includes(filterMemberSearch.toLowerCase())
+  );
+  
+  // Toggle lead in filter
+  const toggleLeadFilter = (leadId: string) => {
+    setFilterLeads(prev => 
+      prev.includes(leadId) 
+        ? prev.filter(id => id !== leadId)
+        : [...prev, leadId]
+    );
+  };
+  
+  // Toggle member in filter
+  const toggleMemberFilter = (memberId: string) => {
+    setFilterMembers(prev => 
+      prev.includes(memberId) 
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    );
+  };
+  
+  // Bulk selection helpers
+  const toggleProjectSelection = (projectId: string) => {
+    setSelectedProjects(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  };
+  
+  const toggleMemberSelection = (memberId: string) => {
+    setSelectedMembers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(memberId)) {
+        newSet.delete(memberId);
+      } else {
+        newSet.add(memberId);
+      }
+      return newSet;
+    });
+  };
+  
+  const toggleLeadSelection = (leadId: string) => {
+    setSelectedLeads(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(leadId)) {
+        newSet.delete(leadId);
+      } else {
+        newSet.add(leadId);
+      }
+      return newSet;
+    });
+  };
+  
+  const selectAllProjects = () => {
+    if (selectedProjects.size === sortedProjects.length) {
+      setSelectedProjects(new Set());
+    } else {
+      setSelectedProjects(new Set(sortedProjects.map(p => p.id)));
+    }
+  };
+  
+  const selectAllMembers = () => {
+    if (selectedMembers.size === teamMembers.length) {
+      setSelectedMembers(new Set());
+    } else {
+      setSelectedMembers(new Set(teamMembers.map(m => m.id)));
+    }
+  };
+  
+  const selectAllLeads = () => {
+    if (selectedLeads.size === projectLeads.length) {
+      setSelectedLeads(new Set());
+    } else {
+      setSelectedLeads(new Set(projectLeads.map(l => l.id)));
+    }
   };
 
   const startEdit = (project: Project) => {
@@ -445,16 +548,84 @@ export default function ProjectsDashboard() {
   const getActiveFilterCount = () => {
     let count = 0;
     if (filterProjectName) count++;
-    if (filterLead !== 'all') count++;
-    if (filterMember !== 'all') count++;
+    if (filterLeads.length > 0) count += filterLeads.length;
+    if (filterMembers.length > 0) count += filterMembers.length;
     return count;
   };
 
   const clearAllFilters = () => {
     setFilterProjectName('');
-    setFilterLead('all');
-    setFilterMember('all');
+    setFilterLeads([]);
+    setFilterMembers([]);
+    setFilterMemberSearch('');
   };
+  
+  // Bulk delete mutations
+  const bulkDeleteProjectsMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest('DELETE', `/api/projects/${id}`)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      toast({ 
+        title: 'Success', 
+        description: `${selectedProjects.size} project(s) deleted successfully` 
+      });
+      setSelectedProjects(new Set());
+      setShowBulkDeleteProjects(false);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to delete projects',
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  const bulkDeleteMembersMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest('DELETE', `/api/team-members/${id}`)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      toast({ 
+        title: 'Success', 
+        description: `${selectedMembers.size} team member(s) deleted successfully` 
+      });
+      setSelectedMembers(new Set());
+      setShowBulkDeleteMembers(false);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to delete team members',
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  const bulkDeleteLeadsMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map(id => apiRequest('DELETE', `/api/project-leads/${id}`)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      toast({ 
+        title: 'Success', 
+        description: `${selectedLeads.size} project lead(s) deleted successfully` 
+      });
+      setSelectedLeads(new Set());
+      setShowBulkDeleteLeads(false);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to delete project leads',
+        variant: 'destructive'
+      });
+    }
+  });
 
   return (
     <div className="space-y-6">
@@ -782,7 +953,7 @@ export default function ProjectsDashboard() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80" align="end">
-                  <div className="space-y-4">
+                  <div className="space-y-4 max-h-[70vh] overflow-y-auto">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium">Sort & Filter</h4>
                       {getActiveFilterCount() > 0 && (
@@ -798,21 +969,38 @@ export default function ProjectsDashboard() {
                       )}
                     </div>
                     
-                    {/* Sort by End Date */}
+                    {/* Sort Options */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Sort by End Date</Label>
-                      <Button
-                        variant="outline"
-                        onClick={toggleSort}
-                        data-testid="button-sort-date"
-                        className="w-full justify-between"
-                      >
-                        <span>End Date</span>
-                        <span className="flex items-center gap-1">
-                          <ArrowUpDown className="h-4 w-4" />
-                          {sortOrder === 'asc' ? 'Earliest First' : 'Latest First'}
-                        </span>
-                      </Button>
+                      <Label className="text-sm font-medium">Sort By</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={sortField === 'endDate' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => toggleSort('endDate')}
+                          data-testid="button-sort-end-date"
+                          className="flex-1 justify-between"
+                        >
+                          <span>End Date</span>
+                          {sortField === 'endDate' && (
+                            <ArrowUpDown className="h-3 w-3 ml-1" />
+                          )}
+                        </Button>
+                        <Button
+                          variant={sortField === 'startDate' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => toggleSort('startDate')}
+                          data-testid="button-sort-start-date"
+                          className="flex-1 justify-between"
+                        >
+                          <span>Start Date</span>
+                          {sortField === 'startDate' && (
+                            <ArrowUpDown className="h-3 w-3 ml-1" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {sortOrder === 'asc' ? 'Earliest First' : 'Latest First'}
+                      </p>
                     </div>
 
                     {/* Filter by Name */}
@@ -843,40 +1031,94 @@ export default function ProjectsDashboard() {
                       </div>
                     </div>
 
-                    {/* Filter by Lead */}
+                    {/* Filter by Lead - Multi Select */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Filter by Lead</Label>
-                      <Select value={filterLead} onValueChange={setFilterLead}>
-                        <SelectTrigger className="w-full" data-testid="select-filter-lead">
-                          <SelectValue placeholder="All Leads" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Leads</SelectItem>
-                          {projectLeads.map((lead) => (
-                            <SelectItem key={lead.id} value={lead.id}>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Filter by Lead</Label>
+                        {filterLeads.length > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {filterLeads.length} selected
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="border rounded-md p-2 space-y-1 max-h-32 overflow-y-auto" data-testid="filter-leads-container">
+                        {projectLeads.map((lead) => (
+                          <div key={lead.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`filter-lead-${lead.id}`}
+                              data-testid={`checkbox-filter-lead-${lead.id}`}
+                              checked={filterLeads.includes(lead.id)}
+                              onCheckedChange={() => toggleLeadFilter(lead.id)}
+                            />
+                            <Label 
+                              htmlFor={`filter-lead-${lead.id}`} 
+                              className="font-normal text-sm cursor-pointer flex-1"
+                            >
                               {lead.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            </Label>
+                          </div>
+                        ))}
+                        {projectLeads.length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-2">No leads available</p>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Filter by Member */}
+                    {/* Filter by Member - Multi Select with Search */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Filter by Member</Label>
-                      <Select value={filterMember} onValueChange={setFilterMember}>
-                        <SelectTrigger className="w-full" data-testid="select-filter-member">
-                          <SelectValue placeholder="All Members" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Members</SelectItem>
-                          {teamMembers.map((member) => (
-                            <SelectItem key={member.id} value={member.id}>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Filter by Member</Label>
+                        {filterMembers.length > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {filterMembers.length} selected
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          placeholder="Search members..."
+                          value={filterMemberSearch}
+                          onChange={(e) => setFilterMemberSearch(e.target.value)}
+                          className="pl-9 pr-9"
+                          data-testid="input-filter-member-search"
+                        />
+                        {filterMemberSearch && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setFilterMemberSearch('')}
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="border rounded-md p-2 space-y-1 max-h-32 overflow-y-auto" data-testid="filter-members-container">
+                        {filteredMembersForFilter.map((member) => (
+                          <div key={member.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`filter-member-${member.id}`}
+                              data-testid={`checkbox-filter-member-${member.id}`}
+                              checked={filterMembers.includes(member.id)}
+                              onCheckedChange={() => toggleMemberFilter(member.id)}
+                            />
+                            <Label 
+                              htmlFor={`filter-member-${member.id}`} 
+                              className="font-normal text-sm cursor-pointer flex-1"
+                            >
                               {member.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            </Label>
+                          </div>
+                        ))}
+                        {filteredMembersForFilter.length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-2">
+                            {filterMemberSearch ? `No members matching "${filterMemberSearch}"` : 'No members available'}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </PopoverContent>
@@ -890,14 +1132,52 @@ export default function ProjectsDashboard() {
               No projects found. Click "Add New Project" to create one.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <>
+              {/* Bulk Selection Controls for Projects */}
+              <div className="flex items-center gap-4 mb-4 pb-4 border-b">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="select-all-projects"
+                    data-testid="checkbox-select-all-projects"
+                    checked={selectedProjects.size === sortedProjects.length && sortedProjects.length > 0}
+                    onCheckedChange={selectAllProjects}
+                  />
+                  <Label htmlFor="select-all-projects" className="font-normal cursor-pointer">
+                    Select All
+                  </Label>
+                </div>
+                {selectedProjects.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{selectedProjects.size} selected</Badge>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowBulkDeleteProjects(true)}
+                      data-testid="button-bulk-delete-projects"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete Selected
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {sortedProjects.map((project) => (
-                <Card key={project.id} data-testid={`project-card-${project.id}`}>
+                <Card key={project.id} data-testid={`project-card-${project.id}`} className={selectedProjects.has(project.id) ? 'ring-2 ring-primary' : ''}>
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1">
-                        <CardTitle className="text-xl">{project.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{project.customer}</p>
+                      <div className="flex items-start gap-3 flex-1">
+                        <Checkbox
+                          id={`select-project-${project.id}`}
+                          data-testid={`checkbox-select-project-${project.id}`}
+                          checked={selectedProjects.has(project.id)}
+                          onCheckedChange={() => toggleProjectSelection(project.id)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <CardTitle className="text-xl">{project.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground">{project.customer}</p>
+                        </div>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1095,10 +1375,19 @@ export default function ProjectsDashboard() {
                         </span>
                       </div>
                     )}
+                    
+                    {/* End date missing warning */}
+                    {!project.endDate && (
+                      <div className="flex items-center gap-2 text-sm text-red-500 mt-2" data-testid={`text-missing-end-date-${project.id}`}>
+                        <AlertCircle className="h-4 w-4" />
+                        <span>End date is missing</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -1108,13 +1397,25 @@ export default function ProjectsDashboard() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl">All Team Members ({teamMembers.length})</CardTitle>
-            <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
-              <DialogTrigger asChild>
-                <Button variant="default" className="gap-2" data-testid="button-add-member">
-                  <UserPlus className="h-4 w-4" />
-                  Add Team Member
+            <div className="flex gap-2">
+              {selectedMembers.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowBulkDeleteMembers(true)}
+                  data-testid="button-bulk-delete-members"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete {selectedMembers.size} Selected
                 </Button>
-              </DialogTrigger>
+              )}
+              <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="default" className="gap-2" data-testid="button-add-member">
+                    <UserPlus className="h-4 w-4" />
+                    Add Team Member
+                  </Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Add Team Member</DialogTitle>
@@ -1156,7 +1457,8 @@ export default function ProjectsDashboard() {
                   </div>
                 </div>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -1165,11 +1467,26 @@ export default function ProjectsDashboard() {
               No team members added yet. Click "Add Team Member" to add one.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <>
+              {/* Bulk Selection Controls for Members */}
+              <div className="flex items-center gap-4 mb-4 pb-4 border-b">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="select-all-members"
+                    data-testid="checkbox-select-all-members"
+                    checked={selectedMembers.size === teamMembers.length && teamMembers.length > 0}
+                    onCheckedChange={selectAllMembers}
+                  />
+                  <Label htmlFor="select-all-members" className="font-normal cursor-pointer">
+                    Select All
+                  </Label>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {teamMembers.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between bg-muted/50 p-3 rounded-md"
+                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md ${selectedMembers.has(member.id) ? 'ring-2 ring-primary' : ''}`}
                 data-testid={`member-item-${member.id}`}
               >
                 {editingMemberId === member.id ? (
@@ -1203,9 +1520,17 @@ export default function ProjectsDashboard() {
                   </div>
                 ) : (
                   <>
-                    <span data-testid={`text-member-${member.id}`} className="font-medium">
-                      {member.name}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`select-member-${member.id}`}
+                        data-testid={`checkbox-select-member-${member.id}`}
+                        checked={selectedMembers.has(member.id)}
+                        onCheckedChange={() => toggleMemberSelection(member.id)}
+                      />
+                      <span data-testid={`text-member-${member.id}`} className="font-medium">
+                        {member.name}
+                      </span>
+                    </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -1239,7 +1564,8 @@ export default function ProjectsDashboard() {
                 )}
               </div>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -1249,13 +1575,25 @@ export default function ProjectsDashboard() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl">All Project Leads ({projectLeads.length})</CardTitle>
-            <Dialog open={showAddLeadDialog} onOpenChange={setShowAddLeadDialog}>
-              <DialogTrigger asChild>
-                <Button variant="default" className="gap-2" data-testid="button-add-lead">
-                  <UserPlus className="h-4 w-4" />
-                  Add Project Lead
+            <div className="flex gap-2">
+              {selectedLeads.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowBulkDeleteLeads(true)}
+                  data-testid="button-bulk-delete-leads"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete {selectedLeads.size} Selected
                 </Button>
-              </DialogTrigger>
+              )}
+              <Dialog open={showAddLeadDialog} onOpenChange={setShowAddLeadDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="default" className="gap-2" data-testid="button-add-lead">
+                    <UserPlus className="h-4 w-4" />
+                    Add Project Lead
+                  </Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Add Project Lead</DialogTitle>
@@ -1297,7 +1635,8 @@ export default function ProjectsDashboard() {
                   </div>
                 </div>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -1306,11 +1645,26 @@ export default function ProjectsDashboard() {
               No project leads added yet. Click "Add Project Lead" to add one.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <>
+              {/* Bulk Selection Controls for Leads */}
+              <div className="flex items-center gap-4 mb-4 pb-4 border-b">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="select-all-leads"
+                    data-testid="checkbox-select-all-leads"
+                    checked={selectedLeads.size === projectLeads.length && projectLeads.length > 0}
+                    onCheckedChange={selectAllLeads}
+                  />
+                  <Label htmlFor="select-all-leads" className="font-normal cursor-pointer">
+                    Select All
+                  </Label>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {projectLeads.map((lead) => (
               <div
                 key={lead.id}
-                className="flex items-center justify-between bg-muted/50 p-3 rounded-md"
+                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md ${selectedLeads.has(lead.id) ? 'ring-2 ring-primary' : ''}`}
                 data-testid={`lead-item-${lead.id}`}
               >
                 {editingLeadId === lead.id ? (
@@ -1344,9 +1698,17 @@ export default function ProjectsDashboard() {
                   </div>
                 ) : (
                   <>
-                    <span data-testid={`text-lead-${lead.id}`} className="font-medium">
-                      {lead.name}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`select-lead-${lead.id}`}
+                        data-testid={`checkbox-select-lead-${lead.id}`}
+                        checked={selectedLeads.has(lead.id)}
+                        onCheckedChange={() => toggleLeadSelection(lead.id)}
+                      />
+                      <span data-testid={`text-lead-${lead.id}`} className="font-medium">
+                        {lead.name}
+                      </span>
+                    </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -1380,7 +1742,8 @@ export default function ProjectsDashboard() {
                 )}
               </div>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -1417,6 +1780,72 @@ export default function ProjectsDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Projects Confirmation Dialog */}
+      <AlertDialog open={showBulkDeleteProjects} onOpenChange={setShowBulkDeleteProjects}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedProjects.size} Project(s)</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedProjects.size} selected project(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-bulk-delete-projects">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => bulkDeleteProjectsMutation.mutate(Array.from(selectedProjects))}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-bulk-delete-projects"
+            >
+              {bulkDeleteProjectsMutation.isPending ? 'Deleting...' : 'Delete All'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Members Confirmation Dialog */}
+      <AlertDialog open={showBulkDeleteMembers} onOpenChange={setShowBulkDeleteMembers}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedMembers.size} Team Member(s)</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedMembers.size} selected team member(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-bulk-delete-members">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => bulkDeleteMembersMutation.mutate(Array.from(selectedMembers))}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-bulk-delete-members"
+            >
+              {bulkDeleteMembersMutation.isPending ? 'Deleting...' : 'Delete All'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Leads Confirmation Dialog */}
+      <AlertDialog open={showBulkDeleteLeads} onOpenChange={setShowBulkDeleteLeads}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedLeads.size} Project Lead(s)</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedLeads.size} selected project lead(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-bulk-delete-leads">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => bulkDeleteLeadsMutation.mutate(Array.from(selectedLeads))}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-bulk-delete-leads"
+            >
+              {bulkDeleteLeadsMutation.isPending ? 'Deleting...' : 'Delete All'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
