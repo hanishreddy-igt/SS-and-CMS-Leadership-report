@@ -288,11 +288,56 @@ export default function SubmitReport() {
     lead.name.toLowerCase().includes(statusLeadSearch.toLowerCase())
   );
 
+  // Tile click handlers - toggle filter and scroll to Report Status section
+  const handleSubmittedTileClick = () => {
+    // Clear lead filters first
+    setStatusFilterLeads(new Set());
+    setStatusLeadSearch('');
+    
+    // Toggle: if already filtered to 'submitted', clear it; otherwise apply it
+    if (statusFilterStatus === 'submitted') {
+      setStatusFilterStatus('all');
+    } else {
+      setStatusFilterStatus('submitted');
+    }
+    
+    setTimeout(() => {
+      const statusSection = document.getElementById('report-status-section');
+      if (statusSection) {
+        statusSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
+  const handlePendingTileClick = () => {
+    // Clear lead filters first
+    setStatusFilterLeads(new Set());
+    setStatusLeadSearch('');
+    
+    // Toggle: if already filtered to 'pending', clear it; otherwise apply it
+    if (statusFilterStatus === 'pending') {
+      setStatusFilterStatus('all');
+    } else {
+      setStatusFilterStatus('pending');
+    }
+    
+    setTimeout(() => {
+      const statusSection = document.getElementById('report-status-section');
+      if (statusSection) {
+        statusSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   return (
     <div className="space-y-8">
-      {/* Premium Metric Cards */}
+      {/* Premium Metric Cards - Clickable to filter Report Status section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="glass-card rounded-xl p-6">
+        <div 
+          className={`glass-card rounded-xl p-6 cursor-pointer transition-all hover:border-success/30 ${statusFilterStatus === 'submitted' ? 'border-success/50 ring-1 ring-success/20' : ''}`}
+          onClick={handleSubmittedTileClick}
+          data-testid="tile-submitted-reports"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="section-label">Weekly Progress</p>
@@ -314,7 +359,11 @@ export default function SubmitReport() {
           </div>
         </div>
 
-        <div className="glass-card rounded-xl p-6">
+        <div 
+          className={`glass-card rounded-xl p-6 cursor-pointer transition-all hover:border-warning/30 ${statusFilterStatus === 'pending' ? 'border-warning/50 ring-1 ring-warning/20' : ''}`}
+          onClick={handlePendingTileClick}
+          data-testid="tile-pending-reports"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="section-label">Awaiting Submission</p>
@@ -552,7 +601,7 @@ export default function SubmitReport() {
         </CardContent>
       </Card>
 
-      <Card className="glass-card border-white/10">
+      <Card id="report-status-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
