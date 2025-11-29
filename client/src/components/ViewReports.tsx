@@ -257,19 +257,33 @@ export default function ViewReports() {
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'landscape' });
     
-    doc.setFontSize(18);
-    doc.text('Weekly Leadership Reports', 14, 20);
+    doc.setFillColor(59, 130, 246);
+    doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
     
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.text('Weekly Leadership Reports', 14, 16);
+    
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 35);
     
     doc.setFontSize(12);
-    doc.text('Summary', 14, 38);
+    doc.setTextColor(59, 130, 246);
+    doc.text('Summary', 14, 45);
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
-    doc.text(`Total Reports: ${sortedReports.length}`, 20, 45);
-    doc.text(`On Track: ${onTrackCount} | Needs Attention: ${atRiskCount} | Critical: ${criticalCount}`, 20, 51);
+    doc.text(`Total Reports: ${sortedReports.length}`, 20, 52);
+    
+    doc.setTextColor(34, 197, 94);
+    doc.text(`On Track: ${onTrackCount}`, 20, 59);
+    doc.setTextColor(245, 158, 11);
+    doc.text(`Needs Attention: ${atRiskCount}`, 70, 59);
+    doc.setTextColor(239, 68, 68);
+    doc.text(`Critical: ${criticalCount}`, 140, 59);
+    doc.setTextColor(0, 0, 0);
 
     const tableData = sortedReports.map((report) => {
       const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
@@ -290,29 +304,47 @@ export default function ViewReports() {
     });
 
     autoTable(doc, {
-      startY: 58,
+      startY: 65,
       head: [['Project', 'Lead', 'Week', 'Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback']],
       body: tableData,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [66, 66, 66] },
+      styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+      headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 20 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 20 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 30 },
-        6: { cellWidth: 30 },
-        7: { cellWidth: 30 },
+        0: { cellWidth: 35 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 28 },
+        4: { cellWidth: 45 },
+        5: { cellWidth: 45 },
+        6: { cellWidth: 45 },
+        7: { cellWidth: 35 },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 3) {
+          const status = data.cell.raw as string;
+          if (status === 'On Track') {
+            data.cell.styles.textColor = [34, 197, 94];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (status === 'Needs Attention') {
+            data.cell.styles.textColor = [245, 158, 11];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (status === 'Critical') {
+            data.cell.styles.textColor = [239, 68, 68];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
       },
       didDrawPage: (data) => {
         doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
         doc.text(
           `Page ${data.pageNumber}`,
           doc.internal.pageSize.width / 2,
           doc.internal.pageSize.height - 10,
           { align: 'center' }
         );
+        doc.setTextColor(0, 0, 0);
       },
     });
 
