@@ -1,173 +1,207 @@
-# Design Guidelines: Weekly Leadership Report Tool
+# Design Guidelines: Executive Leadership Dashboard
 
 ## Design Approach
 
-**Selected System**: Material Design (data-rich applications)
-**Justification**: Enterprise productivity tool requiring clear information hierarchy, robust form patterns, and efficient data displays. Material Design provides excellent components for tables, cards, and status indicators while maintaining professional credibility.
+**Selected Approach**: Custom Premium Dashboard Design
+**References**: Bloomberg Terminal (data density), Salesforce Einstein Analytics (executive polish), Linear (modern restraint)
+
+**Justification**: Executive-level dashboard requiring sophisticated visual treatment that conveys authority while maintaining data clarity. Custom design combining glassmorphism, premium dark aesthetics, and enterprise-grade information architecture.
 
 **Key Principles**:
-- Data clarity over decoration
-- Efficient workflows with minimal friction
-- Professional, trustworthy appearance
-- Scannable information architecture
+- Premium visual language with subtle depth
+- Data-first hierarchy with executive-level polish
+- Trust signals through sophisticated design details
+- Performance metrics immediately scannable
+
+---
+
+## Color Palette
+
+**Foundation**:
+- Background: Dark navy (#0A1628, #0F1F3D for layers)
+- Surface: Navy-800 (#1A2845) with 40% opacity glassmorphism
+- Borders: Teal/cyan (#14B8A6) at 20% opacity
+
+**Accents**:
+- Primary: Teal-500 (#14B8A6) for CTAs, active states
+- Secondary: Cyan-400 (#22D3EE) for highlights
+- Success: Emerald-500 (#10B981)
+- Warning: Amber-500 (#F59E0B)
+- Critical: Rose-500 (#F43F5E)
+
+**Text**:
+- Primary: White (#FFFFFF) at 95% opacity
+- Secondary: Slate-300 (#CBD5E1) at 80% opacity
+- Tertiary: Slate-400 at 60% opacity
 
 ---
 
 ## Typography
 
-**Font Family**: Inter (via Google Fonts CDN)
-- Excellent readability for data-heavy interfaces
-- Professional appearance for enterprise context
+**Font Family**: Inter (premium weight range: 400, 500, 600, 700)
 
 **Hierarchy**:
-- Page Titles: text-3xl, font-bold (Team Management, Submit Report)
-- Section Headers: text-2xl, font-bold (Team Members, Project Leads)
-- Card Titles: text-xl, font-semibold
-- Body Text: text-base, font-normal
-- Labels/Meta: text-sm, font-medium
-- Status Indicators: text-sm, font-semibold
+- Dashboard Title: text-4xl font-bold tracking-tight
+- Section Headers: text-2xl font-semibold
+- Card Titles: text-lg font-semibold
+- Metrics (large numbers): text-5xl font-bold tabular-nums
+- Body: text-sm font-medium
+- Labels: text-xs font-medium uppercase tracking-wider text-slate-400
 
 ---
 
 ## Layout System
 
-**Spacing Primitives**: Tailwind units of 2, 4, 6, 8
-- Component padding: p-6, p-8
-- Section spacing: space-y-6, space-y-8
-- Element gaps: gap-4, gap-6
-- Inline spacing: space-x-2, space-x-4
+**Spacing Primitives**: Tailwind units of 3, 4, 6, 8, 12
+
+**Grid Structure**:
+- Dashboard wrapper: p-6 md:p-8 lg:p-12
+- Card spacing: gap-6 md:gap-8
+- Internal padding: p-6 for cards, p-4 for nested elements
+- Section gaps: space-y-8
 
 **Container Strategy**:
-- Max width: max-w-7xl mx-auto (main container)
-- Content cards: Full width within container
-- Forms: max-w-4xl for optimal readability
-
-**Grid Patterns**:
-- Statistics cards: grid-cols-1 md:grid-cols-3 lg:grid-cols-4
-- Project cards: grid-cols-1 md:grid-cols-2 gap-6
-- Forms: Single column with logical grouping
+- Full-width dashboard: No max-width constraint
+- Sidebar navigation: w-64 fixed
+- Main content: ml-64 with fluid width
+- Metric grids: grid-cols-1 md:grid-cols-2 lg:grid-cols-4
 
 ---
 
 ## Component Library
 
-### Navigation
-**Tab System**:
-- Horizontal tabs with icons (Lucide React icons)
-- Active state: White background with colored top border
-- Inactive state: Subtle gray background
-- Responsive: Stack vertically on mobile (flex-col sm:flex-row)
+### Glassmorphism Cards
 
-### Data Display
+**Base Card**:
+- Background: bg-navy-800/40 backdrop-blur-xl
+- Border: border border-teal-500/20
+- Shadow: shadow-2xl with colored glow (teal at 10% opacity)
+- Rounded: rounded-xl
+- Padding: p-6
+
+**Metric Cards**:
+- Grid layout with large number (text-5xl), label below
+- Trend indicator: Small arrow icon + percentage in green/red
+- Subtle gradient overlay from top (teal/cyan at 5%)
+- Border-left accent: border-l-4 border-teal-500
+
+### Data Visualization
+
+**Status Grid**:
+- Dark cells with border-slate-700/30
+- Submitted: bg-emerald-500/20 border-emerald-500/40
+- Pending: bg-amber-500/20 border-amber-500/40
+- Missing: bg-rose-500/20 border-rose-500/40
+- Hover: Subtle glow effect with border brightening
 
 **Tables**:
-- Full-width responsive tables with alternating row backgrounds
-- Header: bg-gray-50, font-semibold, sticky positioning for long lists
-- Cell padding: px-4 py-3
-- Borders: border-b for row separation
-- Mobile: Stack table cells vertically or use horizontal scroll
+- Header: bg-slate-800/50 backdrop-blur text-xs uppercase tracking-wider
+- Rows: border-b border-slate-700/30
+- Hover: bg-teal-500/5
+- Cell padding: px-6 py-4
+- Zebra striping: Subtle bg-slate-800/20 on alternating rows
 
-**Cards**:
-- White background with shadow (shadow-md)
-- Rounded corners: rounded-lg
-- Padding: p-6
-- Hover state: subtle shadow increase (hover:shadow-lg)
+### Navigation
 
-**Status Badges**:
-- Small rounded badges (rounded-full px-3 py-1)
-- Use semantic states: green (submitted), yellow (pending), red (overdue)
-- Font: text-sm font-medium
+**Sidebar**:
+- Fixed left, dark navy-900 background
+- Active item: bg-teal-500/10 border-l-4 border-teal-500
+- Icons: Lucide React, 20px, teal-400 when active
+- Hover: bg-slate-800/40 transition
 
-**Statistics Cards**:
-- Prominent numbers: text-3xl font-bold
-- Label below: text-sm text-gray-600
-- Icon in top corner
-- Background: subtle gradient or solid white
-
-### Forms
-
-**Input Fields**:
-- Full width within form context
-- Border: border border-gray-300 rounded
-- Padding: px-4 py-2
-- Focus state: ring-2 ring-blue-500
-- Labels: text-sm font-medium mb-2 block
-
-**Buttons**:
-- Primary: bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700
-- Secondary: bg-gray-200 text-gray-800 px-6 py-2 rounded hover:bg-gray-300
-- Danger: bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700
-- Icon buttons: p-2 rounded hover:bg-gray-100
-
-**Select Dropdowns**:
-- Match input field styling
-- Multi-select: Checkbox list with search filter
-- Use native select enhanced with clear visual hierarchy
-
-**Date Pickers**:
-- Native input type="date" with consistent border styling
-- Consider date range pickers for report filtering
+**Top Bar**:
+- Glassmorphic: backdrop-blur-lg bg-navy-800/60
+- Sticky positioning
+- User avatar right-aligned with dropdown
 
 ### Interactive Elements
 
-**List Items** (Team Members, Project Leads):
-- Background: bg-gray-50 on gray-100 page
-- Padding: p-3 rounded
-- Actions aligned right: Edit (blue), Delete (red) icons
-- Edit mode: Inline input with Save/Cancel icons
+**Buttons**:
+- Primary: bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg shadow-teal-500/30
+- Secondary: bg-slate-700/50 backdrop-blur border border-slate-600/50 px-6 py-3 rounded-lg
+- Icon-only: p-2 rounded-lg hover:bg-slate-700/50 transition
 
-**Action Buttons**:
-- Icon-only: 18-20px icon size, p-2
-- Icon + text: space-x-2 between icon and label
-- Group related actions: flex space-x-2
+**Inputs**:
+- bg-slate-800/50 backdrop-blur border border-slate-600/50 rounded-lg px-4 py-3
+- Focus: ring-2 ring-teal-500/50 border-teal-500
+- Placeholder: text-slate-500
 
-**Notifications/Alerts**:
-- Top of page, full width
-- Success: bg-green-100 text-green-800
-- Error: bg-red-100 text-red-800
-- Padding: p-4 rounded-lg
-- Auto-dismiss with subtle fade transition
+**Badges**:
+- Small: px-3 py-1 rounded-full text-xs font-semibold
+- Colors match status (emerald, amber, rose with 20% bg, 80% text opacity)
 
-### Dashboard Components
+### Project Overview Cards
 
-**Project Overview Cards**:
-- Display: Project name (large), customer (subtitle), dates
-- Team composition: Avatar stack or count badge
-- Status indicator: Colored dot or badge
-- Lead name: with small icon
+**Premium Card Structure**:
+- Glassmorphic base with subtle gradient
+- Top: Project name (text-xl font-bold) + customer logo/name
+- Middle: Key metrics in 3-column grid
+- Bottom: Team avatars (overlapping circles) + status badge
+- Hover: Lift effect (translate-y-1 shadow-2xl transition)
 
-**Weekly Report Summary**:
-- Expandable/collapsible sections
-- Date range prominent at top
-- Three-section layout: Progress, Challenges, Next Week
-- Edit button only for report owner
-
-**Status Grid**:
-- Week columns × Project Lead rows
-- Cell states: Submitted (check icon), Missing (warning), Future (disabled)
-- Color coding for quick scanning
+**Report Summary Cards**:
+- Collapsible sections with smooth height transitions
+- Section dividers: border-t border-slate-700/30
+- Date range in teal accent badge at top-right
+- Three columns: Progress (emerald), Challenges (amber), Next Week (cyan)
 
 ---
 
-## Images
+## Animations
 
-**No hero images required** - This is a data-driven productivity application.
+**Minimal Motion**:
+- Card hover: transform transition-transform duration-200
+- Button hover: Subtle scale (scale-105) or brightness shift
+- Data updates: Subtle fade-in (opacity transition)
+- Page transitions: None (maintain performance)
+- Status changes: Brief pulse effect on affected cells
 
-**Icon Library**: Lucide React (already in use)
-- Users, FileText, Edit2, Trash2, Check, X, UserCheck
-- Maintain consistent 18-20px sizing
-- Use semantic colors (blue for edit, red for delete, green for confirm)
-
-**Optional**: User avatars for team members/leads
-- Small circular avatars: w-8 h-8 rounded-full
-- Fallback to initials in colored circle
+**Glassmorphism Transitions**:
+- Backdrop-blur smoothly on card hover: backdrop-blur-xl to backdrop-blur-2xl
 
 ---
 
-## Key Differentiators
+## Icons
 
-- **Data density balanced with whitespace**: Don't overcrowd but show meaningful information
-- **Actionable interface**: Every view should have clear next actions
-- **Status-first design**: Make report compliance immediately visible
-- **Responsive data tables**: Graceful degradation on mobile devices
-- **Consistent interaction patterns**: Edit/delete always in same position, same visual treatment
+**Library**: Lucide React via CDN
+**Common Icons**: BarChart3, TrendingUp, AlertTriangle, CheckCircle2, Users, Calendar, FileText, Settings, ChevronDown
+**Sizing**: 20px standard, 24px for section headers, 16px for inline
+**Colors**: Teal-400 for primary actions, slate-400 for secondary
+
+---
+
+## Key Executive Dashboard Features
+
+**Dashboard Header**:
+- Welcome message with user name (text-3xl font-bold)
+- Global health indicator: Large circular progress ring (teal/emerald)
+- Quick stats bar: 4 metric cards in horizontal scroll/grid
+
+**Critical Metrics Section**:
+- 2×2 or 1×4 grid of glassmorphic metric cards
+- Each shows: Large number, trend arrow, comparison label, mini sparkline
+
+**Project Health Grid**:
+- Sortable table with project rows
+- Columns: Name, Customer, Status, Team Size, Last Update, Action
+- Color-coded status dots with hover tooltips
+
+**Weekly Compliance Matrix**:
+- Heat map style grid: weeks × project leads
+- Green (submitted), amber (pending), red (missing), gray (future)
+- Click cell to view report details in modal
+
+**Team Performance Panel**:
+- List of project leads with submission rates
+- Progress bars in teal gradient
+- Avatar + name + percentage
+
+---
+
+## Premium Details
+
+- Subtle noise texture overlay on dark backgrounds (3% opacity)
+- Consistent 8px border-radius for all interactive elements
+- Box-shadow layering for depth perception
+- Typography uses tabular-nums for all metrics
+- Consistent 200ms transitions across all hover states
