@@ -910,7 +910,7 @@ export default function ProjectsDashboard() {
 
               <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2" data-testid="button-import-jira">
+                  <Button variant="outline" className="gap-2" data-testid="button-import-jira" disabled>
                     <Download className="h-4 w-4" />
                     Import from Jira
                   </Button>
