@@ -169,9 +169,9 @@ export default function ProjectsDashboard() {
   };
 
   const projectStatusOptions = [
-    { value: 'active', label: 'Active', color: 'bg-green-500' },
-    { value: 'renewal', label: 'Renewal Soon', color: 'bg-yellow-500' },
-    { value: 'ended', label: 'Project Ended', color: 'bg-red-500' },
+    { value: 'active', label: 'Active with no renewal soon', color: 'bg-green-500' },
+    { value: 'renewal', label: 'Active but renewal soon', color: 'bg-yellow-500' },
+    { value: 'ended', label: 'Ended', color: 'bg-red-500' },
   ];
 
   const toggleProjectStatusFilter = (status: string) => {
@@ -188,18 +188,18 @@ export default function ProjectsDashboard() {
     
     if (isMissing) {
       return (
-        <span title="Renewal Soon (missing end date)">
+        <span title="Active but renewal soon (missing end date)">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
         </span>
       );
     }
     if (status === 'ended') {
-      return <span className="w-3 h-3 rounded-full bg-red-500 inline-block" title="Project Ended" />;
+      return <span className="w-3 h-3 rounded-full bg-red-500 inline-block" title="Ended" />;
     }
     if (status === 'renewal') {
-      return <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" title="Renewal Soon" />;
+      return <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" title="Active but renewal soon" />;
     }
-    return <span className="w-3 h-3 rounded-full bg-green-500 inline-block" title="Active" />;
+    return <span className="w-3 h-3 rounded-full bg-green-500 inline-block" title="Active with no renewal soon" />;
   };
   
   // Bulk selection helpers

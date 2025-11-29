@@ -57,8 +57,32 @@ export default function ViewReports() {
   const [filterLeads, setFilterLeads] = useState<Set<string>>(new Set());
   const [filterMembers, setFilterMembers] = useState<Set<string>>(new Set());
   const [filterHealth, setFilterHealth] = useState<string>('all');
+  const [filterProjectStatus, setFilterProjectStatus] = useState<string>('all');
   const [leadSearch, setLeadSearch] = useState('');
   const [memberSearch, setMemberSearch] = useState('');
+
+  const getProjectStatus = (endDate: string | null | undefined): 'active' | 'renewal' | 'ended' => {
+    if (!endDate) return 'renewal';
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    
+    const diffTime = end.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return 'ended';
+    if (diffDays <= 60) return 'renewal';
+    return 'active';
+  };
+
+  const projectStatusOptions = [
+    { value: 'all', label: 'All Project Status' },
+    { value: 'active', label: 'Active with no renewal soon' },
+    { value: 'renewal', label: 'Active but renewal soon' },
+    { value: 'ended', label: 'Ended' },
+  ];
 
   const getLeadName = (leadId: string) => {
     return projectLeads.find((l) => l.id === leadId)?.name || 'Unknown';
@@ -156,6 +180,7 @@ export default function ViewReports() {
     setFilterLeads(new Set());
     setFilterMembers(new Set());
     setFilterHealth('all');
+    setFilterProjectStatus('all');
     setLeadSearch('');
     setMemberSearch('');
   };
@@ -163,16 +188,24 @@ export default function ViewReports() {
   const activeFilterCount = 
     (filterLeads.size > 0 ? 1 : 0) + 
     (filterMembers.size > 0 ? 1 : 0) + 
-    (filterHealth !== 'all' ? 1 : 0);
+    (filterHealth !== 'all' ? 1 : 0) +
+    (filterProjectStatus !== 'all' ? 1 : 0);
 
   const filteredReports = weeklyReports.filter((report) => {
     if (report.status !== 'submitted') return false;
     if (filterLeads.size > 0 && !filterLeads.has(report.leadId)) return false;
     if (filterHealth !== 'all' && report.healthStatus !== filterHealth) return false;
     
+    const project = projects.find((p) => p.id === report.projectId);
+    
     if (filterMembers.size > 0) {
-      const project = projects.find((p) => p.id === report.projectId);
       if (!project || !project.teamMemberIds.some(id => filterMembers.has(id))) return false;
+    }
+    
+    if (filterProjectStatus !== 'all') {
+      if (!project) return false;
+      const status = getProjectStatus(project.endDate);
+      if (status !== filterProjectStatus) return false;
     }
     
     return true;
@@ -427,10 +460,10 @@ export default function ViewReports() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">By Status</Label>
+                        <Label className="text-sm font-medium">By Health Status</Label>
                         <div className="space-y-1">
                           {[
-                            { value: 'all', label: 'All Status' },
+                            { value: 'all', label: 'All Health Status' },
                             { value: 'on-track', label: 'On Track' },
                             { value: 'at-risk', label: 'Needs Attention' },
                             { value: 'critical', label: 'Critical' },
@@ -444,6 +477,26 @@ export default function ViewReports() {
                                 checked={filterHealth === option.value}
                                 onCheckedChange={() => setFilterHealth(option.value)}
                                 data-testid={`checkbox-health-${option.value}`}
+                              />
+                              <span className="text-sm">{option.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">By Project Status</Label>
+                        <div className="space-y-1">
+                          {projectStatusOptions.map((option) => (
+                            <div
+                              key={option.value}
+                              className="flex items-center gap-2 p-1 hover-elevate rounded cursor-pointer"
+                              onClick={() => setFilterProjectStatus(option.value)}
+                            >
+                              <Checkbox
+                                checked={filterProjectStatus === option.value}
+                                onCheckedChange={() => setFilterProjectStatus(option.value)}
+                                data-testid={`checkbox-project-status-${option.value}`}
                               />
                               <span className="text-sm">{option.label}</span>
                             </div>
