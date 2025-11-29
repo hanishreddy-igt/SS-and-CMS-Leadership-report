@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -140,6 +140,38 @@ export default function ProjectsDashboard() {
         ? prev.filter(id => id !== memberId)
         : [...prev, memberId]
     );
+  };
+
+  // Get end date status for project indicator
+  const getEndDateStatus = (endDate: string | null | undefined): 'missing' | 'overdue' | 'soon' | 'ok' => {
+    if (!endDate) return 'missing';
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    
+    const diffTime = end.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return 'overdue';
+    if (diffDays <= 60) return 'soon'; // Within 2 months
+    return 'ok';
+  };
+
+  const EndDateIndicator = ({ endDate }: { endDate: string | null | undefined }) => {
+    const status = getEndDateStatus(endDate);
+    
+    if (status === 'missing') {
+      return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+    }
+    if (status === 'overdue') {
+      return <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />;
+    }
+    if (status === 'soon') {
+      return <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" />;
+    }
+    return <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />;
   };
   
   // Bulk selection helpers
@@ -1243,7 +1275,10 @@ export default function ProjectsDashboard() {
                           </div>
                         )}
                         <div className="flex-1">
-                          <CardTitle className="text-xl">{project.name}</CardTitle>
+                          <CardTitle className="text-xl flex items-center gap-2">
+                            <EndDateIndicator endDate={project.endDate} />
+                            {project.name}
+                          </CardTitle>
                           <p className="text-sm text-muted-foreground">{project.customer}</p>
                         </div>
                       </div>
