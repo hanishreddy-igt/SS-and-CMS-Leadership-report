@@ -61,9 +61,11 @@ export default function Home() {
   };
 
   const activeProjects = projects.filter(p => getProjectStatus(p.endDate) !== 'ended');
-  const onTrackCount = reports.filter((r) => r.healthStatus === 'on-track').length;
-  const atRiskCount = reports.filter((r) => r.healthStatus === 'at-risk').length;
-  const criticalCount = reports.filter((r) => r.healthStatus === 'critical').length;
+  // Only count submitted reports for health status tiles
+  const submittedReports = reports.filter((r) => r.status === 'submitted');
+  const onTrackCount = submittedReports.filter((r) => r.healthStatus === 'on-track').length;
+  const atRiskCount = submittedReports.filter((r) => r.healthStatus === 'at-risk').length;
+  const criticalCount = submittedReports.filter((r) => r.healthStatus === 'critical').length;
 
   return (
     <div className="min-h-screen">

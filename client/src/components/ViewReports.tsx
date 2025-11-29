@@ -352,63 +352,242 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   const exportToPDF = () => {
     const doc = new jsPDF({ orientation: 'landscape' });
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
     
-    doc.setFillColor(59, 130, 246);
-    doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F');
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.text('Weekly Leadership Reports', 14, 16);
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 35);
-    
-    doc.setFontSize(12);
-    doc.setTextColor(59, 130, 246);
-    doc.text('Summary', 14, 45);
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.text(`Total Reports: ${sortedReports.length}`, 20, 52);
-    
-    doc.setTextColor(34, 197, 94);
-    doc.text(`On Track: ${onTrackCount}`, 20, 59);
-    doc.setTextColor(245, 158, 11);
-    doc.text(`Needs Attention: ${atRiskCount}`, 70, 59);
-    doc.setTextColor(239, 68, 68);
-    doc.text(`Critical: ${criticalCount}`, 140, 59);
-    doc.setTextColor(0, 0, 0);
+    // Premium color palette matching web UI
+    const colors = {
+      navy: [15, 23, 42],        // Dark navy background
+      navyLight: [30, 41, 59],   // Lighter navy for sections
+      primary: [99, 102, 241],   // Indigo/primary
+      success: [34, 197, 94],    // Green for on-track
+      warning: [245, 158, 11],   // Amber for needs attention
+      destructive: [239, 68, 68], // Red for critical
+      white: [255, 255, 255],
+      muted: [148, 163, 184],    // Muted text
+      border: [51, 65, 85],      // Border color
+    };
 
+    // Premium header with gradient effect
+    doc.setFillColor(...colors.navy as [number, number, number]);
+    doc.rect(0, 0, pageWidth, 35, 'F');
+    
+    // Header accent line
+    doc.setFillColor(...colors.primary as [number, number, number]);
+    doc.rect(0, 35, pageWidth, 2, 'F');
+    
+    // Title
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CMS & SS Leadership Report', 14, 18);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    doc.text('Weekly Delivery Status Overview', 14, 26);
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(9);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 14, 18, { align: 'right' });
+
+    let currentY = 45;
+
+    // AI Summary Section (if available)
+    if (aiSummary) {
+      // AI Summary header
+      doc.setFillColor(...colors.navyLight as [number, number, number]);
+      doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
+      
+      doc.setTextColor(...colors.primary as [number, number, number]);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AI-Powered Weekly Insights', 18, currentY + 7);
+      
+      currentY += 14;
+      
+      // Overall health status badge
+      const healthColors: Record<string, [number, number, number]> = {
+        'on-track': colors.success as [number, number, number],
+        'needs-attention': colors.warning as [number, number, number],
+        'critical': colors.destructive as [number, number, number],
+      };
+      const healthColor = healthColors[aiSummary.overallHealth] || colors.muted as [number, number, number];
+      const healthLabel = aiSummary.overallHealth === 'on-track' ? 'On Track' : 
+                         aiSummary.overallHealth === 'needs-attention' ? 'Needs Attention' : 'Critical';
+      
+      doc.setFillColor(...healthColor);
+      doc.roundedRect(14, currentY, 50, 7, 1.5, 1.5, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Overall: ${healthLabel}`, 18, currentY + 5);
+      
+      doc.setTextColor(...colors.muted as [number, number, number]);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Based on ${reportsAnalyzed} report${reportsAnalyzed !== 1 ? 's' : ''}`, 68, currentY + 5);
+      
+      currentY += 12;
+      
+      // Executive Summary
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(9);
+      const summaryLines = doc.splitTextToSize(aiSummary.executiveSummary, pageWidth - 32);
+      doc.text(summaryLines, 14, currentY);
+      currentY += summaryLines.length * 4 + 6;
+      
+      // Insights grid (2 columns)
+      const insightSections = [
+        { title: 'Key Achievements', items: aiSummary.keyAchievements, color: colors.success },
+        { title: 'Week Highlights', items: aiSummary.weekHighlights, color: colors.primary },
+        { title: 'Needs Attention', items: aiSummary.attentionNeeded, color: colors.warning },
+        { title: 'Upcoming Focus', items: aiSummary.upcomingFocus, color: colors.primary },
+      ].filter(s => s.items && s.items.length > 0);
+      
+      if (aiSummary.criticalIssues && aiSummary.criticalIssues.length > 0) {
+        insightSections.unshift({ title: 'Critical Issues', items: aiSummary.criticalIssues, color: colors.destructive });
+      }
+      
+      const colWidth = (pageWidth - 32) / 2;
+      let leftY = currentY;
+      let rightY = currentY;
+      
+      insightSections.forEach((section, idx) => {
+        const isLeft = idx % 2 === 0;
+        const x = isLeft ? 14 : 14 + colWidth + 4;
+        let y = isLeft ? leftY : rightY;
+        
+        // Section title with colored dot
+        doc.setFillColor(...section.color as [number, number, number]);
+        doc.circle(x + 2, y + 2, 1.5, 'F');
+        
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(section.title, x + 6, y + 3);
+        y += 6;
+        
+        // Items
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(8);
+        section.items.slice(0, 3).forEach((item) => {
+          doc.setFillColor(...section.color as [number, number, number]);
+          doc.circle(x + 3, y + 1.5, 0.8, 'F');
+          const lines = doc.splitTextToSize(item, colWidth - 10);
+          doc.text(lines, x + 7, y + 2);
+          y += lines.length * 3.5 + 1;
+        });
+        
+        y += 4;
+        if (isLeft) leftY = y;
+        else rightY = y;
+      });
+      
+      currentY = Math.max(leftY, rightY) + 4;
+      
+      // Separator line
+      doc.setDrawColor(...colors.border as [number, number, number]);
+      doc.setLineWidth(0.3);
+      doc.line(14, currentY, pageWidth - 14, currentY);
+      currentY += 6;
+    }
+
+    // Health Status Summary Cards
+    doc.setFillColor(...colors.navyLight as [number, number, number]);
+    doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
+    
+    doc.setTextColor(...colors.primary as [number, number, number]);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Report Summary', 18, currentY + 7);
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${sortedReports.length} Total Reports`, pageWidth - 18, currentY + 7, { align: 'right' });
+    
+    currentY += 14;
+
+    // Status metric boxes
+    const metricWidth = 55;
+    const metricHeight = 18;
+    const metricSpacing = 8;
+    const startX = 14;
+    
+    const metrics = [
+      { label: 'On Track', count: onTrackCount, color: colors.success },
+      { label: 'Needs Attention', count: atRiskCount, color: colors.warning },
+      { label: 'Critical', count: criticalCount, color: colors.destructive },
+    ];
+    
+    metrics.forEach((metric, idx) => {
+      const x = startX + idx * (metricWidth + metricSpacing);
+      
+      // Card background
+      doc.setFillColor(250, 250, 250);
+      doc.roundedRect(x, currentY, metricWidth, metricHeight, 2, 2, 'F');
+      
+      // Left border accent
+      doc.setFillColor(...metric.color as [number, number, number]);
+      doc.rect(x, currentY + 2, 2, metricHeight - 4, 'F');
+      
+      // Count
+      doc.setTextColor(...metric.color as [number, number, number]);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(metric.count), x + 8, currentY + 11);
+      
+      // Label
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(metric.label, x + 8, currentY + 16);
+    });
+    
+    currentY += metricHeight + 8;
+
+    // Reports table with premium styling
     const tableData = sortedReports.map((report) => {
       const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
       const feedbackText = feedback && feedback.length > 0
         ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('; ')
-        : 'None';
+        : '-';
 
       return [
         getProjectName(report.projectId),
         getLeadName(report.leadId),
         report.weekStart,
         healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus || '',
-        report.progress || '',
-        report.challenges || '',
-        report.nextWeek || '',
+        report.progress || '-',
+        report.challenges || '-',
+        report.nextWeek || '-',
         feedbackText,
       ];
     });
 
     autoTable(doc, {
-      startY: 65,
-      head: [['Project', 'Lead', 'Week', 'Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback']],
+      startY: currentY,
+      head: [['Project', 'Lead', 'Week', 'Status', 'Progress', 'Challenges', 'Next Week', 'Feedback']],
       body: tableData,
-      styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
-      headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { 
+        fontSize: 7.5, 
+        cellPadding: 3, 
+        overflow: 'linebreak',
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2,
+      },
+      headStyles: { 
+        fillColor: colors.navy as [number, number, number], 
+        textColor: [255, 255, 255], 
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 35 },
+        0: { cellWidth: 35, fontStyle: 'bold' },
         1: { cellWidth: 25 },
         2: { cellWidth: 22 },
-        3: { cellWidth: 28 },
+        3: { cellWidth: 26 },
         4: { cellWidth: 45 },
         5: { cellWidth: 45 },
         6: { cellWidth: 45 },
@@ -418,31 +597,45 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         if (data.section === 'body' && data.column.index === 3) {
           const status = data.cell.raw as string;
           if (status === 'On Track') {
-            data.cell.styles.textColor = [34, 197, 94];
+            data.cell.styles.textColor = colors.success as [number, number, number];
             data.cell.styles.fontStyle = 'bold';
           } else if (status === 'Needs Attention') {
-            data.cell.styles.textColor = [245, 158, 11];
+            data.cell.styles.textColor = colors.warning as [number, number, number];
             data.cell.styles.fontStyle = 'bold';
           } else if (status === 'Critical') {
-            data.cell.styles.textColor = [239, 68, 68];
+            data.cell.styles.textColor = colors.destructive as [number, number, number];
             data.cell.styles.fontStyle = 'bold';
           }
         }
       },
       didDrawPage: (data) => {
+        // Footer with page number
+        doc.setFillColor(...colors.navy as [number, number, number]);
+        doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
+        
         doc.setFontSize(8);
-        doc.setTextColor(128, 128, 128);
+        doc.setTextColor(...colors.muted as [number, number, number]);
+        doc.text(
+          `CMS & SS Leadership Report`,
+          14,
+          pageHeight - 5,
+        );
         doc.text(
           `Page ${data.pageNumber}`,
-          doc.internal.pageSize.width / 2,
-          doc.internal.pageSize.height - 10,
+          pageWidth / 2,
+          pageHeight - 5,
           { align: 'center' }
         );
-        doc.setTextColor(0, 0, 0);
+        doc.text(
+          new Date().toLocaleDateString(),
+          pageWidth - 14,
+          pageHeight - 5,
+          { align: 'right' }
+        );
       },
     });
 
-    doc.save(`weekly_reports_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`cms_ss_leadership_report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const getOverallHealthConfig = (health: string) => {
