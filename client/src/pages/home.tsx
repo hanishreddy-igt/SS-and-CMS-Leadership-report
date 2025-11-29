@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { FileText, FolderKanban, Eye, LogOut, Shield, BarChart3, TrendingUp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -8,9 +9,36 @@ import { useQuery } from '@tanstack/react-query';
 import type { Project, WeeklyReport } from '@shared/schema';
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState('teams-projects');
+  const [healthFilter, setHealthFilter] = useState<string>('all');
+  const [shouldScrollToProjects, setShouldScrollToProjects] = useState(false);
+  
   const handleLogout = () => {
     window.location.href = "/api/logout";
   };
+
+  const handleActiveProjectsClick = () => {
+    setActiveTab('teams-projects');
+    setShouldScrollToProjects(true);
+  };
+
+  const handleHealthTileClick = (healthStatus: string) => {
+    setHealthFilter(healthStatus);
+    setActiveTab('view');
+  };
+
+  useEffect(() => {
+    if (shouldScrollToProjects && activeTab === 'teams-projects') {
+      const timer = setTimeout(() => {
+        const projectsSection = document.getElementById('all-projects-section');
+        if (projectsSection) {
+          projectsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        setShouldScrollToProjects(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldScrollToProjects, activeTab]);
 
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ['/api/projects'],
@@ -66,7 +94,12 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-            <div className="metric-card fade-in" style={{ animationDelay: '0ms' }}>
+            <div 
+              className="metric-card fade-in cursor-pointer hover:border-white/20 transition-all" 
+              style={{ animationDelay: '0ms' }}
+              onClick={handleActiveProjectsClick}
+              data-testid="tile-active-projects"
+            >
               <div className="flex items-center justify-between mb-3">
                 <FolderKanban className="h-5 w-5 text-muted-foreground" />
               </div>
@@ -74,7 +107,12 @@ export default function Home() {
               <p className="text-sm text-muted-foreground mt-1">Active Projects</p>
             </div>
 
-            <div className="metric-card metric-card-success fade-in" style={{ animationDelay: '50ms' }}>
+            <div 
+              className="metric-card metric-card-success fade-in cursor-pointer hover:border-success/30 transition-all" 
+              style={{ animationDelay: '50ms' }}
+              onClick={() => handleHealthTileClick('on-track')}
+              data-testid="tile-on-track"
+            >
               <div className="flex items-center justify-between mb-3">
                 <BarChart3 className="h-5 w-5 text-success" />
               </div>
@@ -82,7 +120,12 @@ export default function Home() {
               <p className="text-sm text-muted-foreground mt-1">On Track</p>
             </div>
 
-            <div className="metric-card metric-card-warning fade-in" style={{ animationDelay: '100ms' }}>
+            <div 
+              className="metric-card metric-card-warning fade-in cursor-pointer hover:border-warning/30 transition-all" 
+              style={{ animationDelay: '100ms' }}
+              onClick={() => handleHealthTileClick('at-risk')}
+              data-testid="tile-needs-attention"
+            >
               <div className="flex items-center justify-between mb-3">
                 <BarChart3 className="h-5 w-5 text-warning" />
               </div>
@@ -90,7 +133,12 @@ export default function Home() {
               <p className="text-sm text-muted-foreground mt-1">Needs Attention</p>
             </div>
 
-            <div className={`metric-card metric-card-danger fade-in ${criticalCount > 0 ? 'pulse-critical' : ''}`} style={{ animationDelay: '150ms' }}>
+            <div 
+              className={`metric-card metric-card-danger fade-in cursor-pointer hover:border-destructive/30 transition-all ${criticalCount > 0 ? 'pulse-critical' : ''}`} 
+              style={{ animationDelay: '150ms' }}
+              onClick={() => handleHealthTileClick('critical')}
+              data-testid="tile-critical"
+            >
               <div className="flex items-center justify-between mb-3">
                 <BarChart3 className="h-5 w-5 text-destructive" />
               </div>
@@ -102,7 +150,7 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        <Tabs defaultValue="teams-projects" className="space-y-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsList className="premium-tabs grid w-full grid-cols-3 h-auto">
             <TabsTrigger 
               value="teams-projects" 
@@ -139,7 +187,7 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="view" className="fade-in">
-            <ViewReports />
+            <ViewReports externalHealthFilter={healthFilter} onClearExternalFilter={() => setHealthFilter('all')} />
           </TabsContent>
         </Tabs>
       </main>

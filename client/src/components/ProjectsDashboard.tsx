@@ -858,7 +858,7 @@ export default function ProjectsDashboard() {
       </div>
 
       {/* All Projects Section */}
-      <Card className="glass-card border-white/10">
+      <Card id="all-projects-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>

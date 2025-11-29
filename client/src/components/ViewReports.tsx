@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -40,7 +40,12 @@ const healthStatusConfig = {
   'critical': { label: 'Critical', icon: AlertCircle, color: 'text-destructive', bgColor: 'bg-destructive/10' },
 };
 
-export default function ViewReports() {
+interface ViewReportsProps {
+  externalHealthFilter?: string;
+  onClearExternalFilter?: () => void;
+}
+
+export default function ViewReports({ externalHealthFilter, onClearExternalFilter }: ViewReportsProps) {
   const { toast } = useToast();
   const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
@@ -60,6 +65,18 @@ export default function ViewReports() {
   const [filterProjectStatus, setFilterProjectStatus] = useState<string>('all');
   const [leadSearch, setLeadSearch] = useState('');
   const [memberSearch, setMemberSearch] = useState('');
+
+  useEffect(() => {
+    if (externalHealthFilter && externalHealthFilter !== 'all') {
+      setFilterHealth(externalHealthFilter);
+      setTimeout(() => {
+        const reportsSection = document.getElementById('weekly-reports-section');
+        if (reportsSection) {
+          reportsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [externalHealthFilter]);
 
   const getProjectStatus = (endDate: string | null | undefined): 'active' | 'renewal' | 'ended' => {
     if (!endDate) return 'renewal';
@@ -183,6 +200,12 @@ export default function ViewReports() {
     setFilterProjectStatus('all');
     setLeadSearch('');
     setMemberSearch('');
+    onClearExternalFilter?.();
+  };
+
+  const handleHealthFilterChange = (value: string) => {
+    setFilterHealth(value);
+    onClearExternalFilter?.();
   };
 
   const activeFilterCount = 
@@ -409,7 +432,7 @@ export default function ViewReports() {
         </div>
       </div>
 
-      <Card className="glass-card border-white/10">
+      <Card id="weekly-reports-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -460,11 +483,11 @@ export default function ViewReports() {
                             <div
                               key={option.value}
                               className="flex items-center gap-2 p-1 hover-elevate rounded cursor-pointer"
-                              onClick={() => setFilterHealth(option.value)}
+                              onClick={() => handleHealthFilterChange(option.value)}
                             >
                               <Checkbox
                                 checked={filterHealth === option.value}
-                                onCheckedChange={() => setFilterHealth(option.value)}
+                                onCheckedChange={() => handleHealthFilterChange(option.value)}
                                 data-testid={`checkbox-health-${option.value}`}
                               />
                               <span className="text-sm">{option.label}</span>
