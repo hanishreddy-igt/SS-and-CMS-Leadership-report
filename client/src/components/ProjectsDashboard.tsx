@@ -711,9 +711,9 @@ export default function ProjectsDashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Projects</p>
-                <p className="text-3xl font-bold" data-testid="text-total-projects">
-                  {projects.length}
+                <p className="text-sm text-muted-foreground">Active Projects</p>
+                <p className="text-3xl font-bold" data-testid="text-active-projects">
+                  {projects.filter(p => getProjectStatus(p.endDate) !== 'ended').length}
                 </p>
               </div>
               <Briefcase className="h-8 w-8 text-primary" />
@@ -1045,6 +1045,37 @@ export default function ProjectsDashboard() {
                         </Button>
                       )}
                     </div>
+
+                    {/* Filter by Project Status */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Filter by Status</Label>
+                        {filterProjectStatus.length > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {filterProjectStatus.length} selected
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="border rounded-md p-2 space-y-1" data-testid="filter-status-container">
+                        {projectStatusOptions.map((status) => (
+                          <div key={status.value} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`filter-status-${status.value}`}
+                              data-testid={`checkbox-filter-status-${status.value}`}
+                              checked={filterProjectStatus.includes(status.value)}
+                              onCheckedChange={() => toggleProjectStatusFilter(status.value)}
+                            />
+                            <Label 
+                              htmlFor={`filter-status-${status.value}`} 
+                              className="font-normal text-sm cursor-pointer flex-1 flex items-center gap-2"
+                            >
+                              <span className={`w-3 h-3 rounded-full ${status.color} inline-block`} />
+                              {status.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                     
                     {/* Sort Options */}
                     <div className="space-y-2">
@@ -1221,37 +1252,6 @@ export default function ProjectsDashboard() {
                             {filterMemberSearch ? `No members matching "${filterMemberSearch}"` : 'No members available'}
                           </p>
                         )}
-                      </div>
-                    </div>
-
-                    {/* Filter by Project Status */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">Filter by Status</Label>
-                        {filterProjectStatus.length > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {filterProjectStatus.length} selected
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="border rounded-md p-2 space-y-1" data-testid="filter-status-container">
-                        {projectStatusOptions.map((status) => (
-                          <div key={status.value} className="flex items-center gap-2">
-                            <Checkbox
-                              id={`filter-status-${status.value}`}
-                              data-testid={`checkbox-filter-status-${status.value}`}
-                              checked={filterProjectStatus.includes(status.value)}
-                              onCheckedChange={() => toggleProjectStatusFilter(status.value)}
-                            />
-                            <Label 
-                              htmlFor={`filter-status-${status.value}`} 
-                              className="font-normal text-sm cursor-pointer flex-1 flex items-center gap-2"
-                            >
-                              <span className={`w-3 h-3 rounded-full ${status.color} inline-block`} />
-                              {status.label}
-                            </Label>
-                          </div>
-                        ))}
                       </div>
                     </div>
                   </div>
