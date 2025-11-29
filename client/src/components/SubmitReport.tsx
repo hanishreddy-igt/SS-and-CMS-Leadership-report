@@ -73,6 +73,12 @@ export default function SubmitReport() {
     );
   };
 
+  const hasLeadSubmittedAllReports = (leadId: string) => {
+    const leadsProjects = projects.filter((p) => p.leadId === leadId);
+    if (leadsProjects.length === 0) return false;
+    return leadsProjects.every((p) => hasSubmittedForProject(p.id));
+  };
+
   const filteredStatusProjects = projects.filter((project) => {
     if (statusFilterLeads.size > 0 && !statusFilterLeads.has(project.leadId)) return false;
     
@@ -214,11 +220,19 @@ export default function SubmitReport() {
                   <SelectValue placeholder="Select your name" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projectLeads.map((lead) => (
-                    <SelectItem key={lead.id} value={lead.id}>
-                      {lead.name}
-                    </SelectItem>
-                  ))}
+                  {projectLeads.map((lead) => {
+                    const allSubmitted = hasLeadSubmittedAllReports(lead.id);
+                    return (
+                      <SelectItem 
+                        key={lead.id} 
+                        value={lead.id}
+                        disabled={allSubmitted}
+                      >
+                        {lead.name}
+                        {allSubmitted && ' (Submitted all reports)'}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
