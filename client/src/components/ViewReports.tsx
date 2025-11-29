@@ -228,17 +228,25 @@ export default function ViewReports() {
   );
 
   const exportToCSV = () => {
-    const headers = ['Project', 'Lead', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Submitted'];
-    const rows = sortedReports.map((report) => [
-      getProjectName(report.projectId),
-      getLeadName(report.leadId),
-      report.weekStart,
-      healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus || '',
-      (report.progress || '').replace(/\n/g, ' '),
-      (report.challenges || '').replace(/\n/g, ' '),
-      (report.nextWeek || '').replace(/\n/g, ' '),
-      new Date(report.submittedAt).toLocaleString(),
-    ]);
+    const headers = ['Project', 'Lead', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback', 'Submitted'];
+    const rows = sortedReports.map((report) => {
+      const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
+      const feedbackText = feedback && feedback.length > 0
+        ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('; ')
+        : 'None';
+
+      return [
+        getProjectName(report.projectId),
+        getLeadName(report.leadId),
+        report.weekStart,
+        healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus || '',
+        (report.progress || '').replace(/\n/g, ' '),
+        (report.challenges || '').replace(/\n/g, ' '),
+        (report.nextWeek || '').replace(/\n/g, ' '),
+        feedbackText.replace(/\n/g, ' '),
+        new Date(report.submittedAt).toLocaleString(),
+      ];
+    });
 
     const csvContent = [
       headers.join(','),
