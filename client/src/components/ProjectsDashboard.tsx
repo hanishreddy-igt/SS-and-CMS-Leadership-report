@@ -79,10 +79,14 @@ export default function ProjectsDashboard() {
   // Add Team Member Modal State
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [newMember, setNewMember] = useState('');
+  const [memberNameError, setMemberNameError] = useState<string | null>(null);
+  const [memberNameWarning, setMemberNameWarning] = useState<string | null>(null);
 
   // Add Project Lead Modal State
   const [showAddLeadDialog, setShowAddLeadDialog] = useState(false);
   const [newLead, setNewLead] = useState('');
+  const [leadNameError, setLeadNameError] = useState<string | null>(null);
+  const [leadNameWarning, setLeadNameWarning] = useState<string | null>(null);
 
   const totalTeamMembers = teamMembers.length;
   const totalLeads = projectLeads.length;
@@ -386,6 +390,8 @@ export default function ProjectsDashboard() {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member added' });
       setNewMember('');
+      setMemberNameError(null);
+      setMemberNameWarning(null);
       setShowAddMemberDialog(false);
     },
     onError: () => {
@@ -441,6 +447,8 @@ export default function ProjectsDashboard() {
       queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
       toast({ title: 'Success', description: 'Project lead added' });
       setNewLead('');
+      setLeadNameError(null);
+      setLeadNameWarning(null);
       setShowAddLeadDialog(false);
     },
     onError: () => {
@@ -541,14 +549,94 @@ export default function ProjectsDashboard() {
     }
   };
 
+  // Check for duplicate names in team members
+  const checkMemberDuplicate = (name: string): { isExact: boolean; partialMatches: string[] } => {
+    const trimmedName = name.trim().toLowerCase();
+    const exactMatch = teamMembers.some(m => m.name.toLowerCase() === trimmedName);
+    const partialMatches = teamMembers
+      .filter(m => {
+        const existingName = m.name.toLowerCase();
+        return existingName !== trimmedName && (
+          existingName.includes(trimmedName) || 
+          trimmedName.includes(existingName) ||
+          existingName.split(' ').some(part => trimmedName.split(' ').some(inputPart => 
+            part.length > 2 && inputPart.length > 2 && (part.includes(inputPart) || inputPart.includes(part))
+          ))
+        );
+      })
+      .map(m => m.name);
+    return { isExact: exactMatch, partialMatches };
+  };
+
+  // Check for duplicate names in project leads
+  const checkLeadDuplicate = (name: string): { isExact: boolean; partialMatches: string[] } => {
+    const trimmedName = name.trim().toLowerCase();
+    const exactMatch = projectLeads.some(l => l.name.toLowerCase() === trimmedName);
+    const partialMatches = projectLeads
+      .filter(l => {
+        const existingName = l.name.toLowerCase();
+        return existingName !== trimmedName && (
+          existingName.includes(trimmedName) || 
+          trimmedName.includes(existingName) ||
+          existingName.split(' ').some(part => trimmedName.split(' ').some(inputPart => 
+            part.length > 2 && inputPart.length > 2 && (part.includes(inputPart) || inputPart.includes(part))
+          ))
+        );
+      })
+      .map(l => l.name);
+    return { isExact: exactMatch, partialMatches };
+  };
+
+  // Handle member name change with validation
+  const handleMemberNameChange = (value: string) => {
+    setNewMember(value);
+    if (!value.trim()) {
+      setMemberNameError(null);
+      setMemberNameWarning(null);
+      return;
+    }
+    const { isExact, partialMatches } = checkMemberDuplicate(value);
+    if (isExact) {
+      setMemberNameError('A team member with this exact name already exists.');
+      setMemberNameWarning(null);
+    } else if (partialMatches.length > 0) {
+      setMemberNameError(null);
+      setMemberNameWarning(`Similar name(s) found: ${partialMatches.join(', ')}. Please double check before adding.`);
+    } else {
+      setMemberNameError(null);
+      setMemberNameWarning(null);
+    }
+  };
+
+  // Handle lead name change with validation
+  const handleLeadNameChange = (value: string) => {
+    setNewLead(value);
+    if (!value.trim()) {
+      setLeadNameError(null);
+      setLeadNameWarning(null);
+      return;
+    }
+    const { isExact, partialMatches } = checkLeadDuplicate(value);
+    if (isExact) {
+      setLeadNameError('A project lead with this exact name already exists.');
+      setLeadNameWarning(null);
+    } else if (partialMatches.length > 0) {
+      setLeadNameError(null);
+      setLeadNameWarning(`Similar name(s) found: ${partialMatches.join(', ')}. Please double check before adding.`);
+    } else {
+      setLeadNameError(null);
+      setLeadNameWarning(null);
+    }
+  };
+
   const handleAddMember = () => {
-    if (newMember.trim()) {
+    if (newMember.trim() && !memberNameError) {
       createMemberMutation.mutate(newMember.trim());
     }
   };
 
   const handleAddLead = () => {
-    if (newLead.trim()) {
+    if (newLead.trim() && !leadNameError) {
       createLeadMutation.mutate(newLead.trim());
     }
   };
@@ -1558,7 +1646,14 @@ export default function ProjectsDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl">All Team Members ({teamMembers.length})</CardTitle>
             <div className="flex gap-2">
-              <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
+              <Dialog open={showAddMemberDialog} onOpenChange={(open) => {
+                setShowAddMemberDialog(open);
+                if (!open) {
+                  setNewMember('');
+                  setMemberNameError(null);
+                  setMemberNameWarning(null);
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button variant="default" className="gap-2" data-testid="button-add-member">
                     <UserPlus className="h-4 w-4" />
@@ -1580,10 +1675,17 @@ export default function ProjectsDashboard() {
                       data-testid="input-member-name"
                       type="text"
                       value={newMember}
-                      onChange={(e) => setNewMember(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddMember()}
+                      onChange={(e) => handleMemberNameChange(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !memberNameError && handleAddMember()}
                       placeholder="Enter team member name"
+                      className={memberNameError ? 'border-red-500' : memberNameWarning ? 'border-amber-500' : ''}
                     />
+                    {memberNameError && (
+                      <p className="text-sm text-red-500" data-testid="error-member-duplicate">{memberNameError}</p>
+                    )}
+                    {memberNameWarning && (
+                      <p className="text-sm text-amber-600" data-testid="warning-member-similar">{memberNameWarning}</p>
+                    )}
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button
@@ -1591,6 +1693,8 @@ export default function ProjectsDashboard() {
                       onClick={() => {
                         setShowAddMemberDialog(false);
                         setNewMember('');
+                        setMemberNameError(null);
+                        setMemberNameWarning(null);
                       }}
                       data-testid="button-cancel-add-member"
                     >
@@ -1598,7 +1702,7 @@ export default function ProjectsDashboard() {
                     </Button>
                     <Button
                       onClick={handleAddMember}
-                      disabled={createMemberMutation.isPending || !newMember.trim()}
+                      disabled={createMemberMutation.isPending || !newMember.trim() || !!memberNameError}
                       data-testid="button-submit-member"
                     >
                       {createMemberMutation.isPending ? 'Adding...' : 'Add Member'}
@@ -1760,7 +1864,14 @@ export default function ProjectsDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl">All Project Leads ({projectLeads.length})</CardTitle>
             <div className="flex gap-2">
-              <Dialog open={showAddLeadDialog} onOpenChange={setShowAddLeadDialog}>
+              <Dialog open={showAddLeadDialog} onOpenChange={(open) => {
+                setShowAddLeadDialog(open);
+                if (!open) {
+                  setNewLead('');
+                  setLeadNameError(null);
+                  setLeadNameWarning(null);
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button variant="default" className="gap-2" data-testid="button-add-lead">
                     <UserPlus className="h-4 w-4" />
@@ -1782,10 +1893,17 @@ export default function ProjectsDashboard() {
                       data-testid="input-lead-name"
                       type="text"
                       value={newLead}
-                      onChange={(e) => setNewLead(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddLead()}
+                      onChange={(e) => handleLeadNameChange(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !leadNameError && handleAddLead()}
                       placeholder="Enter project lead name"
+                      className={leadNameError ? 'border-red-500' : leadNameWarning ? 'border-amber-500' : ''}
                     />
+                    {leadNameError && (
+                      <p className="text-sm text-red-500" data-testid="error-lead-duplicate">{leadNameError}</p>
+                    )}
+                    {leadNameWarning && (
+                      <p className="text-sm text-amber-600" data-testid="warning-lead-similar">{leadNameWarning}</p>
+                    )}
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button
@@ -1793,6 +1911,8 @@ export default function ProjectsDashboard() {
                       onClick={() => {
                         setShowAddLeadDialog(false);
                         setNewLead('');
+                        setLeadNameError(null);
+                        setLeadNameWarning(null);
                       }}
                       data-testid="button-cancel-add-lead"
                     >
@@ -1800,7 +1920,7 @@ export default function ProjectsDashboard() {
                     </Button>
                     <Button
                       onClick={handleAddLead}
-                      disabled={createLeadMutation.isPending || !newLead.trim()}
+                      disabled={createLeadMutation.isPending || !newLead.trim() || !!leadNameError}
                       data-testid="button-submit-lead"
                     >
                       {createLeadMutation.isPending ? 'Adding...' : 'Add Lead'}
