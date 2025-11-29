@@ -384,54 +384,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   return (
     <div className="space-y-8">
-      {/* Premium Health Status Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card rounded-xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="section-label">Health Indicator</p>
-              <p className="text-3xl font-bold tabular-nums text-success" data-testid="text-on-track">
-                {onTrackCount}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">On Track</p>
-            </div>
-            <div className="h-14 w-14 rounded-xl bg-success/10 flex items-center justify-center">
-              <CheckCircle2 className="h-7 w-7 text-success" />
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-card rounded-xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="section-label">Attention Required</p>
-              <p className="text-3xl font-bold tabular-nums text-warning" data-testid="text-needs-attention">
-                {atRiskCount}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Needs Attention</p>
-            </div>
-            <div className="h-14 w-14 rounded-xl bg-warning/10 flex items-center justify-center">
-              <AlertTriangle className="h-7 w-7 text-warning" />
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-card rounded-xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="section-label">Immediate Action</p>
-              <p className="text-3xl font-bold tabular-nums text-destructive" data-testid="text-critical">
-                {criticalCount}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Critical</p>
-            </div>
-            <div className="h-14 w-14 rounded-xl bg-destructive/10 flex items-center justify-center">
-              <AlertCircle className="h-7 w-7 text-destructive" />
-            </div>
-          </div>
-        </div>
-      </div>
-
       <Card id="weekly-reports-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col gap-4">
