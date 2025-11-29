@@ -111,11 +111,28 @@ export default function ProjectsDashboard() {
     return true;
   });
 
+  const getStatusPriority = (status: 'active' | 'renewal' | 'ended'): number => {
+    if (status === 'renewal') return 0; // Active but renewal soon - first
+    if (status === 'active') return 1;  // Active with no renewal soon - second
+    return 2;                            // Ended - last
+  };
+
   const sortedProjects = [...filteredProjects].sort((a, b) => {
-    const dateField = sortField === 'endDate' ? 'endDate' : 'startDate';
-    const dateA = a[dateField] ? new Date(a[dateField]!).getTime() : 0;
-    const dateB = b[dateField] ? new Date(b[dateField]!).getTime() : 0;
-    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    const statusA = getProjectStatus(a.endDate);
+    const statusB = getProjectStatus(b.endDate);
+    
+    // First sort by status priority
+    const statusPriorityA = getStatusPriority(statusA);
+    const statusPriorityB = getStatusPriority(statusB);
+    
+    if (statusPriorityA !== statusPriorityB) {
+      return statusPriorityA - statusPriorityB;
+    }
+    
+    // Within same status, sort by end date (earliest first)
+    const dateA = a.endDate ? new Date(a.endDate).getTime() : Infinity;
+    const dateB = b.endDate ? new Date(b.endDate).getTime() : Infinity;
+    return dateA - dateB;
   });
 
   const toggleSort = (field: SortField) => {
