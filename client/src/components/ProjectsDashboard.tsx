@@ -30,6 +30,7 @@ export default function ProjectsDashboard() {
   const [filterProjectName, setFilterProjectName] = useState<string>('');
   const [filterMemberSearch, setFilterMemberSearch] = useState<string>('');
   const [filterLeadSearch, setFilterLeadSearch] = useState<string>('');
+  const [filterProjectStatus, setFilterProjectStatus] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [sortField, setSortField] = useState<SortField>('endDate');
   
@@ -100,6 +101,7 @@ export default function ProjectsDashboard() {
     if (filterLeads.length > 0 && !filterLeads.includes(project.leadId)) return false;
     if (filterMembers.length > 0 && !filterMembers.some(memberId => project.teamMemberIds.includes(memberId))) return false;
     if (filterProjectName && !project.name.toLowerCase().includes(filterProjectName.toLowerCase())) return false;
+    if (filterProjectStatus.length > 0 && !filterProjectStatus.includes(getProjectStatus(project.endDate))) return false;
     return true;
   });
 
@@ -142,9 +144,10 @@ export default function ProjectsDashboard() {
     );
   };
 
-  // Get end date status for project indicator
-  const getEndDateStatus = (endDate: string | null | undefined): 'missing' | 'overdue' | 'soon' | 'ok' => {
-    if (!endDate) return 'missing';
+  // Get project status based on end date
+  // 'active' = Green (end date far), 'renewal' = Yellow/Caution (within 2 months or missing), 'ended' = Red (past end date)
+  const getProjectStatus = (endDate: string | null | undefined): 'active' | 'renewal' | 'ended' => {
+    if (!endDate) return 'renewal'; // Missing end date = renewal soon
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -154,24 +157,43 @@ export default function ProjectsDashboard() {
     const diffTime = end.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays < 0) return 'overdue';
-    if (diffDays <= 60) return 'soon'; // Within 2 months
-    return 'ok';
+    if (diffDays < 0) return 'ended';
+    if (diffDays <= 60) return 'renewal'; // Within 2 months
+    return 'active';
+  };
+
+  const projectStatusOptions = [
+    { value: 'active', label: 'Active', color: 'bg-green-500' },
+    { value: 'renewal', label: 'Renewal Soon', color: 'bg-yellow-500' },
+    { value: 'ended', label: 'Project Ended', color: 'bg-red-500' },
+  ];
+
+  const toggleProjectStatusFilter = (status: string) => {
+    setFilterProjectStatus(prev => 
+      prev.includes(status) 
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    );
   };
 
   const EndDateIndicator = ({ endDate }: { endDate: string | null | undefined }) => {
-    const status = getEndDateStatus(endDate);
+    const status = getProjectStatus(endDate);
+    const isMissing = !endDate;
     
-    if (status === 'missing') {
-      return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+    if (isMissing) {
+      return (
+        <span title="Renewal Soon (missing end date)">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+        </span>
+      );
     }
-    if (status === 'overdue') {
-      return <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />;
+    if (status === 'ended') {
+      return <span className="w-3 h-3 rounded-full bg-red-500 inline-block" title="Project Ended" />;
     }
-    if (status === 'soon') {
-      return <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" />;
+    if (status === 'renewal') {
+      return <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" title="Renewal Soon" />;
     }
-    return <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />;
+    return <span className="w-3 h-3 rounded-full bg-green-500 inline-block" title="Active" />;
   };
   
   // Bulk selection helpers
@@ -586,6 +608,7 @@ export default function ProjectsDashboard() {
     if (filterProjectName) count++;
     if (filterLeads.length > 0) count += filterLeads.length;
     if (filterMembers.length > 0) count += filterMembers.length;
+    if (filterProjectStatus.length > 0) count += filterProjectStatus.length;
     return count;
   };
 
@@ -595,6 +618,7 @@ export default function ProjectsDashboard() {
     setFilterMembers([]);
     setFilterMemberSearch('');
     setFilterLeadSearch('');
+    setFilterProjectStatus([]);
   };
   
   // Exit selection mode and clear selections
@@ -1197,6 +1221,37 @@ export default function ProjectsDashboard() {
                             {filterMemberSearch ? `No members matching "${filterMemberSearch}"` : 'No members available'}
                           </p>
                         )}
+                      </div>
+                    </div>
+
+                    {/* Filter by Project Status */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Filter by Status</Label>
+                        {filterProjectStatus.length > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {filterProjectStatus.length} selected
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="border rounded-md p-2 space-y-1" data-testid="filter-status-container">
+                        {projectStatusOptions.map((status) => (
+                          <div key={status.value} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`filter-status-${status.value}`}
+                              data-testid={`checkbox-filter-status-${status.value}`}
+                              checked={filterProjectStatus.includes(status.value)}
+                              onCheckedChange={() => toggleProjectStatusFilter(status.value)}
+                            />
+                            <Label 
+                              htmlFor={`filter-status-${status.value}`} 
+                              className="font-normal text-sm cursor-pointer flex-1 flex items-center gap-2"
+                            >
+                              <span className={`w-3 h-3 rounded-full ${status.color} inline-block`} />
+                              {status.label}
+                            </Label>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
