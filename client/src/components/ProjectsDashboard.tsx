@@ -794,7 +794,7 @@ export default function ProjectsDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -813,26 +813,12 @@ export default function ProjectsDashboard() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Team Members</p>
-                <p className="text-3xl font-bold" data-testid="text-total-members">
-                  {totalTeamMembers}
+                <p className="text-sm text-muted-foreground">Projects with Renewals Soon</p>
+                <p className="text-3xl font-bold text-amber-600" data-testid="text-renewals-soon">
+                  {projects.filter(p => getProjectStatus(p.endDate) === 'renewal').length}
                 </p>
               </div>
-              <Users className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Project Leads</p>
-                <p className="text-3xl font-bold" data-testid="text-total-leads">
-                  {totalLeads}
-                </p>
-              </div>
-              <Users className="h-8 w-8 text-primary" />
+              <AlertCircle className="h-8 w-8 text-amber-500" />
             </div>
           </CardContent>
         </Card>
