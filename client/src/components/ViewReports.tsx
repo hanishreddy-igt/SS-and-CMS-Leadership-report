@@ -31,10 +31,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, Save, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, RefreshCw, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2 } from 'lucide-react';
+import { Edit2, Save, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, RefreshCw, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Eye, Download, Trash2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback } from '@shared/schema';
+import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport } from '@shared/schema';
 
 const healthStatusConfig = {
   'on-track': { label: 'On Track', icon: CheckCircle2, color: 'text-success', bgColor: 'bg-success/10' },
@@ -85,6 +85,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
   const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<string | null>(null);
   const [reportsAnalyzed, setReportsAnalyzed] = useState<number>(0);
+
+  // Archived Reports State
+  const [showArchivedReportsModal, setShowArchivedReportsModal] = useState(false);
+  const [selectedArchivedReport, setSelectedArchivedReport] = useState<SavedReport | null>(null);
+  const { data: savedReports = [], refetch: refetchSavedReports } = useQuery<SavedReport[]>({ 
+    queryKey: ['/api/saved-reports'] 
+  });
 
   const generateSummaryMutation = useMutation({
     mutationFn: async () => {
@@ -228,6 +235,60 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     }
   });
 
+  const saveToArchiveMutation = useMutation({
+    mutationFn: async (data: { pdfData: string; csvData: string; weekStart: string; weekEnd: string }) => {
+      const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
+      const onTrack = submittedReports.filter(r => r.healthStatus === 'on-track').length;
+      const needsAttention = submittedReports.filter(r => r.healthStatus === 'at-risk').length;
+      const critical = submittedReports.filter(r => r.healthStatus === 'critical').length;
+      
+      return await apiRequest('POST', '/api/saved-reports', {
+        weekStart: data.weekStart,
+        weekEnd: data.weekEnd,
+        pdfData: data.pdfData,
+        csvData: data.csvData,
+        aiSummary: aiSummary,
+        reportCount: String(submittedReports.length),
+        healthCounts: { onTrack, needsAttention, critical },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
+      toast({
+        title: 'Report Archived',
+        description: 'Weekly report saved to archive successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Archive Failed',
+        description: error.message || 'Failed to save report to archive',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const deleteArchivedReportMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/saved-reports/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
+      setSelectedArchivedReport(null);
+      toast({
+        title: 'Archived Report Deleted',
+        description: 'The archived report has been removed',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Delete Failed',
+        description: error.message || 'Failed to delete archived report',
+        variant: 'destructive',
+      });
+    }
+  });
+
   const saveEdit = (reportId: string) => {
     editReportMutation.mutate({ id: reportId, updates: editData });
   };
@@ -313,7 +374,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     member.name.toLowerCase().includes(memberSearch.toLowerCase())
   );
 
-  const exportToCSV = () => {
+  // Generate CSV content for export/archive
+  const generateCSVContent = () => {
     const headers = ['Project', 'Lead', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback', 'Submitted'];
     const rows = sortedReports.map((report) => {
       const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
@@ -334,17 +396,66 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       ];
     });
 
-    const csvContent = [
+    return [
       headers.join(','),
       ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
     ].join('\n');
+  };
 
+  const exportToCSV = () => {
+    const csvContent = generateCSVContent();
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
     link.setAttribute('download', `weekly_reports_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Get current week's date range (Monday to Sunday)
+  const getCurrentWeekDates = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    
+    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    return { weekStart: formatDate(monday), weekEnd: formatDate(sunday) };
+  };
+
+  // Download archived PDF
+  const downloadArchivedPDF = (report: SavedReport) => {
+    const link = document.createElement('a');
+    link.href = `data:application/pdf;base64,${report.pdfData}`;
+    link.download = `weekly_report_${report.weekStart}_to_${report.weekEnd}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Download archived CSV
+  const downloadArchivedCSV = (report: SavedReport) => {
+    if (!report.csvData) {
+      toast({
+        title: 'No CSV Data',
+        description: 'This archived report does not have CSV data',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const blob = new Blob([report.csvData], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `weekly_report_${report.weekStart}_to_${report.weekEnd}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -636,6 +747,141 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     });
 
     doc.save(`cms_ss_leadership_report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Save current reports to archive (generates PDF and saves to database)
+  const saveToArchive = () => {
+    if (sortedReports.length === 0) {
+      toast({
+        title: 'No Reports to Archive',
+        description: 'Submit some reports first before archiving',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Generate PDF document (same as exportToPDF but we get base64)
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    
+    const colors = {
+      navy: [15, 23, 42],
+      navyLight: [30, 41, 59],
+      primary: [99, 102, 241],
+      success: [34, 197, 94],
+      warning: [245, 158, 11],
+      destructive: [239, 68, 68],
+      white: [255, 255, 255],
+      muted: [148, 163, 184],
+      border: [51, 65, 85],
+    };
+
+    doc.setFillColor(...colors.navy as [number, number, number]);
+    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.setFillColor(...colors.primary as [number, number, number]);
+    doc.rect(0, 35, pageWidth, 2, 'F');
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CMS & SS Leadership Report', 14, 18);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    doc.text('Weekly Delivery Status Overview', 14, 26);
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(9);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 14, 18, { align: 'right' });
+
+    let currentY = 45;
+
+    // Status metrics cards
+    const metrics = [
+      { label: 'On Track', value: onTrackCount, color: colors.success },
+      { label: 'Needs Attention', value: atRiskCount, color: colors.warning },
+      { label: 'Critical', value: criticalCount, color: colors.destructive },
+    ];
+
+    const cardWidth = (pageWidth - 28 - 8) / 3;
+    metrics.forEach((metric, idx) => {
+      const x = 14 + (idx * (cardWidth + 4));
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(x, currentY, cardWidth, 16, 2, 2, 'F');
+      doc.setFillColor(...metric.color as [number, number, number]);
+      doc.rect(x, currentY, 3, 16, 'F');
+      doc.setTextColor(...metric.color as [number, number, number]);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(metric.value), x + 8, currentY + 10);
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(metric.label, x + 20, currentY + 10);
+    });
+
+    currentY += 24;
+
+    // Reports table
+    const tableData = sortedReports.map((report) => {
+      const project = projects.find((p) => p.id === report.projectId);
+      const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
+      const feedbackText = feedback && feedback.length > 0
+        ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('\n')
+        : '-';
+      return [
+        getProjectName(report.projectId),
+        project?.customer || '-',
+        getLeadName(report.leadId),
+        healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || '-',
+        report.progress || '-',
+        report.challenges || '-',
+        report.nextWeek || '-',
+        feedbackText,
+      ];
+    });
+
+    autoTable(doc, {
+      head: [['Project', 'Customer', 'Lead', 'Health', 'Progress', 'Challenges', 'Next Week', 'Feedback']],
+      body: tableData,
+      startY: currentY,
+      theme: 'plain',
+      styles: { fontSize: 7, cellPadding: 3, lineColor: [226, 232, 240], lineWidth: 0.5 },
+      headStyles: { fillColor: [...colors.navyLight as [number, number, number]], textColor: [...colors.white as [number, number, number]], fontStyle: 'bold' },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 40 },
+        5: { cellWidth: 40 },
+        6: { cellWidth: 40 },
+        7: { cellWidth: 40 },
+      },
+      didDrawPage: (data) => {
+        doc.setFillColor(...colors.navy as [number, number, number]);
+        doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
+        doc.setFontSize(8);
+        doc.setTextColor(...colors.muted as [number, number, number]);
+        doc.text('CMS & SS Leadership Report', 14, pageHeight - 5);
+        doc.text(`Page ${data.pageNumber}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+        doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 5, { align: 'right' });
+      },
+    });
+
+    // Get PDF as base64 and CSV content
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    const csvContent = generateCSVContent();
+    const { weekStart, weekEnd } = getCurrentWeekDates();
+
+    saveToArchiveMutation.mutate({
+      pdfData: pdfBase64,
+      csvData: csvContent,
+      weekStart,
+      weekEnd,
+    });
   };
 
   const getOverallHealthConfig = (health: string) => {
@@ -959,6 +1205,22 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </PopoverContent>
                 </Popover>
 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setShowArchivedReportsModal(true)}
+                  data-testid="button-view-archive"
+                >
+                  <Archive className="h-4 w-4" />
+                  View Archive
+                  {savedReports.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {savedReports.length}
+                    </Badge>
+                  )}
+                </Button>
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -976,11 +1238,19 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={exportToPDF} data-testid="menu-export-pdf">
                       <FileText className="h-4 w-4 mr-2" />
-                      Save as PDF
+                      Download as PDF
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={exportToCSV} data-testid="menu-export-csv">
                       <FileDown className="h-4 w-4 mr-2" />
-                      Save as CSV
+                      Download as CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={saveToArchive} 
+                      data-testid="menu-save-to-archive"
+                      disabled={saveToArchiveMutation.isPending}
+                    >
+                      <Archive className="h-4 w-4 mr-2" />
+                      {saveToArchiveMutation.isPending ? 'Saving...' : 'Save to Archive'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1354,6 +1624,172 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Archived Reports Modal */}
+      <Dialog open={showArchivedReportsModal} onOpenChange={setShowArchivedReportsModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Archive className="h-5 w-5 text-primary" />
+              Archived Weekly Reports
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-auto">
+            {savedReports.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Archive className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                <p className="text-lg font-medium mb-2">No archived reports yet</p>
+                <p className="text-sm">Save weekly reports to the archive to access them later.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {savedReports.map((report) => {
+                  const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
+                  const reportAiSummary = report.aiSummary as AISummary | null;
+                  
+                  return (
+                    <Card 
+                      key={report.id} 
+                      className={`glass-card border-white/10 ${selectedArchivedReport?.id === report.id ? 'ring-2 ring-primary' : 'hover:border-primary/30'} transition-all cursor-pointer`}
+                      onClick={() => setSelectedArchivedReport(selectedArchivedReport?.id === report.id ? null : report)}
+                      data-testid={`archived-report-${report.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <Calendar className="h-4 w-4 text-primary" />
+                              <span className="font-semibold">
+                                Week of {report.weekStart} to {report.weekEnd}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                              <span>{report.reportCount} reports</span>
+                              {healthCounts && (
+                                <div className="flex items-center gap-2">
+                                  <span className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-success" />
+                                    {healthCounts.onTrack || 0}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-warning" />
+                                    {healthCounts.needsAttention || 0}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <div className="h-2 w-2 rounded-full bg-destructive" />
+                                    {healthCounts.critical || 0}
+                                  </span>
+                                </div>
+                              )}
+                              {reportAiSummary && (
+                                <Badge variant="outline" className="gap-1 border-primary/30">
+                                  <Sparkles className="h-3 w-3 text-primary" />
+                                  AI Summary
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Saved: {new Date(report.savedAt).toLocaleString()}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={() => downloadArchivedPDF(report)}
+                              data-testid={`button-download-pdf-${report.id}`}
+                            >
+                              <FileText className="h-4 w-4" />
+                              PDF
+                            </Button>
+                            {report.csvData && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1"
+                                onClick={() => downloadArchivedCSV(report)}
+                                data-testid={`button-download-csv-${report.id}`}
+                              >
+                                <FileDown className="h-4 w-4" />
+                                CSV
+                              </Button>
+                            )}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive"
+                                  data-testid={`button-delete-archived-${report.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Archived Report?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete the archived report for week {report.weekStart} to {report.weekEnd}. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteArchivedReportMutation.mutate(report.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                        
+                        {/* Expanded View with AI Summary */}
+                        {selectedArchivedReport?.id === report.id && reportAiSummary && (
+                          <div className="mt-4 pt-4 border-t border-white/10">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Sparkles className="h-4 w-4 text-primary" />
+                              <h4 className="font-medium">AI Summary</h4>
+                            </div>
+                            <div className={`p-3 rounded-lg ${getOverallHealthConfig(reportAiSummary.overallHealth).bgColor} border ${getOverallHealthConfig(reportAiSummary.overallHealth).borderColor} mb-3`}>
+                              <Badge className={`mb-2 ${getOverallHealthConfig(reportAiSummary.overallHealth).bgColor} ${getOverallHealthConfig(reportAiSummary.overallHealth).color} border-0`}>
+                                {reportAiSummary.overallHealth === 'on-track' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                                {reportAiSummary.overallHealth === 'needs-attention' && <AlertTriangle className="h-3 w-3 mr-1" />}
+                                {reportAiSummary.overallHealth === 'critical' && <AlertCircle className="h-3 w-3 mr-1" />}
+                                Overall: {getOverallHealthConfig(reportAiSummary.overallHealth).label}
+                              </Badge>
+                              <p className="text-sm">{reportAiSummary.executiveSummary}</p>
+                            </div>
+                            
+                            {reportAiSummary.keyAchievements && reportAiSummary.keyAchievements.length > 0 && (
+                              <div className="mb-2">
+                                <p className="text-xs font-medium text-success mb-1">Key Achievements:</p>
+                                <ul className="text-xs text-muted-foreground space-y-0.5">
+                                  {reportAiSummary.keyAchievements.slice(0, 2).map((item, i) => (
+                                    <li key={i} className="flex items-start gap-1">
+                                      <div className="h-1 w-1 rounded-full bg-success mt-1.5 shrink-0" />
+                                      {item}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
