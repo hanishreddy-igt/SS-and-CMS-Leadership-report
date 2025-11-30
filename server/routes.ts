@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { JiraService } from "./services/jiraService";
-import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema } from "@shared/schema";
+import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
 
@@ -305,6 +305,53 @@ Be concise and focus on actionable insights. If there are no critical issues, re
         error: error.message || 'Failed to generate AI summary',
         summary: null 
       });
+    }
+  });
+
+  // Saved Reports routes - archived weekly report snapshots (protected)
+  app.get('/api/saved-reports', isAuthenticated, async (_req, res) => {
+    try {
+      const reports = await storage.getSavedReports();
+      // Sort by savedAt descending (most recent first)
+      reports.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/saved-reports/:id', isAuthenticated, async (req, res) => {
+    try {
+      const report = await storage.getSavedReport(req.params.id);
+      if (!report) {
+        return res.status(404).json({ error: 'Saved report not found' });
+      }
+      res.json(report);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/saved-reports', isAuthenticated, async (req, res) => {
+    try {
+      const data = insertSavedReportSchema.parse(req.body);
+      const report = await storage.upsertSavedReport(data);
+      res.json(report);
+    } catch (error: any) {
+      console.error('Error saving report:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete('/api/saved-reports/:id', isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteSavedReport(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Saved report not found' });
+      }
+      res.json({ success });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

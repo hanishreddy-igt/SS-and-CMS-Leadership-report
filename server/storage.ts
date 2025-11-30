@@ -234,12 +234,26 @@ export class MemStorage implements IStorage {
   async upsertSavedReport(insertReport: InsertSavedReport): Promise<SavedReport> {
     const existing = Array.from(this.savedReports.values()).find(r => r.weekStart === insertReport.weekStart);
     if (existing) {
-      const updated: SavedReport = { ...existing, ...insertReport, savedAt: new Date() };
+      const updated: SavedReport = { 
+        ...existing, 
+        ...insertReport, 
+        csvData: insertReport.csvData ?? null,
+        aiSummary: insertReport.aiSummary ?? null,
+        healthCounts: insertReport.healthCounts ?? null,
+        savedAt: new Date() 
+      };
       this.savedReports.set(existing.id, updated);
       return updated;
     }
     const id = randomUUID();
-    const report: SavedReport = { ...insertReport, id, savedAt: new Date() };
+    const report: SavedReport = { 
+      ...insertReport, 
+      id, 
+      csvData: insertReport.csvData ?? null,
+      aiSummary: insertReport.aiSummary ?? null,
+      healthCounts: insertReport.healthCounts ?? null,
+      savedAt: new Date() 
+    };
     this.savedReports.set(id, report);
     return report;
   }
