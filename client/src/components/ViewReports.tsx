@@ -484,7 +484,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.muted as [number, number, number]);
-    doc.text('Weekly Delivery Status Overview', 14, 26);
+    const { weekEnd } = getCurrentWeekDates();
+    const weekEndFormatted = new Date(weekEnd + 'T00:00:00').toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    doc.text(`Weekly Delivery Status Overview - Week Ending ${weekEndFormatted}`, 14, 26);
     
     doc.setTextColor(...colors.white as [number, number, number]);
     doc.setFontSize(9);
@@ -778,7 +784,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.muted as [number, number, number]);
-    doc.text('Weekly Delivery Status Overview', 14, 26);
+    const archiveWeekDates = getCurrentWeekDates();
+    const archiveWeekEndFormatted = new Date(archiveWeekDates.weekEnd + 'T00:00:00').toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    doc.text(`Weekly Delivery Status Overview - Week Ending ${archiveWeekEndFormatted}`, 14, 26);
     
     doc.setTextColor(...colors.white as [number, number, number]);
     doc.setFontSize(9);
