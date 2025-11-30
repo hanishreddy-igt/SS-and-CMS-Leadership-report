@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -103,10 +103,39 @@ export default function HistoricalReports() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   const { data: savedReports = [], isLoading } = useQuery<SavedReport[]>({ 
     queryKey: ['/api/saved-reports'] 
   });
+
+  // Create blob URL for PDF preview when a report is selected
+  useEffect(() => {
+    if (selectedReport?.pdfData && showPdfModal) {
+      try {
+        const byteCharacters = atob(selectedReport.pdfData);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        setPdfBlobUrl(url);
+        
+        // Cleanup on unmount or when report changes
+        return () => {
+          URL.revokeObjectURL(url);
+          setPdfBlobUrl(null);
+        };
+      } catch (error) {
+        console.error('Error creating PDF blob:', error);
+        setPdfBlobUrl(null);
+      }
+    } else {
+      setPdfBlobUrl(null);
+    }
+  }, [selectedReport, showPdfModal]);
 
   // Group reports by year and month based on weekEnd date
   const groupedReports = useMemo(() => {
@@ -684,11 +713,21 @@ export default function HistoricalReports() {
                 )}
 
                 <div className="flex-1 overflow-hidden rounded-lg border border-white/10 bg-white">
-                  <iframe
-                    src={`data:application/pdf;base64,${selectedReport.pdfData}`}
-                    className="w-full h-full min-h-[500px]"
-                    title="PDF Preview"
-                  />
+                  {pdfBlobUrl ? (
+                    <iframe
+                      src={pdfBlobUrl}
+                      className="w-full h-full min-h-[500px]"
+                      title="PDF Preview"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-[500px] text-muted-foreground">
+                      <div className="text-center">
+                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                        <p>Loading PDF preview...</p>
+                        <p className="text-sm mt-2">Use the Download PDF button above to view the full report.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             );
