@@ -738,6 +738,11 @@ export default function HistoricalReports() {
                 <div className="rounded-lg border border-white/10 bg-white overflow-auto" style={{ minHeight: '400px', maxHeight: '50vh' }}>
                   {pdfBlobUrl ? (
                     <div className="flex flex-col items-center">
+                      <div className="w-full bg-primary/10 border-b border-primary/20 py-2 px-4 text-center">
+                        <h3 className="text-sm font-semibold text-primary">
+                          Weekly Report - Week Ending {formatWeekEnding(selectedReport.weekEnd)}
+                        </h3>
+                      </div>
                       <Document
                         file={pdfBlobUrl}
                         onLoadSuccess={onDocumentLoadSuccess}
