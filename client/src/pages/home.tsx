@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { FileText, FolderKanban, Eye, LogOut, Shield, BarChart3, TrendingUp } from 'lucide-react';
+import { FileText, FolderKanban, Eye, LogOut, Shield, BarChart3, TrendingUp, History } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import ProjectsDashboard from '@/components/ProjectsDashboard';
 import SubmitReport from '@/components/SubmitReport';
 import ViewReports from '@/components/ViewReports';
+import HistoricalReports from '@/components/HistoricalReports';
 import { useQuery } from '@tanstack/react-query';
 import type { Project, WeeklyReport } from '@shared/schema';
 
@@ -155,7 +156,7 @@ export default function Home() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="premium-tabs grid w-full grid-cols-3 h-auto">
+          <TabsList className="premium-tabs grid w-full grid-cols-4 h-auto">
             <TabsTrigger 
               value="teams-projects" 
               data-testid="tab-teams-projects" 
@@ -178,7 +179,15 @@ export default function Home() {
               className="premium-tab gap-2 py-4"
             >
               <Eye className="h-5 w-5" />
-              <span className="hidden sm:inline font-semibold">View Reports</span>
+              <span className="hidden sm:inline font-semibold">View Current Report</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="historical" 
+              data-testid="tab-historical" 
+              className="premium-tab gap-2 py-4"
+            >
+              <History className="h-5 w-5" />
+              <span className="hidden sm:inline font-semibold">Historical Reports</span>
             </TabsTrigger>
           </TabsList>
 
@@ -195,6 +204,10 @@ export default function Home() {
 
           <TabsContent value="view" className="fade-in">
             <ViewReports externalHealthFilter={healthFilter} onClearExternalFilter={() => setHealthFilter('all')} />
+          </TabsContent>
+
+          <TabsContent value="historical" className="fade-in">
+            <HistoricalReports />
           </TabsContent>
         </Tabs>
       </main>

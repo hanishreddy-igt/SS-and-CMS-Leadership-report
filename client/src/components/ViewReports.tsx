@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, Save, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, RefreshCw, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Eye, Download, Trash2 } from 'lucide-react';
+import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, RefreshCw, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport } from '@shared/schema';
@@ -86,10 +86,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<string | null>(null);
   const [reportsAnalyzed, setReportsAnalyzed] = useState<number>(0);
 
-  // Archived Reports State
-  const [showArchivedReportsModal, setShowArchivedReportsModal] = useState(false);
-  const [selectedArchivedReport, setSelectedArchivedReport] = useState<SavedReport | null>(null);
-  const { data: savedReports = [], refetch: refetchSavedReports } = useQuery<SavedReport[]>({ 
+  // Archive functionality
+  const { refetch: refetchSavedReports } = useQuery<SavedReport[]>({ 
     queryKey: ['/api/saved-reports'] 
   });
 
@@ -268,27 +266,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     }
   });
 
-  const deleteArchivedReportMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return await apiRequest('DELETE', `/api/saved-reports/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
-      setSelectedArchivedReport(null);
-      toast({
-        title: 'Archived Report Deleted',
-        description: 'The archived report has been removed',
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Delete Failed',
-        description: error.message || 'Failed to delete archived report',
-        variant: 'destructive',
-      });
-    }
-  });
-
   const saveEdit = (reportId: string) => {
     editReportMutation.mutate({ id: reportId, updates: editData });
   };
@@ -429,36 +406,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     
     const formatDate = (d: Date) => d.toISOString().split('T')[0];
     return { weekStart: formatDate(monday), weekEnd: formatDate(sunday) };
-  };
-
-  // Download archived PDF
-  const downloadArchivedPDF = (report: SavedReport) => {
-    const link = document.createElement('a');
-    link.href = `data:application/pdf;base64,${report.pdfData}`;
-    link.download = `weekly_report_${report.weekStart}_to_${report.weekEnd}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Download archived CSV
-  const downloadArchivedCSV = (report: SavedReport) => {
-    if (!report.csvData) {
-      toast({
-        title: 'No CSV Data',
-        description: 'This archived report does not have CSV data',
-        variant: 'destructive',
-      });
-      return;
-    }
-    const blob = new Blob([report.csvData], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `weekly_report_${report.weekStart}_to_${report.weekEnd}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const exportToPDF = () => {
@@ -1205,22 +1152,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </PopoverContent>
                 </Popover>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setShowArchivedReportsModal(true)}
-                  data-testid="button-view-archive"
-                >
-                  <Archive className="h-4 w-4" />
-                  View Archive
-                  {savedReports.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {savedReports.length}
-                    </Badge>
-                  )}
-                </Button>
-
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -1228,10 +1159,10 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       size="sm"
                       className="gap-2"
                       disabled={sortedReports.length === 0}
-                      data-testid="button-save"
+                      data-testid="button-download"
                     >
-                      <Save className="h-4 w-4" />
-                      Save
+                      <Download className="h-4 w-4" />
+                      Download
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1244,16 +1175,20 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       <FileDown className="h-4 w-4 mr-2" />
                       Download as CSV
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={saveToArchive} 
-                      data-testid="menu-save-to-archive"
-                      disabled={saveToArchiveMutation.isPending}
-                    >
-                      <Archive className="h-4 w-4 mr-2" />
-                      {saveToArchiveMutation.isPending ? 'Saving...' : 'Save to Archive'}
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={saveToArchive}
+                  disabled={sortedReports.length === 0 || saveToArchiveMutation.isPending}
+                  data-testid="button-archive"
+                >
+                  <Archive className="h-4 w-4" />
+                  {saveToArchiveMutation.isPending ? 'Archiving...' : 'Archive'}
+                </Button>
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -1265,12 +1200,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       disabled={weeklyReports.length === 0}
                     >
                       <RefreshCw className="h-4 w-4" />
-                      Reset reports for next week
+                      Force Reset
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Reset Reports for Next Week?</AlertDialogTitle>
+                      <AlertDialogTitle>Force Reset All Reports?</AlertDialogTitle>
                       <AlertDialogDescription>
                         This will permanently delete all {weeklyReports.length} weekly reports to prepare for a new reporting cycle. This action cannot be undone.
                         Make sure you have saved the reports as PDF or CSV before resetting.
@@ -1624,172 +1559,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               </>
             );
           })()}
-        </DialogContent>
-      </Dialog>
-
-      {/* Archived Reports Modal */}
-      <Dialog open={showArchivedReportsModal} onOpenChange={setShowArchivedReportsModal}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Archive className="h-5 w-5 text-primary" />
-              Archived Weekly Reports
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="flex-1 overflow-auto">
-            {savedReports.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Archive className="h-16 w-16 mx-auto mb-4 opacity-30" />
-                <p className="text-lg font-medium mb-2">No archived reports yet</p>
-                <p className="text-sm">Save weekly reports to the archive to access them later.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {savedReports.map((report) => {
-                  const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
-                  const reportAiSummary = report.aiSummary as AISummary | null;
-                  
-                  return (
-                    <Card 
-                      key={report.id} 
-                      className={`glass-card border-white/10 ${selectedArchivedReport?.id === report.id ? 'ring-2 ring-primary' : 'hover:border-primary/30'} transition-all cursor-pointer`}
-                      onClick={() => setSelectedArchivedReport(selectedArchivedReport?.id === report.id ? null : report)}
-                      data-testid={`archived-report-${report.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <Calendar className="h-4 w-4 text-primary" />
-                              <span className="font-semibold">
-                                Week of {report.weekStart} to {report.weekEnd}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                              <span>{report.reportCount} reports</span>
-                              {healthCounts && (
-                                <div className="flex items-center gap-2">
-                                  <span className="flex items-center gap-1">
-                                    <div className="h-2 w-2 rounded-full bg-success" />
-                                    {healthCounts.onTrack || 0}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <div className="h-2 w-2 rounded-full bg-warning" />
-                                    {healthCounts.needsAttention || 0}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <div className="h-2 w-2 rounded-full bg-destructive" />
-                                    {healthCounts.critical || 0}
-                                  </span>
-                                </div>
-                              )}
-                              {reportAiSummary && (
-                                <Badge variant="outline" className="gap-1 border-primary/30">
-                                  <Sparkles className="h-3 w-3 text-primary" />
-                                  AI Summary
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Saved: {new Date(report.savedAt).toLocaleString()}
-                            </p>
-                          </div>
-                          
-                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1"
-                              onClick={() => downloadArchivedPDF(report)}
-                              data-testid={`button-download-pdf-${report.id}`}
-                            >
-                              <FileText className="h-4 w-4" />
-                              PDF
-                            </Button>
-                            {report.csvData && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1"
-                                onClick={() => downloadArchivedCSV(report)}
-                                data-testid={`button-download-csv-${report.id}`}
-                              >
-                                <FileDown className="h-4 w-4" />
-                                CSV
-                              </Button>
-                            )}
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-destructive hover:text-destructive"
-                                  data-testid={`button-delete-archived-${report.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Archived Report?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will permanently delete the archived report for week {report.weekStart} to {report.weekEnd}. This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteArchivedReportMutation.mutate(report.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </div>
-                        
-                        {/* Expanded View with AI Summary */}
-                        {selectedArchivedReport?.id === report.id && reportAiSummary && (
-                          <div className="mt-4 pt-4 border-t border-white/10">
-                            <div className="flex items-center gap-2 mb-3">
-                              <Sparkles className="h-4 w-4 text-primary" />
-                              <h4 className="font-medium">AI Summary</h4>
-                            </div>
-                            <div className={`p-3 rounded-lg ${getOverallHealthConfig(reportAiSummary.overallHealth).bgColor} border ${getOverallHealthConfig(reportAiSummary.overallHealth).borderColor} mb-3`}>
-                              <Badge className={`mb-2 ${getOverallHealthConfig(reportAiSummary.overallHealth).bgColor} ${getOverallHealthConfig(reportAiSummary.overallHealth).color} border-0`}>
-                                {reportAiSummary.overallHealth === 'on-track' && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                                {reportAiSummary.overallHealth === 'needs-attention' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                                {reportAiSummary.overallHealth === 'critical' && <AlertCircle className="h-3 w-3 mr-1" />}
-                                Overall: {getOverallHealthConfig(reportAiSummary.overallHealth).label}
-                              </Badge>
-                              <p className="text-sm">{reportAiSummary.executiveSummary}</p>
-                            </div>
-                            
-                            {reportAiSummary.keyAchievements && reportAiSummary.keyAchievements.length > 0 && (
-                              <div className="mb-2">
-                                <p className="text-xs font-medium text-success mb-1">Key Achievements:</p>
-                                <ul className="text-xs text-muted-foreground space-y-0.5">
-                                  {reportAiSummary.keyAchievements.slice(0, 2).map((item, i) => (
-                                    <li key={i} className="flex items-start gap-1">
-                                      <div className="h-1 w-1 rounded-full bg-success mt-1.5 shrink-0" />
-                                      {item}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </DialogContent>
       </Dialog>
     </div>
