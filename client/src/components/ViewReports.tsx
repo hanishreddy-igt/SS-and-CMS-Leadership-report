@@ -93,6 +93,16 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   // Get current week start from reports
   const currentWeekStart = weeklyReports.length > 0 ? weeklyReports[0].weekStart : null;
 
+  // Check if reports were modified after AI summary was generated
+  const reportsModifiedAfterSummary = (() => {
+    if (!summaryGeneratedAt || weeklyReports.length === 0) return false;
+    const summaryTime = new Date(summaryGeneratedAt).getTime();
+    const latestReportTime = Math.max(
+      ...weeklyReports.map(r => new Date(r.submittedAt).getTime())
+    );
+    return latestReportTime > summaryTime;
+  })();
+
   // Load AI summary from database on mount
   interface SavedAiSummaryResponse {
     summary: AISummary | null;
@@ -161,7 +171,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           await apiRequest('POST', '/api/saved-reports', {
             weekStart: reportWeekStart,
             weekEnd: weekEnd,
-            reportCount: weeklyReports.length,
+            reportCount: String(weeklyReports.length),
             healthCounts,
             aiSummary: aiSummary || null,
             pdfData: '', // Auto-archive doesn't generate PDF
@@ -1050,6 +1060,24 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           </div>
         </CardHeader>
         <CardContent className="pt-6">
+          {/* Constant informational banner about AI summary costs */}
+          <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-start gap-2">
+            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Generate the AI summary only after all reports are submitted to avoid extra costs on GPT calls.
+            </p>
+          </div>
+
+          {/* Warning banner when reports modified after summary generation */}
+          {reportsModifiedAfterSummary && aiSummary && (
+            <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+              <p className="text-sm text-warning">
+                There are edits to the weekly reports after this summary was generated.
+              </p>
+            </div>
+          )}
+
           {!aiSummary ? (
             <div className="text-center py-8 text-muted-foreground">
               <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-30" />
