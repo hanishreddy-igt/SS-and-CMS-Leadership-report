@@ -73,6 +73,19 @@ export const savedReports = pgTable("saved_reports", {
   savedAt: timestamp("saved_at").notNull().defaultNow(),
 });
 
+// Current week's AI summary - persists until reset
+export const currentAiSummary = pgTable("current_ai_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  weekStart: text("week_start").notNull().unique(), // Current week identifier
+  summary: jsonb("summary").notNull(), // The AI-generated summary
+  reportsAnalyzed: text("reports_analyzed").notNull(), // Number of reports analyzed
+  generatedAt: timestamp("generated_at").notNull().defaultNow(), // When it was generated (UTC)
+});
+
+export const insertCurrentAiSummarySchema = createInsertSchema(currentAiSummary).omit({ id: true, generatedAt: true });
+export type CurrentAiSummary = typeof currentAiSummary.$inferSelect;
+export type InsertCurrentAiSummary = z.infer<typeof insertCurrentAiSummarySchema>;
+
 export const insertPersonSchema = createInsertSchema(people).omit({ id: true });
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true });
 export const insertWeeklyReportSchema = createInsertSchema(weeklyReports).omit({ id: true, submittedAt: true });

@@ -14,8 +14,10 @@ import type {
   UpsertUser,
   SavedReport,
   InsertSavedReport,
+  CurrentAiSummary,
+  InsertCurrentAiSummary,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -58,6 +60,11 @@ export interface IStorage {
   getSavedReportByWeek(weekStart: string): Promise<SavedReport | undefined>;
   upsertSavedReport(report: InsertSavedReport): Promise<SavedReport>;
   deleteSavedReport(id: string): Promise<boolean>;
+
+  // Current AI Summary (persisted current week's summary)
+  getCurrentAiSummary(weekStart: string): Promise<CurrentAiSummary | undefined>;
+  upsertCurrentAiSummary(summary: InsertCurrentAiSummary): Promise<CurrentAiSummary>;
+  deleteCurrentAiSummary(weekStart: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -67,6 +74,7 @@ export class MemStorage implements IStorage {
   private projects: Map<string, Project>;
   private weeklyReports: Map<string, WeeklyReport>;
   private savedReports: Map<string, SavedReport>;
+  private currentAiSummaries: Map<string, CurrentAiSummary>;
 
   constructor() {
     this.users = new Map();
@@ -74,6 +82,7 @@ export class MemStorage implements IStorage {
     this.projects = new Map();
     this.weeklyReports = new Map();
     this.savedReports = new Map();
+    this.currentAiSummaries = new Map();
   }
 
   // User operations (required for authentication)
@@ -261,6 +270,36 @@ export class MemStorage implements IStorage {
   async deleteSavedReport(id: string): Promise<boolean> {
     return this.savedReports.delete(id);
   }
+
+  // Current AI Summary
+  async getCurrentAiSummary(weekStart: string): Promise<CurrentAiSummary | undefined> {
+    return this.currentAiSummaries.get(weekStart);
+  }
+
+  async upsertCurrentAiSummary(insertSummary: InsertCurrentAiSummary): Promise<CurrentAiSummary> {
+    const existing = this.currentAiSummaries.get(insertSummary.weekStart);
+    if (existing) {
+      const updated: CurrentAiSummary = { 
+        ...existing, 
+        ...insertSummary, 
+        generatedAt: new Date() 
+      };
+      this.currentAiSummaries.set(insertSummary.weekStart, updated);
+      return updated;
+    }
+    const id = randomUUID();
+    const summary: CurrentAiSummary = { 
+      ...insertSummary, 
+      id, 
+      generatedAt: new Date() 
+    };
+    this.currentAiSummaries.set(insertSummary.weekStart, summary);
+    return summary;
+  }
+
+  async deleteCurrentAiSummary(weekStart: string): Promise<boolean> {
+    return this.currentAiSummaries.delete(weekStart);
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -421,6 +460,32 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSavedReport(id: string): Promise<boolean> {
     const result = await db.delete(savedReports).where(eq(savedReports.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Current AI Summary
+  async getCurrentAiSummary(weekStart: string): Promise<CurrentAiSummary | undefined> {
+    const [summary] = await db.select().from(currentAiSummary).where(eq(currentAiSummary.weekStart, weekStart));
+    return summary || undefined;
+  }
+
+  async upsertCurrentAiSummary(insertSummary: InsertCurrentAiSummary): Promise<CurrentAiSummary> {
+    const [summary] = await db
+      .insert(currentAiSummary)
+      .values(insertSummary)
+      .onConflictDoUpdate({
+        target: currentAiSummary.weekStart,
+        set: {
+          ...insertSummary,
+          generatedAt: new Date(),
+        },
+      })
+      .returning();
+    return summary;
+  }
+
+  async deleteCurrentAiSummary(weekStart: string): Promise<boolean> {
+    const result = await db.delete(currentAiSummary).where(eq(currentAiSummary.weekStart, weekStart));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }

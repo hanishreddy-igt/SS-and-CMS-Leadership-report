@@ -86,6 +86,35 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<string | null>(null);
   const [reportsAnalyzed, setReportsAnalyzed] = useState<number>(0);
 
+  // Get current week start from reports
+  const currentWeekStart = weeklyReports.length > 0 ? weeklyReports[0].weekStart : null;
+
+  // Load AI summary from database on mount
+  interface SavedAiSummaryResponse {
+    summary: AISummary | null;
+    reportsAnalyzed?: number;
+    generatedAt?: string;
+  }
+  const { data: savedAiSummary } = useQuery<SavedAiSummaryResponse>({
+    queryKey: ['/api/current-ai-summary', currentWeekStart],
+    enabled: !!currentWeekStart,
+  });
+
+  // Update local state when saved AI summary is loaded
+  useEffect(() => {
+    if (savedAiSummary && savedAiSummary.summary && !aiSummary) {
+      setAiSummary(savedAiSummary.summary);
+      setSummaryGeneratedAt(savedAiSummary.generatedAt || null);
+      setReportsAnalyzed(savedAiSummary.reportsAnalyzed || 0);
+    }
+  }, [savedAiSummary, aiSummary]);
+
+  // Format date to UTC string
+  const formatUTC = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toISOString().replace('T', ' ').replace('.000Z', ' UTC');
+  };
+
   // Archive functionality
   const { refetch: refetchSavedReports } = useQuery<SavedReport[]>({ 
     queryKey: ['/api/saved-reports'] 
@@ -215,13 +244,23 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   const deleteAllReportsMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('DELETE', '/api/weekly-reports', {});
+      // Delete all reports
+      await apiRequest('DELETE', '/api/weekly-reports', {});
+      // Also delete the current AI summary if exists
+      if (currentWeekStart) {
+        await apiRequest('DELETE', `/api/current-ai-summary/${currentWeekStart}`, {});
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
+      // Clear local AI summary state
+      setAiSummary(null);
+      setSummaryGeneratedAt(null);
+      setReportsAnalyzed(0);
       toast({ 
         title: 'Success', 
-        description: 'All reports have been reset for next week' 
+        description: 'All reports and AI summary have been reset for next week' 
       });
     },
     onError: (error: Error) => {
@@ -992,9 +1031,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
               {/* Generated timestamp */}
               {summaryGeneratedAt && (
-                <p className="text-xs text-muted-foreground text-right">
-                  Generated: {new Date(summaryGeneratedAt).toLocaleString()}
-                </p>
+                <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-white/10 pt-3 mt-4">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Generated: {formatUTC(summaryGeneratedAt)}
+                  </span>
+                  <span>{reportsAnalyzed} reports analyzed</span>
+                </div>
               )}
             </div>
           )}

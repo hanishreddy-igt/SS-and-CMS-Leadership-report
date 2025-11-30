@@ -222,6 +222,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current week's AI summary (protected)
+  app.get('/api/current-ai-summary/:weekStart', isAuthenticated, async (req, res) => {
+    try {
+      const summary = await storage.getCurrentAiSummary(req.params.weekStart);
+      if (!summary) {
+        return res.json({ summary: null });
+      }
+      res.json({ 
+        summary: summary.summary,
+        reportsAnalyzed: parseInt(summary.reportsAnalyzed),
+        generatedAt: summary.generatedAt.toISOString()
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete current week's AI summary (for Force Reset) (protected)
+  app.delete('/api/current-ai-summary/:weekStart', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteCurrentAiSummary(req.params.weekStart);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // AI Summary endpoint - Generate weekly insights from reports (protected)
   app.post('/api/weekly-reports/ai-summary', isAuthenticated, async (_req, res) => {
     try {
@@ -245,6 +272,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'No submitted reports available to analyze' 
         });
       }
+
+      // Get the current week start from the reports
+      const currentWeekStart = submittedReports[0]?.weekStart || '';
 
       // Build context for AI
       const reportsContext = submittedReports.map(report => {
@@ -293,11 +323,21 @@ Be concise and focus on actionable insights. If there are no critical issues, re
       }
 
       const summary = JSON.parse(content);
+      const generatedAt = new Date();
+      
+      // Persist the AI summary to the database
+      if (currentWeekStart) {
+        await storage.upsertCurrentAiSummary({
+          weekStart: currentWeekStart,
+          summary: summary,
+          reportsAnalyzed: String(submittedReports.length),
+        });
+      }
       
       res.json({ 
         summary,
         reportsAnalyzed: submittedReports.length,
-        generatedAt: new Date().toISOString()
+        generatedAt: generatedAt.toISOString()
       });
     } catch (error: any) {
       console.error('AI Summary error:', error);
