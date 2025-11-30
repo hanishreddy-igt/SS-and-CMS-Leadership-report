@@ -614,6 +614,19 @@ export default function HistoricalReports() {
                     <p className="text-sm mb-4">{reportAiSummary.executiveSummary}</p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {reportAiSummary.weekHighlights && reportAiSummary.weekHighlights.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-primary mb-2">Weekly Highlights</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportAiSummary.weekHighlights.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       {reportAiSummary.keyAchievements && reportAiSummary.keyAchievements.length > 0 && (
                         <div>
                           <p className="text-xs font-medium text-success mb-2">Key Achievements</p>
@@ -621,6 +634,32 @@ export default function HistoricalReports() {
                             {reportAiSummary.keyAchievements.map((item, i) => (
                               <li key={i} className="flex items-start gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {reportAiSummary.attentionNeeded && reportAiSummary.attentionNeeded.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-warning mb-2">Needs Attention</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportAiSummary.attentionNeeded.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {reportAiSummary.upcomingFocus && reportAiSummary.upcomingFocus.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-blue-400 mb-2">Upcoming Focus</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportAiSummary.upcomingFocus.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
                                 {item}
                               </li>
                             ))}
