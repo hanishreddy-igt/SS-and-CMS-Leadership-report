@@ -100,14 +100,14 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     enabled: !!currentWeekStart,
   });
 
-  // Update local state when saved AI summary is loaded
+  // Update local state when saved AI summary is loaded from database
   useEffect(() => {
-    if (savedAiSummary && savedAiSummary.summary && !aiSummary) {
+    if (savedAiSummary && savedAiSummary.summary) {
       setAiSummary(savedAiSummary.summary);
       setSummaryGeneratedAt(savedAiSummary.generatedAt || null);
       setReportsAnalyzed(savedAiSummary.reportsAnalyzed || 0);
     }
-  }, [savedAiSummary, aiSummary]);
+  }, [savedAiSummary]);
 
   // Format date to UTC string
   const formatUTC = (dateString: string) => {
@@ -130,6 +130,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         setAiSummary(data.summary);
         setSummaryGeneratedAt(data.generatedAt);
         setReportsAnalyzed(data.reportsAnalyzed || 0);
+        // Invalidate the cache so it will be reloaded when navigating back
+        queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
         toast({
           title: 'AI Summary Generated',
           description: `Analyzed ${data.reportsAnalyzed} reports successfully`,
