@@ -60,9 +60,23 @@ export const weeklyReports = pgTable("weekly_reports", {
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
 
+// Archived weekly report snapshots - stores PDF/CSV for each week
+export const savedReports = pgTable("saved_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  weekStart: text("week_start").notNull().unique(), // Week identifier - only one per week
+  weekEnd: text("week_end").notNull(),
+  pdfData: text("pdf_data").notNull(), // Base64 encoded PDF
+  csvData: text("csv_data"), // CSV content
+  aiSummary: jsonb("ai_summary"), // AI summary if generated
+  reportCount: text("report_count").notNull(), // Number of reports included
+  healthCounts: jsonb("health_counts"), // { onTrack: n, needsAttention: n, critical: n }
+  savedAt: timestamp("saved_at").notNull().defaultNow(),
+});
+
 export const insertPersonSchema = createInsertSchema(people).omit({ id: true });
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true });
 export const insertWeeklyReportSchema = createInsertSchema(weeklyReports).omit({ id: true, submittedAt: true });
+export const insertSavedReportSchema = createInsertSchema(savedReports).omit({ id: true, savedAt: true });
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -72,6 +86,8 @@ export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type WeeklyReport = typeof weeklyReports.$inferSelect;
 export type InsertWeeklyReport = z.infer<typeof insertWeeklyReportSchema>;
+export type SavedReport = typeof savedReports.$inferSelect;
+export type InsertSavedReport = z.infer<typeof insertSavedReportSchema>;
 
 // Type aliases for backward compatibility
 export type TeamMember = Person;

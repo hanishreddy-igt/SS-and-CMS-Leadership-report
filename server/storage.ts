@@ -12,8 +12,10 @@ import type {
   InsertPerson,
   User,
   UpsertUser,
+  SavedReport,
+  InsertSavedReport,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -49,6 +51,13 @@ export interface IStorage {
   createWeeklyReport(report: InsertWeeklyReport): Promise<WeeklyReport>;
   updateWeeklyReport(id: string, report: Partial<InsertWeeklyReport>): Promise<WeeklyReport | undefined>;
   deleteWeeklyReport(id: string): Promise<boolean>;
+
+  // Saved Reports (archived weekly snapshots)
+  getSavedReports(): Promise<SavedReport[]>;
+  getSavedReport(id: string): Promise<SavedReport | undefined>;
+  getSavedReportByWeek(weekStart: string): Promise<SavedReport | undefined>;
+  upsertSavedReport(report: InsertSavedReport): Promise<SavedReport>;
+  deleteSavedReport(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -57,12 +66,14 @@ export class MemStorage implements IStorage {
   private people: Map<string, Person>;
   private projects: Map<string, Project>;
   private weeklyReports: Map<string, WeeklyReport>;
+  private savedReports: Map<string, SavedReport>;
 
   constructor() {
     this.users = new Map();
     this.people = new Map();
     this.projects = new Map();
     this.weeklyReports = new Map();
+    this.savedReports = new Map();
   }
 
   // User operations (required for authentication)
@@ -206,6 +217,36 @@ export class MemStorage implements IStorage {
   async deleteWeeklyReport(id: string): Promise<boolean> {
     return this.weeklyReports.delete(id);
   }
+
+  // Saved Reports (archived weekly snapshots)
+  async getSavedReports(): Promise<SavedReport[]> {
+    return Array.from(this.savedReports.values());
+  }
+
+  async getSavedReport(id: string): Promise<SavedReport | undefined> {
+    return this.savedReports.get(id);
+  }
+
+  async getSavedReportByWeek(weekStart: string): Promise<SavedReport | undefined> {
+    return Array.from(this.savedReports.values()).find(r => r.weekStart === weekStart);
+  }
+
+  async upsertSavedReport(insertReport: InsertSavedReport): Promise<SavedReport> {
+    const existing = Array.from(this.savedReports.values()).find(r => r.weekStart === insertReport.weekStart);
+    if (existing) {
+      const updated: SavedReport = { ...existing, ...insertReport, savedAt: new Date() };
+      this.savedReports.set(existing.id, updated);
+      return updated;
+    }
+    const id = randomUUID();
+    const report: SavedReport = { ...insertReport, id, savedAt: new Date() };
+    this.savedReports.set(id, report);
+    return report;
+  }
+
+  async deleteSavedReport(id: string): Promise<boolean> {
+    return this.savedReports.delete(id);
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -331,6 +372,41 @@ export class DatabaseStorage implements IStorage {
 
   async deleteWeeklyReport(id: string): Promise<boolean> {
     const result = await db.delete(weeklyReports).where(eq(weeklyReports.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Saved Reports (archived weekly snapshots)
+  async getSavedReports(): Promise<SavedReport[]> {
+    return await db.select().from(savedReports);
+  }
+
+  async getSavedReport(id: string): Promise<SavedReport | undefined> {
+    const [report] = await db.select().from(savedReports).where(eq(savedReports.id, id));
+    return report || undefined;
+  }
+
+  async getSavedReportByWeek(weekStart: string): Promise<SavedReport | undefined> {
+    const [report] = await db.select().from(savedReports).where(eq(savedReports.weekStart, weekStart));
+    return report || undefined;
+  }
+
+  async upsertSavedReport(insertReport: InsertSavedReport): Promise<SavedReport> {
+    const [report] = await db
+      .insert(savedReports)
+      .values(insertReport)
+      .onConflictDoUpdate({
+        target: savedReports.weekStart,
+        set: {
+          ...insertReport,
+          savedAt: new Date(),
+        },
+      })
+      .returning();
+    return report;
+  }
+
+  async deleteSavedReport(id: string): Promise<boolean> {
+    const result = await db.delete(savedReports).where(eq(savedReports.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }
