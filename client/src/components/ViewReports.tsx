@@ -187,15 +187,21 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             }
           }
           
-          // Archive via API
+          // Generate PDF and CSV for auto-archive (same as manual Force Archive)
+          console.log('Auto-archive: Generating PDF and CSV...');
+          const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
+          const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, summaryToArchive);
+          const csvContent = generateCSVForReports(submittedReports);
+          
+          // Archive via API with full PDF and CSV data
           await apiRequest('POST', '/api/saved-reports', {
             weekStart: reportWeekStart,
             weekEnd: weekEnd,
-            reportCount: String(weeklyReports.length),
+            reportCount: String(submittedReports.length),
             healthCounts,
             aiSummary: summaryToArchive || null,
-            pdfData: '', // Auto-archive doesn't generate PDF
-            csvData: '',
+            pdfData: pdfBase64,
+            csvData: csvContent,
           });
           
           // Delete all current reports
@@ -602,6 +608,191 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     year: 'numeric',
     timeZone: 'UTC'
   });
+
+  // Generate PDF content and return as base64 - reusable for both manual and auto archive
+  const generatePDFBase64 = (reportsToUse: WeeklyReport[], weekEndDate: string, summaryToUse: AISummary | null): string => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    
+    const colors = {
+      navy: [15, 23, 42],
+      navyLight: [30, 41, 59],
+      primary: [99, 102, 241],
+      success: [34, 197, 94],
+      warning: [245, 158, 11],
+      destructive: [239, 68, 68],
+      white: [255, 255, 255],
+      muted: [148, 163, 184],
+      border: [51, 65, 85],
+    };
+
+    doc.setFillColor(...colors.navy as [number, number, number]);
+    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.setFillColor(...colors.primary as [number, number, number]);
+    doc.rect(0, 35, pageWidth, 2, 'F');
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CMS & SS Leadership Report', 14, 18);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    const weekEndFormatted = new Date(weekEndDate + 'T00:00:00').toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    doc.text(`Weekly Delivery Status Overview - Week Ending ${weekEndFormatted}`, 14, 26);
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(9);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 14, 18, { align: 'right' });
+
+    let currentY = 45;
+
+    // Status metrics cards
+    const pdfOnTrack = reportsToUse.filter(r => r.healthStatus === 'on-track').length;
+    const pdfAtRisk = reportsToUse.filter(r => r.healthStatus === 'at-risk').length;
+    const pdfCritical = reportsToUse.filter(r => r.healthStatus === 'critical').length;
+    
+    const metrics = [
+      { label: 'On Track', value: pdfOnTrack, color: colors.success },
+      { label: 'Needs Attention', value: pdfAtRisk, color: colors.warning },
+      { label: 'Critical', value: pdfCritical, color: colors.destructive },
+    ];
+
+    const cardWidth = (pageWidth - 28 - 8) / 3;
+    metrics.forEach((metric, idx) => {
+      const x = 14 + (idx * (cardWidth + 4));
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(x, currentY, cardWidth, 16, 2, 2, 'F');
+      doc.setFillColor(...metric.color as [number, number, number]);
+      doc.rect(x, currentY, 3, 16, 'F');
+      doc.setTextColor(...metric.color as [number, number, number]);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(metric.value), x + 8, currentY + 10);
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(metric.label, x + 20, currentY + 10);
+    });
+
+    currentY += 24;
+
+    // AI Summary section if available
+    if (summaryToUse) {
+      doc.setFillColor(...colors.navyLight as [number, number, number]);
+      doc.roundedRect(14, currentY, pageWidth - 28, 8, 2, 2, 'F');
+      doc.setTextColor(...colors.primary as [number, number, number]);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AI-Powered Weekly Insights', 18, currentY + 5.5);
+      currentY += 12;
+      
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.setFont('helvetica', 'normal');
+      const summaryLines = doc.splitTextToSize(summaryToUse.executiveSummary, pageWidth - 32);
+      doc.text(summaryLines, 14, currentY);
+      currentY += summaryLines.length * 4 + 8;
+    }
+
+    // Reports table
+    const tableData = reportsToUse.map((report) => {
+      const project = projects.find((p) => p.id === report.projectId);
+      const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
+      const feedbackText = feedback && feedback.length > 0
+        ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('\n')
+        : '-';
+      return [
+        getProjectName(report.projectId),
+        project?.customer || '-',
+        getLeadName(report.leadId),
+        healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || '-',
+        report.progress || '-',
+        report.challenges || '-',
+        report.nextWeek || '-',
+        feedbackText,
+      ];
+    });
+
+    autoTable(doc, {
+      head: [['Project', 'Customer', 'Lead', 'Health', 'Progress', 'Challenges', 'Next Week', 'Feedback']],
+      body: tableData,
+      startY: currentY,
+      theme: 'plain',
+      styles: { fontSize: 7, cellPadding: 3, lineColor: [226, 232, 240], lineWidth: 0.5 },
+      headStyles: { fillColor: [...colors.navyLight as [number, number, number]], textColor: [...colors.white as [number, number, number]], fontStyle: 'bold' },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 40 },
+        5: { cellWidth: 40 },
+        6: { cellWidth: 40 },
+        7: { cellWidth: 40 },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 3) {
+          const status = data.cell.raw as string;
+          if (status === 'On Track') {
+            data.cell.styles.textColor = colors.success as [number, number, number];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (status === 'Needs Attention') {
+            data.cell.styles.textColor = colors.warning as [number, number, number];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (status === 'Critical') {
+            data.cell.styles.textColor = colors.destructive as [number, number, number];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      },
+      didDrawPage: (data) => {
+        doc.setFillColor(...colors.navy as [number, number, number]);
+        doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
+        doc.setFontSize(8);
+        doc.setTextColor(...colors.muted as [number, number, number]);
+        doc.text('CMS & SS Leadership Report', 14, pageHeight - 5);
+        doc.text(`Page ${data.pageNumber}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+        doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 5, { align: 'right' });
+      },
+    });
+
+    return doc.output('datauristring').split(',')[1];
+  };
+
+  // Generate CSV content for a given set of reports
+  const generateCSVForReports = (reportsToUse: WeeklyReport[]): string => {
+    const headers = ['Project', 'Lead', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback', 'Submitted'];
+    const rows = reportsToUse.map((report) => {
+      const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
+      const feedbackText = feedback && feedback.length > 0
+        ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('; ')
+        : 'None';
+
+      return [
+        getProjectName(report.projectId),
+        getLeadName(report.leadId),
+        report.weekStart,
+        healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus || '',
+        (report.progress || '').replace(/\n/g, ' '),
+        (report.challenges || '').replace(/\n/g, ' '),
+        (report.nextWeek || '').replace(/\n/g, ' '),
+        feedbackText.replace(/\n/g, ' '),
+        new Date(report.submittedAt).toLocaleString(),
+      ];
+    });
+
+    return [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n');
+  };
 
   const exportToPDF = () => {
     const doc = new jsPDF({ orientation: 'landscape' });
