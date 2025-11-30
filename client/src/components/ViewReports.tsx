@@ -407,39 +407,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     }
   });
 
-  const saveToArchiveMutation = useMutation({
-    mutationFn: async (data: { pdfData: string; csvData: string; weekStart: string; weekEnd: string }) => {
-      const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
-      const onTrack = submittedReports.filter(r => r.healthStatus === 'on-track').length;
-      const needsAttention = submittedReports.filter(r => r.healthStatus === 'at-risk').length;
-      const critical = submittedReports.filter(r => r.healthStatus === 'critical').length;
-      
-      return await apiRequest('POST', '/api/saved-reports', {
-        weekStart: data.weekStart,
-        weekEnd: data.weekEnd,
-        pdfData: data.pdfData,
-        csvData: data.csvData,
-        aiSummary: aiSummary,
-        reportCount: String(submittedReports.length),
-        healthCounts: { onTrack, needsAttention, critical },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
-      toast({
-        title: 'Report Archived',
-        description: 'Weekly report saved to archive successfully',
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Archive Failed',
-        description: error.message || 'Failed to save report to archive',
-        variant: 'destructive',
-      });
-    }
-  });
-
   const saveEdit = (reportId: string) => {
     editReportMutation.mutate({ id: reportId, updates: editData });
   };
@@ -1088,8 +1055,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.save(`cms_ss_leadership_report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // Save current reports to archive (generates PDF and saves to database)
-  const saveToArchive = () => {
+  // Track if Force Archive is in progress
+  const [isForceArchiving, setIsForceArchiving] = useState(false);
+
+  // Save current reports to archive (generates AI summary, PDF, CSV, archives, then resets)
+  const saveToArchive = async () => {
     if (sortedReports.length === 0) {
       toast({
         title: 'No Reports to Archive',
@@ -1099,134 +1069,90 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       return;
     }
 
-    // Generate PDF document (same as exportToPDF but we get base64)
-    const doc = new jsPDF({ orientation: 'landscape' });
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-    
-    const colors = {
-      navy: [15, 23, 42],
-      navyLight: [30, 41, 59],
-      primary: [99, 102, 241],
-      success: [34, 197, 94],
-      warning: [245, 158, 11],
-      destructive: [239, 68, 68],
-      white: [255, 255, 255],
-      muted: [148, 163, 184],
-      border: [51, 65, 85],
-    };
+    setIsForceArchiving(true);
 
-    doc.setFillColor(...colors.navy as [number, number, number]);
-    doc.rect(0, 0, pageWidth, 35, 'F');
-    doc.setFillColor(...colors.primary as [number, number, number]);
-    doc.rect(0, 35, pageWidth, 2, 'F');
-    
-    doc.setTextColor(...colors.white as [number, number, number]);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CMS & SS Leadership Report', 14, 18);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...colors.muted as [number, number, number]);
-    const archiveWeekDates = getCurrentWeekDates();
-    const archiveWeekEndFormatted = new Date(archiveWeekDates.weekEnd + 'T00:00:00').toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-    doc.text(`Weekly Delivery Status Overview - Week Ending ${archiveWeekEndFormatted}`, 14, 26);
-    
-    doc.setTextColor(...colors.white as [number, number, number]);
-    doc.setFontSize(9);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 14, 18, { align: 'right' });
+    try {
+      // Step 1: Get week dates from the actual reports (not calculated from today)
+      const reportWeekStart = weeklyReports[0].weekStart;
+      const weekStartDate = new Date(reportWeekStart + 'T00:00:00Z');
+      const weekEndDate = new Date(weekStartDate);
+      weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
+      const weekEnd = weekEndDate.toISOString().split('T')[0];
 
-    let currentY = 45;
+      // Step 2: Generate AI summary if one doesn't exist
+      let summaryToArchive = aiSummary;
+      if (!summaryToArchive) {
+        toast({
+          title: 'Generating AI Summary',
+          description: 'Please wait while we analyze the reports...',
+        });
+        try {
+          const summaryResponse = await apiRequest('POST', '/api/weekly-reports/ai-summary');
+          const summaryData = await summaryResponse.json();
+          if (summaryData.summary) {
+            summaryToArchive = summaryData.summary;
+            setAiSummary(summaryData.summary);
+            setSummaryGeneratedAt(summaryData.generatedAt);
+            setReportsAnalyzed(summaryData.reportsAnalyzed || 0);
+          }
+        } catch (summaryError) {
+          console.error('Failed to generate AI summary:', summaryError);
+          // Continue without AI summary if it fails
+        }
+      }
 
-    // Status metrics cards
-    const metrics = [
-      { label: 'On Track', value: onTrackCount, color: colors.success },
-      { label: 'Needs Attention', value: atRiskCount, color: colors.warning },
-      { label: 'Critical', value: criticalCount, color: colors.destructive },
-    ];
+      // Step 3: Generate PDF and CSV using the reusable functions
+      const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
+      const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, summaryToArchive);
+      const csvContent = generateCSVForReports(submittedReports);
 
-    const cardWidth = (pageWidth - 28 - 8) / 3;
-    metrics.forEach((metric, idx) => {
-      const x = 14 + (idx * (cardWidth + 4));
-      doc.setFillColor(248, 250, 252);
-      doc.roundedRect(x, currentY, cardWidth, 16, 2, 2, 'F');
-      doc.setFillColor(...metric.color as [number, number, number]);
-      doc.rect(x, currentY, 3, 16, 'F');
-      doc.setTextColor(...metric.color as [number, number, number]);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(metric.value), x + 8, currentY + 10);
-      doc.setTextColor(100, 100, 100);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(metric.label, x + 20, currentY + 10);
-    });
+      // Step 4: Calculate health counts
+      const healthCounts = {
+        onTrack: submittedReports.filter(r => r.healthStatus === 'on-track').length,
+        needsAttention: submittedReports.filter(r => r.healthStatus === 'at-risk').length,
+        critical: submittedReports.filter(r => r.healthStatus === 'critical').length,
+      };
 
-    currentY += 24;
+      // Step 5: Archive via API
+      await apiRequest('POST', '/api/saved-reports', {
+        weekStart: reportWeekStart,
+        weekEnd: weekEnd,
+        reportCount: String(submittedReports.length),
+        healthCounts,
+        aiSummary: summaryToArchive || null,
+        pdfData: pdfBase64,
+        csvData: csvContent,
+      });
 
-    // Reports table
-    const tableData = sortedReports.map((report) => {
-      const project = projects.find((p) => p.id === report.projectId);
-      const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
-      const feedbackText = feedback && feedback.length > 0
-        ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('\n')
-        : '-';
-      return [
-        getProjectName(report.projectId),
-        project?.customer || '-',
-        getLeadName(report.leadId),
-        healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || '-',
-        report.progress || '-',
-        report.challenges || '-',
-        report.nextWeek || '-',
-        feedbackText,
-      ];
-    });
+      // Step 6: Reset - Delete all current reports and AI summary
+      await apiRequest('DELETE', '/api/weekly-reports', {});
+      if (currentWeekStart) {
+        await apiRequest('DELETE', `/api/current-ai-summary/${currentWeekStart}`, {});
+      }
 
-    autoTable(doc, {
-      head: [['Project', 'Customer', 'Lead', 'Health', 'Progress', 'Challenges', 'Next Week', 'Feedback']],
-      body: tableData,
-      startY: currentY,
-      theme: 'plain',
-      styles: { fontSize: 7, cellPadding: 3, lineColor: [226, 232, 240], lineWidth: 0.5 },
-      headStyles: { fillColor: [...colors.navyLight as [number, number, number]], textColor: [...colors.white as [number, number, number]], fontStyle: 'bold' },
-      columnStyles: {
-        0: { cellWidth: 28 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 22 },
-        3: { cellWidth: 22 },
-        4: { cellWidth: 40 },
-        5: { cellWidth: 40 },
-        6: { cellWidth: 40 },
-        7: { cellWidth: 40 },
-      },
-      didDrawPage: (data) => {
-        doc.setFillColor(...colors.navy as [number, number, number]);
-        doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
-        doc.setFontSize(8);
-        doc.setTextColor(...colors.muted as [number, number, number]);
-        doc.text('CMS & SS Leadership Report', 14, pageHeight - 5);
-        doc.text(`Page ${data.pageNumber}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
-        doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 5, { align: 'right' });
-      },
-    });
+      // Step 7: Invalidate queries and clear local state
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
+      
+      setAiSummary(null);
+      setSummaryGeneratedAt(null);
+      setReportsAnalyzed(0);
 
-    // Get PDF as base64 and CSV content
-    const pdfBase64 = doc.output('datauristring').split(',')[1];
-    const csvContent = generateCSVContent();
-    const { weekStart, weekEnd } = getCurrentWeekDates();
-
-    saveToArchiveMutation.mutate({
-      pdfData: pdfBase64,
-      csvData: csvContent,
-      weekStart,
-      weekEnd,
-    });
+      toast({
+        title: 'Archive Complete',
+        description: `Week ending ${weekEnd} has been archived${summaryToArchive ? ' with AI summary' : ''} and reports have been reset.`,
+      });
+    } catch (error) {
+      console.error('Force archive failed:', error);
+      toast({
+        title: 'Archive Failed',
+        description: 'Failed to archive reports. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsForceArchiving(false);
+    }
   };
 
   const getOverallHealthConfig = (health: string) => {
@@ -1603,11 +1529,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   size="sm"
                   className="gap-2"
                   onClick={saveToArchive}
-                  disabled={sortedReports.length === 0 || saveToArchiveMutation.isPending}
+                  disabled={sortedReports.length === 0 || isForceArchiving}
                   data-testid="button-archive"
                 >
                   <Archive className="h-4 w-4" />
-                  {saveToArchiveMutation.isPending ? 'Archiving...' : 'Force Archive'}
+                  {isForceArchiving ? 'Archiving...' : 'Force Archive'}
                 </Button>
 
                 <AlertDialog>
