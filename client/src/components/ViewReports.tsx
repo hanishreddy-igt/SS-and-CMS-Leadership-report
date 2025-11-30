@@ -167,13 +167,33 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             critical: weeklyReports.filter(r => r.healthStatus === 'critical').length,
           };
           
+          // ALWAYS generate AI summary before archiving if one doesn't exist
+          let summaryToArchive = aiSummary;
+          if (!summaryToArchive) {
+            console.log('Auto-archive: Generating AI summary before archiving...');
+            try {
+              const summaryResponse = await apiRequest('POST', '/api/weekly-reports/ai-summary');
+              const summaryData = await summaryResponse.json();
+              if (summaryData.summary) {
+                summaryToArchive = summaryData.summary;
+                // Update local state with the generated summary
+                setAiSummary(summaryData.summary);
+                setSummaryGeneratedAt(summaryData.generatedAt);
+                setReportsAnalyzed(summaryData.reportsAnalyzed || 0);
+              }
+            } catch (summaryError) {
+              console.error('Failed to generate AI summary for auto-archive:', summaryError);
+              // Continue with archiving even if summary generation fails
+            }
+          }
+          
           // Archive via API
           await apiRequest('POST', '/api/saved-reports', {
             weekStart: reportWeekStart,
             weekEnd: weekEnd,
             reportCount: String(weeklyReports.length),
             healthCounts,
-            aiSummary: aiSummary || null,
+            aiSummary: summaryToArchive || null,
             pdfData: '', // Auto-archive doesn't generate PDF
             csvData: '',
           });
@@ -198,7 +218,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           
           toast({
             title: 'Auto-Archive Complete',
-            description: `Previous week's ${weeklyReports.length} reports have been archived and reset for the new week.`,
+            description: `Previous week's ${weeklyReports.length} reports have been archived${summaryToArchive ? ' with AI summary' : ''} and reset for the new week.`,
           });
         } catch (error) {
           console.error('Auto-archive failed:', error);
