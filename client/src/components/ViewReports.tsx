@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, RefreshCw, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info } from 'lucide-react';
+import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport } from '@shared/schema';
@@ -372,36 +372,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       toast({ 
         title: 'Error', 
         description: error.message || 'Failed to update report',
-        variant: 'destructive'
-      });
-    }
-  });
-
-  const deleteAllReportsMutation = useMutation({
-    mutationFn: async () => {
-      // Delete all reports
-      await apiRequest('DELETE', '/api/weekly-reports', {});
-      // Also delete the current AI summary if exists
-      if (currentWeekStart) {
-        await apiRequest('DELETE', `/api/current-ai-summary/${currentWeekStart}`, {});
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
-      // Clear local AI summary state
-      setAiSummary(null);
-      setSummaryGeneratedAt(null);
-      setReportsAnalyzed(0);
-      toast({ 
-        title: 'Success', 
-        description: 'All reports and AI summary have been reset for next week' 
-      });
-    },
-    onError: (error: Error) => {
-      toast({ 
-        title: 'Error', 
-        description: error.message || 'Failed to reset reports',
         variant: 'destructive'
       });
     }
@@ -1527,7 +1497,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-2"
+                  className="gap-2 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
                   onClick={saveToArchive}
                   disabled={sortedReports.length === 0 || isForceArchiving}
                   data-testid="button-archive"
@@ -1535,41 +1505,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   <Archive className="h-4 w-4" />
                   {isForceArchiving ? 'Archiving...' : 'Force Archive'}
                 </Button>
-
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      data-testid="button-reset-reports"
-                      className="gap-2"
-                      disabled={weeklyReports.length === 0}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                      Force Reset
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Force Reset All Reports?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete all {weeklyReports.length} weekly reports to prepare for a new reporting cycle. This action cannot be undone.
-                        Make sure you have saved the reports as PDF or CSV before resetting.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel data-testid="button-cancel-reset">Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        data-testid="button-confirm-reset"
-                        onClick={() => deleteAllReportsMutation.mutate()}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        disabled={deleteAllReportsMutation.isPending}
-                      >
-                        {deleteAllReportsMutation.isPending ? 'Resetting...' : 'Reset All Reports'}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
               </div>
             </div>
           </div>
