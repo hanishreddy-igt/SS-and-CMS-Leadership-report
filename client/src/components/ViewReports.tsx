@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, RefreshCw, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save } from 'lucide-react';
+import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, RefreshCw, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport } from '@shared/schema';
@@ -85,6 +85,10 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
   const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<string | null>(null);
   const [reportsAnalyzed, setReportsAnalyzed] = useState<number>(0);
+  
+  // Auto-archive tracking
+  const autoArchiveTriggered = useRef(false);
+  const [isAutoArchiving, setIsAutoArchiving] = useState(false);
 
   // Get current week start from reports
   const currentWeekStart = weeklyReports.length > 0 ? weeklyReports[0].weekStart : null;
@@ -108,6 +112,99 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       setReportsAnalyzed(savedAiSummary.reportsAnalyzed || 0);
     }
   }, [savedAiSummary]);
+
+  // Auto-archive on Wednesday 00:00 UTC
+  useEffect(() => {
+    const checkAndAutoArchive = async () => {
+      // Don't run if already triggered or no reports
+      if (autoArchiveTriggered.current || weeklyReports.length === 0) return;
+      
+      const now = new Date();
+      const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 3 = Wednesday
+      
+      // Check if it's Wednesday or later in the week (Wed, Thu, Fri, Sat)
+      const isWednesdayOrLater = dayOfWeek >= 3 || dayOfWeek === 0; // Wed(3), Thu(4), Fri(5), Sat(6), Sun(0)
+      
+      if (!isWednesdayOrLater) return;
+      
+      // Get the week start of the reports
+      const reportWeekStart = weeklyReports[0].weekStart;
+      
+      // Calculate the Monday of the current week
+      const currentMonday = new Date(now);
+      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      currentMonday.setUTCDate(now.getUTCDate() + diffToMonday);
+      currentMonday.setUTCHours(0, 0, 0, 0);
+      const currentWeekMonday = currentMonday.toISOString().split('T')[0];
+      
+      // If reports are from a previous week (not current week), auto-archive
+      if (reportWeekStart < currentWeekMonday) {
+        console.log('Auto-archive triggered: Reports from previous week detected on/after Wednesday');
+        autoArchiveTriggered.current = true;
+        setIsAutoArchiving(true);
+        
+        try {
+          // Calculate week end (Sunday) from week start
+          const weekStartDate = new Date(reportWeekStart + 'T00:00:00Z');
+          const weekEndDate = new Date(weekStartDate);
+          weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
+          const weekEnd = weekEndDate.toISOString().split('T')[0];
+          
+          // Create a simple archive entry
+          const healthCounts = {
+            onTrack: weeklyReports.filter(r => r.healthStatus === 'on-track').length,
+            needsAttention: weeklyReports.filter(r => r.healthStatus === 'at-risk').length,
+            critical: weeklyReports.filter(r => r.healthStatus === 'critical').length,
+          };
+          
+          // Archive via API
+          await apiRequest('POST', '/api/saved-reports', {
+            weekStart: reportWeekStart,
+            weekEnd: weekEnd,
+            reportCount: weeklyReports.length,
+            healthCounts,
+            aiSummary: aiSummary || null,
+            pdfData: '', // Auto-archive doesn't generate PDF
+            csvData: '',
+          });
+          
+          // Delete all current reports
+          await apiRequest('DELETE', '/api/weekly-reports', {});
+          
+          // Delete AI summary
+          if (currentWeekStart) {
+            await apiRequest('DELETE', `/api/current-ai-summary/${currentWeekStart}`, {});
+          }
+          
+          // Invalidate queries
+          queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
+          
+          // Clear local state
+          setAiSummary(null);
+          setSummaryGeneratedAt(null);
+          setReportsAnalyzed(0);
+          
+          toast({
+            title: 'Auto-Archive Complete',
+            description: `Previous week's ${weeklyReports.length} reports have been archived and reset for the new week.`,
+          });
+        } catch (error) {
+          console.error('Auto-archive failed:', error);
+          toast({
+            title: 'Auto-Archive Failed',
+            description: 'Failed to auto-archive reports. Please use Force Archive manually.',
+            variant: 'destructive',
+          });
+        } finally {
+          setIsAutoArchiving(false);
+        }
+      }
+    };
+    
+    checkAndAutoArchive();
+  }, [weeklyReports, aiSummary, currentWeekStart, toast]);
 
   // Format date to UTC string
   const formatUTC = (dateString: string) => {
@@ -448,6 +545,33 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     const formatDate = (d: Date) => d.toISOString().split('T')[0];
     return { weekStart: formatDate(monday), weekEnd: formatDate(sunday) };
   };
+
+  // Get next Wednesday 00:00:00 UTC for auto-archive display
+  const getNextWednesdayUTC = () => {
+    const now = new Date();
+    const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 3 = Wednesday
+    let daysUntilWed = (3 - dayOfWeek + 7) % 7;
+    if (daysUntilWed === 0) {
+      // If today is Wednesday, check if past midnight UTC
+      if (now.getUTCHours() >= 0) {
+        daysUntilWed = 7; // Next Wednesday
+      }
+    }
+    const nextWed = new Date(now);
+    nextWed.setUTCDate(now.getUTCDate() + daysUntilWed);
+    nextWed.setUTCHours(0, 0, 0, 0);
+    return nextWed;
+  };
+
+  // Format next Wednesday for display
+  const nextWednesday = getNextWednesdayUTC();
+  const nextWedFormatted = nextWednesday.toLocaleDateString('en-US', { 
+    weekday: 'long',
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
 
   const exportToPDF = () => {
     const doc = new jsPDF({ orientation: 'landscape' });
@@ -1244,7 +1368,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   data-testid="button-archive"
                 >
                   <Archive className="h-4 w-4" />
-                  {saveToArchiveMutation.isPending ? 'Archiving...' : 'Archive'}
+                  {saveToArchiveMutation.isPending ? 'Archiving...' : 'Force Archive'}
                 </Button>
 
                 <AlertDialog>
@@ -1286,6 +1410,21 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           </div>
         </CardHeader>
         <CardContent>
+          {/* Auto-archive schedule banner */}
+          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
+            <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
+              <p className="text-muted-foreground">
+                Reports are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
+                {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-4">
             {sortedReports.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No reports found matching the filters.</p>
