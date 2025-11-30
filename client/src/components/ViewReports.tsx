@@ -160,13 +160,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
           const weekEnd = weekEndDate.toISOString().split('T')[0];
           
-          // Create a simple archive entry
-          const healthCounts = {
-            onTrack: weeklyReports.filter(r => r.healthStatus === 'on-track').length,
-            needsAttention: weeklyReports.filter(r => r.healthStatus === 'at-risk').length,
-            critical: weeklyReports.filter(r => r.healthStatus === 'critical').length,
-          };
-          
           // ALWAYS generate AI summary before archiving if one doesn't exist
           let summaryToArchive = aiSummary;
           if (!summaryToArchive) {
@@ -192,6 +185,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
           const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, summaryToArchive);
           const csvContent = generateCSVForReports(submittedReports);
+          
+          // Calculate health counts from submitted reports only (same as Force Archive)
+          const healthCounts = {
+            onTrack: submittedReports.filter(r => r.healthStatus === 'on-track').length,
+            needsAttention: submittedReports.filter(r => r.healthStatus === 'at-risk').length,
+            critical: submittedReports.filter(r => r.healthStatus === 'critical').length,
+          };
           
           // Archive via API with full PDF and CSV data
           await apiRequest('POST', '/api/saved-reports', {
