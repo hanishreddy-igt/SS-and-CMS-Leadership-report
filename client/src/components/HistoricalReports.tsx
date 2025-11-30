@@ -113,7 +113,16 @@ export default function HistoricalReports() {
   useEffect(() => {
     if (selectedReport?.pdfData && showPdfModal) {
       try {
-        const byteCharacters = atob(selectedReport.pdfData);
+        // Strip data: prefix if present
+        let base64Data = selectedReport.pdfData;
+        if (base64Data.startsWith('data:')) {
+          const commaIndex = base64Data.indexOf(',');
+          if (commaIndex !== -1) {
+            base64Data = base64Data.substring(commaIndex + 1);
+          }
+        }
+        
+        const byteCharacters = atob(base64Data);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
           byteNumbers[i] = byteCharacters.charCodeAt(i);
@@ -531,7 +540,7 @@ export default function HistoricalReports() {
       </Card>
 
       <Dialog open={showPdfModal} onOpenChange={setShowPdfModal}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <FileText className="h-5 w-5 text-primary" />
@@ -712,15 +721,32 @@ export default function HistoricalReports() {
                   </div>
                 )}
 
-                <div className="flex-1 overflow-hidden rounded-lg border border-white/10 bg-white">
+                <div className="rounded-lg border border-white/10 bg-white overflow-auto" style={{ minHeight: '500px', height: '60vh' }}>
                   {pdfBlobUrl ? (
-                    <iframe
-                      src={pdfBlobUrl}
-                      className="w-full h-full min-h-[500px]"
-                      title="PDF Preview"
-                    />
+                    <object
+                      data={pdfBlobUrl}
+                      type="application/pdf"
+                      className="w-full h-full"
+                      style={{ minHeight: '500px', height: '60vh' }}
+                    >
+                      <div className="flex items-center justify-center h-full text-muted-foreground p-8">
+                        <div className="text-center">
+                          <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                          <p className="mb-2">PDF preview not available in your browser.</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => selectedReport && downloadPDF(selectedReport)}
+                          >
+                            <Download className="h-4 w-4" />
+                            Download PDF to View
+                          </Button>
+                        </div>
+                      </div>
+                    </object>
                   ) : (
-                    <div className="flex items-center justify-center h-[500px] text-muted-foreground">
+                    <div className="flex items-center justify-center h-full text-muted-foreground" style={{ minHeight: '500px' }}>
                       <div className="text-center">
                         <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
                         <p>Loading PDF preview...</p>
