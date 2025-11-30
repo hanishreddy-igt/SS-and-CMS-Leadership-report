@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +31,10 @@ import {
   Download,
   Trash2,
   Eye,
-  BarChart3
+  BarChart3,
+  ChevronDown,
+  ChevronRight,
+  CalendarDays
 } from 'lucide-react';
 import type { SavedReport } from '@shared/schema';
 
@@ -41,6 +46,12 @@ interface AISummary {
   attentionNeeded: string[];
   upcomingFocus: string[];
   executiveSummary: string;
+}
+
+interface GroupedReports {
+  [year: string]: {
+    [month: string]: SavedReport[];
+  };
 }
 
 const getOverallHealthConfig = (health: string) => {
@@ -80,14 +91,84 @@ const getOverallHealthConfig = (health: string) => {
   }
 };
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
 export default function HistoricalReports() {
   const { toast } = useToast();
   const [selectedReport, setSelectedReport] = useState<SavedReport | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
 
   const { data: savedReports = [], isLoading } = useQuery<SavedReport[]>({ 
     queryKey: ['/api/saved-reports'] 
   });
+
+  // Group reports by year and month based on weekEnd date
+  const groupedReports = useMemo(() => {
+    const grouped: GroupedReports = {};
+    
+    savedReports.forEach(report => {
+      const endDate = new Date(report.weekEnd);
+      const year = endDate.getFullYear().toString();
+      const month = MONTH_NAMES[endDate.getMonth()];
+      
+      if (!grouped[year]) {
+        grouped[year] = {};
+      }
+      if (!grouped[year][month]) {
+        grouped[year][month] = [];
+      }
+      grouped[year][month].push(report);
+    });
+
+    // Sort reports within each month by weekEnd date (most recent first)
+    Object.keys(grouped).forEach(year => {
+      Object.keys(grouped[year]).forEach(month => {
+        grouped[year][month].sort((a, b) => 
+          new Date(b.weekEnd).getTime() - new Date(a.weekEnd).getTime()
+        );
+      });
+    });
+
+    return grouped;
+  }, [savedReports]);
+
+  // Get sorted years (most recent first)
+  const sortedYears = useMemo(() => {
+    return Object.keys(groupedReports).sort((a, b) => parseInt(b) - parseInt(a));
+  }, [groupedReports]);
+
+  // Auto-expand the most recent year when data loads
+  useMemo(() => {
+    if (sortedYears.length > 0 && expandedYears.size === 0) {
+      setExpandedYears(new Set([sortedYears[0]]));
+    }
+  }, [sortedYears]);
+
+  const toggleYear = (year: string) => {
+    const newExpanded = new Set(expandedYears);
+    if (newExpanded.has(year)) {
+      newExpanded.delete(year);
+    } else {
+      newExpanded.add(year);
+    }
+    setExpandedYears(newExpanded);
+  };
+
+  const toggleMonth = (yearMonth: string) => {
+    const newExpanded = new Set(expandedMonths);
+    if (newExpanded.has(yearMonth)) {
+      newExpanded.delete(yearMonth);
+    } else {
+      newExpanded.add(yearMonth);
+    }
+    setExpandedMonths(newExpanded);
+  };
 
   const deleteArchivedReportMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -114,7 +195,7 @@ export default function HistoricalReports() {
   const downloadPDF = (report: SavedReport) => {
     const link = document.createElement('a');
     link.href = `data:application/pdf;base64,${report.pdfData}`;
-    link.download = `weekly_report_${report.weekStart}_to_${report.weekEnd}.pdf`;
+    link.download = `weekly_report_ending_${report.weekEnd}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -133,7 +214,7 @@ export default function HistoricalReports() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `weekly_report_${report.weekStart}_to_${report.weekEnd}.csv`);
+    link.setAttribute('download', `weekly_report_ending_${report.weekEnd}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -144,9 +225,26 @@ export default function HistoricalReports() {
     setShowPdfModal(true);
   };
 
-  const closePdfModal = () => {
-    setShowPdfModal(false);
-    setSelectedReport(null);
+  const handleCalendarSelect = (report: SavedReport) => {
+    setSelectedReport(report);
+    setShowPdfModal(true);
+    setCalendarOpen(false);
+  };
+
+  const formatWeekEnding = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getWeekNumber = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const startOfYear = new Date(date.getFullYear(), 0, 1);
+    const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+    return Math.ceil((days + startOfYear.getDay() + 1) / 7);
   };
 
   if (isLoading) {
@@ -183,9 +281,130 @@ export default function HistoricalReports() {
                 View and download previously archived weekly reports
               </p>
             </div>
-            <Badge variant="outline" className="gap-1">
-              {savedReports.length} {savedReports.length === 1 ? 'Report' : 'Reports'} Archived
-            </Badge>
+            <div className="flex items-center gap-3">
+              {savedReports.length > 0 && (
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="gap-2"
+                      data-testid="button-calendar-dropdown"
+                    >
+                      <CalendarDays className="h-4 w-4" />
+                      Select Week
+                      <ChevronDown className="h-4 w-4 ml-1" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="end">
+                    <div className="p-3 border-b border-white/10">
+                      <h4 className="font-semibold text-sm flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        Browse by Week Ending
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Select a week to view its report
+                      </p>
+                    </div>
+                    <ScrollArea className="h-[350px]">
+                      <div className="p-2">
+                        {sortedYears.map(year => (
+                          <div key={year} className="mb-1">
+                            <button
+                              onClick={() => toggleYear(year)}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate text-left font-medium"
+                              data-testid={`calendar-year-${year}`}
+                            >
+                              {expandedYears.has(year) ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              <Calendar className="h-4 w-4 text-primary" />
+                              {year}
+                              <Badge variant="secondary" className="ml-auto text-xs">
+                                {Object.values(groupedReports[year]).flat().length}
+                              </Badge>
+                            </button>
+                            
+                            {expandedYears.has(year) && (
+                              <div className="ml-4 mt-1 space-y-1">
+                                {MONTH_NAMES.filter(month => groupedReports[year][month]).map(month => {
+                                  const yearMonth = `${year}-${month}`;
+                                  const monthReports = groupedReports[year][month];
+                                  
+                                  return (
+                                    <div key={yearMonth}>
+                                      <button
+                                        onClick={() => toggleMonth(yearMonth)}
+                                        className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md hover-elevate text-left text-sm"
+                                        data-testid={`calendar-month-${yearMonth}`}
+                                      >
+                                        {expandedMonths.has(yearMonth) ? (
+                                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                        ) : (
+                                          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                                        )}
+                                        {month}
+                                        <Badge variant="outline" className="ml-auto text-xs">
+                                          {monthReports.length}
+                                        </Badge>
+                                      </button>
+                                      
+                                      {expandedMonths.has(yearMonth) && (
+                                        <div className="ml-6 mt-1 space-y-1">
+                                          {monthReports.map(report => {
+                                            const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
+                                            
+                                            return (
+                                              <button
+                                                key={report.id}
+                                                onClick={() => handleCalendarSelect(report)}
+                                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate active-elevate-2 text-left text-sm bg-muted/30 border border-white/5"
+                                                data-testid={`calendar-week-${report.id}`}
+                                              >
+                                                <div className="flex-1">
+                                                  <div className="font-medium text-xs">
+                                                    Week {getWeekNumber(report.weekEnd)}
+                                                  </div>
+                                                  <div className="text-xs text-muted-foreground">
+                                                    Ending {formatWeekEnding(report.weekEnd)}
+                                                  </div>
+                                                </div>
+                                                {healthCounts && (
+                                                  <div className="flex items-center gap-1">
+                                                    {(healthCounts.onTrack || 0) > 0 && (
+                                                      <div className="h-2 w-2 rounded-full bg-success" title={`${healthCounts.onTrack} On Track`} />
+                                                    )}
+                                                    {(healthCounts.needsAttention || 0) > 0 && (
+                                                      <div className="h-2 w-2 rounded-full bg-warning" title={`${healthCounts.needsAttention} Needs Attention`} />
+                                                    )}
+                                                    {(healthCounts.critical || 0) > 0 && (
+                                                      <div className="h-2 w-2 rounded-full bg-destructive" title={`${healthCounts.critical} Critical`} />
+                                                    )}
+                                                  </div>
+                                                )}
+                                                <Eye className="h-3 w-3 text-muted-foreground" />
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
+              )}
+              <Badge variant="outline" className="gap-1">
+                {savedReports.length} {savedReports.length === 1 ? 'Report' : 'Reports'} Archived
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
@@ -216,8 +435,8 @@ export default function HistoricalReports() {
                         <div className="flex items-center gap-2">
                           <Calendar className="h-5 w-5 text-primary" />
                           <div>
-                            <h3 className="font-semibold text-lg">Week of {report.weekStart}</h3>
-                            <p className="text-xs text-muted-foreground">to {report.weekEnd}</p>
+                            <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
+                            <p className="text-xs text-muted-foreground">Started {formatWeekEnding(report.weekStart)}</p>
                           </div>
                         </div>
                         <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -291,7 +510,7 @@ export default function HistoricalReports() {
             </DialogTitle>
             {selectedReport && (
               <DialogDescription>
-                Week of {selectedReport.weekStart} to {selectedReport.weekEnd}
+                Week Ending {formatWeekEnding(selectedReport.weekEnd)}
               </DialogDescription>
             )}
           </DialogHeader>
@@ -365,7 +584,7 @@ export default function HistoricalReports() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Archived Report?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This will permanently delete the archived report for week {selectedReport.weekStart} to {selectedReport.weekEnd}. This action cannot be undone.
+                            This will permanently delete the archived report for week ending {formatWeekEnding(selectedReport.weekEnd)}. This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
