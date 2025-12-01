@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info } from 'lucide-react';
+import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment } from '@shared/schema';
@@ -423,6 +423,30 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const cancelEdit = () => {
     setEditingId(null);
   };
+
+  // Delete report state and mutation
+  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
+  
+  const deleteReportMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/weekly-reports/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      toast({ 
+        title: 'Report Deleted', 
+        description: 'The report has been removed and the project is now pending.' 
+      });
+      setDeletingReportId(null);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to delete report',
+        variant: 'destructive'
+      });
+    }
+  });
 
   const toggleLeadFilter = (leadId: string) => {
     const newSet = new Set(filterLeads);
@@ -1629,17 +1653,55 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                           </p>
                         </div>
                         {editingId !== report.id && (
-                          <Button
-                            data-testid={`button-edit-report-${report.id}`}
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startEdit(report);
-                            }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              data-testid={`button-edit-report-${report.id}`}
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startEdit(report);
+                              }}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog open={deletingReportId === report.id} onOpenChange={(open) => !open && setDeletingReportId(null)}>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  data-testid={`button-delete-report-${report.id}`}
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeletingReportId(report.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this report for <strong>{getProjectName(report.projectId)}</strong>? 
+                                    The project will return to pending status and you'll need to submit a new report.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel data-testid="button-cancel-delete-report">Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    data-testid="button-confirm-delete-report"
+                                    className="bg-destructive hover:bg-destructive/90"
+                                    onClick={() => deleteReportMutation.mutate(report.id)}
+                                    disabled={deleteReportMutation.isPending}
+                                  >
+                                    {deleteReportMutation.isPending ? 'Deleting...' : 'Delete Report'}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         )}
                       </div>
                     </CardHeader>
