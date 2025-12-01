@@ -455,13 +455,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     (a, b) => new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
   );
 
-  const filteredLeadsForSearch = projectLeads.filter(lead =>
-    lead.name.toLowerCase().includes(leadSearch.toLowerCase())
-  );
+  const filteredLeadsForSearch = projectLeads
+    .filter(lead => lead.name.toLowerCase().includes(leadSearch.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-  const filteredMembersForSearch = teamMembers.filter(member =>
-    member.name.toLowerCase().includes(memberSearch.toLowerCase())
-  );
+  const filteredMembersForSearch = teamMembers
+    .filter(member => member.name.toLowerCase().includes(memberSearch.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Generate CSV content for export/archive
   const generateCSVContent = () => {

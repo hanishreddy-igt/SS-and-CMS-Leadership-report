@@ -289,9 +289,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   };
   
   // Filter member search results
-  const filteredMembersForFilter = teamMembers.filter((member) =>
-    member.name.toLowerCase().includes(filterMemberSearch.toLowerCase())
-  );
+  const filteredMembersForFilter = teamMembers
+    .filter((member) => member.name.toLowerCase().includes(filterMemberSearch.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
   
   // Toggle lead in filter
   const toggleLeadFilter = (leadId: string) => {
@@ -526,9 +526,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     }));
   };
 
-  const filteredTeamMembers = teamMembers.filter((member) =>
-    member.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTeamMembers = teamMembers
+    .filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const handleImport = async () => {
     setIsImporting(true);
@@ -1018,9 +1018,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     }));
   };
 
-  const filteredProjectTeamMembers = teamMembers.filter((member) =>
-    member.name.toLowerCase().includes(projectSearchQuery.toLowerCase())
-  );
+  const filteredProjectTeamMembers = teamMembers
+    .filter((member) => member.name.toLowerCase().includes(projectSearchQuery.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const getActiveFilterCount = () => {
     let count = 0;
@@ -1329,7 +1329,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           <SelectValue placeholder="Select project lead" />
                         </SelectTrigger>
                         <SelectContent>
-                          {projectLeads.map((lead) => (
+                          {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => (
                             <SelectItem key={lead.id} value={lead.id}>
                               {lead.name}
                             </SelectItem>
@@ -1792,6 +1792,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <div className="border rounded-md p-2 space-y-1 max-h-[160px] overflow-y-auto scrollbar-visible" data-testid="filter-leads-container">
                         {projectLeads
                           .filter(lead => lead.name.toLowerCase().includes(filterLeadSearch.toLowerCase()))
+                          .sort((a, b) => a.name.localeCompare(b.name))
                           .map((lead) => (
                           <div key={lead.id} className="flex items-center gap-2">
                             <Checkbox
@@ -2078,7 +2079,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {projectLeads.map((lead) => (
+                  {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
                       {lead.name}
                     </SelectItem>
@@ -2444,7 +2445,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {teamMembers.map((member) => (
+              {[...teamMembers].sort((a, b) => a.name.localeCompare(b.name)).map((member) => (
               <div
                 key={member.id}
                 className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors ${selectedMembers.has(member.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeMembers ? 'cursor-pointer hover:bg-muted' : ''}`}
@@ -2677,7 +2678,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {projectLeads.map((lead) => (
+              {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => (
               <div
                 key={lead.id}
                 className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors cursor-pointer hover:bg-muted ${selectedLeads.has(lead.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}

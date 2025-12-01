@@ -448,9 +448,9 @@ export default function SubmitReport() {
   const canSaveDraft = selectedProject && selectedLead;
   const canSubmit = selectedProject && selectedLead && healthStatus && progress && nextWeek;
 
-  const filteredLeadsForSearch = projectLeads.filter(lead =>
-    lead.name.toLowerCase().includes(statusLeadSearch.toLowerCase())
-  );
+  const filteredLeadsForSearch = projectLeads
+    .filter(lead => lead.name.toLowerCase().includes(statusLeadSearch.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Tile click handlers - toggle filter and scroll to Report Status section
   const handleSubmittedTileClick = () => {
