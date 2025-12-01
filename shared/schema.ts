@@ -37,7 +37,8 @@ export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   customer: text("customer").notNull(),
-  leadId: varchar("lead_id").notNull(),
+  leadId: varchar("lead_id").notNull(), // Primary lead (for backward compatibility)
+  leadIds: text("lead_ids").array().notNull().default(sql`'{}'`), // All leads including co-leads
   teamMembers: jsonb("team_members").notNull().default(sql`'[]'`), // Array of { memberId, role }
   startDate: text("start_date"),
   endDate: text("end_date"),
@@ -49,7 +50,7 @@ export type ProjectType = 'CMS' | 'SS';
 export const weeklyReports = pgTable("weekly_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull(),
-  leadId: varchar("lead_id").notNull(),
+  leadId: varchar("lead_id").notNull(), // Primary lead for the project
   weekStart: text("week_start").notNull(),
   healthStatus: text("health_status"),
   progress: text("progress"),
@@ -57,6 +58,7 @@ export const weeklyReports = pgTable("weekly_reports", {
   nextWeek: text("next_week"),
   teamMemberFeedback: jsonb("team_member_feedback"),
   status: text("status").notNull().default('draft'),
+  submittedByLeadId: varchar("submitted_by_lead_id"), // Who actually submitted (for co-lead tracking)
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
 
