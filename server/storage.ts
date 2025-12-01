@@ -184,6 +184,7 @@ export class MemStorage implements IStorage {
     const project: Project = { 
       ...insertProject, 
       id,
+      leadIds: insertProject.leadIds ?? [],
       teamMembers: insertProject.teamMembers ?? [],
       startDate: insertProject.startDate ?? null,
       endDate: insertProject.endDate ?? null,
@@ -224,6 +225,7 @@ export class MemStorage implements IStorage {
       nextWeek: insertReport.nextWeek ?? null,
       teamMemberFeedback: insertReport.teamMemberFeedback ?? null,
       status: insertReport.status ?? 'draft',
+      submittedByLeadId: insertReport.submittedByLeadId ?? null,
       id,
       submittedAt: new Date()
     };
