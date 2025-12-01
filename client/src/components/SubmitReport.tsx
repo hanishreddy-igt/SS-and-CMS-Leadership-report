@@ -63,8 +63,22 @@ export default function SubmitReport() {
   const [modalExistingDraftId, setModalExistingDraftId] = useState<string | null>(null);
 
   const currentWeek = getCurrentWeekStart();
+  
+  // Helper to get all lead IDs for a project (supports co-leads)
+  const getProjectLeadIds = (project: Project): string[] => {
+    return project.leadIds && project.leadIds.length > 0 
+      ? project.leadIds 
+      : [project.leadId];
+  };
+
+  // Helper to check if a lead is assigned to a project (works with co-leads)
+  const isLeadAssignedToProject = (project: Project, leadId: string): boolean => {
+    const projectLeadIds = getProjectLeadIds(project);
+    return projectLeadIds.includes(leadId);
+  };
+  
   const leadProjects = selectedLead
-    ? projects.filter((p) => p.leadId === selectedLead)
+    ? projects.filter((p) => isLeadAssignedToProject(p, selectedLead))
     : [];
 
   const selectedProjectData = projects.find((p) => p.id === selectedProject);
@@ -111,7 +125,7 @@ export default function SubmitReport() {
   };
 
   const hasLeadSubmittedAllReports = (leadId: string) => {
-    const leadsProjects = projects.filter((p) => p.leadId === leadId);
+    const leadsProjects = projects.filter((p) => isLeadAssignedToProject(p, leadId));
     if (leadsProjects.length === 0) return false;
     return leadsProjects.every((p) => hasSubmittedForProject(p.id));
   };
@@ -219,7 +233,9 @@ export default function SubmitReport() {
     // Exclude ended projects from the status list
     if (isProjectEndedCheck(project.endDate)) return false;
     
-    if (statusFilterLeads.size > 0 && !statusFilterLeads.has(project.leadId)) return false;
+    // Check if any of the project's leads match the filter (supports co-leads)
+    const projectLeadIds = getProjectLeadIds(project);
+    if (statusFilterLeads.size > 0 && !projectLeadIds.some(leadId => statusFilterLeads.has(leadId))) return false;
     
     const reportStatus = getProjectReportStatus(project.id);
     if (statusFilterStatus === 'submitted' && reportStatus !== 'submitted') return false;
@@ -235,12 +251,42 @@ export default function SubmitReport() {
     return projectLeads.find((l) => l.id === leadId)?.name || 'Unknown';
   };
 
-  const groupedByLead = filteredStatusProjects.reduce((acc, project) => {
-    const leadName = getLeadName(project.leadId);
-    if (!acc[leadName]) {
-      acc[leadName] = [];
+  // Get all lead names for a project (for display with co-leads)
+  const getProjectLeadNames = (project: Project): string => {
+    const leadIds = getProjectLeadIds(project);
+    const names = leadIds
+      .map(id => projectLeads.find(l => l.id === id)?.name)
+      .filter(Boolean) as string[];
+    return names.join(' & ') || 'Unknown';
+  };
+
+  // Check if a project has co-leads
+  const hasCoLeads = (project: Project): boolean => {
+    return project.leadIds && project.leadIds.length > 1;
+  };
+
+  // Get the name of who submitted a report
+  const getSubmittedByName = (projectId: string): string | null => {
+    const report = currentWeekReports.find((r) => r.projectId === projectId && r.status === 'submitted');
+    if (report && report.submittedByLeadId) {
+      return getLeadName(report.submittedByLeadId);
     }
-    acc[leadName].push(project);
+    return null;
+  };
+
+  // Group projects by lead - co-lead projects appear under each assigned lead
+  const groupedByLead = filteredStatusProjects.reduce((acc, project) => {
+    const projectLeadIds = getProjectLeadIds(project);
+    projectLeadIds.forEach(leadId => {
+      const leadName = getLeadName(leadId);
+      if (!acc[leadName]) {
+        acc[leadName] = [];
+      }
+      // Avoid duplicates if project was already added for this lead
+      if (!acc[leadName].some(p => p.id === project.id)) {
+        acc[leadName].push(project);
+      }
+    });
     return acc;
   }, {} as Record<string, Project[]>);
 
@@ -337,6 +383,7 @@ export default function SubmitReport() {
       nextWeek: nextWeek || null,
       teamMemberFeedback: feedback.length > 0 ? feedback : null,
       status,
+      submittedByLeadId: status === 'submitted' ? selectedLead : null,
     };
   };
 
@@ -404,9 +451,13 @@ export default function SubmitReport() {
       .filter(([_, feedback]) => feedback.trim())
       .map(([memberId, feedback]) => ({ memberId, feedback }));
 
+    // Get the primary lead ID from co-leads array or fallback to legacy leadId
+    const projectLeadIds = getProjectLeadIds(modalProject);
+    const primaryLeadId = projectLeadIds[0] || modalProject.leadId;
+
     return {
       projectId: modalProject.id,
-      leadId: modalProject.leadId,
+      leadId: primaryLeadId, // Primary lead for the project (from leadIds array)
       weekStart: currentWeek,
       healthStatus: modalHealthStatus || null,
       progress: modalProgress || null,
@@ -414,6 +465,8 @@ export default function SubmitReport() {
       nextWeek: modalNextWeek || null,
       teamMemberFeedback: feedback.length > 0 ? feedback : null,
       status,
+      // Track who submitted the report (using primary lead for now - could be enhanced with actual logged-in user)
+      submittedByLeadId: status === 'submitted' ? primaryLeadId : null,
     };
   };
 
@@ -670,6 +723,8 @@ export default function SubmitReport() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {leadProjects.map((project) => {
                         const reportStatus = getProjectReportStatus(project.id);
+                        const submittedByName = reportStatus === 'submitted' ? getSubmittedByName(project.id) : null;
+                        const isCoLead = hasCoLeads(project);
                         return (
                           <div
                             key={project.id}
@@ -678,15 +733,30 @@ export default function SubmitReport() {
                             onClick={() => handleProjectTileClick(project)}
                           >
                             <div className="flex-1">
-                              <p className="font-medium">{project.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{project.name}</p>
+                                {isCoLead && (
+                                  <Badge variant="outline" className="text-xs">Co-Lead</Badge>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground">{project.customer}</p>
+                              {isCoLead && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Leads: {getProjectLeadNames(project)}
+                                </p>
+                              )}
                             </div>
                             {reportStatus === 'submitted' ? (
-                              <div className="flex items-center gap-2 text-success">
-                                <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
-                                  <Check className="h-4 w-4" />
+                              <div className="flex flex-col items-end gap-1">
+                                <div className="flex items-center gap-2 text-success">
+                                  <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+                                    <Check className="h-4 w-4" />
+                                  </div>
+                                  <span className="text-sm font-medium">Submitted</span>
                                 </div>
-                                <span className="text-sm font-medium">Submitted</span>
+                                {isCoLead && submittedByName && (
+                                  <span className="text-xs text-muted-foreground">by {submittedByName}</span>
+                                )}
                               </div>
                             ) : reportStatus === 'drafted' ? (
                               <div className="flex items-center gap-2 text-primary">
@@ -741,6 +811,12 @@ export default function SubmitReport() {
                 </DialogTitle>
                 <DialogDescription>
                   <span className="font-medium">{modalProject.name}</span> - {modalProject.customer}
+                  {hasCoLeads(modalProject) && (
+                    <>
+                      <br />
+                      <span className="text-xs text-muted-foreground">Co-Leads: {getProjectLeadNames(modalProject)}</span>
+                    </>
+                  )}
                   <br />
                   <span className="text-xs">Week starting: {currentWeek}</span>
                 </DialogDescription>
@@ -753,6 +829,11 @@ export default function SubmitReport() {
                   </div>
                   <div>
                     <p className="text-lg font-medium">This report has already been submitted</p>
+                    {hasCoLeads(modalProject) && getSubmittedByName(modalProject.id) && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Submitted by {getSubmittedByName(modalProject.id)}
+                      </p>
+                    )}
                     <p className="text-sm text-muted-foreground mt-2">
                       You can view this report under the <span className="font-medium text-primary">"View Current Report"</span> tab.
                     </p>

@@ -345,6 +345,43 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     return teamMembers.find((m) => m.id === memberId)?.name || 'Unknown';
   };
 
+  // Co-lead helper functions
+  const getProjectLeadIds = (project: Project): string[] => {
+    if (project.leadIds && project.leadIds.length > 0) {
+      return project.leadIds;
+    }
+    return project.leadId ? [project.leadId] : [];
+  };
+
+  const getProjectLeadNames = (project: Project): string => {
+    const leadIds = getProjectLeadIds(project);
+    const names = leadIds
+      .map(id => projectLeads.find(l => l.id === id)?.name)
+      .filter(Boolean) as string[];
+    return names.join(' & ') || 'Unknown';
+  };
+
+  const hasCoLeads = (project: Project): boolean => {
+    return project.leadIds && project.leadIds.length > 1;
+  };
+
+  // Get the name of who submitted a report
+  const getSubmittedByName = (report: WeeklyReport): string | null => {
+    if (report.submittedByLeadId) {
+      return getLeadName(report.submittedByLeadId);
+    }
+    return null;
+  };
+
+  // Check if any of the project's leads match the filter (supports co-leads)
+  const doesReportMatchLeadFilter = (report: WeeklyReport): boolean => {
+    if (filterLeads.size === 0) return true;
+    const project = projects.find(p => p.id === report.projectId);
+    if (!project) return filterLeads.has(report.leadId);
+    const projectLeadIds = getProjectLeadIds(project);
+    return projectLeadIds.some(leadId => filterLeads.has(leadId));
+  };
+
   const startEdit = (report: WeeklyReport) => {
     if (report.status !== 'submitted') return;
     setEditingId(report.id);
@@ -428,7 +465,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   const filteredReports = weeklyReports.filter((report) => {
     if (report.status !== 'submitted') return false;
-    if (filterLeads.size > 0 && !filterLeads.has(report.leadId)) return false;
+    // Use co-lead aware filter helper
+    if (!doesReportMatchLeadFilter(report)) return false;
     if (filterHealth !== 'all' && report.healthStatus !== filterHealth) return false;
     
     const project = projects.find((p) => p.id === report.projectId);
@@ -465,16 +503,21 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   // Generate CSV content for export/archive
   const generateCSVContent = () => {
-    const headers = ['Project', 'Lead', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback', 'Submitted'];
+    const headers = ['Project', 'Lead(s)', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback', 'Submitted', 'Submitted By'];
     const rows = sortedReports.map((report) => {
+      const project = projects.find(p => p.id === report.projectId);
       const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
       const feedbackText = feedback && feedback.length > 0
         ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('; ')
         : 'None';
 
+      // Use co-lead names if available
+      const leadNames = project ? getProjectLeadNames(project) : getLeadName(report.leadId);
+      const submittedBy = getSubmittedByName(report) || '';
+
       return [
         getProjectName(report.projectId),
-        getLeadName(report.leadId),
+        leadNames,
         report.weekStart,
         healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus || '',
         (report.progress || '').replace(/\n/g, ' '),
@@ -482,6 +525,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         (report.nextWeek || '').replace(/\n/g, ' '),
         feedbackText.replace(/\n/g, ' '),
         new Date(report.submittedAt).toLocaleString(),
+        submittedBy,
       ];
     });
 
@@ -646,10 +690,14 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       const feedbackText = feedback && feedback.length > 0
         ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('\n')
         : '-';
+      
+      // Use co-lead names if available
+      const leadNames = project ? getProjectLeadNames(project) : getLeadName(report.leadId);
+      
       return [
         getProjectName(report.projectId),
         project?.customer || '-',
-        getLeadName(report.leadId),
+        leadNames,
         healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || '-',
         report.progress || '-',
         report.challenges || '-',
@@ -659,7 +707,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     });
 
     autoTable(doc, {
-      head: [['Project', 'Customer', 'Lead', 'Health', 'Progress', 'Challenges', 'Next Week', 'Feedback']],
+      head: [['Project', 'Customer', 'Lead(s)', 'Health', 'Progress', 'Challenges', 'Next Week', 'Feedback']],
       body: tableData,
       startY: currentY,
       theme: 'plain',
@@ -936,14 +984,18 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
     // Reports table with premium styling
     const tableData = sortedReports.map((report) => {
+      const project = projects.find(p => p.id === report.projectId);
       const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
       const feedbackText = feedback && feedback.length > 0
         ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('; ')
         : '-';
 
+      // Use co-lead names if available
+      const leadNames = project ? getProjectLeadNames(project) : getLeadName(report.leadId);
+
       return [
         getProjectName(report.projectId),
-        getLeadName(report.leadId),
+        leadNames,
         report.weekStart,
         healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig]?.label || report.healthStatus || '',
         report.progress || '-',
@@ -955,7 +1007,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
     autoTable(doc, {
       startY: currentY,
-      head: [['Project', 'Lead', 'Week', 'Status', 'Progress', 'Challenges', 'Next Week', 'Feedback']],
+      head: [['Project', 'Lead(s)', 'Week', 'Status', 'Progress', 'Challenges', 'Next Week', 'Feedback']],
       body: tableData,
       styles: { 
         fontSize: 7.5, 
@@ -1557,7 +1609,21 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Week of <span className="text-primary">{report.weekStart}</span> • By {getLeadName(report.leadId)}
+                            Week of <span className="text-primary">{report.weekStart}</span> • Lead{(() => {
+                              const project = projects.find(p => p.id === report.projectId);
+                              return project && hasCoLeads(project) ? 's: ' : ': ';
+                            })()}{(() => {
+                              const project = projects.find(p => p.id === report.projectId);
+                              return project ? getProjectLeadNames(project) : getLeadName(report.leadId);
+                            })()}
+                            {(() => {
+                              const project = projects.find(p => p.id === report.projectId);
+                              const submittedBy = getSubmittedByName(report);
+                              if (project && hasCoLeads(project) && submittedBy) {
+                                return <span className="text-xs text-muted-foreground/70"> (submitted by {submittedBy})</span>;
+                              }
+                              return null;
+                            })()}
                           </p>
                         </div>
                         {editingId !== report.id && (
@@ -1767,8 +1833,17 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Project Lead</p>
-                        <p className="font-medium">{getLeadName(selectedReport.leadId)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {project && hasCoLeads(project) ? 'Project Leads' : 'Project Lead'}
+                        </p>
+                        <p className="font-medium">
+                          {project ? getProjectLeadNames(project) : getLeadName(selectedReport.leadId)}
+                        </p>
+                        {project && hasCoLeads(project) && getSubmittedByName(selectedReport) && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Submitted by {getSubmittedByName(selectedReport)}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

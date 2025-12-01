@@ -54,7 +54,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [editFormData, setEditFormData] = useState({
     name: '',
     customer: '',
-    leadId: '',
+    leadIds: [] as string[],
     teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
     endDate: '',
@@ -77,7 +77,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [projectFormData, setProjectFormData] = useState({
     name: '',
     customer: '',
-    leadId: '',
+    leadIds: [] as string[],
     teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
     endDate: '',
@@ -145,6 +145,22 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const getLeadById = (leadId: string) => {
     return projectLeads.find((l) => l.id === leadId);
+  };
+
+  // Get all lead names for a project (supports co-leads)
+  const getProjectLeadNames = (project: Project): string => {
+    const leadIdsArray = project.leadIds && project.leadIds.length > 0 
+      ? project.leadIds 
+      : [project.leadId];
+    const names = leadIdsArray
+      .map(id => projectLeads.find(l => l.id === id)?.name)
+      .filter(Boolean) as string[];
+    return names.join(' & ') || 'Unknown';
+  };
+
+  // Check if project has co-leads
+  const hasCoLeads = (project: Project): boolean => {
+    return project.leadIds && project.leadIds.length > 1;
   };
 
   const handleProjectClick = (project: Project) => {
@@ -253,7 +269,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   };
 
   const filteredProjects = projects.filter((project) => {
-    if (filterLeads.length > 0 && !filterLeads.includes(project.leadId)) return false;
+    // Get all leads for this project (support both legacy leadId and new leadIds array)
+    const projectLeadIds = project.leadIds && project.leadIds.length > 0 
+      ? project.leadIds 
+      : [project.leadId];
+    if (filterLeads.length > 0 && !filterLeads.some(leadId => projectLeadIds.includes(leadId))) return false;
     const projectMemberIds = getMemberIdsFromProject(project);
     if (filterMembers.length > 0 && !filterMembers.some(memberId => projectMemberIds.includes(memberId))) return false;
     if (filterProjectName && !project.name.toLowerCase().includes(filterProjectName.toLowerCase())) return false;
@@ -408,10 +428,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const startEdit = (project: Project) => {
     setEditingProject(project);
+    // Support both new leadIds array and legacy single leadId
+    const leadIdsArray = project.leadIds && project.leadIds.length > 0 
+      ? project.leadIds 
+      : [project.leadId];
     setEditFormData({
       name: project.name,
       customer: project.customer,
-      leadId: project.leadId,
+      leadIds: leadIdsArray,
       teamMembers: (project.teamMembers as TeamMemberAssignment[]) || [],
       startDate: project.startDate || '',
       endDate: project.endDate || '',
@@ -466,7 +490,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   });
 
   const handleSaveEdit = () => {
-    if (editingProject && editFormData.name && editFormData.customer && editFormData.leadId && 
+    if (editingProject && editFormData.name && editFormData.customer && editFormData.leadIds.length > 0 && 
         editFormData.teamMembers.length > 0) {
       
       // Validate date formats
@@ -494,6 +518,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         id: editingProject.id, 
         updates: {
           ...editFormData,
+          leadId: editFormData.leadIds[0], // Primary lead is first in the array
+          leadIds: editFormData.leadIds,
           startDate: startDateParsed || '2025-08-30',
           endDate: endDateParsed || null,
           projectType: editFormData.projectType || null,
@@ -699,7 +725,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       setProjectFormData({
         name: '',
         customer: '',
-        leadId: '',
+        leadIds: [],
         teamMembers: [],
         startDate: '',
         endDate: '',
@@ -954,8 +980,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (!projectFormData.customer.trim()) {
       errors.customer = 'Customer is required';
     }
-    if (!projectFormData.leadId) {
-      errors.leadId = 'Project lead is required';
+    if (projectFormData.leadIds.length === 0) {
+      errors.leadIds = 'At least one project lead is required';
     }
     if (projectFormData.teamMembers.length === 0) {
       errors.teamMembers = 'At least one team member is required';
@@ -983,6 +1009,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       
       createProjectMutation.mutate({
         ...projectFormData,
+        leadId: projectFormData.leadIds[0], // Primary lead is first in the array
+        leadIds: projectFormData.leadIds,
         startDate: startDateParsed || '2025-08-30',
         endDate: endDateParsed || null,
         projectType: projectFormData.projectType || null,
@@ -1234,7 +1262,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   setProjectFormData({
                     name: '',
                     customer: '',
-                    leadId: '',
+                    leadIds: [],
                     teamMembers: [],
                     startDate: '',
                     endDate: '',
@@ -1315,30 +1343,53 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="new-lead">Project Lead <span className="text-red-500">*</span></Label>
-                      <Select
-                        value={projectFormData.leadId}
-                        onValueChange={(value) => {
-                          setProjectFormData({ ...projectFormData, leadId: value });
-                          if (projectFormErrors.leadId) {
-                            setProjectFormErrors({ ...projectFormErrors, leadId: '' });
-                          }
-                        }}
-                      >
-                        <SelectTrigger id="new-lead" data-testid="select-lead" className={projectFormErrors.leadId ? 'border-red-500' : ''}>
-                          <SelectValue placeholder="Select project lead" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => (
-                            <SelectItem key={lead.id} value={lead.id}>
-                              {lead.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {projectFormErrors.leadId && (
-                        <p className="text-sm text-red-500" data-testid="error-lead">{projectFormErrors.leadId}</p>
+                      <div className="flex items-center justify-between">
+                        <Label>Project Lead(s) <span className="text-red-500">*</span></Label>
+                        {projectFormData.leadIds.length > 0 && (
+                          <Badge variant="secondary" data-testid="badge-lead-count">
+                            {projectFormData.leadIds.length} selected {projectFormData.leadIds.length === 2 && '(Co-leads)'}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className={`border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto ${projectFormErrors.leadIds ? 'border-red-500' : ''}`} data-testid="leads-selection-container">
+                        {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => {
+                          const isSelected = projectFormData.leadIds.includes(lead.id);
+                          return (
+                            <div key={lead.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`new-lead-${lead.id}`}
+                                data-testid={`checkbox-lead-${lead.id}`}
+                                checked={isSelected}
+                                onCheckedChange={() => {
+                                  const newLeadIds = isSelected
+                                    ? projectFormData.leadIds.filter(id => id !== lead.id)
+                                    : [...projectFormData.leadIds, lead.id];
+                                  setProjectFormData({ ...projectFormData, leadIds: newLeadIds });
+                                  if (projectFormErrors.leadIds) {
+                                    setProjectFormErrors({ ...projectFormErrors, leadIds: '' });
+                                  }
+                                }}
+                              />
+                              <Label
+                                htmlFor={`new-lead-${lead.id}`}
+                                className="font-normal text-sm cursor-pointer flex-1"
+                              >
+                                {lead.name}
+                                {projectFormData.leadIds.indexOf(lead.id) === 0 && projectFormData.leadIds.length > 1 && (
+                                  <span className="text-xs text-muted-foreground ml-2">(Primary)</span>
+                                )}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                        {projectLeads.length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-2">No project leads available</p>
+                        )}
+                      </div>
+                      {projectFormErrors.leadIds && (
+                        <p className="text-sm text-red-500" data-testid="error-lead">{projectFormErrors.leadIds}</p>
                       )}
+                      <p className="text-xs text-muted-foreground">Select one lead, or select two for co-lead projects. First selected becomes primary.</p>
                     </div>
 
                     <div className="space-y-2">
@@ -1992,8 +2043,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   <CardContent className="space-y-3">
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Lead:</span>
-                      <span className="text-muted-foreground">{getLeadName(project.leadId)}</span>
+                      <span className="font-medium">{hasCoLeads(project) ? 'Co-Leads:' : 'Lead:'}</span>
+                      <span className="text-muted-foreground">{getProjectLeadNames(project)}</span>
                     </div>
 
                     <div className="flex items-start gap-2 text-sm">
@@ -2070,22 +2121,47 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-lead">Project Lead <span className="text-red-500">*</span></Label>
-              <Select
-                value={editFormData.leadId}
-                onValueChange={(value) => setEditFormData({ ...editFormData, leadId: value })}
-              >
-                <SelectTrigger id="edit-lead" data-testid="select-edit-lead">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => (
-                    <SelectItem key={lead.id} value={lead.id}>
-                      {lead.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label>Project Lead(s) <span className="text-red-500">*</span></Label>
+                {editFormData.leadIds.length > 0 && (
+                  <Badge variant="secondary" data-testid="badge-edit-lead-count">
+                    {editFormData.leadIds.length} selected {editFormData.leadIds.length === 2 && '(Co-leads)'}
+                  </Badge>
+                )}
+              </div>
+              <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto" data-testid="edit-leads-selection-container">
+                {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => {
+                  const isSelected = editFormData.leadIds.includes(lead.id);
+                  return (
+                    <div key={lead.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`edit-lead-${lead.id}`}
+                        data-testid={`checkbox-edit-lead-${lead.id}`}
+                        checked={isSelected}
+                        onCheckedChange={() => {
+                          const newLeadIds = isSelected
+                            ? editFormData.leadIds.filter(id => id !== lead.id)
+                            : [...editFormData.leadIds, lead.id];
+                          setEditFormData({ ...editFormData, leadIds: newLeadIds });
+                        }}
+                      />
+                      <Label
+                        htmlFor={`edit-lead-${lead.id}`}
+                        className="font-normal text-sm cursor-pointer flex-1"
+                      >
+                        {lead.name}
+                        {editFormData.leadIds.indexOf(lead.id) === 0 && editFormData.leadIds.length > 1 && (
+                          <span className="text-xs text-muted-foreground ml-2">(Primary)</span>
+                        )}
+                      </Label>
+                    </div>
+                  );
+                })}
+                {projectLeads.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">No project leads available</p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">Select one lead, or select two for co-lead projects. First selected becomes primary.</p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -2866,29 +2942,40 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </div>
               </div>
 
-              {/* Project Lead Section - with clickable email */}
+              {/* Project Lead Section - with clickable email (supports co-leads) */}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-muted">
                   <UserCog className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground">Project Lead</p>
-                  <div 
-                    className="flex items-center gap-2 cursor-pointer group"
-                    onClick={() => toggleLeadEmailVisibility(selectedProject.leadId)}
-                    data-testid="button-toggle-lead-email"
-                  >
-                    <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid="text-project-detail-lead">
-                      {getLeadName(selectedProject.leadId)}
-                    </p>
-                    <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {hasCoLeads(selectedProject) ? 'Project Leads (Co-Lead)' : 'Project Lead'}
+                  </p>
+                  <div className="space-y-2">
+                    {(selectedProject.leadIds && selectedProject.leadIds.length > 0 
+                      ? selectedProject.leadIds 
+                      : [selectedProject.leadId]
+                    ).map((leadId) => (
+                      <div key={leadId}>
+                        <div 
+                          className="flex items-center gap-2 cursor-pointer group"
+                          onClick={() => toggleLeadEmailVisibility(leadId)}
+                          data-testid={`button-toggle-lead-email-${leadId}`}
+                        >
+                          <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid={`text-project-detail-lead-${leadId}`}>
+                            {getLeadName(leadId)}
+                          </p>
+                          <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                        {visibleLeadEmail === leadId && (
+                          <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid={`text-lead-email-${leadId}`}>
+                            <Mail className="h-3.5 w-3.5" />
+                            {getLeadById(leadId)?.email || 'No email set'}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  {visibleLeadEmail === selectedProject.leadId && (
-                    <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid="text-lead-email">
-                      <Mail className="h-3.5 w-3.5" />
-                      {getLeadById(selectedProject.leadId)?.email || 'No email set'}
-                    </div>
-                  )}
                 </div>
               </div>
 
