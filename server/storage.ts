@@ -16,8 +16,10 @@ import type {
   InsertSavedReport,
   CurrentAiSummary,
   InsertCurrentAiSummary,
+  ProjectRole,
+  InsertProjectRole,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -65,6 +67,13 @@ export interface IStorage {
   getCurrentAiSummary(weekStart: string): Promise<CurrentAiSummary | undefined>;
   upsertCurrentAiSummary(summary: InsertCurrentAiSummary): Promise<CurrentAiSummary>;
   deleteCurrentAiSummary(weekStart: string): Promise<boolean>;
+
+  // Project Roles
+  getProjectRoles(): Promise<ProjectRole[]>;
+  getProjectRole(id: string): Promise<ProjectRole | undefined>;
+  createProjectRole(role: InsertProjectRole): Promise<ProjectRole>;
+  deleteProjectRole(id: string): Promise<boolean>;
+  seedDefaultRoles(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -307,6 +316,48 @@ export class MemStorage implements IStorage {
   async deleteCurrentAiSummary(weekStart: string): Promise<boolean> {
     return this.currentAiSummaries.delete(weekStart);
   }
+
+  // Project Roles - MemStorage implementation
+  private projectRoles: Map<string, ProjectRole> = new Map();
+
+  async getProjectRoles(): Promise<ProjectRole[]> {
+    return Array.from(this.projectRoles.values());
+  }
+
+  async getProjectRole(id: string): Promise<ProjectRole | undefined> {
+    return this.projectRoles.get(id);
+  }
+
+  async createProjectRole(role: InsertProjectRole): Promise<ProjectRole> {
+    const id = randomUUID();
+    const newRole: ProjectRole = { id, name: role.name, isDefault: role.isDefault ?? 'false' };
+    this.projectRoles.set(id, newRole);
+    return newRole;
+  }
+
+  async deleteProjectRole(id: string): Promise<boolean> {
+    return this.projectRoles.delete(id);
+  }
+
+  async seedDefaultRoles(): Promise<void> {
+    const defaultRoles = [
+      'Digital Engagement Specialist',
+      'Digital Engagement Coordinator',
+      'Social Listening Specialist',
+      'Social Listening Coordinator',
+      'Community Moderator',
+      'Community Advisor',
+      'Community Admin',
+      'Community Moderator + Reporting',
+      'Community Reporting',
+    ];
+    for (const roleName of defaultRoles) {
+      const exists = Array.from(this.projectRoles.values()).find(r => r.name === roleName);
+      if (!exists) {
+        await this.createProjectRole({ name: roleName, isDefault: 'true' });
+      }
+    }
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -494,6 +545,48 @@ export class DatabaseStorage implements IStorage {
   async deleteCurrentAiSummary(weekStart: string): Promise<boolean> {
     const result = await db.delete(currentAiSummary).where(eq(currentAiSummary.weekStart, weekStart));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Project Roles
+  async getProjectRoles(): Promise<ProjectRole[]> {
+    return await db.select().from(projectRoles);
+  }
+
+  async getProjectRole(id: string): Promise<ProjectRole | undefined> {
+    const [role] = await db.select().from(projectRoles).where(eq(projectRoles.id, id));
+    return role || undefined;
+  }
+
+  async createProjectRole(role: InsertProjectRole): Promise<ProjectRole> {
+    const [newRole] = await db.insert(projectRoles).values(role).returning();
+    return newRole;
+  }
+
+  async deleteProjectRole(id: string): Promise<boolean> {
+    const result = await db.delete(projectRoles).where(eq(projectRoles.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async seedDefaultRoles(): Promise<void> {
+    const defaultRoles = [
+      'Digital Engagement Specialist',
+      'Digital Engagement Coordinator',
+      'Social Listening Specialist',
+      'Social Listening Coordinator',
+      'Community Moderator',
+      'Community Advisor',
+      'Community Admin',
+      'Community Moderator + Reporting',
+      'Community Reporting',
+    ];
+    
+    for (const roleName of defaultRoles) {
+      try {
+        await db.insert(projectRoles).values({ name: roleName, isDefault: 'true' }).onConflictDoNothing();
+      } catch (e) {
+        // Ignore duplicate key errors
+      }
+    }
   }
 }
 

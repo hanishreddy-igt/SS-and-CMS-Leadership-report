@@ -82,9 +82,20 @@ export const currentAiSummary = pgTable("current_ai_summary", {
   generatedAt: timestamp("generated_at").notNull().defaultNow(), // When it was generated (UTC)
 });
 
+// Project roles table - stores available roles for team member assignments
+export const projectRoles = pgTable("project_roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // Role name
+  isDefault: text("is_default").default('false'), // Whether it's a system default role
+});
+
 export const insertCurrentAiSummarySchema = createInsertSchema(currentAiSummary).omit({ id: true, generatedAt: true });
 export type CurrentAiSummary = typeof currentAiSummary.$inferSelect;
 export type InsertCurrentAiSummary = z.infer<typeof insertCurrentAiSummarySchema>;
+
+export const insertProjectRoleSchema = createInsertSchema(projectRoles).omit({ id: true });
+export type ProjectRole = typeof projectRoles.$inferSelect;
+export type InsertProjectRole = z.infer<typeof insertProjectRoleSchema>;
 
 export const insertPersonSchema = createInsertSchema(people).omit({ id: true });
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true });
