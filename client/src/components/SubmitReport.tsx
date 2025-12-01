@@ -12,7 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye } from 'lucide-react';
 import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusOptions = [
@@ -50,6 +51,16 @@ export default function SubmitReport() {
   const [statusFilterLeads, setStatusFilterLeads] = useState<Set<string>>(new Set());
   const [statusFilterStatus, setStatusFilterStatus] = useState<string>('all');
   const [statusLeadSearch, setStatusLeadSearch] = useState('');
+
+  // Modal state for clicking on project tiles
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [modalProject, setModalProject] = useState<Project | null>(null);
+  const [modalHealthStatus, setModalHealthStatus] = useState('');
+  const [modalProgress, setModalProgress] = useState('');
+  const [modalChallenges, setModalChallenges] = useState('');
+  const [modalNextWeek, setModalNextWeek] = useState('');
+  const [modalMemberFeedback, setModalMemberFeedback] = useState<Record<string, string>>({});
+  const [modalExistingDraftId, setModalExistingDraftId] = useState<string | null>(null);
 
   const currentWeek = getCurrentWeekStart();
   const leadProjects = selectedLead
@@ -144,6 +155,64 @@ export default function SubmitReport() {
     const report = currentWeekReports.find((r) => r.projectId === projectId);
     if (!report) return 'pending';
     return report.status === 'submitted' ? 'submitted' : 'drafted';
+  };
+
+  // Get team members for a specific project
+  const getProjectTeamMembers = (project: Project) => {
+    const memberIds = ((project.teamMembers as TeamMemberAssignment[]) || []).map(a => a.memberId);
+    return teamMembers.filter((m) => memberIds.includes(m.id));
+  };
+
+  // Handle clicking on a project tile in the Report Status section
+  const handleProjectTileClick = (project: Project) => {
+    const reportStatus = getProjectReportStatus(project.id);
+    
+    setModalProject(project);
+    setShowReportModal(true);
+    
+    if (reportStatus === 'submitted') {
+      // Just show the submitted message, no need to load form data
+      return;
+    }
+    
+    // Load draft data if exists
+    const draft = getDraftForProject(project.id);
+    if (draft) {
+      setModalExistingDraftId(draft.id);
+      setModalHealthStatus(draft.healthStatus || '');
+      setModalProgress(draft.progress || '');
+      setModalChallenges(draft.challenges || '');
+      setModalNextWeek(draft.nextWeek || '');
+      if (draft.teamMemberFeedback && Array.isArray(draft.teamMemberFeedback)) {
+        const feedbackMap: Record<string, string> = {};
+        (draft.teamMemberFeedback as TeamMemberFeedback[]).forEach((fb) => {
+          feedbackMap[fb.memberId] = fb.feedback;
+        });
+        setModalMemberFeedback(feedbackMap);
+      } else {
+        setModalMemberFeedback({});
+      }
+    } else {
+      // Reset form for new submission
+      setModalExistingDraftId(null);
+      setModalHealthStatus('');
+      setModalProgress('');
+      setModalChallenges('');
+      setModalNextWeek('');
+      setModalMemberFeedback({});
+    }
+  };
+
+  // Close the modal and reset state
+  const closeReportModal = () => {
+    setShowReportModal(false);
+    setModalProject(null);
+    setModalHealthStatus('');
+    setModalProgress('');
+    setModalChallenges('');
+    setModalNextWeek('');
+    setModalMemberFeedback({});
+    setModalExistingDraftId(null);
   };
 
   const filteredStatusProjects = projects.filter((project) => {
@@ -277,6 +346,96 @@ export default function SubmitReport() {
       saveDraftMutation.mutate({ report, isUpdate: !!existingDraftId });
     }
   };
+
+  // Modal-specific mutations
+  const modalSaveDraftMutation = useMutation({
+    mutationFn: async ({ report, isUpdate, draftId }: { report: InsertWeeklyReport; isUpdate: boolean; draftId: string | null }) => {
+      if (isUpdate && draftId) {
+        return await apiRequest('PATCH', `/api/weekly-reports/${draftId}`, report);
+      }
+      return await apiRequest('POST', '/api/weekly-reports', report);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      toast({ 
+        title: 'Draft Saved', 
+        description: 'Your report has been saved as a draft' 
+      });
+      closeReportModal();
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to save draft',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const modalSubmitReportMutation = useMutation({
+    mutationFn: async ({ report, isUpdate, draftId }: { report: InsertWeeklyReport; isUpdate: boolean; draftId: string | null }) => {
+      if (isUpdate && draftId) {
+        return await apiRequest('PATCH', `/api/weekly-reports/${draftId}`, report);
+      }
+      return await apiRequest('POST', '/api/weekly-reports', report);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      toast({ 
+        title: 'Success', 
+        description: 'Weekly report submitted successfully' 
+      });
+      closeReportModal();
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to submit report',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Build report data for modal
+  const buildModalReportData = (status: 'draft' | 'submitted'): InsertWeeklyReport | null => {
+    if (!modalProject) return null;
+    
+    const feedback: TeamMemberFeedback[] = Object.entries(modalMemberFeedback)
+      .filter(([_, feedback]) => feedback.trim())
+      .map(([memberId, feedback]) => ({ memberId, feedback }));
+
+    return {
+      projectId: modalProject.id,
+      leadId: modalProject.leadId,
+      weekStart: currentWeek,
+      healthStatus: modalHealthStatus || null,
+      progress: modalProgress || null,
+      challenges: modalChallenges || null,
+      nextWeek: modalNextWeek || null,
+      teamMemberFeedback: feedback.length > 0 ? feedback : null,
+      status,
+    };
+  };
+
+  const handleModalSaveDraft = () => {
+    const report = buildModalReportData('draft');
+    if (report) {
+      modalSaveDraftMutation.mutate({ report, isUpdate: !!modalExistingDraftId, draftId: modalExistingDraftId });
+    }
+  };
+
+  const handleModalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (modalProject && modalHealthStatus && modalProgress && modalNextWeek) {
+      const report = buildModalReportData('submitted');
+      if (report) {
+        modalSubmitReportMutation.mutate({ report, isUpdate: !!modalExistingDraftId, draftId: modalExistingDraftId });
+      }
+    }
+  };
+
+  const canModalSaveDraft = modalProject !== null;
+  const canModalSubmit = modalProject && modalHealthStatus && modalProgress && modalNextWeek;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -729,8 +888,9 @@ export default function SubmitReport() {
                         return (
                           <div
                             key={project.id}
-                            className="flex items-center justify-between bg-muted/30 border border-white/10 rounded-lg p-4 transition-all hover:bg-muted/50"
+                            className="flex items-center justify-between bg-muted/30 border border-white/10 rounded-lg p-4 transition-all hover:bg-muted/50 cursor-pointer hover:border-primary/30"
                             data-testid={`status-${project.id}`}
+                            onClick={() => handleProjectTileClick(project)}
                           >
                             <div className="flex-1">
                               <p className="font-medium">{project.name}</p>
@@ -769,6 +929,176 @@ export default function SubmitReport() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Report Submission Modal - Opens when clicking on a project tile */}
+      <Dialog open={showReportModal} onOpenChange={(open) => !open && closeReportModal()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {modalProject && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {getProjectReportStatus(modalProject.id) === 'submitted' ? (
+                    <>
+                      <CheckCircle2 className="h-5 w-5 text-success" />
+                      Report Already Submitted
+                    </>
+                  ) : getProjectReportStatus(modalProject.id) === 'drafted' ? (
+                    <>
+                      <PenLine className="h-5 w-5 text-primary" />
+                      Continue Draft Report
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-5 w-5 text-primary" />
+                      Submit Weekly Report
+                    </>
+                  )}
+                </DialogTitle>
+                <DialogDescription>
+                  <span className="font-medium">{modalProject.name}</span> - {modalProject.customer}
+                  <br />
+                  <span className="text-xs">Week starting: {currentWeek}</span>
+                </DialogDescription>
+              </DialogHeader>
+
+              {getProjectReportStatus(modalProject.id) === 'submitted' ? (
+                <div className="py-8 text-center space-y-4">
+                  <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="h-8 w-8 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium">This report has already been submitted</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      You can view this report under the <span className="font-medium text-primary">"View Current Report"</span> tab.
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={closeReportModal} className="mt-4" data-testid="button-close-submitted-modal">
+                    <Eye className="h-4 w-4 mr-2" />
+                    Close
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleModalSubmit} className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="modal-health-status">Project Health Status <span className="text-red-500">*</span></Label>
+                    <Select value={modalHealthStatus} onValueChange={setModalHealthStatus}>
+                      <SelectTrigger id="modal-health-status" data-testid="modal-select-health-status">
+                        <SelectValue placeholder="Select health status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {healthStatusOptions.map((option) => {
+                          const Icon = option.icon;
+                          return (
+                            <SelectItem key={option.value} value={option.value}>
+                              <div className="flex items-center gap-2">
+                                <Icon className={`h-4 w-4 ${option.color}`} />
+                                <span>{option.label}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="modal-progress">Progress This Week <span className="text-red-500">*</span></Label>
+                    <Textarea
+                      id="modal-progress"
+                      data-testid="modal-textarea-progress"
+                      value={modalProgress}
+                      onChange={(e) => setModalProgress(e.target.value)}
+                      placeholder="Describe what was accomplished this week..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="modal-challenges">Challenges & Blockers</Label>
+                    <Textarea
+                      id="modal-challenges"
+                      data-testid="modal-textarea-challenges"
+                      value={modalChallenges}
+                      onChange={(e) => setModalChallenges(e.target.value)}
+                      placeholder="Describe any challenges or blockers..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="modal-next-week">Plans for Next Week <span className="text-red-500">*</span></Label>
+                    <Textarea
+                      id="modal-next-week"
+                      data-testid="modal-textarea-next-week"
+                      value={modalNextWeek}
+                      onChange={(e) => setModalNextWeek(e.target.value)}
+                      placeholder="Outline plans for the upcoming week..."
+                      rows={3}
+                    />
+                  </div>
+
+                  {getProjectTeamMembers(modalProject).length > 0 && (
+                    <div className="space-y-3">
+                      <Label>Team Member Feedback (Optional)</Label>
+                      <div className="space-y-3 border rounded-md p-3">
+                        {getProjectTeamMembers(modalProject).map((member) => (
+                          <div key={member.id} className="space-y-1">
+                            <Label htmlFor={`modal-feedback-${member.id}`} className="text-sm font-medium">
+                              {member.name}
+                            </Label>
+                            <Textarea
+                              id={`modal-feedback-${member.id}`}
+                              data-testid={`modal-textarea-feedback-${member.id}`}
+                              value={modalMemberFeedback[member.id] || ''}
+                              onChange={(e) =>
+                                setModalMemberFeedback({ ...modalMemberFeedback, [member.id]: e.target.value })
+                              }
+                              placeholder={`Feedback for ${member.name}...`}
+                              rows={2}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                    <Button 
+                      data-testid="modal-button-cancel"
+                      type="button"
+                      variant="outline"
+                      onClick={closeReportModal}
+                    >
+                      Cancel
+                    </Button>
+                    {canModalSubmit ? (
+                      <Button 
+                        data-testid="modal-button-submit-report" 
+                        type="submit" 
+                        className="flex-1"
+                        disabled={modalSubmitReportMutation.isPending}
+                      >
+                        {modalSubmitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
+                      </Button>
+                    ) : (
+                      <Button 
+                        data-testid="modal-button-save-draft" 
+                        type="button"
+                        className="flex-1"
+                        disabled={!canModalSaveDraft || modalSaveDraftMutation.isPending}
+                        onClick={handleModalSaveDraft}
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {modalSaveDraftMutation.isPending ? 'Saving...' : modalExistingDraftId ? 'Update Draft' : 'Save as Draft'}
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
