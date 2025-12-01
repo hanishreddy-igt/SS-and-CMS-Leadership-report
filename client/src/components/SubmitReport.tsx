@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, MousePointerClick } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye } from 'lucide-react';
 import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusOptions = [
@@ -550,35 +550,12 @@ export default function SubmitReport() {
         </div>
       </div>
 
-      <Card className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
-          <div>
-            <p className="section-label">Weekly Submission</p>
-            <CardTitle className="text-2xl">Submit Weekly Report</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Week starting: <span className="text-primary font-medium">{currentWeek}</span></p>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4 p-6 bg-muted/20 border border-white/10 rounded-lg">
-            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <MousePointerClick className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="font-medium text-lg">Click on a project tile below to submit a report</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Find your project in the <span className="font-medium text-primary">Report Status by Lead</span> section and click on it to open the submission form.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card id="report-status-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <p className="section-label">Status Overview</p>
-              <CardTitle className="text-2xl">Report Status by Lead</CardTitle>
+              <p className="section-label">Weekly Submission</p>
+              <CardTitle className="text-2xl">Submit Weekly Report</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">Week starting: <span className="text-primary font-medium">{currentWeek}</span></p>
             </div>
             <Popover>
