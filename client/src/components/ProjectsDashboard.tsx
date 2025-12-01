@@ -3167,11 +3167,15 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </div>
               </div>
               
-              {/* Projects managed by this lead */}
+              {/* Projects managed by this lead (includes co-lead projects) */}
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-2">Projects Led</p>
                 {(() => {
-                  const ledProjects = projects.filter(p => p.leadId === selectedLeadForDetail.id);
+                  const ledProjects = projects.filter(p => {
+                    // Check leadIds array first (co-lead support), then fall back to leadId
+                    const projectLeadIds = p.leadIds && p.leadIds.length > 0 ? p.leadIds : [p.leadId];
+                    return projectLeadIds.includes(selectedLeadForDetail.id);
+                  });
                   if (ledProjects.length === 0) {
                     return (
                       <p className="text-sm text-muted-foreground italic">No projects assigned</p>
@@ -3181,7 +3185,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     <div className="space-y-2" data-testid="list-lead-projects">
                       {ledProjects.map(project => (
                         <div key={project.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
-                          <span className="text-sm font-medium">{project.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{project.name}</span>
+                            {hasCoLeads(project) && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal text-muted-foreground">
+                                Co-Lead
+                              </Badge>
+                            )}
+                          </div>
                           {(() => {
                             const status = getProjectStatus(project.endDate);
                             if (status === 'active') {
