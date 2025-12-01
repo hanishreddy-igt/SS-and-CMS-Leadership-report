@@ -122,8 +122,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showProjectDetailModal, setShowProjectDetailModal] = useState(false);
 
-  // Email display toggle state - track which lead's email is visible
-  const [visibleLeadEmail, setVisibleLeadEmail] = useState<string | null>(null);
+  // Email display toggle state - track which leads' emails are visible (supports multiple)
+  const [visibleLeadEmails, setVisibleLeadEmails] = useState<Set<string>>(new Set());
 
   // Effect to clear all filters when triggered from parent (Active Projects tile)
   useEffect(() => {
@@ -167,18 +167,26 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (!selectionModeProjects && !editingProject) {
       setSelectedProject(project);
       setShowProjectDetailModal(true);
-      setVisibleLeadEmail(null);
+      setVisibleLeadEmails(new Set());
     }
   };
 
   const closeProjectDetailModal = () => {
     setShowProjectDetailModal(false);
     setSelectedProject(null);
-    setVisibleLeadEmail(null);
+    setVisibleLeadEmails(new Set());
   };
 
   const toggleLeadEmailVisibility = (leadId: string) => {
-    setVisibleLeadEmail(prev => prev === leadId ? null : leadId);
+    setVisibleLeadEmails(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(leadId)) {
+        newSet.delete(leadId);
+      } else {
+        newSet.add(leadId);
+      }
+      return newSet;
+    });
   };
 
   // Helper to get team member names from the new structure
@@ -2967,7 +2975,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </p>
                           <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
-                        {visibleLeadEmail === leadId && (
+                        {visibleLeadEmails.has(leadId) && (
                           <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid={`text-lead-email-${leadId}`}>
                             <Mail className="h-3.5 w-3.5" />
                             {getLeadById(leadId)?.email || 'No email set'}
