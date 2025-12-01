@@ -885,6 +885,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     const errors: Record<string, string> = {};
     if (!projectFormData.name.trim()) {
       errors.name = 'Project name is required';
+    } else if (projectNameError) {
+      errors.name = projectNameError;
     }
     if (!projectFormData.customer.trim()) {
       errors.customer = 'Customer is required';
@@ -1165,6 +1167,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   });
                   setProjectSearchQuery('');
                   setProjectFormErrors({});
+                  setProjectNameError(null);
+                  setProjectNameWarning(null);
                 }
               }}>
                 <DialogTrigger asChild>
@@ -1189,16 +1193,26 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         type="text"
                         value={projectFormData.name}
                         onChange={(e) => {
-                          setProjectFormData({ ...projectFormData, name: e.target.value });
+                          handleProjectNameChange(e.target.value);
                           if (projectFormErrors.name) {
                             setProjectFormErrors({ ...projectFormErrors, name: '' });
                           }
                         }}
                         placeholder="Enter project name"
-                        className={projectFormErrors.name ? 'border-red-500' : ''}
+                        className={(projectFormErrors.name || projectNameError) ? 'border-red-500' : projectNameWarning ? 'border-yellow-500' : ''}
                       />
                       {projectFormErrors.name && (
                         <p className="text-sm text-red-500" data-testid="error-project-name">{projectFormErrors.name}</p>
+                      )}
+                      {projectNameError && !projectFormErrors.name && (
+                        <p className="text-sm text-red-500 flex items-center gap-1" data-testid="error-project-name-duplicate">
+                          <AlertCircle className="h-3 w-3" /> {projectNameError}
+                        </p>
+                      )}
+                      {projectNameWarning && !projectNameError && (
+                        <p className="text-sm text-yellow-600 flex items-center gap-1" data-testid="warning-project-name">
+                          <AlertTriangle className="h-3 w-3" /> {projectNameWarning}
+                        </p>
                       )}
                     </div>
 
@@ -1912,7 +1926,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span className="text-muted-foreground">
-                          {project.startDate || 'N/A'} - {project.endDate || 'N/A'}
+                          {formatDisplayDate(project.startDate)} - {formatDisplayDate(project.endDate)}
                         </span>
                       </div>
                     )}
@@ -2813,9 +2827,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Project Timeline</p>
                   <div className="flex items-center gap-2 mt-1" data-testid="text-project-detail-dates">
-                    <span className="text-base">{selectedProject.startDate || 'Not set'}</span>
+                    <span className="text-base">{selectedProject.startDate ? formatDisplayDate(selectedProject.startDate) : 'Not set'}</span>
                     <span className="text-muted-foreground">to</span>
-                    <span className="text-base">{selectedProject.endDate || 'Not set'}</span>
+                    <span className="text-base">{selectedProject.endDate ? formatDisplayDate(selectedProject.endDate) : 'Not set'}</span>
                   </div>
                   {!selectedProject.endDate && (
                     <div className="flex items-center gap-1.5 mt-1 text-warning text-sm">
