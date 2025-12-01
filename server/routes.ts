@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { JiraService } from "./services/jiraService";
-import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema } from "@shared/schema";
+import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
 
@@ -114,6 +114,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Project lead not found' });
       }
       res.json({ success });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Project Roles routes (protected)
+  app.get('/api/project-roles', isAuthenticated, async (_req, res) => {
+    try {
+      const roles = await storage.getProjectRoles();
+      res.json(roles);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/project-roles', isAuthenticated, async (req, res) => {
+    try {
+      const data = insertProjectRoleSchema.parse(req.body);
+      const role = await storage.createProjectRole(data);
+      res.json(role);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete('/api/project-roles/:id', isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteProjectRole(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Role not found' });
+      }
+      res.json({ success });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Seed default roles endpoint
+  app.post('/api/project-roles/seed', isAuthenticated, async (_req, res) => {
+    try {
+      await storage.seedDefaultRoles();
+      const roles = await storage.getProjectRoles();
+      res.json(roles);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
