@@ -116,7 +116,7 @@ export class MemStorage implements IStorage {
 
   async createTeamMember(insertMember: InsertTeamMember): Promise<TeamMember> {
     const id = randomUUID();
-    const member: TeamMember = { ...insertMember, id, roles: ['team-member'] };
+    const member: TeamMember = { ...insertMember, id, roles: ['team-member'], email: insertMember.email ?? null };
     this.people.set(id, member);
     return member;
   }
@@ -144,7 +144,7 @@ export class MemStorage implements IStorage {
 
   async createProjectLead(insertLead: InsertProjectLead): Promise<ProjectLead> {
     const id = randomUUID();
-    const lead: ProjectLead = { ...insertLead, id, roles: ['project-lead'] };
+    const lead: ProjectLead = { ...insertLead, id, roles: ['project-lead'], email: insertLead.email ?? null };
     this.people.set(id, lead);
     return lead;
   }
@@ -172,7 +172,14 @@ export class MemStorage implements IStorage {
 
   async createProject(insertProject: InsertProject): Promise<Project> {
     const id = randomUUID();
-    const project: Project = { ...insertProject, id };
+    const project: Project = { 
+      ...insertProject, 
+      id,
+      teamMembers: insertProject.teamMembers ?? [],
+      startDate: insertProject.startDate ?? null,
+      endDate: insertProject.endDate ?? null,
+      projectType: insertProject.projectType ?? null,
+    };
     this.projects.set(id, project);
     return project;
   }

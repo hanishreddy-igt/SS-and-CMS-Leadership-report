@@ -39,13 +39,18 @@ interface JiraSearchResponse {
   maxResults: number;
 }
 
+interface TeamMemberAssignment {
+  memberId: string;
+  role: string;
+}
+
 interface ImportedProject {
   name: string;
   customer: string;
   leadId: string;
   leadName: string;
-  teamMemberIds: string[];
-  teamMemberNames: string[];
+  teamMembers: TeamMemberAssignment[];
+  teamMemberNames: Map<string, string>; // memberId -> name mapping for reference
   startDate: string;
   endDate: string;
   epicKey: string;
@@ -183,17 +188,26 @@ export class JiraService {
 
       const customer = this.extractCustomer(epic, projectKey);
 
-      const teamMemberObjects = Array.from(teamMembers.entries())
+      // Filter out the lead and create team member assignments with empty roles
+      const teamMemberAssignments: TeamMemberAssignment[] = Array.from(teamMembers.entries())
         .filter(([id]) => id !== lead.accountId)
-        .map(([id, name]) => ({ id, name }));
+        .map(([id]) => ({ memberId: id, role: '' }));
+
+      // Create a map for name lookups
+      const memberNamesMap = new Map<string, string>();
+      teamMembers.forEach((name, id) => {
+        if (id !== lead.accountId) {
+          memberNamesMap.set(id, name);
+        }
+      });
 
       const project: ImportedProject = {
         name: epicName,
         customer,
         leadId: lead.accountId,
         leadName: lead.displayName,
-        teamMemberIds: teamMemberObjects.map((m) => m.id),
-        teamMemberNames: teamMemberObjects.map((m) => m.name),
+        teamMembers: teamMemberAssignments,
+        teamMemberNames: memberNamesMap,
         startDate: createdDate.toISOString().split('T')[0],
         endDate: dueDate.toISOString().split('T')[0],
         epicKey,

@@ -409,8 +409,9 @@ Be concise and focus on actionable insights. If there are no critical issues, re
       importedProjects.forEach((project) => {
         leadsMap.set(project.leadId, project.leadName);
         
-        project.teamMemberIds.forEach((id, index) => {
-          peopleMap.set(id, project.teamMemberNames[index]);
+        // Collect team member names from the map
+        project.teamMemberNames.forEach((name, id) => {
+          peopleMap.set(id, name);
         });
       });
 
@@ -419,7 +420,7 @@ Be concise and focus on actionable insights. If there are no critical issues, re
           name: p.name,
           customer: p.customer,
           leadId: p.leadId,
-          teamMemberIds: p.teamMemberIds,
+          teamMembers: p.teamMembers, // Now an array of {memberId, role}
           startDate: p.startDate,
           endDate: p.endDate,
           epicKey: p.epicKey,
