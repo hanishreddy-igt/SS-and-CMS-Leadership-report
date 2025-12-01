@@ -61,6 +61,9 @@ export default function SubmitReport() {
   const [modalNextWeek, setModalNextWeek] = useState('');
   const [modalMemberFeedback, setModalMemberFeedback] = useState<Record<string, string>>({});
   const [modalExistingDraftId, setModalExistingDraftId] = useState<string | null>(null);
+  
+  // Lock state for preventing simultaneous editing
+  const [projectLockInfo, setProjectLockInfo] = useState<{ isLocked: boolean; lockedBy: string } | null>(null);
 
   const currentWeek = getCurrentWeekStart();
   
@@ -178,8 +181,28 @@ export default function SubmitReport() {
   };
 
   // Handle clicking on a project tile in the Report Status section
-  const handleProjectTileClick = (project: Project) => {
+  const handleProjectTileClick = async (project: Project) => {
     const reportStatus = getProjectReportStatus(project.id);
+    
+    // Check if someone else is editing this project
+    try {
+      const lockCheckResponse = await fetch(`/api/project-locks/${project.id}`, {
+        credentials: 'include'
+      });
+      const lockCheck = await lockCheckResponse.json();
+      
+      if (lockCheck.isLocked) {
+        // Someone else is editing - show warning but still allow opening
+        setProjectLockInfo({ isLocked: true, lockedBy: lockCheck.lockedBy });
+      } else {
+        setProjectLockInfo(null);
+        // Acquire lock for this project
+        await apiRequest('POST', `/api/project-locks/${project.id}`, {});
+      }
+    } catch (error) {
+      console.error('Error checking/acquiring lock:', error);
+      setProjectLockInfo(null);
+    }
     
     setModalProject(project);
     setShowReportModal(true);
@@ -218,7 +241,16 @@ export default function SubmitReport() {
   };
 
   // Close the modal and reset state
-  const closeReportModal = () => {
+  const closeReportModal = async () => {
+    // Release the lock when closing modal
+    if (modalProject && !projectLockInfo?.isLocked) {
+      try {
+        await apiRequest('DELETE', `/api/project-locks/${modalProject.id}`, {});
+      } catch (error) {
+        console.error('Error releasing lock:', error);
+      }
+    }
+    
     setShowReportModal(false);
     setModalProject(null);
     setModalHealthStatus('');
@@ -227,6 +259,7 @@ export default function SubmitReport() {
     setModalNextWeek('');
     setModalMemberFeedback({});
     setModalExistingDraftId(null);
+    setProjectLockInfo(null);
   };
 
   const filteredStatusProjects = projects.filter((project) => {
@@ -821,6 +854,20 @@ export default function SubmitReport() {
                   <span className="text-xs">Week starting: {currentWeek}</span>
                 </DialogDescription>
               </DialogHeader>
+
+              {/* Warning banner when someone else is editing */}
+              {projectLockInfo?.isLocked && (
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30" data-testid="lock-warning-banner">
+                  <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-warning">Someone else is editing this report</p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium">{projectLockInfo.lockedBy}</span> is currently editing this report. 
+                      If you both submit changes, one may overwrite the other.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {getProjectReportStatus(modalProject.id) === 'submitted' ? (
                 <div className="py-8 text-center space-y-4">

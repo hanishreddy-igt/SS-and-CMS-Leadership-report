@@ -13,6 +13,26 @@ const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
 });
 
+// In-memory store for project editing locks
+// Maps projectId -> { userId, userName, timestamp }
+interface ProjectLock {
+  userId: string;
+  userName: string;
+  timestamp: Date;
+}
+const projectEditLocks = new Map<string, ProjectLock>();
+
+// Clean up stale locks (older than 10 minutes) periodically
+setInterval(() => {
+  const now = Date.now();
+  const staleThreshold = 10 * 60 * 1000; // 10 minutes
+  for (const [projectId, lock] of projectEditLocks.entries()) {
+    if (now - lock.timestamp.getTime() > staleThreshold) {
+      projectEditLocks.delete(projectId);
+    }
+  }
+}, 60 * 1000); // Run every minute
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
@@ -26,6 +46,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Project Edit Lock routes (for preventing simultaneous editing)
+  // Check if a project is currently being edited by someone
+  app.get('/api/project-locks/:projectId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const currentUserId = req.user.claims.sub;
+      const lock = projectEditLocks.get(projectId);
+      
+      if (lock && lock.userId !== currentUserId) {
+        // Someone else is editing
+        res.json({ 
+          isLocked: true, 
+          lockedBy: lock.userName,
+          lockedAt: lock.timestamp
+        });
+      } else {
+        res.json({ isLocked: false });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Acquire a lock on a project (when opening report modal)
+  app.post('/api/project-locks/:projectId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const userName = user?.email?.split('@')[0] || 'Someone';
+      
+      const existingLock = projectEditLocks.get(projectId);
+      
+      // If already locked by someone else, return conflict
+      if (existingLock && existingLock.userId !== userId) {
+        return res.status(409).json({ 
+          error: 'Project is already being edited',
+          lockedBy: existingLock.userName,
+          lockedAt: existingLock.timestamp
+        });
+      }
+      
+      // Acquire or refresh the lock
+      projectEditLocks.set(projectId, {
+        userId,
+        userName,
+        timestamp: new Date()
+      });
+      
+      res.json({ success: true, lockAcquired: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Release a lock on a project (when closing report modal)
+  app.delete('/api/project-locks/:projectId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const userId = req.user.claims.sub;
+      
+      const lock = projectEditLocks.get(projectId);
+      
+      // Only allow the lock holder to release the lock
+      if (lock && lock.userId === userId) {
+        projectEditLocks.delete(projectId);
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
