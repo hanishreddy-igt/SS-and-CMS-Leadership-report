@@ -99,6 +99,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [leadNameError, setLeadNameError] = useState<string | null>(null);
   const [leadNameWarning, setLeadNameWarning] = useState<string | null>(null);
 
+  // Project name validation state
+  const [projectNameError, setProjectNameError] = useState<string | null>(null);
+  const [projectNameWarning, setProjectNameWarning] = useState<string | null>(null);
+
   // Lead Detail Modal State
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Person | null>(null);
   const [showLeadDetailModal, setShowLeadDetailModal] = useState(false);
@@ -202,6 +206,15 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (status === 'renewal') return 0; // Active but renewal soon - first
     if (status === 'active') return 1;  // Active with no renewal soon - second
     return 2;                            // Ended - last
+  };
+
+  // Format date from YYYY-MM-DD to MM/DD/YYYY
+  const formatDisplayDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return 'N/A';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr; // Return as-is if not in expected format
+    const [year, month, day] = parts;
+    return `${month}/${day}/${year}`;
   };
 
   const filteredProjects = projects.filter((project) => {
@@ -812,6 +825,46 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const handleAddLead = () => {
     if (newLead.trim() && !leadNameError) {
       createLeadMutation.mutate({ name: newLead.trim(), email: newLeadEmail.trim() || undefined });
+    }
+  };
+
+  // Check for duplicate project names
+  const checkProjectDuplicate = (name: string): { isExact: boolean; partialMatches: string[] } => {
+    const trimmedName = name.trim().toLowerCase();
+    const exactMatch = projects.some(p => p.name.toLowerCase() === trimmedName);
+    const partialMatches = projects
+      .filter(p => {
+        const existingName = p.name.toLowerCase();
+        return existingName !== trimmedName && (
+          existingName.includes(trimmedName) || 
+          trimmedName.includes(existingName) ||
+          existingName.split(' ').some(part => trimmedName.split(' ').some(inputPart => 
+            part.length > 2 && inputPart.length > 2 && (part.includes(inputPart) || inputPart.includes(part))
+          ))
+        );
+      })
+      .map(p => p.name);
+    return { isExact: exactMatch, partialMatches };
+  };
+
+  // Handle project name change with validation
+  const handleProjectNameChange = (value: string) => {
+    setProjectFormData(prev => ({ ...prev, name: value }));
+    if (!value.trim()) {
+      setProjectNameError(null);
+      setProjectNameWarning(null);
+      return;
+    }
+    const { isExact, partialMatches } = checkProjectDuplicate(value);
+    if (isExact) {
+      setProjectNameError('A project with this exact name already exists.');
+      setProjectNameWarning(null);
+    } else if (partialMatches.length > 0) {
+      setProjectNameError(null);
+      setProjectNameWarning(`Similar project(s) found: ${partialMatches.join(', ')}. Please double check before adding.`);
+    } else {
+      setProjectNameError(null);
+      setProjectNameWarning(null);
     }
   };
 
