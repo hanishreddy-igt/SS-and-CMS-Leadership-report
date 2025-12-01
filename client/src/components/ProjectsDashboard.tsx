@@ -132,7 +132,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   };
 
   const handleProjectClick = (project: Project) => {
-    if (!selectionModeProjects) {
+    if (!selectionModeProjects && !editingProject) {
       setSelectedProject(project);
       setShowProjectDetailModal(true);
       setVisibleLeadEmail(null);
@@ -1718,198 +1718,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
-                      <Dialog open={editingProject?.id === project.id} onOpenChange={(open) => !open && setEditingProject(null)}>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Edit Project</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="edit-name">Project Name <span className="text-red-500">*</span></Label>
-                              <Input
-                                id="edit-name"
-                                data-testid="input-edit-project-name"
-                                value={editFormData.name}
-                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="edit-customer">Customer <span className="text-red-500">*</span></Label>
-                              <Input
-                                id="edit-customer"
-                                data-testid="input-edit-customer"
-                                value={editFormData.customer}
-                                onChange={(e) => setEditFormData({ ...editFormData, customer: e.target.value })}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="edit-lead">Project Lead <span className="text-red-500">*</span></Label>
-                              <Select
-                                value={editFormData.leadId}
-                                onValueChange={(value) => setEditFormData({ ...editFormData, leadId: value })}
-                              >
-                                <SelectTrigger id="edit-lead" data-testid="select-edit-lead">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {projectLeads.map((lead) => (
-                                    <SelectItem key={lead.id} value={lead.id}>
-                                      {lead.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <Label>Team Members <span className="text-red-500">*</span></Label>
-                                {editFormData.teamMembers.length > 0 && (
-                                  <Badge variant="secondary" data-testid="badge-edit-selected-count">
-                                    {editFormData.teamMembers.length} selected
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  type="text"
-                                  placeholder="Search team members..."
-                                  value={searchQuery}
-                                  onChange={(e) => setSearchQuery(e.target.value)}
-                                  className="pl-9 pr-9"
-                                  data-testid="input-edit-search-members"
-                                />
-                                {searchQuery && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setSearchQuery('')}
-                                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
-                                    data-testid="button-edit-clear-search"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                              <div className="border rounded-md p-4 space-y-2 max-h-64 overflow-y-auto">
-                                {filteredTeamMembers.length > 0 ? (
-                                  filteredTeamMembers.map((member) => {
-                                    const assignment = editFormData.teamMembers.find(m => m.memberId === member.id);
-                                    const isSelected = !!assignment;
-                                    return (
-                                      <div key={member.id} className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                          <Checkbox
-                                            id={`edit-member-${member.id}`}
-                                            data-testid={`checkbox-edit-member-${member.id}`}
-                                            checked={isSelected}
-                                            onCheckedChange={() => toggleTeamMember(member.id)}
-                                          />
-                                          <Label htmlFor={`edit-member-${member.id}`} className="font-normal cursor-pointer flex-1">
-                                            {member.name}
-                                          </Label>
-                                        </div>
-                                        {isSelected && (
-                                          <div className="ml-6">
-                                            <Input
-                                              type="text"
-                                              placeholder="Role (e.g., Developer, QA Lead)"
-                                              value={assignment?.role || ''}
-                                              onChange={(e) => updateTeamMemberRole(member.id, e.target.value)}
-                                              className="h-8 text-sm"
-                                              data-testid={`input-edit-role-${member.id}`}
-                                            />
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })
-                                ) : (
-                                  <p className="text-sm text-muted-foreground text-center py-4">
-                                    No team members found matching "{searchQuery}"
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="edit-start-date">Start Date</Label>
-                                <Input
-                                  id="edit-start-date"
-                                  data-testid="input-edit-start-date"
-                                  type="date"
-                                  value={editFormData.startDate}
-                                  onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="edit-end-date">End Date</Label>
-                                <Input
-                                  id="edit-end-date"
-                                  data-testid="input-edit-end-date"
-                                  type="date"
-                                  value={editFormData.endDate}
-                                  onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Type of Project</Label>
-                              <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-2">
-                                  <Checkbox
-                                    id="edit-project-type-cms"
-                                    data-testid="checkbox-edit-project-type-cms"
-                                    checked={editFormData.projectType === 'CMS'}
-                                    onCheckedChange={(checked) => {
-                                      setEditFormData({ 
-                                        ...editFormData, 
-                                        projectType: checked ? 'CMS' : '' 
-                                      });
-                                    }}
-                                  />
-                                  <Label htmlFor="edit-project-type-cms" className="font-normal cursor-pointer">
-                                    Community Managed Services (CMS)
-                                  </Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Checkbox
-                                    id="edit-project-type-ss"
-                                    data-testid="checkbox-edit-project-type-ss"
-                                    checked={editFormData.projectType === 'SS'}
-                                    onCheckedChange={(checked) => {
-                                      setEditFormData({ 
-                                        ...editFormData, 
-                                        projectType: checked ? 'SS' : '' 
-                                      });
-                                    }}
-                                  />
-                                  <Label htmlFor="edit-project-type-ss" className="font-normal cursor-pointer">
-                                    Strategic Services (SS)
-                                  </Label>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                onClick={() => setEditingProject(null)}
-                                data-testid="button-cancel-edit"
-                              >
-                                Cancel
-                              </Button>
-                              <Button 
-                                onClick={handleSaveEdit} 
-                                data-testid="button-save-edit"
-                                disabled={editProjectMutation.isPending}
-                              >
-                                {editProjectMutation.isPending ? 'Saving...' : 'Save Changes'}
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -1966,6 +1774,200 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Project Dialog - Standalone outside Card to prevent event propagation issues */}
+      <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Project Name <span className="text-red-500">*</span></Label>
+              <Input
+                id="edit-name"
+                data-testid="input-edit-project-name"
+                value={editFormData.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-customer">Customer <span className="text-red-500">*</span></Label>
+              <Input
+                id="edit-customer"
+                data-testid="input-edit-customer"
+                value={editFormData.customer}
+                onChange={(e) => setEditFormData({ ...editFormData, customer: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-lead">Project Lead <span className="text-red-500">*</span></Label>
+              <Select
+                value={editFormData.leadId}
+                onValueChange={(value) => setEditFormData({ ...editFormData, leadId: value })}
+              >
+                <SelectTrigger id="edit-lead" data-testid="select-edit-lead">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectLeads.map((lead) => (
+                    <SelectItem key={lead.id} value={lead.id}>
+                      {lead.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Team Members <span className="text-red-500">*</span></Label>
+                {editFormData.teamMembers.length > 0 && (
+                  <Badge variant="secondary" data-testid="badge-edit-selected-count">
+                    {editFormData.teamMembers.length} selected
+                  </Badge>
+                )}
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search team members..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-9"
+                  data-testid="input-edit-search-members"
+                />
+                {searchQuery && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                    data-testid="button-edit-clear-search"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <div className="border rounded-md p-4 space-y-2 max-h-64 overflow-y-auto">
+                {filteredTeamMembers.length > 0 ? (
+                  filteredTeamMembers.map((member) => {
+                    const assignment = editFormData.teamMembers.find(m => m.memberId === member.id);
+                    const isSelected = !!assignment;
+                    return (
+                      <div key={member.id} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={`edit-member-${member.id}`}
+                            data-testid={`checkbox-edit-member-${member.id}`}
+                            checked={isSelected}
+                            onCheckedChange={() => toggleTeamMember(member.id)}
+                          />
+                          <Label htmlFor={`edit-member-${member.id}`} className="font-normal cursor-pointer flex-1">
+                            {member.name}
+                          </Label>
+                        </div>
+                        {isSelected && (
+                          <div className="ml-6">
+                            <Input
+                              type="text"
+                              placeholder="Role (e.g., Developer, QA Lead)"
+                              value={assignment?.role || ''}
+                              onChange={(e) => updateTeamMemberRole(member.id, e.target.value)}
+                              className="h-8 text-sm"
+                              data-testid={`input-edit-role-${member.id}`}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No team members found matching "{searchQuery}"
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-start-date">Start Date</Label>
+                <Input
+                  id="edit-start-date"
+                  data-testid="input-edit-start-date"
+                  type="date"
+                  value={editFormData.startDate}
+                  onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-end-date">End Date</Label>
+                <Input
+                  id="edit-end-date"
+                  data-testid="input-edit-end-date"
+                  type="date"
+                  value={editFormData.endDate}
+                  onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Type of Project</Label>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="edit-project-type-cms"
+                    data-testid="checkbox-edit-project-type-cms"
+                    checked={editFormData.projectType === 'CMS'}
+                    onCheckedChange={(checked) => {
+                      setEditFormData({ 
+                        ...editFormData, 
+                        projectType: checked ? 'CMS' : '' 
+                      });
+                    }}
+                  />
+                  <Label htmlFor="edit-project-type-cms" className="font-normal cursor-pointer">
+                    Community Managed Services (CMS)
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="edit-project-type-ss"
+                    data-testid="checkbox-edit-project-type-ss"
+                    checked={editFormData.projectType === 'SS'}
+                    onCheckedChange={(checked) => {
+                      setEditFormData({ 
+                        ...editFormData, 
+                        projectType: checked ? 'SS' : '' 
+                      });
+                    }}
+                  />
+                  <Label htmlFor="edit-project-type-ss" className="font-normal cursor-pointer">
+                    Strategic Services (SS)
+                  </Label>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setEditingProject(null)}
+                data-testid="button-cancel-edit"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveEdit} 
+                data-testid="button-save-edit"
+                disabled={editProjectMutation.isPending}
+              >
+                {editProjectMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Team Members Section */}
       <Card>
