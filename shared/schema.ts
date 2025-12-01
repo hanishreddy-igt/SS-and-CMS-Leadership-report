@@ -38,7 +38,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   customer: text("customer").notNull(),
   leadId: varchar("lead_id").notNull(),
-  teamMemberIds: text("team_member_ids").array().notNull(),
+  teamMembers: jsonb("team_members").notNull().default(sql`'[]'`), // Array of { memberId, role }
   startDate: text("start_date"),
   endDate: text("end_date"),
   projectType: text("project_type"),
@@ -111,6 +111,12 @@ export type InsertProjectLead = InsertPerson;
 export type TeamMemberFeedback = {
   memberId: string;
   feedback: string;
+};
+
+// Team member assignment with project-specific role
+export type TeamMemberAssignment = {
+  memberId: string;
+  role: string;
 };
 
 export type HealthStatus = 'on-track' | 'at-risk' | 'critical';
