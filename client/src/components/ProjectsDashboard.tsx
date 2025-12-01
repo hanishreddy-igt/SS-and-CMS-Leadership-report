@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +15,7 @@ import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Tr
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import type { Project, ProjectLead, TeamMember, InsertProject, Person, TeamMemberAssignment } from '@shared/schema';
+import type { Project, ProjectLead, TeamMember, InsertProject, Person, TeamMemberAssignment, ProjectRole } from '@shared/schema';
 
 type SortOrder = 'asc' | 'desc';
 type SortField = 'endDate' | 'startDate';
@@ -30,6 +30,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
+  const { data: projectRoles = [] } = useQuery<ProjectRole[]>({ queryKey: ['/api/project-roles'] });
   const [filterLeads, setFilterLeads] = useState<string[]>([]);
   const [filterMembers, setFilterMembers] = useState<string[]>([]);
   const [filterProjectName, setFilterProjectName] = useState<string>('');
@@ -101,6 +102,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   // Lead Detail Modal State
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Person | null>(null);
   const [showLeadDetailModal, setShowLeadDetailModal] = useState(false);
+
+  // Role selection state for add/edit project forms
+  const [roleInputs, setRoleInputs] = useState<Record<string, string>>({}); // Keyed by popover id
+  const [showAddRolePopover, setShowAddRolePopover] = useState<string | null>(null); // popover id or null
+  const hasAttemptedSeed = useRef(false);
 
   // Project Detail Modal State
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -639,6 +645,48 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       });
     }
   });
+
+  // Role mutation
+  const createRoleMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return await apiRequest('POST', '/api/project-roles', { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-roles'] });
+      toast({ 
+        title: 'Success', 
+        description: 'Role added successfully' 
+      });
+      if (showAddRolePopover) {
+        setRoleInputs(prev => ({ ...prev, [showAddRolePopover]: '' }));
+      }
+      setShowAddRolePopover(null);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to add role',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Seed default roles on component mount if none exist
+  const seedRolesMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', '/api/project-roles/seed');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-roles'] });
+    },
+  });
+
+  useEffect(() => {
+    if (projectRoles.length === 0 && !hasAttemptedSeed.current) {
+      hasAttemptedSeed.current = true;
+      seedRolesMutation.mutate();
+    }
+  }, [projectRoles.length]);
 
   const startEditMember = (member: TeamMember) => {
     setEditingMemberId(member.id);
@@ -1207,15 +1255,81 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                                   </Label>
                                 </div>
                                 {isSelected && (
-                                  <div className="ml-6">
-                                    <Input
-                                      type="text"
-                                      placeholder="Role (e.g., Developer, QA Lead)"
+                                  <div className="ml-6 flex items-center gap-2">
+                                    <Select
                                       value={assignment?.role || ''}
-                                      onChange={(e) => updateProjectTeamMemberRole(member.id, e.target.value)}
-                                      className="h-8 text-sm"
-                                      data-testid={`input-role-${member.id}`}
-                                    />
+                                      onValueChange={(value) => {
+                                        if (value === '__add_new__') {
+                                          setShowAddRolePopover(`add-${member.id}`);
+                                        } else {
+                                          updateProjectTeamMemberRole(member.id, value);
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 text-sm" data-testid={`select-role-${member.id}`}>
+                                        <SelectValue placeholder="Select role..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {projectRoles.map((role) => (
+                                          <SelectItem key={role.id} value={role.name}>
+                                            {role.name}
+                                          </SelectItem>
+                                        ))}
+                                        <SelectItem value="__add_new__" className="text-primary font-medium">
+                                          <span className="flex items-center gap-1">
+                                            <Plus className="h-3 w-3" /> Add New Role
+                                          </span>
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    {showAddRolePopover === `add-${member.id}` && (
+                                      <Popover open={true} onOpenChange={() => setShowAddRolePopover(null)}>
+                                        <PopoverTrigger asChild>
+                                          <span />
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-64" align="start">
+                                          <div className="space-y-2">
+                                            <Label>New Role Name</Label>
+                                            <Input
+                                              type="text"
+                                              placeholder="Enter role name..."
+                                              value={roleInputs[`add-${member.id}`] || ''}
+                                              onChange={(e) => setRoleInputs(prev => ({ ...prev, [`add-${member.id}`]: e.target.value }))}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && (roleInputs[`add-${member.id}`] || '').trim()) {
+                                                  createRoleMutation.mutate((roleInputs[`add-${member.id}`] || '').trim());
+                                                }
+                                              }}
+                                              data-testid={`input-new-role-${member.id}`}
+                                            />
+                                            <div className="flex gap-2 justify-end">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setShowAddRolePopover(null);
+                                                  setRoleInputs(prev => ({ ...prev, [`add-${member.id}`]: '' }));
+                                                }}
+                                              >
+                                                Cancel
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                onClick={() => {
+                                                  if ((roleInputs[`add-${member.id}`] || '').trim()) {
+                                                    createRoleMutation.mutate((roleInputs[`add-${member.id}`] || '').trim());
+                                                  }
+                                                }}
+                                                disabled={!(roleInputs[`add-${member.id}`] || '').trim() || createRoleMutation.isPending}
+                                                data-testid={`button-save-role-${member.id}`}
+                                              >
+                                                {createRoleMutation.isPending ? 'Adding...' : 'Add'}
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -1869,15 +1983,81 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </Label>
                         </div>
                         {isSelected && (
-                          <div className="ml-6">
-                            <Input
-                              type="text"
-                              placeholder="Role (e.g., Developer, QA Lead)"
+                          <div className="ml-6 flex items-center gap-2">
+                            <Select
                               value={assignment?.role || ''}
-                              onChange={(e) => updateTeamMemberRole(member.id, e.target.value)}
-                              className="h-8 text-sm"
-                              data-testid={`input-edit-role-${member.id}`}
-                            />
+                              onValueChange={(value) => {
+                                if (value === '__add_new__') {
+                                  setShowAddRolePopover(`edit-${member.id}`);
+                                } else {
+                                  updateTeamMemberRole(member.id, value);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-sm" data-testid={`select-edit-role-${member.id}`}>
+                                <SelectValue placeholder="Select role..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {projectRoles.map((role) => (
+                                  <SelectItem key={role.id} value={role.name}>
+                                    {role.name}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="__add_new__" className="text-primary font-medium">
+                                  <span className="flex items-center gap-1">
+                                    <Plus className="h-3 w-3" /> Add New Role
+                                  </span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {showAddRolePopover === `edit-${member.id}` && (
+                              <Popover open={true} onOpenChange={() => setShowAddRolePopover(null)}>
+                                <PopoverTrigger asChild>
+                                  <span />
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64" align="start">
+                                  <div className="space-y-2">
+                                    <Label>New Role Name</Label>
+                                    <Input
+                                      type="text"
+                                      placeholder="Enter role name..."
+                                      value={roleInputs[`edit-${member.id}`] || ''}
+                                      onChange={(e) => setRoleInputs(prev => ({ ...prev, [`edit-${member.id}`]: e.target.value }))}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && (roleInputs[`edit-${member.id}`] || '').trim()) {
+                                          createRoleMutation.mutate((roleInputs[`edit-${member.id}`] || '').trim());
+                                        }
+                                      }}
+                                      data-testid={`input-new-edit-role-${member.id}`}
+                                    />
+                                    <div className="flex gap-2 justify-end">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setShowAddRolePopover(null);
+                                          setRoleInputs(prev => ({ ...prev, [`edit-${member.id}`]: '' }));
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          if ((roleInputs[`edit-${member.id}`] || '').trim()) {
+                                            createRoleMutation.mutate((roleInputs[`edit-${member.id}`] || '').trim());
+                                          }
+                                        }}
+                                        disabled={!(roleInputs[`edit-${member.id}`] || '').trim() || createRoleMutation.isPending}
+                                        data-testid={`button-save-edit-role-${member.id}`}
+                                      >
+                                        {createRoleMutation.isPending ? 'Adding...' : 'Add'}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
                           </div>
                         )}
                       </div>
