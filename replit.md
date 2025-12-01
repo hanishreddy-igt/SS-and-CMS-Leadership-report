@@ -26,7 +26,7 @@ This project provides a tool for leadership to monitor the delivery status of al
     - **Users**: Authentication data.
     - **Sessions**: Session storage.
     - **People**: Unified table for team members and project leads.
-    - **Projects**: Project details including customer, lead, members, and dates.
+    - **Projects**: Project details including customer, lead, team member assignments with roles, and dates. Team members are stored as JSONB array: `[{memberId: string, role: string}]`.
     - **Weekly Reports**: Stores progress, health status, and team feedback.
     - **Saved Reports**: Archived weekly report snapshots with PDF/CSV data, AI summary, and health counts.
 - **Key Features**:

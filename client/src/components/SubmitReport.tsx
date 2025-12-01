@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine } from 'lucide-react';
-import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport } from '@shared/schema';
+import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusOptions = [
   { value: 'on-track', label: 'On Track', icon: CheckCircle2, color: 'text-success' },
@@ -57,8 +57,11 @@ export default function SubmitReport() {
     : [];
 
   const selectedProjectData = projects.find((p) => p.id === selectedProject);
+  const projectMemberIds = selectedProjectData 
+    ? ((selectedProjectData.teamMembers as TeamMemberAssignment[]) || []).map(a => a.memberId)
+    : [];
   const projectTeamMembers = selectedProjectData
-    ? teamMembers.filter((m) => selectedProjectData.teamMemberIds.includes(m.id))
+    ? teamMembers.filter((m) => projectMemberIds.includes(m.id))
     : [];
 
   const currentWeekReports = weeklyReports.filter((r) => r.weekStart === currentWeek);

@@ -15,7 +15,7 @@ import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Tr
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import type { Project, ProjectLead, TeamMember, InsertProject, Person } from '@shared/schema';
+import type { Project, ProjectLead, TeamMember, InsertProject, Person, TeamMemberAssignment } from '@shared/schema';
 
 type SortOrder = 'asc' | 'desc';
 type SortField = 'endDate' | 'startDate';
@@ -54,7 +54,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     name: '',
     customer: '',
     leadId: '',
-    teamMemberIds: [] as string[],
+    teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
     endDate: '',
     projectType: '' as string,
@@ -77,7 +77,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     name: '',
     customer: '',
     leadId: '',
-    teamMemberIds: [] as string[],
+    teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
     endDate: '',
     projectType: '' as string,
@@ -149,10 +149,29 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setVisibleLeadEmail(prev => prev === leadId ? null : leadId);
   };
 
-  const getTeamMemberNames = (memberIds: string[]) => {
-    return memberIds
-      .map((id) => teamMembers.find((m) => m.id === id)?.name)
+  // Helper to get team member names from the new structure
+  const getTeamMemberNames = (assignments: TeamMemberAssignment[] | unknown) => {
+    const teamMemberAssignments = (assignments as TeamMemberAssignment[]) || [];
+    return teamMemberAssignments
+      .map((a) => teamMembers.find((m) => m.id === a.memberId)?.name)
       .filter(Boolean);
+  };
+
+  // Helper to get team member details with roles
+  const getTeamMembersWithRoles = (assignments: TeamMemberAssignment[] | unknown) => {
+    const teamMemberAssignments = (assignments as TeamMemberAssignment[]) || [];
+    return teamMemberAssignments
+      .map((a) => {
+        const member = teamMembers.find((m) => m.id === a.memberId);
+        return member ? { name: member.name, role: a.role || '' } : null;
+      })
+      .filter(Boolean) as { name: string; role: string }[];
+  };
+
+  // Helper to get member IDs from assignments for filtering
+  const getMemberIdsFromProject = (project: Project): string[] => {
+    const assignments = (project.teamMembers as TeamMemberAssignment[]) || [];
+    return assignments.map(a => a.memberId);
   };
 
   // Get project status based on end date
@@ -181,7 +200,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const filteredProjects = projects.filter((project) => {
     if (filterLeads.length > 0 && !filterLeads.includes(project.leadId)) return false;
-    if (filterMembers.length > 0 && !filterMembers.some(memberId => project.teamMemberIds.includes(memberId))) return false;
+    const projectMemberIds = getMemberIdsFromProject(project);
+    if (filterMembers.length > 0 && !filterMembers.some(memberId => projectMemberIds.includes(memberId))) return false;
     if (filterProjectName && !project.name.toLowerCase().includes(filterProjectName.toLowerCase())) return false;
     if (filterProjectStatus.length > 0 && !filterProjectStatus.includes(getProjectStatus(project.endDate))) return false;
     return true;
@@ -338,7 +358,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       name: project.name,
       customer: project.customer,
       leadId: project.leadId,
-      teamMemberIds: project.teamMemberIds,
+      teamMembers: (project.teamMembers as TeamMemberAssignment[]) || [],
       startDate: project.startDate || '',
       endDate: project.endDate || '',
       projectType: project.projectType || '',
@@ -391,7 +411,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const handleSaveEdit = () => {
     if (editingProject && editFormData.name && editFormData.customer && editFormData.leadId && 
-        editFormData.teamMemberIds.length > 0) {
+        editFormData.teamMembers.length > 0) {
       editProjectMutation.mutate({ 
         id: editingProject.id, 
         updates: {
@@ -404,12 +424,27 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     }
   };
 
+  // Toggle a team member in edit form - preserves existing roles
   const toggleTeamMember = (memberId: string) => {
+    setEditFormData((prev) => {
+      const existing = prev.teamMembers.find(m => m.memberId === memberId);
+      if (existing) {
+        // Remove member
+        return { ...prev, teamMembers: prev.teamMembers.filter(m => m.memberId !== memberId) };
+      } else {
+        // Add member with empty role
+        return { ...prev, teamMembers: [...prev.teamMembers, { memberId, role: '' }] };
+      }
+    });
+  };
+
+  // Update role for a team member in edit form
+  const updateTeamMemberRole = (memberId: string, role: string) => {
     setEditFormData((prev) => ({
       ...prev,
-      teamMemberIds: prev.teamMemberIds.includes(memberId)
-        ? prev.teamMemberIds.filter((id) => id !== memberId)
-        : [...prev.teamMemberIds, memberId],
+      teamMembers: prev.teamMembers.map(m => 
+        m.memberId === memberId ? { ...m, role } : m
+      ),
     }));
   };
 
@@ -587,7 +622,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         name: '',
         customer: '',
         leadId: '',
-        teamMemberIds: [],
+        teamMembers: [],
         startDate: '',
         endDate: '',
         projectType: '',
@@ -756,8 +791,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (!projectFormData.leadId) {
       errors.leadId = 'Project lead is required';
     }
-    if (projectFormData.teamMemberIds.length === 0) {
-      errors.teamMemberIds = 'At least one team member is required';
+    if (projectFormData.teamMembers.length === 0) {
+      errors.teamMembers = 'At least one team member is required';
     }
     return errors;
   };
@@ -783,12 +818,25 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     }
   };
 
+  // Toggle a team member in add project form
   const toggleProjectTeamMember = (memberId: string) => {
+    setProjectFormData((prev) => {
+      const existing = prev.teamMembers.find(m => m.memberId === memberId);
+      if (existing) {
+        return { ...prev, teamMembers: prev.teamMembers.filter(m => m.memberId !== memberId) };
+      } else {
+        return { ...prev, teamMembers: [...prev.teamMembers, { memberId, role: '' }] };
+      }
+    });
+  };
+
+  // Update role for a team member in add project form
+  const updateProjectTeamMemberRole = (memberId: string, role: string) => {
     setProjectFormData((prev) => ({
       ...prev,
-      teamMemberIds: prev.teamMemberIds.includes(memberId)
-        ? prev.teamMemberIds.filter((id) => id !== memberId)
-        : [...prev.teamMemberIds, memberId],
+      teamMembers: prev.teamMembers.map(m => 
+        m.memberId === memberId ? { ...m, role } : m
+      ),
     }));
   };
 
@@ -1009,7 +1057,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     name: '',
                     customer: '',
                     leadId: '',
-                    teamMemberIds: [],
+                    teamMembers: [],
                     startDate: '',
                     endDate: '',
                     projectType: '',
@@ -1104,9 +1152,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>Team Members <span className="text-red-500">*</span></Label>
-                        {projectFormData.teamMemberIds.length > 0 && (
+                        {projectFormData.teamMembers.length > 0 && (
                           <Badge variant="secondary" data-testid="badge-selected-count">
-                            {projectFormData.teamMemberIds.length} selected
+                            {projectFormData.teamMembers.length} selected
                           </Badge>
                         )}
                       </div>
@@ -1135,34 +1183,52 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         )}
                       </div>
 
-                      <div className={`border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto ${projectFormErrors.teamMemberIds ? 'border-red-500' : ''}`}>
+                      <div className={`border rounded-md p-4 space-y-2 max-h-64 overflow-y-auto ${projectFormErrors.teamMembers ? 'border-red-500' : ''}`}>
                         {filteredProjectTeamMembers.length > 0 ? (
-                          filteredProjectTeamMembers.map((member) => (
-                            <div key={member.id} className="flex items-center gap-2">
-                              <Checkbox
-                                id={`new-member-${member.id}`}
-                                data-testid={`checkbox-member-${member.id}`}
-                                checked={projectFormData.teamMemberIds.includes(member.id)}
-                                onCheckedChange={() => {
-                                  toggleProjectTeamMember(member.id);
-                                  if (projectFormErrors.teamMemberIds) {
-                                    setProjectFormErrors({ ...projectFormErrors, teamMemberIds: '' });
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`new-member-${member.id}`} className="font-normal cursor-pointer">
-                                {member.name}
-                              </Label>
-                            </div>
-                          ))
+                          filteredProjectTeamMembers.map((member) => {
+                            const assignment = projectFormData.teamMembers.find(m => m.memberId === member.id);
+                            const isSelected = !!assignment;
+                            return (
+                              <div key={member.id} className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    id={`new-member-${member.id}`}
+                                    data-testid={`checkbox-member-${member.id}`}
+                                    checked={isSelected}
+                                    onCheckedChange={() => {
+                                      toggleProjectTeamMember(member.id);
+                                      if (projectFormErrors.teamMembers) {
+                                        setProjectFormErrors({ ...projectFormErrors, teamMembers: '' });
+                                      }
+                                    }}
+                                  />
+                                  <Label htmlFor={`new-member-${member.id}`} className="font-normal cursor-pointer flex-1">
+                                    {member.name}
+                                  </Label>
+                                </div>
+                                {isSelected && (
+                                  <div className="ml-6">
+                                    <Input
+                                      type="text"
+                                      placeholder="Role (e.g., Developer, QA Lead)"
+                                      value={assignment?.role || ''}
+                                      onChange={(e) => updateProjectTeamMemberRole(member.id, e.target.value)}
+                                      className="h-8 text-sm"
+                                      data-testid={`input-role-${member.id}`}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
                         ) : (
                           <p className="text-sm text-muted-foreground text-center py-4" data-testid="text-no-results">
                             No team members found matching "{projectSearchQuery}"
                           </p>
                         )}
                       </div>
-                      {projectFormErrors.teamMemberIds && (
-                        <p className="text-sm text-red-500" data-testid="error-team-members">{projectFormErrors.teamMemberIds}</p>
+                      {projectFormErrors.teamMembers && (
+                        <p className="text-sm text-red-500" data-testid="error-team-members">{projectFormErrors.teamMembers}</p>
                       )}
                     </div>
 
@@ -1697,9 +1763,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <Label>Team Members <span className="text-red-500">*</span></Label>
-                                {editFormData.teamMemberIds.length > 0 && (
+                                {editFormData.teamMembers.length > 0 && (
                                   <Badge variant="secondary" data-testid="badge-edit-selected-count">
-                                    {editFormData.teamMemberIds.length} selected
+                                    {editFormData.teamMembers.length} selected
                                   </Badge>
                                 )}
                               </div>
@@ -1726,21 +1792,39 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                                   </Button>
                                 )}
                               </div>
-                              <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
+                              <div className="border rounded-md p-4 space-y-2 max-h-64 overflow-y-auto">
                                 {filteredTeamMembers.length > 0 ? (
-                                  filteredTeamMembers.map((member) => (
-                                    <div key={member.id} className="flex items-center gap-2">
-                                      <Checkbox
-                                        id={`edit-member-${member.id}`}
-                                        data-testid={`checkbox-edit-member-${member.id}`}
-                                        checked={editFormData.teamMemberIds.includes(member.id)}
-                                        onCheckedChange={() => toggleTeamMember(member.id)}
-                                      />
-                                      <Label htmlFor={`edit-member-${member.id}`} className="font-normal cursor-pointer">
-                                        {member.name}
-                                      </Label>
-                                    </div>
-                                  ))
+                                  filteredTeamMembers.map((member) => {
+                                    const assignment = editFormData.teamMembers.find(m => m.memberId === member.id);
+                                    const isSelected = !!assignment;
+                                    return (
+                                      <div key={member.id} className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                          <Checkbox
+                                            id={`edit-member-${member.id}`}
+                                            data-testid={`checkbox-edit-member-${member.id}`}
+                                            checked={isSelected}
+                                            onCheckedChange={() => toggleTeamMember(member.id)}
+                                          />
+                                          <Label htmlFor={`edit-member-${member.id}`} className="font-normal cursor-pointer flex-1">
+                                            {member.name}
+                                          </Label>
+                                        </div>
+                                        {isSelected && (
+                                          <div className="ml-6">
+                                            <Input
+                                              type="text"
+                                              placeholder="Role (e.g., Developer, QA Lead)"
+                                              value={assignment?.role || ''}
+                                              onChange={(e) => updateTeamMemberRole(member.id, e.target.value)}
+                                              className="h-8 text-sm"
+                                              data-testid={`input-edit-role-${member.id}`}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })
                                 ) : (
                                   <p className="text-sm text-muted-foreground text-center py-4">
                                     No team members found matching "{searchQuery}"
@@ -1840,9 +1924,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <div className="flex-1">
                         <span className="font-medium">Team:</span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {getTeamMemberNames(project.teamMemberIds).map((name, idx) => (
+                          {getTeamMembersWithRoles(project.teamMembers).map((member, idx) => (
                             <Badge key={idx} variant="secondary" className="text-xs">
-                              {name}
+                              {member.name}{member.role && <span className="text-primary ml-1">({member.role})</span>}
                             </Badge>
                           ))}
                         </div>
@@ -2469,12 +2553,17 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground mb-2">Team Members</p>
                   <div className="flex flex-wrap gap-2" data-testid="container-project-detail-team">
-                    {getTeamMemberNames(selectedProject.teamMemberIds).map((name, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-sm py-1">
-                        {name}
+                    {getTeamMembersWithRoles(selectedProject.teamMembers).map((member, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-sm py-1 flex items-center gap-1.5">
+                        <span>{member.name}</span>
+                        {member.role && (
+                          <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm">
+                            {member.role}
+                          </span>
+                        )}
                       </Badge>
                     ))}
-                    {selectedProject.teamMemberIds.length === 0 && (
+                    {(!selectedProject.teamMembers || (selectedProject.teamMembers as TeamMemberAssignment[]).length === 0) && (
                       <p className="text-sm text-muted-foreground">No team members assigned</p>
                     )}
                   </div>

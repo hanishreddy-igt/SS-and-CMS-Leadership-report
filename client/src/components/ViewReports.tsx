@@ -34,7 +34,7 @@ import {
 import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport } from '@shared/schema';
+import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusConfig = {
   'on-track': { label: 'On Track', icon: CheckCircle2, color: 'text-success', bgColor: 'bg-success/10' },
@@ -434,7 +434,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     const project = projects.find((p) => p.id === report.projectId);
     
     if (filterMembers.size > 0) {
-      if (!project || !project.teamMemberIds.some(id => filterMembers.has(id))) return false;
+      const projectMemberIds = project ? ((project.teamMembers as TeamMemberAssignment[]) || []).map(a => a.memberId) : [];
+      if (!project || !projectMemberIds.some(id => filterMembers.has(id))) return false;
     }
     
     if (filterProjectStatus !== 'all') {
@@ -1733,7 +1734,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             const HealthIcon = healthConfig?.icon || CheckCircle2;
             const feedback = selectedReport.teamMemberFeedback as TeamMemberFeedback[] | null;
             const project = projects.find(p => p.id === selectedReport.projectId);
-            const projectMembers = project?.teamMemberIds || [];
+            const projectMembers = project ? ((project.teamMembers as TeamMemberAssignment[]) || []).map(a => a.memberId) : [];
             
             return (
               <>
