@@ -103,6 +103,12 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [projectNameError, setProjectNameError] = useState<string | null>(null);
   const [projectNameWarning, setProjectNameWarning] = useState<string | null>(null);
 
+  // Date input display state (MM/DD/YYYY format for user input)
+  const [projectStartDateInput, setProjectStartDateInput] = useState('');
+  const [projectEndDateInput, setProjectEndDateInput] = useState('');
+  const [editStartDateInput, setEditStartDateInput] = useState('');
+  const [editEndDateInput, setEditEndDateInput] = useState('');
+
   // Lead Detail Modal State
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Person | null>(null);
   const [showLeadDetailModal, setShowLeadDetailModal] = useState(false);
@@ -208,13 +214,42 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     return 2;                            // Ended - last
   };
 
-  // Format date from YYYY-MM-DD to MM/DD/YYYY
+  // Format date from YYYY-MM-DD to MM/DD/YYYY for display
   const formatDisplayDate = (dateStr: string | null | undefined): string => {
     if (!dateStr) return 'N/A';
     const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr; // Return as-is if not in expected format
+    if (parts.length !== 3) return dateStr;
     const [year, month, day] = parts;
     return `${month}/${day}/${year}`;
+  };
+
+  // Format date from YYYY-MM-DD to MM/DD/YYYY for input fields
+  const formatInputDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
+    return `${month}/${day}/${year}`;
+  };
+
+  // Parse date from MM/DD/YYYY to YYYY-MM-DD for storage
+  const parseInputDate = (inputValue: string): string => {
+    if (!inputValue) return '';
+    const parts = inputValue.split('/');
+    if (parts.length !== 3) return '';
+    const [month, day, year] = parts;
+    if (!month || !day || !year) return '';
+    const m = month.padStart(2, '0');
+    const d = day.padStart(2, '0');
+    const y = year.length === 2 ? `20${year}` : year;
+    return `${y}-${m}-${d}`;
+  };
+
+  // Validate date format (MM/DD/YYYY)
+  const isValidDateFormat = (value: string): boolean => {
+    if (!value) return true;
+    const regex = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/(\d{2}|\d{4})$/;
+    return regex.test(value);
   };
 
   const filteredProjects = projects.filter((project) => {
@@ -382,6 +417,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       endDate: project.endDate || '',
       projectType: project.projectType || '',
     });
+    setEditStartDateInput(formatInputDate(project.startDate));
+    setEditEndDateInput(formatInputDate(project.endDate));
     setSearchQuery('');
   };
 
@@ -431,12 +468,34 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const handleSaveEdit = () => {
     if (editingProject && editFormData.name && editFormData.customer && editFormData.leadId && 
         editFormData.teamMembers.length > 0) {
+      
+      // Validate date formats
+      if (editStartDateInput && !isValidDateFormat(editStartDateInput)) {
+        toast({
+          title: 'Invalid Date',
+          description: 'Start date must be in MM/DD/YYYY format',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (editEndDateInput && !isValidDateFormat(editEndDateInput)) {
+        toast({
+          title: 'Invalid Date',
+          description: 'End date must be in MM/DD/YYYY format',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      const startDateParsed = parseInputDate(editStartDateInput);
+      const endDateParsed = parseInputDate(editEndDateInput);
+      
       editProjectMutation.mutate({ 
         id: editingProject.id, 
         updates: {
           ...editFormData,
-          startDate: editFormData.startDate || '2025-08-30',
-          endDate: editFormData.endDate || null,
+          startDate: startDateParsed || '2025-08-30',
+          endDate: endDateParsed || null,
           projectType: editFormData.projectType || null,
         }
       });
@@ -646,8 +705,12 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         endDate: '',
         projectType: '',
       });
+      setProjectStartDateInput('');
+      setProjectEndDateInput('');
       setProjectSearchQuery('');
       setProjectFormErrors({});
+      setProjectNameError(null);
+      setProjectNameWarning(null);
       setShowAddProjectDialog(false);
     },
     onError: (error: Error) => {
@@ -903,13 +966,25 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const handleSubmitProject = (e: React.FormEvent) => {
     e.preventDefault();
     const errors = validateProjectForm();
+    
+    // Validate date formats
+    if (projectStartDateInput && !isValidDateFormat(projectStartDateInput)) {
+      errors.startDate = 'Invalid date format. Use MM/DD/YYYY';
+    }
+    if (projectEndDateInput && !isValidDateFormat(projectEndDateInput)) {
+      errors.endDate = 'Invalid date format. Use MM/DD/YYYY';
+    }
+    
     setProjectFormErrors(errors);
     
     if (Object.keys(errors).length === 0) {
+      const startDateParsed = parseInputDate(projectStartDateInput);
+      const endDateParsed = parseInputDate(projectEndDateInput);
+      
       createProjectMutation.mutate({
         ...projectFormData,
-        startDate: projectFormData.startDate || '2025-08-30',
-        endDate: projectFormData.endDate || null,
+        startDate: startDateParsed || '2025-08-30',
+        endDate: endDateParsed || null,
         projectType: projectFormData.projectType || null,
       });
     } else {
@@ -1165,6 +1240,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     endDate: '',
                     projectType: '',
                   });
+                  setProjectStartDateInput('');
+                  setProjectEndDateInput('');
                   setProjectSearchQuery('');
                   setProjectFormErrors({});
                   setProjectNameError(null);
@@ -1419,20 +1496,30 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <Input
                           id="new-start-date"
                           data-testid="input-start-date"
-                          type="date"
-                          value={projectFormData.startDate}
-                          onChange={(e) => setProjectFormData({ ...projectFormData, startDate: e.target.value })}
+                          type="text"
+                          placeholder="MM/DD/YYYY"
+                          value={projectStartDateInput}
+                          onChange={(e) => setProjectStartDateInput(e.target.value)}
+                          className={!isValidDateFormat(projectStartDateInput) && projectStartDateInput ? 'border-red-500' : ''}
                         />
+                        {!isValidDateFormat(projectStartDateInput) && projectStartDateInput && (
+                          <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="new-end-date">End Date</Label>
                         <Input
                           id="new-end-date"
                           data-testid="input-end-date"
-                          type="date"
-                          value={projectFormData.endDate}
-                          onChange={(e) => setProjectFormData({ ...projectFormData, endDate: e.target.value })}
+                          type="text"
+                          placeholder="MM/DD/YYYY"
+                          value={projectEndDateInput}
+                          onChange={(e) => setProjectEndDateInput(e.target.value)}
+                          className={!isValidDateFormat(projectEndDateInput) && projectEndDateInput ? 'border-red-500' : ''}
                         />
+                        {!isValidDateFormat(projectEndDateInput) && projectEndDateInput && (
+                          <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                        )}
                       </div>
                     </div>
 
@@ -2143,20 +2230,30 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 <Input
                   id="edit-start-date"
                   data-testid="input-edit-start-date"
-                  type="date"
-                  value={editFormData.startDate}
-                  onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
+                  type="text"
+                  placeholder="MM/DD/YYYY"
+                  value={editStartDateInput}
+                  onChange={(e) => setEditStartDateInput(e.target.value)}
+                  className={!isValidDateFormat(editStartDateInput) && editStartDateInput ? 'border-red-500' : ''}
                 />
+                {!isValidDateFormat(editStartDateInput) && editStartDateInput && (
+                  <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-end-date">End Date</Label>
                 <Input
                   id="edit-end-date"
                   data-testid="input-edit-end-date"
-                  type="date"
-                  value={editFormData.endDate}
-                  onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
+                  type="text"
+                  placeholder="MM/DD/YYYY"
+                  value={editEndDateInput}
+                  onChange={(e) => setEditEndDateInput(e.target.value)}
+                  className={!isValidDateFormat(editEndDateInput) && editEndDateInput ? 'border-red-500' : ''}
                 />
+                {!isValidDateFormat(editEndDateInput) && editEndDateInput && (
+                  <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                )}
               </div>
             </div>
             <div className="space-y-2">
