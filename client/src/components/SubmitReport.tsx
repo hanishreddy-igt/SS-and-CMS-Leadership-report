@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, MousePointerClick } from 'lucide-react';
 import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusOptions = [
@@ -559,209 +559,17 @@ export default function SubmitReport() {
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-            <div className="space-y-2">
-              <Label htmlFor="lead">Select Project Lead <span className="text-red-500">*</span></Label>
-              <Select 
-                value={selectedLead} 
-                onValueChange={(value) => {
-                  if (value === '__none__') {
-                    setSelectedLead('');
-                    setSelectedProject('');
-                    setHealthStatus('');
-                    setProgress('');
-                    setChallenges('');
-                    setNextWeek('');
-                    setMemberFeedback({});
-                    setExistingDraftId(null);
-                  } else {
-                    setSelectedLead(value);
-                  }
-                }}
-              >
-                <SelectTrigger id="lead" data-testid="select-report-lead">
-                  <SelectValue placeholder="Select your name" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">--</SelectItem>
-                  {projectLeads.map((lead) => {
-                    const allSubmitted = hasLeadSubmittedAllReports(lead.id);
-                    return (
-                      <SelectItem 
-                        key={lead.id} 
-                        value={lead.id}
-                        disabled={allSubmitted}
-                      >
-                        <span className="flex items-center gap-1">
-                          {lead.name}
-                          {allSubmitted && <span className="font-bold text-red-600">(Submitted all reports)</span>}
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+          <div className="flex items-center gap-4 p-6 bg-muted/20 border border-white/10 rounded-lg">
+            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <MousePointerClick className="h-6 w-6 text-primary" />
             </div>
-
-            {selectedLead && (
-              <div className="space-y-2">
-                <Label htmlFor="project">Select Project <span className="text-red-500">*</span></Label>
-                <Select value={selectedProject} onValueChange={setSelectedProject}>
-                  <SelectTrigger id="project" data-testid="select-report-project">
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leadProjects
-                      .filter((project) => !isProjectEnded(project.endDate))
-                      .map((project) => {
-                        const isSubmitted = hasSubmittedForProject(project.id);
-                        const isDrafted = hasDraftForProject(project.id);
-                        return (
-                          <SelectItem
-                            key={project.id}
-                            value={project.id}
-                            disabled={isSubmitted}
-                          >
-                            <span className="flex items-center gap-1">
-                              <span className={isSubmitted ? 'line-through' : ''}>{project.name}</span>
-                              {isSubmitted && <span className="font-bold text-red-600">(Already submitted)</span>}
-                              {isDrafted && !isSubmitted && <span className="font-bold text-red-600">(Drafted)</span>}
-                            </span>
-                          </SelectItem>
-                        );
-                      })}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {selectedProject && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="health-status">Project Health Status <span className="text-red-500">*</span></Label>
-                  <Select value={healthStatus} onValueChange={setHealthStatus}>
-                    <SelectTrigger id="health-status" data-testid="select-health-status">
-                      <SelectValue placeholder="Select health status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {healthStatusOptions.map((option) => {
-                        const Icon = option.icon;
-                        return (
-                          <SelectItem key={option.value} value={option.value}>
-                            <div className="flex items-center gap-2">
-                              <Icon className={`h-4 w-4 ${option.color}`} />
-                              <span>{option.label}</span>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="progress">Progress This Week <span className="text-red-500">*</span></Label>
-                  <Textarea
-                    id="progress"
-                    data-testid="textarea-progress"
-                    value={progress}
-                    onChange={(e) => setProgress(e.target.value)}
-                    placeholder="Describe what was accomplished this week..."
-                    rows={4}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="challenges">Challenges & Blockers</Label>
-                  <Textarea
-                    id="challenges"
-                    data-testid="textarea-challenges"
-                    value={challenges}
-                    onChange={(e) => setChallenges(e.target.value)}
-                    placeholder="Describe any challenges or blockers..."
-                    rows={4}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="next-week">Plans for Next Week <span className="text-red-500">*</span></Label>
-                  <Textarea
-                    id="next-week"
-                    data-testid="textarea-next-week"
-                    value={nextWeek}
-                    onChange={(e) => setNextWeek(e.target.value)}
-                    placeholder="Outline plans for the upcoming week..."
-                    rows={4}
-                  />
-                </div>
-
-                {projectTeamMembers.length > 0 && (
-                  <div className="space-y-3">
-                    <Label>Team Member Feedback (Optional)</Label>
-                    <div className="space-y-3 border rounded-md p-4">
-                      {projectTeamMembers.map((member) => (
-                        <div key={member.id} className="space-y-2">
-                          <Label htmlFor={`feedback-${member.id}`} className="text-sm font-medium">
-                            {member.name}
-                          </Label>
-                          <Textarea
-                            id={`feedback-${member.id}`}
-                            data-testid={`textarea-feedback-${member.id}`}
-                            value={memberFeedback[member.id] || ''}
-                            onChange={(e) =>
-                              setMemberFeedback({ ...memberFeedback, [member.id]: e.target.value })
-                            }
-                            placeholder={`Feedback for ${member.name}...`}
-                            rows={2}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button 
-                    data-testid="button-cancel"
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedProject('');
-                      setHealthStatus('');
-                      setProgress('');
-                      setChallenges('');
-                      setNextWeek('');
-                      setMemberFeedback({});
-                      setExistingDraftId(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  {canSubmit ? (
-                    <Button 
-                      data-testid="button-submit-report" 
-                      type="submit" 
-                      className="flex-1"
-                      disabled={submitReportMutation.isPending}
-                    >
-                      {submitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
-                    </Button>
-                  ) : (
-                    <Button 
-                      data-testid="button-save-draft" 
-                      type="button"
-                      className="flex-1"
-                      disabled={!canSaveDraft || saveDraftMutation.isPending}
-                      onClick={handleSaveDraft}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {saveDraftMutation.isPending ? 'Saving...' : existingDraftId ? 'Update Draft' : 'Save as Draft'}
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
-          </form>
+            <div>
+              <p className="font-medium text-lg">Click on a project tile below to submit a report</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Find your project in the <span className="font-medium text-primary">Report Status by Lead</span> section and click on it to open the submission form.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
