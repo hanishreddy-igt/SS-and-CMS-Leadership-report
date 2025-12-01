@@ -59,6 +59,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     challenges: '',
     nextWeek: '',
     healthStatus: '',
+    teamMemberFeedback: [] as TeamMemberFeedback[],
   });
   
   const [filterLeads, setFilterLeads] = useState<Set<string>>(new Set());
@@ -390,6 +391,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       challenges: report.challenges || '',
       nextWeek: report.nextWeek || '',
       healthStatus: report.healthStatus || '',
+      teamMemberFeedback: (report.teamMemberFeedback as TeamMemberFeedback[]) || [],
     });
   };
 
@@ -1695,6 +1697,56 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                               rows={3}
                             />
                           </div>
+                          
+                          {/* Team Member Feedback Edit Section */}
+                          {(() => {
+                            const project = projects.find(p => p.id === report.projectId);
+                            if (!project) return null;
+                            const projectTeamMembers = ((project.teamMembers as TeamMemberAssignment[]) || [])
+                              .map(a => teamMembers.find(m => m.id === a.memberId))
+                              .filter(Boolean) as typeof teamMembers;
+                            if (projectTeamMembers.length === 0) return null;
+                            
+                            return (
+                              <div className="space-y-3 pt-2 border-t border-white/10">
+                                <Label className="flex items-center gap-2">
+                                  <Users className="h-4 w-4" />
+                                  Team Member Feedback (Optional)
+                                </Label>
+                                <div className="space-y-2">
+                                  {projectTeamMembers.map((member) => {
+                                    const existingFeedback = editData.teamMemberFeedback.find(f => f.memberId === member.id);
+                                    return (
+                                      <div key={member.id} className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">{member.name}</Label>
+                                        <Textarea
+                                          data-testid={`textarea-edit-feedback-${member.id}`}
+                                          placeholder={`Feedback for ${member.name}...`}
+                                          value={existingFeedback?.feedback || ''}
+                                          onChange={(e) => {
+                                            const newFeedback = e.target.value;
+                                            setEditData(prev => {
+                                              const existing = prev.teamMemberFeedback.filter(f => f.memberId !== member.id);
+                                              if (newFeedback.trim()) {
+                                                return {
+                                                  ...prev,
+                                                  teamMemberFeedback: [...existing, { memberId: member.id, feedback: newFeedback }]
+                                                };
+                                              }
+                                              return { ...prev, teamMemberFeedback: existing };
+                                            });
+                                          }}
+                                          rows={2}
+                                          className="text-sm"
+                                        />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          
                           <div className="flex gap-2">
                             <Button
                               data-testid={`button-save-edit-${report.id}`}
