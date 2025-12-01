@@ -429,14 +429,23 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   
   const deleteReportMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest('DELETE', `/api/weekly-reports/${id}`);
+      const response = await apiRequest('DELETE', `/api/weekly-reports/${id}`);
+      return await response.json() as { success: boolean; remainingSubmittedCount: number; projectStillHasReport: boolean };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
-      toast({ 
-        title: 'Report Deleted', 
-        description: 'The report has been removed and the project is now pending.' 
-      });
+      
+      if (data.projectStillHasReport) {
+        toast({ 
+          title: 'Duplicate Report Removed', 
+          description: `Report deleted. Another report for this project still exists (${data.remainingSubmittedCount} remaining).`
+        });
+      } else {
+        toast({ 
+          title: 'Report Deleted', 
+          description: 'The report has been removed and the project is now pending.' 
+        });
+      }
       setDeletingReportId(null);
     },
     onError: (error: Error) => {

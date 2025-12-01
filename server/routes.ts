@@ -242,11 +242,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/weekly-reports/:id', isAuthenticated, async (req, res) => {
     try {
+      // First, get the report to know its projectId and weekStart
+      const reportToDelete = await storage.getWeeklyReport(req.params.id);
+      if (!reportToDelete) {
+        return res.status(404).json({ error: 'Weekly report not found' });
+      }
+      
+      const { projectId, weekStart } = reportToDelete;
+      
+      // Delete the report
       const success = await storage.deleteWeeklyReport(req.params.id);
       if (!success) {
         return res.status(404).json({ error: 'Weekly report not found' });
       }
-      res.json({ success });
+      
+      // Check if there are other submitted reports for the same project/week
+      const allReports = await storage.getWeeklyReports();
+      const remainingReportsForProject = allReports.filter(
+        r => r.projectId === projectId && 
+             r.weekStart === weekStart && 
+             r.status === 'submitted'
+      );
+      
+      res.json({ 
+        success: true, 
+        remainingSubmittedCount: remainingReportsForProject.length,
+        projectStillHasReport: remainingReportsForProject.length > 0
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
