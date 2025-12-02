@@ -103,6 +103,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [projectNameError, setProjectNameError] = useState<string | null>(null);
   const [projectNameWarning, setProjectNameWarning] = useState<string | null>(null);
 
+  // Pagination state - show items in batches
+  const [projectsToShow, setProjectsToShow] = useState(12);
+  const [membersToShow, setMembersToShow] = useState(15);
+  const [leadsToShow, setLeadsToShow] = useState(15);
+
   // Date input display state (MM/DD/YYYY format for user input)
   const [projectStartDateInput, setProjectStartDateInput] = useState('');
   const [projectEndDateInput, setProjectEndDateInput] = useState('');
@@ -1992,7 +1997,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sortedProjects.map((project) => (
+              {sortedProjects.slice(0, projectsToShow).map((project) => (
                 <Card 
                   key={project.id} 
                   data-testid={`project-card-${project.id}`} 
@@ -2098,6 +2103,29 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </Card>
               ))}
               </div>
+              {sortedProjects.length > projectsToShow && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setProjectsToShow(prev => prev + 12)}
+                    data-testid="button-view-more-projects"
+                  >
+                    View More ({sortedProjects.length - projectsToShow} remaining)
+                  </Button>
+                </div>
+              )}
+              {projectsToShow > 12 && sortedProjects.length > 12 && (
+                <div className="flex justify-center mt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setProjectsToShow(12)}
+                    data-testid="button-show-less-projects"
+                  >
+                    Show Less
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </CardContent>
@@ -2529,7 +2557,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {[...teamMembers].sort((a, b) => a.name.localeCompare(b.name)).map((member) => (
+              {[...teamMembers].sort((a, b) => a.name.localeCompare(b.name)).slice(0, membersToShow).map((member) => (
               <div
                 key={member.id}
                 className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors ${selectedMembers.has(member.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeMembers ? 'cursor-pointer hover:bg-muted' : ''}`}
@@ -2614,6 +2642,29 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               </div>
               ))}
               </div>
+              {teamMembers.length > membersToShow && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setMembersToShow(prev => prev + 15)}
+                    data-testid="button-view-more-members"
+                  >
+                    View More ({teamMembers.length - membersToShow} remaining)
+                  </Button>
+                </div>
+              )}
+              {membersToShow > 15 && teamMembers.length > 15 && (
+                <div className="flex justify-center mt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMembersToShow(15)}
+                    data-testid="button-show-less-members"
+                  >
+                    Show Less
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </CardContent>
@@ -2762,7 +2813,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => (
+              {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).slice(0, leadsToShow).map((lead) => (
               <div
                 key={lead.id}
                 className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors cursor-pointer hover:bg-muted ${selectedLeads.has(lead.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}
@@ -2820,6 +2871,29 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               </div>
               ))}
               </div>
+              {projectLeads.length > leadsToShow && (
+                <div className="flex justify-center mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setLeadsToShow(prev => prev + 15)}
+                    data-testid="button-view-more-leads"
+                  >
+                    View More ({projectLeads.length - leadsToShow} remaining)
+                  </Button>
+                </div>
+              )}
+              {leadsToShow > 15 && projectLeads.length > 15 && (
+                <div className="flex justify-center mt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLeadsToShow(15)}
+                    data-testid="button-show-less-leads"
+                  >
+                    Show Less
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </CardContent>
