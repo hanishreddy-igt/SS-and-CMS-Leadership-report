@@ -1300,42 +1300,52 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(40, 40, 40);
         doc.text('Portfolio Health Breakdown:', 14, currentY);
-        currentY += 4;
+        currentY += 5;
         
         const phb = aiSummary.portfolioHealthBreakdown;
+        const maxWidth = pageWidth - 36;
+        
+        // On Track
+        const onTrackText = `On Track (${phb.onTrack.count}): ${phb.onTrack.projects.slice(0, 5).join(', ')}${phb.onTrack.projects.length > 5 ? '...' : ''}`;
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        
-        const onTrackText = `On Track (${phb.onTrack.count}): ${phb.onTrack.projects.slice(0, 5).join(', ')}${phb.onTrack.projects.length > 5 ? '...' : ''}`;
         doc.setTextColor(...colors.success as [number, number, number]);
-        const onTrackLines = doc.splitTextToSize(onTrackText, pageWidth - 36);
+        const onTrackLines = doc.splitTextToSize(onTrackText, maxWidth);
         doc.text(onTrackLines, 18, currentY);
-        currentY += onTrackLines.length * 3 + 1;
+        currentY += onTrackLines.length * 3.2 + 1;
         
+        // Needs Attention
         const needsAttentionText = `Needs Attention (${phb.needsAttention.count}): ${phb.needsAttention.projects.slice(0, 5).join(', ')}${phb.needsAttention.projects.length > 5 ? '...' : ''}`;
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(...colors.warning as [number, number, number]);
-        const needsAttentionLines = doc.splitTextToSize(needsAttentionText, pageWidth - 36);
+        const needsAttentionLines = doc.splitTextToSize(needsAttentionText, maxWidth);
         doc.text(needsAttentionLines, 18, currentY);
-        currentY += needsAttentionLines.length * 3 + 1;
+        currentY += needsAttentionLines.length * 3.2 + 1;
         
+        // Critical
         const criticalText = `Critical (${phb.critical.count}): ${phb.critical.projects.slice(0, 5).join(', ')}${phb.critical.projects.length > 5 ? '...' : ''}`;
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(...colors.destructive as [number, number, number]);
-        const criticalLines = doc.splitTextToSize(criticalText, pageWidth - 36);
+        const criticalLines = doc.splitTextToSize(criticalText, maxWidth);
         doc.text(criticalLines, 18, currentY);
-        currentY += criticalLines.length * 3 + 2;
+        currentY += criticalLines.length * 3.2 + 3;
       }
 
       // Immediate Attention Required (comprehensive format)
       if (aiSummary.immediateAttentionRequired && aiSummary.immediateAttentionRequired.length > 0) {
+        const attentionItems = aiSummary.immediateAttentionRequired.slice(0, 3);
+        const maxWidth = pageWidth - 40;
+        
         // Calculate height needed for box
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        let boxHeight = 8;
-        const attentionItems = aiSummary.immediateAttentionRequired.slice(0, 3);
+        let boxHeight = 10;
         attentionItems.forEach((item) => {
           const itemText = `• ${item.project} (${item.lead}): ${item.issue}`;
-          const itemLines = doc.splitTextToSize(itemText, pageWidth - 40);
-          boxHeight += itemLines.length * 3 + 1;
+          const itemLines = doc.splitTextToSize(itemText, maxWidth);
+          boxHeight += itemLines.length * 3.2 + 1;
         });
         
         doc.setFillColor(255, 240, 240);
@@ -1344,19 +1354,19 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.destructive as [number, number, number]);
-        doc.text('Immediate Attention Required:', 18, currentY + 4);
-        currentY += 8;
+        doc.text('Immediate Attention Required:', 18, currentY + 5);
+        currentY += 9;
         
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(80, 80, 80);
         attentionItems.forEach((item) => {
           const itemText = `• ${item.project} (${item.lead}): ${item.issue}`;
-          const itemLines = doc.splitTextToSize(itemText, pageWidth - 40);
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          const itemLines = doc.splitTextToSize(itemText, maxWidth);
           doc.text(itemLines, 18, currentY);
-          currentY += itemLines.length * 3 + 1;
+          currentY += itemLines.length * 3.2 + 1;
         });
-        currentY += 2;
+        currentY += 3;
       }
       
       // Key sections in compact format
@@ -1816,42 +1826,52 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(40, 40, 40);
         doc.text('Portfolio Health Breakdown:', 14, currentY);
-        currentY += 5;
+        currentY += 6;
         
         const phb = aiSummary.portfolioHealthBreakdown;
+        const maxWidth = pageWidth - 36;
+        
+        // On Track
+        const onTrackText = `On Track (${phb.onTrack.count}): ${phb.onTrack.projects.slice(0, 5).join(', ')}${phb.onTrack.projects.length > 5 ? '...' : ''}`;
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        
-        const onTrackText = `On Track (${phb.onTrack.count}): ${phb.onTrack.projects.slice(0, 5).join(', ')}${phb.onTrack.projects.length > 5 ? '...' : ''}`;
         doc.setTextColor(...colors.success as [number, number, number]);
-        const onTrackLines = doc.splitTextToSize(onTrackText, pageWidth - 36);
+        const onTrackLines = doc.splitTextToSize(onTrackText, maxWidth);
         doc.text(onTrackLines, 18, currentY);
-        currentY += onTrackLines.length * 3.5 + 1;
+        currentY += onTrackLines.length * 3.5 + 1.5;
         
+        // Needs Attention
         const needsAttentionText = `Needs Attention (${phb.needsAttention.count}): ${phb.needsAttention.projects.slice(0, 5).join(', ')}${phb.needsAttention.projects.length > 5 ? '...' : ''}`;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(...colors.warning as [number, number, number]);
-        const needsAttentionLines = doc.splitTextToSize(needsAttentionText, pageWidth - 36);
+        const needsAttentionLines = doc.splitTextToSize(needsAttentionText, maxWidth);
         doc.text(needsAttentionLines, 18, currentY);
-        currentY += needsAttentionLines.length * 3.5 + 1;
+        currentY += needsAttentionLines.length * 3.5 + 1.5;
         
+        // Critical
         const criticalText = `Critical (${phb.critical.count}): ${phb.critical.projects.slice(0, 5).join(', ')}${phb.critical.projects.length > 5 ? '...' : ''}`;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(...colors.destructive as [number, number, number]);
-        const criticalLines = doc.splitTextToSize(criticalText, pageWidth - 36);
+        const criticalLines = doc.splitTextToSize(criticalText, maxWidth);
         doc.text(criticalLines, 18, currentY);
-        currentY += criticalLines.length * 3.5 + 3;
+        currentY += criticalLines.length * 3.5 + 4;
       }
 
       // Immediate Attention Required (comprehensive format)
       if (aiSummary.immediateAttentionRequired && aiSummary.immediateAttentionRequired.length > 0) {
+        const attentionItems = aiSummary.immediateAttentionRequired.slice(0, 5);
+        const maxWidth = pageWidth - 40;
+        
         // Calculate height needed for box
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        let boxHeight = 10;
-        const attentionItems = aiSummary.immediateAttentionRequired.slice(0, 5);
+        let boxHeight = 12;
         attentionItems.forEach((item) => {
           const itemText = `• ${item.project} (${item.lead}): ${item.issue}`;
-          const itemLines = doc.splitTextToSize(itemText, pageWidth - 40);
-          boxHeight += itemLines.length * 3.5 + 1;
+          const itemLines = doc.splitTextToSize(itemText, maxWidth);
+          boxHeight += itemLines.length * 3.5 + 1.5;
         });
         
         doc.setFillColor(255, 240, 240);
@@ -1860,17 +1880,17 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.destructive as [number, number, number]);
-        doc.text('Immediate Attention Required:', 18, currentY + 5);
-        currentY += 10;
+        doc.text('Immediate Attention Required:', 18, currentY + 6);
+        currentY += 11;
         
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(80, 80, 80);
         attentionItems.forEach((item) => {
           const itemText = `• ${item.project} (${item.lead}): ${item.issue}`;
-          const itemLines = doc.splitTextToSize(itemText, pageWidth - 40);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          const itemLines = doc.splitTextToSize(itemText, maxWidth);
           doc.text(itemLines, 18, currentY);
-          currentY += itemLines.length * 3.5 + 1;
+          currentY += itemLines.length * 3.5 + 1.5;
         });
         currentY += 4;
       }
