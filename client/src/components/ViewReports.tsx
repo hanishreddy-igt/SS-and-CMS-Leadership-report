@@ -1178,6 +1178,26 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       border: [51, 65, 85],      // Border color
     };
 
+    // Helper function to convert AI summary items to text strings
+    const formatAIItem = (item: unknown): string => {
+      if (typeof item === 'string') return item;
+      if (!item || typeof item !== 'object') return '';
+      const obj = item as Record<string, unknown>;
+      // AchievementItem: project, achievement, impact
+      if ('achievement' in obj && 'project' in obj) {
+        return `${obj.project}: ${obj.achievement}`;
+      }
+      // UpcomingFocusItem: project, focus, priority
+      if ('focus' in obj && 'project' in obj) {
+        return `${obj.project}: ${obj.focus}`;
+      }
+      // AttentionItem: project, issue, recommendedAction
+      if ('issue' in obj && 'project' in obj) {
+        return `${obj.project}: ${obj.issue}`;
+      }
+      return '';
+    };
+
     // Premium header with gradient effect
     doc.setFillColor(...colors.navy as [number, number, number]);
     doc.rect(0, 0, pageWidth, 35, 'F');
@@ -1290,12 +1310,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         (section.items || []).slice(0, 3).forEach((item) => {
           doc.setFillColor(...section.color as [number, number, number]);
           doc.circle(x + 3, y + 1.5, 0.8, 'F');
-          const itemText = typeof item === 'string' ? item : 
-            ('achievement' in item ? `${item.project}: ${item.achievement}` : 
-             ('focus' in item ? `${item.project}: ${item.focus}` : String(item)));
-          const lines = doc.splitTextToSize(itemText, colWidth - 10);
-          doc.text(lines, x + 7, y + 2);
-          y += lines.length * 3.5 + 1;
+          const itemText = formatAIItem(item);
+          if (itemText) {
+            const lines = doc.splitTextToSize(itemText, colWidth - 10);
+            doc.text(lines, x + 7, y + 2);
+            y += lines.length * 3.5 + 1;
+          }
         });
         
         y += 4;
