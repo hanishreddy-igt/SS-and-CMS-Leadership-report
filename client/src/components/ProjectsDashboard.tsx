@@ -105,8 +105,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   // Pagination state - show items in batches
   const [projectsToShow, setProjectsToShow] = useState(12);
-  const [membersToShow, setMembersToShow] = useState(15);
-  const [leadsToShow, setLeadsToShow] = useState(15);
+  const [membersToShow, setMembersToShow] = useState(12);
+  const [leadsToShow, setLeadsToShow] = useState(12);
 
   // Date input display state (MM/DD/YYYY format for user input)
   const [projectStartDateInput, setProjectStartDateInput] = useState('');
@@ -2646,19 +2646,19 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 <div className="flex justify-center mt-4">
                   <Button
                     variant="outline"
-                    onClick={() => setMembersToShow(prev => prev + 15)}
+                    onClick={() => setMembersToShow(prev => prev + 12)}
                     data-testid="button-view-more-members"
                   >
                     View More ({teamMembers.length - membersToShow} remaining)
                   </Button>
                 </div>
               )}
-              {membersToShow > 15 && teamMembers.length > 15 && (
+              {membersToShow > 12 && teamMembers.length > 12 && (
                 <div className="flex justify-center mt-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setMembersToShow(15)}
+                    onClick={() => setMembersToShow(12)}
                     data-testid="button-show-less-members"
                   >
                     Show Less
@@ -2875,19 +2875,19 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 <div className="flex justify-center mt-4">
                   <Button
                     variant="outline"
-                    onClick={() => setLeadsToShow(prev => prev + 15)}
+                    onClick={() => setLeadsToShow(prev => prev + 12)}
                     data-testid="button-view-more-leads"
                   >
                     View More ({projectLeads.length - leadsToShow} remaining)
                   </Button>
                 </div>
               )}
-              {leadsToShow > 15 && projectLeads.length > 15 && (
+              {leadsToShow > 12 && projectLeads.length > 12 && (
                 <div className="flex justify-center mt-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setLeadsToShow(15)}
+                    onClick={() => setLeadsToShow(12)}
                     data-testid="button-show-less-leads"
                   >
                     Show Less
