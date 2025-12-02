@@ -1991,7 +1991,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {sortedProjects.map((project) => (
                 <Card 
                   key={project.id} 
@@ -2528,7 +2528,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {[...teamMembers].sort((a, b) => a.name.localeCompare(b.name)).map((member) => (
               <div
                 key={member.id}
@@ -2761,7 +2761,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => (
               <div
                 key={lead.id}
