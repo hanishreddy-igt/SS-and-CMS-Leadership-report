@@ -104,7 +104,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [projectNameWarning, setProjectNameWarning] = useState<string | null>(null);
 
   // Pagination state - show items in batches
-  const [projectsToShow, setProjectsToShow] = useState(12);
+  const [projectsToShow, setProjectsToShow] = useState(8);
   const [membersToShow, setMembersToShow] = useState(12);
   const [leadsToShow, setLeadsToShow] = useState(12);
 
@@ -2107,19 +2107,19 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 <div className="flex justify-center mt-4">
                   <Button
                     variant="outline"
-                    onClick={() => setProjectsToShow(prev => prev + 12)}
+                    onClick={() => setProjectsToShow(prev => prev + 8)}
                     data-testid="button-view-more-projects"
                   >
                     View More ({sortedProjects.length - projectsToShow} remaining)
                   </Button>
                 </div>
               )}
-              {projectsToShow > 12 && sortedProjects.length > 12 && (
+              {projectsToShow > 8 && sortedProjects.length > 8 && (
                 <div className="flex justify-center mt-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setProjectsToShow(12)}
+                    onClick={() => setProjectsToShow(8)}
                     data-testid="button-show-less-projects"
                   >
                     Show Less
