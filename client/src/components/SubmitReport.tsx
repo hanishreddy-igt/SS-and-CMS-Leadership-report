@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, Info } from 'lucide-react';
 import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusOptions = [
@@ -30,6 +30,18 @@ function getCurrentWeekStart(): string {
   monday.setDate(now.getDate() - daysToMonday);
   monday.setHours(0, 0, 0, 0);
   return monday.toISOString().split('T')[0];
+}
+
+// Calculate next Wednesday at 00:00 UTC (auto-archive day)
+function getNextWednesdayUTC() {
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay();
+  const daysUntilWed = (3 - dayOfWeek + 7) % 7;
+  const adjustedDays = daysUntilWed === 0 ? 7 : daysUntilWed;
+  const nextWed = new Date(now);
+  nextWed.setUTCDate(now.getUTCDate() + adjustedDays);
+  nextWed.setUTCHours(0, 0, 0, 0);
+  return nextWed;
 }
 
 export default function SubmitReport() {
@@ -733,6 +745,20 @@ export default function SubmitReport() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Auto-archive schedule banner */}
+          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
+            <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
+              <p className="text-muted-foreground">
+                Reports are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Next auto-archive: <span className="text-foreground">{getNextWednesdayUTC().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} 00:00 UTC</span>
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-6">
             {Object.keys(groupedByLead).length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No projects found matching the filters.</p>
