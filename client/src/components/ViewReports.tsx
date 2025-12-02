@@ -73,25 +73,127 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [selectedReport, setSelectedReport] = useState<WeeklyReport | null>(null);
   const [showReportDetailModal, setShowReportDetailModal] = useState(false);
 
-  // AI Summary State - Leadership Summary
-  interface AISummary {
-    overallHealth: 'on-track' | 'needs-attention' | 'critical';
-    weekHighlights: string[];
-    keyAchievements: string[];
-    criticalIssues: string[];
-    attentionNeeded: string[];
-    upcomingFocus: string[];
-    executiveSummary: string;
+  // AI Summary State - Comprehensive Leadership Summary
+  interface PortfolioHealthCategory {
+    count: number;
+    projects: string[];
   }
   
-  // Team Member Summary
+  interface PortfolioHealthBreakdown {
+    onTrack: PortfolioHealthCategory;
+    needsAttention: PortfolioHealthCategory;
+    critical: PortfolioHealthCategory;
+  }
+  
+  interface AttentionItem {
+    project: string;
+    customer: string;
+    lead: string;
+    issue: string;
+    recommendedAction: string;
+  }
+  
+  interface AchievementItem {
+    project: string;
+    achievement: string;
+    impact: string;
+  }
+  
+  interface CrossProjectPatterns {
+    commonChallenges: string[];
+    resourceConstraints: string[];
+    processIssues: string[];
+  }
+  
+  interface UpcomingFocusItem {
+    project: string;
+    focus: string;
+    priority: 'high' | 'medium' | 'low';
+  }
+  
+  interface LeadershipAction {
+    action: string;
+    priority: 'high' | 'medium';
+    rationale: string;
+  }
+  
+  interface AISummary {
+    overallHealth: 'on-track' | 'needs-attention' | 'critical';
+    executiveSummary: string;
+    portfolioHealthBreakdown?: PortfolioHealthBreakdown;
+    immediateAttentionRequired?: AttentionItem[];
+    keyAchievements?: AchievementItem[] | string[];
+    crossProjectPatterns?: CrossProjectPatterns;
+    upcomingFocus?: UpcomingFocusItem[] | string[];
+    recommendedLeadershipActions?: LeadershipAction[];
+    weekHighlights?: string[];
+    // Legacy fields for backward compatibility
+    criticalIssues?: string[];
+    attentionNeeded?: string[];
+  }
+  
+  // Comprehensive Team Member Summary
+  interface TeamHighlightItem {
+    memberName: string;
+    project: string;
+    highlight: string;
+  }
+  
+  interface RecognitionItem {
+    memberName: string;
+    project: string;
+    achievement: string;
+    suggestedRecognition: string;
+  }
+  
+  interface TeamConcernItem {
+    concern: string;
+    affectedMembers: string[] | string;
+    project: string;
+    severity: 'high' | 'medium' | 'low';
+  }
+  
+  interface WorkloadObservation {
+    observation: string;
+    affectedMembers: string[];
+    recommendation: string;
+  }
+  
+  interface SupportNeededItem {
+    area: string;
+    members: string[];
+    suggestedSupport: string;
+  }
+  
+  interface DevelopmentOpportunity {
+    memberName: string;
+    opportunity: string;
+    rationale: string;
+  }
+  
+  interface RetentionRisk {
+    indicator: string;
+    members: string[];
+    recommendedAction: string;
+  }
+  
+  interface HRAction {
+    action: string;
+    priority: 'high' | 'medium';
+    rationale: string;
+  }
+  
   interface TeamSummary {
     overallTeamMorale: 'positive' | 'mixed' | 'concerning';
-    teamHighlights: string[];
-    teamConcerns: string[];
-    recognitionOpportunities: string[];
-    supportNeeded: string[];
     teamSummary: string;
+    teamHighlights?: TeamHighlightItem[] | string[];
+    recognitionOpportunities?: RecognitionItem[] | string[];
+    teamConcerns?: TeamConcernItem[] | string[];
+    workloadObservations?: WorkloadObservation[];
+    supportNeeded?: SupportNeededItem[] | string[];
+    developmentOpportunities?: DevelopmentOpportunity[];
+    retentionRisks?: RetentionRisk[];
+    recommendedHRActions?: HRAction[];
   }
   
   const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
@@ -1500,7 +1602,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             <div className="text-center py-8 text-muted-foreground">
               <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-30" />
               <p className="text-lg font-medium mb-2">No summary generated yet</p>
-              <p className="text-sm">Click "Generate AI Summary" to analyze all submitted reports and get quick insights for the week.</p>
+              <p className="text-sm">Click "Generate AI Summary" to analyze all submitted reports and get comprehensive insights for the week.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -1520,98 +1622,279 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 <p className="text-foreground leading-relaxed">{aiSummary.executiveSummary}</p>
               </div>
 
-              {/* Insights Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Week Highlights */}
-                {aiSummary.weekHighlights.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-primary" />
-                      <h4 className="font-medium">Week Highlights</h4>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {aiSummary.weekHighlights.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Key Achievements */}
-                {aiSummary.keyAchievements.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+              {/* Portfolio Health Breakdown (new comprehensive format) */}
+              {aiSummary.portfolioHealthBreakdown && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-lg bg-success/10 border border-success/30">
+                    <div className="flex items-center gap-2 mb-2">
                       <CheckCircle2 className="h-4 w-4 text-success" />
-                      <h4 className="font-medium">Key Achievements</h4>
+                      <h4 className="font-medium text-success">On Track ({aiSummary.portfolioHealthBreakdown.onTrack.count})</h4>
                     </div>
-                    <ul className="space-y-1.5">
-                      {aiSummary.keyAchievements.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
-                          {item}
-                        </li>
+                    <ul className="space-y-1 max-h-32 overflow-y-auto">
+                      {aiSummary.portfolioHealthBreakdown.onTrack.projects.map((project, i) => (
+                        <li key={i} className="text-xs text-muted-foreground">{project}</li>
                       ))}
                     </ul>
                   </div>
-                )}
-
-                {/* Critical Issues */}
-                {aiSummary.criticalIssues.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-destructive" />
-                      <h4 className="font-medium">Critical Issues</h4>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {aiSummary.criticalIssues.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Attention Needed */}
-                {aiSummary.attentionNeeded.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                  <div className="p-4 rounded-lg bg-warning/10 border border-warning/30">
+                    <div className="flex items-center gap-2 mb-2">
                       <AlertTriangle className="h-4 w-4 text-warning" />
-                      <h4 className="font-medium">Needs Attention</h4>
+                      <h4 className="font-medium text-warning">Needs Attention ({aiSummary.portfolioHealthBreakdown.needsAttention.count})</h4>
                     </div>
-                    <ul className="space-y-1.5">
-                      {aiSummary.attentionNeeded.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
-                          {item}
-                        </li>
+                    <ul className="space-y-1 max-h-32 overflow-y-auto">
+                      {aiSummary.portfolioHealthBreakdown.needsAttention.projects.map((project, i) => (
+                        <li key={i} className="text-xs text-muted-foreground">{project}</li>
                       ))}
                     </ul>
                   </div>
-                )}
+                  <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <h4 className="font-medium text-destructive">Critical ({aiSummary.portfolioHealthBreakdown.critical.count})</h4>
+                    </div>
+                    <ul className="space-y-1 max-h-32 overflow-y-auto">
+                      {aiSummary.portfolioHealthBreakdown.critical.projects.map((project, i) => (
+                        <li key={i} className="text-xs text-muted-foreground">{project}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
 
-                {/* Upcoming Focus */}
-                {aiSummary.upcomingFocus.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-primary" />
-                      <h4 className="font-medium">Upcoming Focus</h4>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {aiSummary.upcomingFocus.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+              {/* Immediate Attention Required (new comprehensive format) */}
+              {aiSummary.immediateAttentionRequired && aiSummary.immediateAttentionRequired.length > 0 && (
+                <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    <h4 className="font-semibold text-destructive">Immediate Attention Required</h4>
                   </div>
-                )}
-              </div>
+                  <div className="space-y-3">
+                    {aiSummary.immediateAttentionRequired.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-background/50 border border-white/10">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium">{item.project}</span>
+                          <Badge variant="outline" className="text-xs">{item.customer}</Badge>
+                          <span className="text-xs text-muted-foreground">Lead: {item.lead}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{item.issue}</p>
+                        <div className="flex items-start gap-2 text-sm">
+                          <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <span className="text-primary">{item.recommendedAction}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Key Achievements (handles both new and legacy formats) */}
+              {aiSummary.keyAchievements && aiSummary.keyAchievements.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-success" />
+                    <h4 className="font-semibold">Key Achievements</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {aiSummary.keyAchievements.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-success/5 border border-success/20">
+                        {typeof item === 'string' ? (
+                          <p className="text-sm text-muted-foreground">{item}</p>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">{item.project}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{item.achievement}</p>
+                            {item.impact && (
+                              <p className="text-xs text-success mt-1">{item.impact}</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Cross-Project Patterns (new comprehensive format) */}
+              {aiSummary.crossProjectPatterns && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <h4 className="font-semibold">Cross-Project Patterns</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {aiSummary.crossProjectPatterns.commonChallenges?.length > 0 && (
+                      <div className="p-3 rounded-lg bg-warning/5 border border-warning/20">
+                        <h5 className="text-sm font-medium text-warning mb-2">Common Challenges</h5>
+                        <ul className="space-y-1">
+                          {aiSummary.crossProjectPatterns.commonChallenges.map((item, i) => (
+                            <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {aiSummary.crossProjectPatterns.resourceConstraints?.length > 0 && (
+                      <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                        <h5 className="text-sm font-medium text-blue-500 mb-2">Resource Constraints</h5>
+                        <ul className="space-y-1">
+                          {aiSummary.crossProjectPatterns.resourceConstraints.map((item, i) => (
+                            <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {aiSummary.crossProjectPatterns.processIssues?.length > 0 && (
+                      <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                        <h5 className="text-sm font-medium text-purple-500 mb-2">Process Issues</h5>
+                        <ul className="space-y-1">
+                          {aiSummary.crossProjectPatterns.processIssues.map((item, i) => (
+                            <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Upcoming Focus (handles both new and legacy formats) */}
+              {aiSummary.upcomingFocus && aiSummary.upcomingFocus.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    <h4 className="font-semibold">Upcoming Focus</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {aiSummary.upcomingFocus.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                        {typeof item === 'string' ? (
+                          <p className="text-sm text-muted-foreground">{item}</p>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="font-medium text-sm">{item.project}</span>
+                              <Badge variant={item.priority === 'high' ? 'destructive' : item.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
+                                {item.priority}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{item.focus}</p>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommended Leadership Actions (new comprehensive format) */}
+              {aiSummary.recommendedLeadershipActions && aiSummary.recommendedLeadershipActions.length > 0 && (
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Lightbulb className="h-5 w-5 text-primary" />
+                    <h4 className="font-semibold">Recommended Leadership Actions</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {aiSummary.recommendedLeadershipActions.map((item, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-white/10">
+                        <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="shrink-0 mt-0.5">
+                          {item.priority}
+                        </Badge>
+                        <div>
+                          <p className="text-sm font-medium">{item.action}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{item.rationale}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy fields for backward compatibility */}
+              {!aiSummary.portfolioHealthBreakdown && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Week Highlights (legacy) */}
+                  {aiSummary.weekHighlights && aiSummary.weekHighlights.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                        <h4 className="font-medium">Week Highlights</h4>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {aiSummary.weekHighlights.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Critical Issues (legacy) */}
+                  {aiSummary.criticalIssues && aiSummary.criticalIssues.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-destructive" />
+                        <h4 className="font-medium">Critical Issues</h4>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {aiSummary.criticalIssues.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Attention Needed (legacy) */}
+                  {aiSummary.attentionNeeded && aiSummary.attentionNeeded.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-warning" />
+                        <h4 className="font-medium">Needs Attention</h4>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {aiSummary.attentionNeeded.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Week Highlights (new format, shown alongside comprehensive) */}
+              {aiSummary.portfolioHealthBreakdown && aiSummary.weekHighlights && aiSummary.weekHighlights.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    <h4 className="font-medium">Week Highlights</h4>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {aiSummary.weekHighlights.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Generated timestamp */}
               {summaryGeneratedAt && (
@@ -1666,80 +1949,215 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 <p className="text-foreground leading-relaxed">{teamSummary.teamSummary}</p>
               </div>
 
-              {/* Team Insights Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Team Highlights */}
-                {teamSummary.teamHighlights.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-blue-500" />
-                      <h4 className="font-medium">Team Highlights</h4>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {teamSummary.teamHighlights.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+              {/* Team Highlights (handles both new and legacy formats) */}
+              {teamSummary.teamHighlights && teamSummary.teamHighlights.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-blue-500" />
+                    <h4 className="font-semibold">Team Highlights</h4>
                   </div>
-                )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {teamSummary.teamHighlights.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                        {typeof item === 'string' ? (
+                          <p className="text-sm text-muted-foreground">{item}</p>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">{item.memberName}</span>
+                              <Badge variant="outline" className="text-xs">{item.project}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{item.highlight}</p>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                {/* Recognition Opportunities */}
-                {teamSummary.recognitionOpportunities.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4 text-success" />
-                      <h4 className="font-medium">Recognition Opportunities</h4>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {teamSummary.recognitionOpportunities.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+              {/* Recognition Opportunities (handles both new and legacy formats) */}
+              {teamSummary.recognitionOpportunities && teamSummary.recognitionOpportunities.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-success" />
+                    <h4 className="font-semibold">Recognition Opportunities</h4>
                   </div>
-                )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {teamSummary.recognitionOpportunities.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-success/5 border border-success/20">
+                        {typeof item === 'string' ? (
+                          <p className="text-sm text-muted-foreground">{item}</p>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">{item.memberName}</span>
+                              <Badge variant="outline" className="text-xs">{item.project}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{item.achievement}</p>
+                            {item.suggestedRecognition && (
+                              <p className="text-xs text-success mt-1">{item.suggestedRecognition}</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                {/* Team Concerns */}
-                {teamSummary.teamConcerns.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-warning" />
-                      <h4 className="font-medium">Team Concerns</h4>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {teamSummary.teamConcerns.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+              {/* Team Concerns (handles both new and legacy formats) */}
+              {teamSummary.teamConcerns && teamSummary.teamConcerns.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-warning" />
+                    <h4 className="font-semibold">Team Concerns</h4>
                   </div>
-                )}
+                  <div className="space-y-3">
+                    {teamSummary.teamConcerns.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-warning/5 border border-warning/20">
+                        {typeof item === 'string' ? (
+                          <p className="text-sm text-muted-foreground">{item}</p>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant={item.severity === 'high' ? 'destructive' : item.severity === 'medium' ? 'default' : 'secondary'} className="text-xs">
+                                {item.severity}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">{item.project}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{item.concern}</p>
+                            {item.affectedMembers && (
+                              <p className="text-xs text-warning mt-1">
+                                Affected: {Array.isArray(item.affectedMembers) ? item.affectedMembers.join(', ') : item.affectedMembers}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                {/* Support Needed */}
-                {teamSummary.supportNeeded.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-destructive" />
-                      <h4 className="font-medium">Support Needed</h4>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {teamSummary.supportNeeded.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+              {/* Workload Observations (new comprehensive format) */}
+              {teamSummary.workloadObservations && teamSummary.workloadObservations.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-blue-500" />
+                    <h4 className="font-semibold">Workload Observations</h4>
                   </div>
-                )}
-              </div>
+                  <div className="space-y-3">
+                    {teamSummary.workloadObservations.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                        <p className="text-sm text-muted-foreground">{item.observation}</p>
+                        <p className="text-xs text-blue-500 mt-1">
+                          Affected: {item.affectedMembers.join(', ')}
+                        </p>
+                        <div className="flex items-start gap-2 text-sm mt-2">
+                          <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <span className="text-primary text-xs">{item.recommendation}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Support Needed (handles both new and legacy formats) */}
+              {teamSummary.supportNeeded && teamSummary.supportNeeded.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-destructive" />
+                    <h4 className="font-semibold">Support Needed</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {teamSummary.supportNeeded.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                        {typeof item === 'string' ? (
+                          <p className="text-sm text-muted-foreground">{item}</p>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium">{item.area}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Members: {item.members.join(', ')}
+                            </p>
+                            <p className="text-xs text-destructive mt-1">{item.suggestedSupport}</p>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Development Opportunities (new comprehensive format) */}
+              {teamSummary.developmentOpportunities && teamSummary.developmentOpportunities.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-purple-500" />
+                    <h4 className="font-semibold">Development Opportunities</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {teamSummary.developmentOpportunities.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                        <span className="font-medium text-sm">{item.memberName}</span>
+                        <p className="text-sm text-muted-foreground mt-1">{item.opportunity}</p>
+                        <p className="text-xs text-purple-500 mt-1">{item.rationale}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Retention Risks (new comprehensive format) */}
+              {teamSummary.retentionRisks && teamSummary.retentionRisks.length > 0 && (
+                <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    <h4 className="font-semibold text-destructive">Retention Risks</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {teamSummary.retentionRisks.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-background/50 border border-white/10">
+                        <p className="text-sm text-muted-foreground">{item.indicator}</p>
+                        {item.members.length > 0 && (
+                          <p className="text-xs text-destructive mt-1">
+                            Members: {item.members.join(', ')}
+                          </p>
+                        )}
+                        <div className="flex items-start gap-2 text-sm mt-2">
+                          <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <span className="text-primary text-xs">{item.recommendedAction}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommended HR Actions (new comprehensive format) */}
+              {teamSummary.recommendedHRActions && teamSummary.recommendedHRActions.length > 0 && (
+                <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Users className="h-5 w-5 text-blue-500" />
+                    <h4 className="font-semibold">Recommended HR Actions</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {teamSummary.recommendedHRActions.map((item, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-white/10">
+                        <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="shrink-0 mt-0.5">
+                          {item.priority}
+                        </Badge>
+                        <div>
+                          <p className="text-sm font-medium">{item.action}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{item.rationale}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
