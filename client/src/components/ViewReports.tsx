@@ -889,7 +889,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       const rightX = 14 + halfWidth + 4;
       
       // Left column: Achievements & Highlights
-      if (leadershipSummary.keyAchievements.length > 0 || leadershipSummary.weekHighlights.length > 0) {
+      if ((leadershipSummary.keyAchievements?.length ?? 0) > 0 || (leadershipSummary.weekHighlights?.length ?? 0) > 0) {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.success as [number, number, number]);
@@ -897,16 +897,17 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         currentY += 3;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        leadershipSummary.keyAchievements.slice(0, 3).forEach(item => {
-          const itemLines = doc.splitTextToSize(`• ${item}`, halfWidth - 4);
+        (leadershipSummary.keyAchievements || []).slice(0, 3).forEach(item => {
+          const itemText = typeof item === 'string' ? item : `${item.project}: ${item.achievement}`;
+          const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
           doc.text(itemLines, leftX, currentY);
           currentY += itemLines.length * 3;
         });
       }
       
       // Right column: Attention Needed & Critical Issues (position tracked separately)
-      let rightY = currentY - (leadershipSummary.keyAchievements.slice(0, 3).length * 3) - 3;
-      if (leadershipSummary.attentionNeeded.length > 0 || leadershipSummary.criticalIssues.length > 0) {
+      let rightY = currentY - ((leadershipSummary.keyAchievements || []).slice(0, 3).length * 3) - 3;
+      if ((leadershipSummary.attentionNeeded?.length ?? 0) > 0 || (leadershipSummary.criticalIssues?.length ?? 0) > 0) {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.warning as [number, number, number]);
@@ -914,7 +915,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         rightY += 3;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        leadershipSummary.attentionNeeded.slice(0, 3).forEach(item => {
+        (leadershipSummary.attentionNeeded || []).slice(0, 3).forEach(item => {
           const itemLines = doc.splitTextToSize(`• ${item}`, halfWidth - 4);
           doc.text(itemLines, rightX, rightY);
           rightY += itemLines.length * 3;
@@ -964,7 +965,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       let teamRightY = currentY;
       
       // Left: Recognition & Highlights
-      if (teamSummaryParam.teamHighlights.length > 0 || teamSummaryParam.recognitionOpportunities.length > 0) {
+      if ((teamSummaryParam.teamHighlights?.length ?? 0) > 0 || (teamSummaryParam.recognitionOpportunities?.length ?? 0) > 0) {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.success as [number, number, number]);
@@ -972,15 +973,16 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         teamLeftY += 3;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        teamSummaryParam.recognitionOpportunities.slice(0, 3).forEach(item => {
-          const itemLines = doc.splitTextToSize(`• ${item}`, halfWidth - 4);
+        (teamSummaryParam.recognitionOpportunities || []).slice(0, 3).forEach(item => {
+          const itemText = typeof item === 'string' ? item : `${item.memberName}: ${item.achievement}`;
+          const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
           doc.text(itemLines, leftX, teamLeftY);
           teamLeftY += itemLines.length * 3;
         });
       }
       
       // Right: Concerns & Support Needed
-      if (teamSummaryParam.teamConcerns.length > 0 || teamSummaryParam.supportNeeded.length > 0) {
+      if ((teamSummaryParam.teamConcerns?.length ?? 0) > 0 || (teamSummaryParam.supportNeeded?.length ?? 0) > 0) {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.warning as [number, number, number]);
@@ -988,8 +990,9 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         teamRightY += 3;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        teamSummaryParam.supportNeeded.slice(0, 3).forEach(item => {
-          const itemLines = doc.splitTextToSize(`• ${item}`, halfWidth - 4);
+        (teamSummaryParam.supportNeeded || []).slice(0, 3).forEach(item => {
+          const itemText = typeof item === 'string' ? item : `${item.area}: ${item.suggestedSupport}`;
+          const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
           doc.text(itemLines, rightX, teamRightY);
           teamRightY += itemLines.length * 3;
         });
@@ -1073,28 +1076,56 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     
     // Add Leadership Summary section if available
     if (leadershipSummary) {
+      const formatItems = (items: unknown[] | undefined) => {
+        if (!items) return '';
+        return items.map(item => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object' && 'project' in item && 'achievement' in item) 
+            return `${(item as {project: string}).project}: ${(item as {achievement: string}).achievement}`;
+          if (item && typeof item === 'object' && 'project' in item && 'focus' in item) 
+            return `${(item as {project: string}).project}: ${(item as {focus: string}).focus}`;
+          return '';
+        }).join('; ').replace(/"/g, '""');
+      };
+      
       lines.push('=== LEADERSHIP INSIGHTS (AI-POWERED) ===');
       lines.push(`"Overall Health","${leadershipSummary.overallHealth === 'on-track' ? 'On Track' : leadershipSummary.overallHealth === 'needs-attention' ? 'Needs Attention' : 'Critical'}"`);
       lines.push(`"Executive Summary","${leadershipSummary.executiveSummary.replace(/"/g, '""')}"`);
-      lines.push(`"Key Achievements","${leadershipSummary.keyAchievements.join('; ').replace(/"/g, '""')}"`);
-      lines.push(`"Week Highlights","${leadershipSummary.weekHighlights.join('; ').replace(/"/g, '""')}"`);
-      lines.push(`"Needs Attention","${leadershipSummary.attentionNeeded.join('; ').replace(/"/g, '""')}"`);
-      lines.push(`"Critical Issues","${leadershipSummary.criticalIssues.join('; ').replace(/"/g, '""')}"`);
-      lines.push(`"Upcoming Focus","${leadershipSummary.upcomingFocus.join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Key Achievements","${formatItems(leadershipSummary.keyAchievements)}"`);
+      lines.push(`"Week Highlights","${(leadershipSummary.weekHighlights || []).join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Needs Attention","${(leadershipSummary.attentionNeeded || []).join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Critical Issues","${(leadershipSummary.criticalIssues || []).join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Upcoming Focus","${formatItems(leadershipSummary.upcomingFocus)}"`);
       lines.push('');
     }
     
     // Add Team Summary section if available
     if (teamSummaryParam) {
+      const formatTeamItems = (items: unknown[] | undefined) => {
+        if (!items) return '';
+        return items.map(item => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object' && 'memberName' in item && 'achievement' in item) 
+            return `${(item as {memberName: string}).memberName}: ${(item as {achievement: string}).achievement}`;
+          if (item && typeof item === 'object' && 'memberName' in item && 'highlight' in item) 
+            return `${(item as {memberName: string}).memberName}: ${(item as {highlight: string}).highlight}`;
+          if (item && typeof item === 'object' && 'area' in item && 'suggestedSupport' in item) 
+            return `${(item as {area: string}).area}: ${(item as {suggestedSupport: string}).suggestedSupport}`;
+          if (item && typeof item === 'object' && 'concern' in item) 
+            return (item as {concern: string}).concern;
+          return '';
+        }).join('; ').replace(/"/g, '""');
+      };
+      
       lines.push('=== TEAM MEMBER INSIGHTS (AI-POWERED) ===');
       const moraleLabel = teamSummaryParam.overallTeamMorale === 'positive' ? 'Positive' : 
                           teamSummaryParam.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
       lines.push(`"Team Morale","${moraleLabel}"`);
       lines.push(`"Team Summary","${teamSummaryParam.teamSummary.replace(/"/g, '""')}"`);
-      lines.push(`"Team Highlights","${teamSummaryParam.teamHighlights.join('; ').replace(/"/g, '""')}"`);
-      lines.push(`"Recognition Opportunities","${teamSummaryParam.recognitionOpportunities.join('; ').replace(/"/g, '""')}"`);
-      lines.push(`"Team Concerns","${teamSummaryParam.teamConcerns.join('; ').replace(/"/g, '""')}"`);
-      lines.push(`"Support Needed","${teamSummaryParam.supportNeeded.join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Team Highlights","${formatTeamItems(teamSummaryParam.teamHighlights)}"`);
+      lines.push(`"Recognition Opportunities","${formatTeamItems(teamSummaryParam.recognitionOpportunities)}"`);
+      lines.push(`"Team Concerns","${formatTeamItems(teamSummaryParam.teamConcerns)}"`);
+      lines.push(`"Support Needed","${formatTeamItems(teamSummaryParam.supportNeeded)}"`);
       lines.push('');
     }
     
@@ -1256,10 +1287,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
         doc.setFontSize(8);
-        section.items.slice(0, 3).forEach((item) => {
+        (section.items || []).slice(0, 3).forEach((item) => {
           doc.setFillColor(...section.color as [number, number, number]);
           doc.circle(x + 3, y + 1.5, 0.8, 'F');
-          const lines = doc.splitTextToSize(item, colWidth - 10);
+          const itemText = typeof item === 'string' ? item : 
+            ('achievement' in item ? `${item.project}: ${item.achievement}` : 
+             ('focus' in item ? `${item.project}: ${item.focus}` : String(item)));
+          const lines = doc.splitTextToSize(itemText, colWidth - 10);
           doc.text(lines, x + 7, y + 2);
           y += lines.length * 3.5 + 1;
         });
@@ -1425,6 +1459,368 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     });
 
     doc.save(`cms_ss_leadership_report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Export AI Summary as standalone PDF
+  const exportAISummaryPDF = () => {
+    if (!aiSummary && !teamSummary) {
+      toast({
+        title: 'No AI Summary Available',
+        description: 'Generate an AI summary first before downloading',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'portrait' });
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    
+    const colors = {
+      navy: [15, 23, 42],
+      navyLight: [30, 41, 59],
+      primary: [99, 102, 241],
+      success: [34, 197, 94],
+      warning: [245, 158, 11],
+      destructive: [239, 68, 68],
+      white: [255, 255, 255],
+      muted: [148, 163, 184],
+      border: [51, 65, 85],
+      purple: [139, 92, 246],
+    };
+
+    // Header
+    doc.setFillColor(...colors.navy as [number, number, number]);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    doc.setFillColor(...colors.primary as [number, number, number]);
+    doc.rect(0, 30, pageWidth, 2, 'F');
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('AI-Powered Executive Summary', 14, 15);
+    
+    const { weekEnd } = getCurrentWeekDates();
+    const weekEndFormatted = new Date(weekEnd + 'T00:00:00').toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    doc.setFontSize(10);
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    doc.text(`Week Ending ${weekEndFormatted}`, 14, 23);
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(8);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 14, 15, { align: 'right' });
+
+    let currentY = 40;
+
+    // Helper to render text item
+    const renderTextItem = (item: string | { project?: string; achievement?: string; focus?: string; priority?: string }, defaultText: string = '') => {
+      if (typeof item === 'string') return item;
+      if (item.project && item.achievement) return `${item.project}: ${item.achievement}`;
+      if (item.project && item.focus) return `${item.project} (${item.priority || 'medium'}): ${item.focus}`;
+      return defaultText;
+    };
+
+    // Leadership Summary Section
+    if (aiSummary) {
+      // Section header
+      doc.setFillColor(...colors.navyLight as [number, number, number]);
+      doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
+      doc.setTextColor(...colors.primary as [number, number, number]);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Leadership Insights', 18, currentY + 7);
+      
+      // Overall health badge
+      const healthColors: Record<string, [number, number, number]> = {
+        'on-track': colors.success as [number, number, number],
+        'needs-attention': colors.warning as [number, number, number],
+        'critical': colors.destructive as [number, number, number],
+      };
+      const healthColor = healthColors[aiSummary.overallHealth] || colors.muted as [number, number, number];
+      const healthLabel = aiSummary.overallHealth === 'on-track' ? 'On Track' : 
+                         aiSummary.overallHealth === 'needs-attention' ? 'Needs Attention' : 'Critical';
+      
+      doc.setFillColor(...healthColor);
+      doc.roundedRect(pageWidth - 14 - 40, currentY + 2, 38, 6, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.text(healthLabel, pageWidth - 14 - 20, currentY + 6, { align: 'center' });
+      
+      currentY += 15;
+      
+      // Executive Summary
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const summaryLines = doc.splitTextToSize(aiSummary.executiveSummary, pageWidth - 28);
+      doc.text(summaryLines, 14, currentY);
+      currentY += summaryLines.length * 4.5 + 6;
+
+      // Portfolio Health Breakdown (comprehensive format)
+      if (aiSummary.portfolioHealthBreakdown) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(40, 40, 40);
+        doc.text('Portfolio Health Breakdown:', 14, currentY);
+        currentY += 5;
+        
+        const phb = aiSummary.portfolioHealthBreakdown;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        
+        doc.setTextColor(...colors.success as [number, number, number]);
+        doc.text(`On Track (${phb.onTrack.count}): ${phb.onTrack.projects.slice(0, 5).join(', ')}${phb.onTrack.projects.length > 5 ? '...' : ''}`, 18, currentY);
+        currentY += 4;
+        
+        doc.setTextColor(...colors.warning as [number, number, number]);
+        doc.text(`Needs Attention (${phb.needsAttention.count}): ${phb.needsAttention.projects.slice(0, 5).join(', ')}${phb.needsAttention.projects.length > 5 ? '...' : ''}`, 18, currentY);
+        currentY += 4;
+        
+        doc.setTextColor(...colors.destructive as [number, number, number]);
+        doc.text(`Critical (${phb.critical.count}): ${phb.critical.projects.slice(0, 5).join(', ')}${phb.critical.projects.length > 5 ? '...' : ''}`, 18, currentY);
+        currentY += 6;
+      }
+
+      // Immediate Attention Required (comprehensive format)
+      if (aiSummary.immediateAttentionRequired && aiSummary.immediateAttentionRequired.length > 0) {
+        doc.setFillColor(255, 240, 240);
+        doc.roundedRect(14, currentY, pageWidth - 28, 8 + aiSummary.immediateAttentionRequired.length * 4, 2, 2, 'F');
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.destructive as [number, number, number]);
+        doc.text('Immediate Attention Required:', 18, currentY + 5);
+        currentY += 8;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        aiSummary.immediateAttentionRequired.forEach((item) => {
+          doc.text(`• ${item.project} (${item.lead}): ${item.issue}`, 18, currentY);
+          currentY += 4;
+        });
+        currentY += 4;
+      }
+      
+      // Key sections in a grid
+      const sections = [
+        { title: 'Key Achievements', items: aiSummary.keyAchievements, color: colors.success },
+        { title: 'Week Highlights', items: aiSummary.weekHighlights, color: colors.primary },
+        { title: 'Needs Attention', items: aiSummary.attentionNeeded, color: colors.warning },
+        { title: 'Upcoming Focus', items: aiSummary.upcomingFocus, color: colors.primary },
+        { title: 'Critical Issues', items: aiSummary.criticalIssues, color: colors.destructive },
+      ].filter(s => s.items && s.items.length > 0);
+      
+      sections.forEach(section => {
+        doc.setFillColor(...section.color as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(section.title, 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(8);
+        (section.items || []).slice(0, 5).forEach((item) => {
+          const itemText = renderTextItem(item);
+          const lines = doc.splitTextToSize(`• ${itemText}`, pageWidth - 36);
+          doc.text(lines, 20, currentY);
+          currentY += lines.length * 3.5;
+        });
+        currentY += 3;
+      });
+
+      // Cross-Project Patterns (comprehensive format)
+      if (aiSummary.crossProjectPatterns) {
+        if (aiSummary.crossProjectPatterns.commonChallenges?.length > 0) {
+          doc.setFillColor(...colors.warning as [number, number, number]);
+          doc.circle(16, currentY + 1.5, 1.5, 'F');
+          doc.setTextColor(40, 40, 40);
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Common Challenges', 20, currentY + 2.5);
+          currentY += 6;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          doc.setFontSize(8);
+          aiSummary.crossProjectPatterns.commonChallenges.slice(0, 3).forEach((item) => {
+            const lines = doc.splitTextToSize(`• ${item}`, pageWidth - 36);
+            doc.text(lines, 20, currentY);
+            currentY += lines.length * 3.5;
+          });
+          currentY += 3;
+        }
+      }
+
+      // Recommended Leadership Actions (comprehensive format)
+      if (aiSummary.recommendedLeadershipActions && aiSummary.recommendedLeadershipActions.length > 0) {
+        doc.setFillColor(...colors.primary as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Recommended Leadership Actions', 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        aiSummary.recommendedLeadershipActions.forEach((item) => {
+          const priorityColor = item.priority === 'high' ? colors.destructive : 
+                               item.priority === 'medium' ? colors.warning : colors.muted;
+          doc.setTextColor(...priorityColor as [number, number, number]);
+          doc.text(`[${item.priority.toUpperCase()}]`, 20, currentY);
+          doc.setTextColor(80, 80, 80);
+          const lines = doc.splitTextToSize(item.action, pageWidth - 55);
+          doc.text(lines, 42, currentY);
+          currentY += lines.length * 3.5 + 1;
+        });
+        currentY += 4;
+      }
+      
+      currentY += 6;
+    }
+
+    // Team Summary Section
+    if (teamSummary) {
+      // Check if we need a new page
+      if (currentY > pageHeight - 80) {
+        doc.addPage();
+        currentY = 20;
+      }
+      
+      // Section header
+      doc.setFillColor(...colors.navyLight as [number, number, number]);
+      doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
+      doc.setTextColor(59, 130, 246);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Team Member Insights', 18, currentY + 7);
+      
+      // Morale badge
+      const moraleColors: Record<string, [number, number, number]> = {
+        'positive': colors.success as [number, number, number],
+        'mixed': colors.warning as [number, number, number],
+        'concerning': colors.destructive as [number, number, number]
+      };
+      const moraleColor = moraleColors[teamSummary.overallTeamMorale] || colors.muted as [number, number, number];
+      const moraleLabel = teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                          teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
+      
+      doc.setFillColor(...moraleColor);
+      doc.roundedRect(pageWidth - 14 - 40, currentY + 2, 38, 6, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.text(`Morale: ${moraleLabel}`, pageWidth - 14 - 20, currentY + 6, { align: 'center' });
+      
+      currentY += 15;
+      
+      // Team Summary text
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const teamSummaryLines = doc.splitTextToSize(teamSummary.teamSummary, pageWidth - 28);
+      doc.text(teamSummaryLines, 14, currentY);
+      currentY += teamSummaryLines.length * 4.5 + 6;
+      
+      // Helper for team items
+      const renderTeamItem = (item: string | { memberName?: string; achievement?: string; highlight?: string; project?: string; concern?: string; area?: string; suggestedSupport?: string; observation?: string; opportunity?: string; indicator?: string }) => {
+        if (typeof item === 'string') return item;
+        if (item.memberName && item.achievement) return `${item.memberName}: ${item.achievement}`;
+        if (item.memberName && item.highlight) return `${item.memberName} (${item.project || ''}): ${item.highlight}`;
+        if (item.memberName && item.opportunity) return `${item.memberName}: ${item.opportunity}`;
+        if (item.concern) return `${item.concern} (${item.project || ''})`;
+        if (item.area && item.suggestedSupport) return `${item.area}: ${item.suggestedSupport}`;
+        if (item.observation) return item.observation;
+        if (item.indicator) return item.indicator;
+        return '';
+      };
+      
+      // Team sections
+      const teamSections = [
+        { title: 'Recognition Opportunities', items: teamSummary.recognitionOpportunities, color: colors.success },
+        { title: 'Team Highlights', items: teamSummary.teamHighlights, color: colors.primary },
+        { title: 'Team Concerns', items: teamSummary.teamConcerns, color: colors.warning },
+        { title: 'Support Needed', items: teamSummary.supportNeeded, color: colors.destructive },
+        { title: 'Workload Observations', items: teamSummary.workloadObservations, color: colors.primary },
+        { title: 'Development Opportunities', items: teamSummary.developmentOpportunities, color: colors.purple },
+        { title: 'Retention Risks', items: teamSummary.retentionRisks, color: colors.destructive },
+      ].filter(s => s.items && s.items.length > 0);
+      
+      teamSections.forEach(section => {
+        // Check for page break
+        if (currentY > pageHeight - 30) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFillColor(...section.color as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(section.title, 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(8);
+        (section.items || []).slice(0, 5).forEach((item) => {
+          const itemText = renderTeamItem(item);
+          const lines = doc.splitTextToSize(`• ${itemText}`, pageWidth - 36);
+          doc.text(lines, 20, currentY);
+          currentY += lines.length * 3.5;
+        });
+        currentY += 3;
+      });
+
+      // Recommended HR Actions (comprehensive format)
+      if (teamSummary.recommendedHRActions && teamSummary.recommendedHRActions.length > 0) {
+        if (currentY > pageHeight - 30) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFillColor(...colors.primary as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Recommended HR Actions', 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        teamSummary.recommendedHRActions.forEach((item) => {
+          const priorityColor = item.priority === 'high' ? colors.destructive : 
+                               item.priority === 'medium' ? colors.warning : colors.muted;
+          doc.setTextColor(...priorityColor as [number, number, number]);
+          doc.text(`[${item.priority.toUpperCase()}]`, 20, currentY);
+          doc.setTextColor(80, 80, 80);
+          const lines = doc.splitTextToSize(item.action, pageWidth - 55);
+          doc.text(lines, 42, currentY);
+          currentY += lines.length * 3.5 + 1;
+        });
+      }
+    }
+
+    // Footer on last page
+    doc.setFillColor(...colors.navy as [number, number, number]);
+    doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
+    doc.setFontSize(7);
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    doc.text('CMS & SS Executive Summary - AI Generated', 14, pageHeight - 4);
+    doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 4, { align: 'right' });
+
+    doc.save(`ai_executive_summary_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   // Track if Force Archive is in progress
@@ -2331,7 +2727,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={exportToPDF} data-testid="menu-export-pdf">
                       <FileText className="h-4 w-4 mr-2" />
-                      Download as PDF
+                      Download Full Report (PDF)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportAISummaryPDF} data-testid="menu-export-ai-summary-pdf" disabled={!aiSummary && !teamSummary}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Download AI Summary Only (PDF)
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={exportToCSV} data-testid="menu-export-csv">
                       <FileDown className="h-4 w-4 mr-2" />
