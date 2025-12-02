@@ -408,16 +408,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI Summary endpoint - Generate weekly insights from reports (protected)
+  // AI Summary endpoint - Generate BOTH leadership and team insights from reports (protected)
   app.post('/api/weekly-reports/ai-summary', isAuthenticated, async (_req, res) => {
     try {
       const reports = await storage.getWeeklyReports();
       const projects = await storage.getProjects();
       const leads = await storage.getProjectLeads();
+      const teamMembers = await storage.getTeamMembers();
       
       if (reports.length === 0) {
         return res.json({ 
           summary: null, 
+          teamSummary: null,
           message: 'No reports available to analyze' 
         });
       }
@@ -428,6 +430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (submittedReports.length === 0) {
         return res.json({ 
           summary: null, 
+          teamSummary: null,
           message: 'No submitted reports available to analyze' 
         });
       }
@@ -435,8 +438,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the current week start from the reports
       const currentWeekStart = submittedReports[0]?.weekStart || '';
 
-      // Build context for AI
-      const reportsContext = submittedReports.map(report => {
+      // Build context for LEADERSHIP AI summary - only health status, progress, challenges, next week
+      const leadershipContext = submittedReports.map(report => {
         const project = projects.find(p => p.id === report.projectId);
         const lead = leads.find(l => l.id === report.leadId);
         return {
@@ -446,15 +449,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           healthStatus: report.healthStatus,
           progress: report.progress,
           challenges: report.challenges,
-          nextWeek: report.nextWeek,
-          weekStart: report.weekStart
+          nextWeek: report.nextWeek
         };
       });
 
-      const prompt = `You are an executive assistant analyzing weekly project reports for leadership. Analyze the following ${submittedReports.length} project reports and provide a concise executive summary.
+      const leadershipPrompt = `You are an executive assistant analyzing weekly project reports for leadership. Analyze the following ${submittedReports.length} project reports and provide a concise executive summary.
+
+IMPORTANT: Focus ONLY on these fields from each report:
+- Health Status (on-track, at-risk, critical)
+- Progress This Week
+- Challenges and Blockers
+- Plans for Next Week
 
 REPORTS DATA:
-${JSON.stringify(reportsContext, null, 2)}
+${JSON.stringify(leadershipContext, null, 2)}
 
 Generate an executive summary in JSON format with the following structure:
 {
@@ -469,32 +477,100 @@ Generate an executive summary in JSON format with the following structure:
 
 Be concise and focus on actionable insights. If there are no critical issues, return an empty array. Limit each array to 3-4 items maximum.`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Using cost-effective model for summaries
-        messages: [{ role: "user", content: prompt }],
+      // Build context for TEAM MEMBER AI summary - only team member feedback
+      interface TeamMemberFeedbackItem {
+        memberId: string;
+        feedback: string;
+      }
+      
+      const teamFeedbackContext = submittedReports.map(report => {
+        const project = projects.find(p => p.id === report.projectId);
+        const lead = leads.find(l => l.id === report.leadId);
+        const feedback = (report.teamMemberFeedback as TeamMemberFeedbackItem[] | null) || [];
+        
+        // Enrich feedback with team member names
+        const enrichedFeedback = feedback.map(f => {
+          const member = teamMembers.find(m => m.id === f.memberId);
+          return {
+            memberName: member?.name || 'Unknown Member',
+            feedback: f.feedback
+          };
+        }).filter(f => f.feedback && f.feedback.trim());
+        
+        return {
+          project: project?.name || 'Unknown Project',
+          lead: lead?.name || 'Unknown Lead',
+          teamFeedback: enrichedFeedback
+        };
+      }).filter(r => r.teamFeedback.length > 0);
+
+      // Generate leadership summary
+      const leadershipResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: leadershipPrompt }],
         response_format: { type: "json_object" },
         max_completion_tokens: 1024,
       });
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No response from AI');
+      const leadershipContent = leadershipResponse.choices[0]?.message?.content;
+      if (!leadershipContent) {
+        throw new Error('No response from AI for leadership summary');
       }
 
-      const summary = JSON.parse(content);
+      const leadershipSummary = JSON.parse(leadershipContent);
+
+      // Generate team summary only if there's feedback
+      let teamSummary = null;
+      if (teamFeedbackContext.length > 0) {
+        const teamPrompt = `You are an HR analyst reviewing team member feedback from weekly project reports. Analyze the following team member feedback and provide insights for leadership.
+
+TEAM MEMBER FEEDBACK DATA:
+${JSON.stringify(teamFeedbackContext, null, 2)}
+
+Generate a team member summary in JSON format with the following structure:
+{
+  "overallTeamMorale": "positive" | "mixed" | "concerning",
+  "teamHighlights": ["positive observation 1", "positive observation 2"],
+  "teamConcerns": ["concern 1", "concern 2"] or [],
+  "recognitionOpportunities": ["team member or achievement to recognize"] or [],
+  "supportNeeded": ["area where team needs support"] or [],
+  "teamSummary": "A 2-3 sentence overview of team sentiment and key feedback themes"
+}
+
+Focus on team dynamics, morale, achievements worth recognizing, and areas needing leadership attention. Be balanced and constructive. Limit each array to 3-4 items maximum.`;
+
+        const teamResponse = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: teamPrompt }],
+          response_format: { type: "json_object" },
+          max_completion_tokens: 1024,
+        });
+
+        const teamContent = teamResponse.choices[0]?.message?.content;
+        if (teamContent) {
+          teamSummary = JSON.parse(teamContent);
+        }
+      }
+
       const generatedAt = new Date();
       
-      // Persist the AI summary to the database
+      // Persist the combined AI summary to the database
+      const combinedSummary = {
+        leadership: leadershipSummary,
+        team: teamSummary
+      };
+      
       if (currentWeekStart) {
         await storage.upsertCurrentAiSummary({
           weekStart: currentWeekStart,
-          summary: summary,
+          summary: combinedSummary,
           reportsAnalyzed: String(submittedReports.length),
         });
       }
       
       res.json({ 
-        summary,
+        summary: leadershipSummary,
+        teamSummary: teamSummary,
         reportsAnalyzed: submittedReports.length,
         generatedAt: generatedAt.toISOString()
       });
@@ -502,7 +578,8 @@ Be concise and focus on actionable insights. If there are no critical issues, re
       console.error('AI Summary error:', error);
       res.status(500).json({ 
         error: error.message || 'Failed to generate AI summary',
-        summary: null 
+        summary: null,
+        teamSummary: null
       });
     }
   });
