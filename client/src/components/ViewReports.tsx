@@ -1613,11 +1613,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div>
             {sortedReports.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No reports found matching the filters.</p>
             ) : (
-              sortedReports.map((report) => {
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {sortedReports.map((report) => {
                 const healthConfig = healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig];
                 const HealthIcon = healthConfig?.icon || CheckCircle2;
                 const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
@@ -1909,7 +1910,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                     </CardContent>
                   </Card>
                 );
-              })
+              })}
+              </div>
             )}
           </div>
         </CardContent>
