@@ -528,6 +528,28 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     (a, b) => new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
   );
 
+  // Group reports by lead - co-lead project reports appear under each assigned lead
+  const groupedReportsByLead = sortedReports.reduce((acc, report) => {
+    const project = projects.find(p => p.id === report.projectId);
+    const projectLeadIds = project ? getProjectLeadIds(project) : (report.leadId ? [report.leadId] : []);
+    
+    projectLeadIds.forEach(leadId => {
+      const leadName = getLeadName(leadId);
+      if (!acc[leadName]) {
+        acc[leadName] = [];
+      }
+      // Avoid duplicates if report was already added for this lead
+      if (!acc[leadName].some(r => r.id === report.id)) {
+        acc[leadName].push(report);
+      }
+    });
+    
+    return acc;
+  }, {} as Record<string, WeeklyReport[]>);
+
+  // Sort lead names alphabetically
+  const sortedLeadNames = Object.keys(groupedReportsByLead).sort((a, b) => a.localeCompare(b));
+
   const filteredLeadsForSearch = projectLeads
     .filter(lead => lead.name.toLowerCase().includes(leadSearch.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -1613,108 +1635,115 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             </div>
           </div>
 
-          <div>
-            {sortedReports.length === 0 ? (
+          <div className="space-y-6">
+            {sortedLeadNames.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No reports found matching the filters.</p>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {sortedReports.map((report) => {
-                const healthConfig = healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig];
-                const HealthIcon = healthConfig?.icon || CheckCircle2;
-                const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
-
+              sortedLeadNames.map((leadName) => {
+                const leadReports = groupedReportsByLead[leadName];
+                
                 return (
-                  <Card 
-                    key={report.id} 
-                    data-testid={`report-${report.id}`} 
-                    className={`glass-card border-white/10 ${editingId !== report.id ? 'cursor-pointer hover:border-primary/30 transition-all' : ''}`}
-                    onClick={() => handleReportClick(report)}
-                  >
-                    <CardHeader className="border-b border-white/5">
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <CardTitle className="text-lg">
-                              {getProjectName(report.projectId)}
-                            </CardTitle>
-                            {healthConfig && (
-                              <Badge variant="outline" className={`gap-1 ${healthConfig.color.replace('text-', 'border-').replace('-600', '-500/50')}`}>
-                                <HealthIcon className={`h-3 w-3 ${healthConfig.color}`} />
-                                <span className={healthConfig.color}>{healthConfig.label}</span>
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Week of <span className="text-primary">{report.weekStart}</span> • Lead{(() => {
-                              const project = projects.find(p => p.id === report.projectId);
-                              return project && hasCoLeads(project) ? 's: ' : ': ';
-                            })()}{(() => {
-                              const project = projects.find(p => p.id === report.projectId);
-                              return project ? getProjectLeadNames(project) : getLeadName(report.leadId);
-                            })()}
-                            {(() => {
-                              const project = projects.find(p => p.id === report.projectId);
-                              const submittedBy = getSubmittedByName(report);
-                              if (project && hasCoLeads(project) && submittedBy) {
-                                return <span className="text-xs text-muted-foreground/70"> (submitted by {submittedBy})</span>;
-                              }
-                              return null;
-                            })()}
-                          </p>
-                        </div>
-                        {editingId !== report.id && (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              data-testid={`button-edit-report-${report.id}`}
-                              size="icon"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                startEdit(report);
-                              }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog open={deletingReportId === report.id} onOpenChange={(open) => !open && setDeletingReportId(null)}>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  data-testid={`button-delete-report-${report.id}`}
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeletingReportId(report.id);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Report</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this report for <strong>{getProjectName(report.projectId)}</strong>? 
-                                    The project will return to pending status and you'll need to submit a new report.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel data-testid="button-cancel-delete-report">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    data-testid="button-confirm-delete-report"
-                                    className="bg-destructive hover:bg-destructive/90"
-                                    onClick={() => deleteReportMutation.mutate(report.id)}
-                                    disabled={deleteReportMutation.isPending}
-                                  >
-                                    {deleteReportMutation.isPending ? 'Deleting...' : 'Delete Report'}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        )}
-                      </div>
-                    </CardHeader>
+                  <div key={leadName} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">{leadName}</h3>
+                      <Badge variant="default" className="gap-1">
+                        {leadReports.length} {leadReports.length === 1 ? 'report' : 'reports'}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {leadReports.map((report) => {
+                        const healthConfig = healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig];
+                        const HealthIcon = healthConfig?.icon || CheckCircle2;
+                        const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
+                        const project = projects.find(p => p.id === report.projectId);
+                        const isCoLead = project && hasCoLeads(project);
+
+                        return (
+                          <Card 
+                            key={report.id} 
+                            data-testid={`report-${report.id}`} 
+                            className={`glass-card border-white/10 ${editingId !== report.id ? 'cursor-pointer hover:border-primary/30 transition-all' : ''}`}
+                            onClick={() => handleReportClick(report)}
+                          >
+                            <CardHeader className="border-b border-white/5">
+                              <div className="flex justify-between items-start gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                    <CardTitle className="text-lg">
+                                      {getProjectName(report.projectId)}
+                                    </CardTitle>
+                                    {isCoLead && (
+                                      <Badge variant="outline" className="text-xs border-primary/50 text-primary">
+                                        Co-Lead
+                                      </Badge>
+                                    )}
+                                    {healthConfig && (
+                                      <Badge variant="outline" className={`gap-1 ${healthConfig.color.replace('text-', 'border-').replace('-600', '-500/50')}`}>
+                                        <HealthIcon className={`h-3 w-3 ${healthConfig.color}`} />
+                                        <span className={healthConfig.color}>{healthConfig.label}</span>
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    Week of <span className="text-primary">{report.weekStart}</span>
+                                    {isCoLead && getSubmittedByName(report) && (
+                                      <span className="text-xs text-muted-foreground/70"> • submitted by {getSubmittedByName(report)}</span>
+                                    )}
+                                  </p>
+                                </div>
+                                {editingId !== report.id && (
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      data-testid={`button-edit-report-${report.id}`}
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        startEdit(report);
+                                      }}
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <AlertDialog open={deletingReportId === report.id} onOpenChange={(open) => !open && setDeletingReportId(null)}>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          data-testid={`button-delete-report-${report.id}`}
+                                          size="icon"
+                                          variant="ghost"
+                                          className="text-destructive hover:text-destructive"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeletingReportId(report.id);
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete this report for <strong>{getProjectName(report.projectId)}</strong>? 
+                                            The project will return to pending status and you'll need to submit a new report.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel data-testid="button-cancel-delete-report">Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            data-testid="button-confirm-delete-report"
+                                            className="bg-destructive hover:bg-destructive/90"
+                                            onClick={() => deleteReportMutation.mutate(report.id)}
+                                            disabled={deleteReportMutation.isPending}
+                                          >
+                                            {deleteReportMutation.isPending ? 'Deleting...' : 'Delete Report'}
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                )}
+                              </div>
+                            </CardHeader>
                     <CardContent className="space-y-4">
                       {editingId === report.id ? (
                         <>
@@ -1910,8 +1939,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                     </CardContent>
                   </Card>
                 );
-              })}
-              </div>
+                      })}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </CardContent>
