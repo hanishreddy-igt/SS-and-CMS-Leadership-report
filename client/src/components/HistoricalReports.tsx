@@ -46,23 +46,126 @@ import type { SavedReport } from '@shared/schema';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
+// Comprehensive Leadership Summary interfaces
+interface PortfolioHealthCategory {
+  count: number;
+  projects: string[];
+}
+
+interface PortfolioHealthBreakdown {
+  onTrack: PortfolioHealthCategory;
+  needsAttention: PortfolioHealthCategory;
+  critical: PortfolioHealthCategory;
+}
+
+interface AttentionItem {
+  project: string;
+  customer: string;
+  lead: string;
+  issue: string;
+  recommendedAction: string;
+}
+
+interface AchievementItem {
+  project: string;
+  achievement: string;
+  impact: string;
+}
+
+interface CrossProjectPatterns {
+  commonChallenges: string[];
+  resourceConstraints: string[];
+  processIssues: string[];
+}
+
+interface UpcomingFocusItem {
+  project: string;
+  focus: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+interface LeadershipAction {
+  action: string;
+  priority: 'high' | 'medium';
+  rationale: string;
+}
+
 interface AISummary {
   overallHealth: 'on-track' | 'needs-attention' | 'critical';
-  weekHighlights: string[];
-  keyAchievements: string[];
-  criticalIssues: string[];
-  attentionNeeded: string[];
-  upcomingFocus: string[];
   executiveSummary: string;
+  portfolioHealthBreakdown?: PortfolioHealthBreakdown;
+  immediateAttentionRequired?: AttentionItem[];
+  keyAchievements?: AchievementItem[] | string[];
+  crossProjectPatterns?: CrossProjectPatterns;
+  upcomingFocus?: UpcomingFocusItem[] | string[];
+  recommendedLeadershipActions?: LeadershipAction[];
+  weekHighlights?: string[];
+  criticalIssues?: string[];
+  attentionNeeded?: string[];
+}
+
+// Comprehensive Team Summary interfaces
+interface TeamHighlightItem {
+  memberName: string;
+  project: string;
+  highlight: string;
+}
+
+interface RecognitionItem {
+  memberName: string;
+  project: string;
+  achievement: string;
+  suggestedRecognition: string;
+}
+
+interface TeamConcernItem {
+  concern: string;
+  affectedMembers: string[] | string;
+  project: string;
+  severity: 'high' | 'medium' | 'low';
+}
+
+interface WorkloadObservation {
+  observation: string;
+  affectedMembers: string[];
+  recommendation: string;
+}
+
+interface SupportNeededItem {
+  area: string;
+  members: string[];
+  suggestedSupport: string;
+}
+
+interface DevelopmentOpportunity {
+  memberName: string;
+  opportunity: string;
+  rationale: string;
+}
+
+interface RetentionRisk {
+  indicator: string;
+  members: string[];
+  recommendedAction: string;
+}
+
+interface HRAction {
+  action: string;
+  priority: 'high' | 'medium';
+  rationale: string;
 }
 
 interface TeamSummary {
   overallTeamMorale: 'positive' | 'mixed' | 'concerning';
   teamSummary: string;
-  teamHighlights: string[];
-  recognitionOpportunities: string[];
-  teamConcerns: string[];
-  supportNeeded: string[];
+  teamHighlights?: TeamHighlightItem[] | string[];
+  recognitionOpportunities?: RecognitionItem[] | string[];
+  teamConcerns?: TeamConcernItem[] | string[];
+  workloadObservations?: WorkloadObservation[];
+  supportNeeded?: SupportNeededItem[] | string[];
+  developmentOpportunities?: DevelopmentOpportunity[];
+  retentionRisks?: RetentionRisk[];
+  recommendedHRActions?: HRAction[];
 }
 
 interface DualSummary {
@@ -713,6 +816,38 @@ export default function HistoricalReports() {
                     </div>
                     <p className="text-sm mb-4">{reportAiSummary.executiveSummary}</p>
                     
+                    {/* Portfolio Health Breakdown (new comprehensive format) */}
+                    {reportAiSummary.portfolioHealthBreakdown && (
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <div className="p-2 rounded bg-success/10 border border-success/20">
+                          <p className="text-xs font-medium text-success mb-1">On Track ({reportAiSummary.portfolioHealthBreakdown.onTrack.count})</p>
+                          <p className="text-xs text-muted-foreground">{reportAiSummary.portfolioHealthBreakdown.onTrack.projects.slice(0, 3).join(', ')}{reportAiSummary.portfolioHealthBreakdown.onTrack.projects.length > 3 ? '...' : ''}</p>
+                        </div>
+                        <div className="p-2 rounded bg-warning/10 border border-warning/20">
+                          <p className="text-xs font-medium text-warning mb-1">Needs Attention ({reportAiSummary.portfolioHealthBreakdown.needsAttention.count})</p>
+                          <p className="text-xs text-muted-foreground">{reportAiSummary.portfolioHealthBreakdown.needsAttention.projects.slice(0, 3).join(', ')}{reportAiSummary.portfolioHealthBreakdown.needsAttention.projects.length > 3 ? '...' : ''}</p>
+                        </div>
+                        <div className="p-2 rounded bg-destructive/10 border border-destructive/20">
+                          <p className="text-xs font-medium text-destructive mb-1">Critical ({reportAiSummary.portfolioHealthBreakdown.critical.count})</p>
+                          <p className="text-xs text-muted-foreground">{reportAiSummary.portfolioHealthBreakdown.critical.projects.slice(0, 3).join(', ')}{reportAiSummary.portfolioHealthBreakdown.critical.projects.length > 3 ? '...' : ''}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Immediate Attention Required (new comprehensive format) */}
+                    {reportAiSummary.immediateAttentionRequired && reportAiSummary.immediateAttentionRequired.length > 0 && (
+                      <div className="mb-4 p-3 rounded bg-destructive/5 border border-destructive/20">
+                        <p className="text-xs font-medium text-destructive mb-2">Immediate Attention Required</p>
+                        <div className="space-y-2">
+                          {reportAiSummary.immediateAttentionRequired.map((item, i) => (
+                            <div key={i} className="text-xs text-muted-foreground">
+                              <span className="font-medium">{item.project}</span> ({item.lead}): {item.issue}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {reportAiSummary.weekHighlights && reportAiSummary.weekHighlights.length > 0 && (
                         <div>
@@ -734,7 +869,7 @@ export default function HistoricalReports() {
                             {reportAiSummary.keyAchievements.map((item, i) => (
                               <li key={i} className="flex items-start gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
-                                {item}
+                                {typeof item === 'string' ? item : `${item.project}: ${item.achievement}`}
                               </li>
                             ))}
                           </ul>
@@ -760,7 +895,7 @@ export default function HistoricalReports() {
                             {reportAiSummary.upcomingFocus.map((item, i) => (
                               <li key={i} className="flex items-start gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                                {item}
+                                {typeof item === 'string' ? item : `${item.project} (${item.priority}): ${item.focus}`}
                               </li>
                             ))}
                           </ul>
@@ -774,6 +909,55 @@ export default function HistoricalReports() {
                               <li key={i} className="flex items-start gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
                                 {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Cross-Project Patterns (new comprehensive format) */}
+                      {reportAiSummary.crossProjectPatterns && (
+                        <>
+                          {reportAiSummary.crossProjectPatterns.commonChallenges?.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-warning mb-2">Common Challenges</p>
+                              <ul className="text-xs text-muted-foreground space-y-1">
+                                {reportAiSummary.crossProjectPatterns.commonChallenges.map((item, i) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                                    {item}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {reportAiSummary.crossProjectPatterns.resourceConstraints?.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-blue-400 mb-2">Resource Constraints</p>
+                              <ul className="text-xs text-muted-foreground space-y-1">
+                                {reportAiSummary.crossProjectPatterns.resourceConstraints.map((item, i) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                    {item}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Recommended Leadership Actions (new comprehensive format) */}
+                      {reportAiSummary.recommendedLeadershipActions && reportAiSummary.recommendedLeadershipActions.length > 0 && (
+                        <div className="col-span-2">
+                          <p className="text-xs font-medium text-primary mb-2">Recommended Actions</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportAiSummary.recommendedLeadershipActions.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="text-[10px] px-1 py-0 shrink-0">
+                                  {item.priority}
+                                </Badge>
+                                <span>{item.action}</span>
                               </li>
                             ))}
                           </ul>
@@ -815,7 +999,7 @@ export default function HistoricalReports() {
                             {reportTeamSummary.teamHighlights.map((item, i) => (
                               <li key={i} className="flex items-start gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                                {item}
+                                {typeof item === 'string' ? item : `${item.memberName} (${item.project}): ${item.highlight}`}
                               </li>
                             ))}
                           </ul>
@@ -828,7 +1012,7 @@ export default function HistoricalReports() {
                             {reportTeamSummary.recognitionOpportunities.map((item, i) => (
                               <li key={i} className="flex items-start gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
-                                {item}
+                                {typeof item === 'string' ? item : `${item.memberName}: ${item.achievement}`}
                               </li>
                             ))}
                           </ul>
@@ -841,7 +1025,7 @@ export default function HistoricalReports() {
                             {reportTeamSummary.teamConcerns.map((item, i) => (
                               <li key={i} className="flex items-start gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
-                                {item}
+                                {typeof item === 'string' ? item : `${item.concern} (${item.project})`}
                               </li>
                             ))}
                           </ul>
@@ -854,7 +1038,69 @@ export default function HistoricalReports() {
                             {reportTeamSummary.supportNeeded.map((item, i) => (
                               <li key={i} className="flex items-start gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
-                                {item}
+                                {typeof item === 'string' ? item : `${item.area}: ${item.suggestedSupport}`}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Workload Observations (new comprehensive format) */}
+                      {reportTeamSummary.workloadObservations && reportTeamSummary.workloadObservations.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-blue-400 mb-2">Workload Observations</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportTeamSummary.workloadObservations.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                {item.observation}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Development Opportunities (new comprehensive format) */}
+                      {reportTeamSummary.developmentOpportunities && reportTeamSummary.developmentOpportunities.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-purple-400 mb-2">Development Opportunities</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportTeamSummary.developmentOpportunities.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-purple-400 mt-1.5 shrink-0" />
+                                {item.memberName}: {item.opportunity}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Retention Risks (new comprehensive format) */}
+                      {reportTeamSummary.retentionRisks && reportTeamSummary.retentionRisks.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-destructive mb-2">Retention Risks</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportTeamSummary.retentionRisks.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
+                                {item.indicator}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Recommended HR Actions (new comprehensive format) */}
+                      {reportTeamSummary.recommendedHRActions && reportTeamSummary.recommendedHRActions.length > 0 && (
+                        <div className="col-span-2">
+                          <p className="text-xs font-medium text-primary mb-2">Recommended HR Actions</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportTeamSummary.recommendedHRActions.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="text-[10px] px-1 py-0 shrink-0">
+                                  {item.priority}
+                                </Badge>
+                                <span>{item.action}</span>
                               </li>
                             ))}
                           </ul>
