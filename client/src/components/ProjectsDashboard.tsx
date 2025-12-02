@@ -504,7 +504,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const handleSaveEdit = () => {
     if (editingProject && editFormData.name && editFormData.customer && editFormData.leadIds.length > 0 && 
-        editFormData.teamMembers.length > 0) {
+        editFormData.teamMembers.length > 0 && editFormData.projectType) {
       
       // Validate date formats
       if (editStartDateInput && !isValidDateFormat(editStartDateInput)) {
@@ -998,6 +998,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     }
     if (projectFormData.teamMembers.length === 0) {
       errors.teamMembers = 'At least one team member is required';
+    }
+    if (!projectFormData.projectType) {
+      errors.projectType = 'Project type is required';
     }
     return errors;
   };
@@ -1588,7 +1591,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Type of Project</Label>
+                      <Label>Type of Project <span className="text-red-500">*</span></Label>
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
                           <Checkbox
@@ -1623,6 +1626,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </Label>
                         </div>
                       </div>
+                      {projectFormErrors.projectType && (
+                        <p className="text-xs text-red-500">{projectFormErrors.projectType}</p>
+                      )}
                     </div>
 
                     <div className="flex justify-end gap-2 pt-4">
@@ -2362,7 +2368,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Type of Project</Label>
+              <Label>Type of Project <span className="text-red-500">*</span></Label>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <Checkbox
@@ -2397,6 +2403,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </Label>
                 </div>
               </div>
+              {!editFormData.projectType && (
+                <p className="text-xs text-red-500">Project type is required</p>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button
