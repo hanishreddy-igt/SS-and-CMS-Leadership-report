@@ -766,30 +766,17 @@ export default function SubmitReport() {
                             onClick={() => handleProjectTileClick(project)}
                           >
                             <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">{project.name}</p>
-                                {isCoLead && (
-                                  <Badge variant="outline" className="text-xs">Co-Lead</Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground">{project.customer}</p>
+                              <p className="font-medium">{project.name}</p>
                               {isCoLead && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Leads: {getProjectLeadNames(project)}
-                                </p>
+                                <Badge variant="outline" className="text-xs mt-1">Co-Lead</Badge>
                               )}
                             </div>
                             {reportStatus === 'submitted' ? (
-                              <div className="flex flex-col items-end gap-1">
-                                <div className="flex items-center gap-2 text-success">
-                                  <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
-                                    <Check className="h-4 w-4" />
-                                  </div>
-                                  <span className="text-sm font-medium">Submitted</span>
+                              <div className="flex items-center gap-2 text-success">
+                                <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+                                  <Check className="h-4 w-4" />
                                 </div>
-                                {isCoLead && submittedByName && (
-                                  <span className="text-xs text-muted-foreground">by {submittedByName}</span>
-                                )}
+                                <span className="text-sm font-medium">Submitted</span>
                               </div>
                             ) : reportStatus === 'drafted' ? (
                               <div className="flex items-center gap-2 text-primary">
