@@ -1229,20 +1229,46 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
     let currentY = 45;
 
-    // AI Summary Section (if available)
+    // Helper to render text item for AI summaries
+    const renderTextItem = (item: unknown): string => {
+      if (typeof item === 'string') return item;
+      if (!item || typeof item !== 'object') return '';
+      const obj = item as Record<string, unknown>;
+      if (obj.project && obj.achievement) return `${obj.project}: ${obj.achievement}`;
+      if (obj.project && obj.focus) return `${obj.project} (${obj.priority || 'medium'}): ${obj.focus}`;
+      if (obj.project && obj.issue) return `${obj.project}: ${obj.issue}`;
+      return '';
+    };
+
+    // Helper for team items
+    const renderTeamItem = (item: unknown): string => {
+      if (typeof item === 'string') return item;
+      if (!item || typeof item !== 'object') return '';
+      const obj = item as Record<string, unknown>;
+      if (obj.memberName && obj.achievement) return `${obj.memberName}: ${obj.achievement}`;
+      if (obj.memberName && obj.highlight) return `${obj.memberName} (${obj.project || ''}): ${obj.highlight}`;
+      if (obj.memberName && obj.opportunity) return `${obj.memberName}: ${obj.opportunity}`;
+      if (obj.concern) return `${obj.concern} (${obj.project || ''})`;
+      if (obj.area && obj.suggestedSupport) return `${obj.area}: ${obj.suggestedSupport}`;
+      if (obj.observation) return String(obj.observation);
+      if (obj.indicator) return String(obj.indicator);
+      return '';
+    };
+
+    // Purple color for development opportunities
+    const colorsPurple: [number, number, number] = [139, 92, 246];
+
+    // Comprehensive Leadership Summary Section (if available)
     if (aiSummary) {
-      // AI Summary header
+      // Section header
       doc.setFillColor(...colors.navyLight as [number, number, number]);
       doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
-      
       doc.setTextColor(...colors.primary as [number, number, number]);
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('AI-Powered Weekly Insights', 18, currentY + 7);
+      doc.text('Leadership Insights (AI-Powered)', 18, currentY + 7);
       
-      currentY += 14;
-      
-      // Overall health status badge
+      // Overall health badge
       const healthColors: Record<string, [number, number, number]> = {
         'on-track': colors.success as [number, number, number],
         'needs-attention': colors.warning as [number, number, number],
@@ -1253,79 +1279,268 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                          aiSummary.overallHealth === 'needs-attention' ? 'Needs Attention' : 'Critical';
       
       doc.setFillColor(...healthColor);
-      doc.roundedRect(14, currentY, 50, 7, 1.5, 1.5, 'F');
+      doc.roundedRect(pageWidth - 14 - 45, currentY + 2, 43, 6, 1, 1, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Overall: ${healthLabel}`, 18, currentY + 5);
+      doc.setFontSize(7);
+      doc.text(healthLabel, pageWidth - 14 - 23, currentY + 6, { align: 'center' });
       
-      doc.setTextColor(...colors.muted as [number, number, number]);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Based on ${reportsAnalyzed} report${reportsAnalyzed !== 1 ? 's' : ''}`, 68, currentY + 5);
-      
-      currentY += 12;
+      currentY += 14;
       
       // Executive Summary
       doc.setTextColor(60, 60, 60);
       doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
       const summaryLines = doc.splitTextToSize(aiSummary.executiveSummary, pageWidth - 32);
       doc.text(summaryLines, 14, currentY);
-      currentY += summaryLines.length * 4 + 6;
+      currentY += summaryLines.length * 4 + 4;
+
+      // Portfolio Health Breakdown (comprehensive format)
+      if (aiSummary.portfolioHealthBreakdown) {
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(40, 40, 40);
+        doc.text('Portfolio Health Breakdown:', 14, currentY);
+        currentY += 4;
+        
+        const phb = aiSummary.portfolioHealthBreakdown;
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        
+        doc.setTextColor(...colors.success as [number, number, number]);
+        const onTrackText = `On Track (${phb.onTrack.count}): ${phb.onTrack.projects.slice(0, 5).join(', ')}${phb.onTrack.projects.length > 5 ? '...' : ''}`;
+        doc.text(doc.splitTextToSize(onTrackText, pageWidth - 36), 18, currentY);
+        currentY += 3.5;
+        
+        doc.setTextColor(...colors.warning as [number, number, number]);
+        const attentionText = `Needs Attention (${phb.needsAttention.count}): ${phb.needsAttention.projects.slice(0, 5).join(', ')}${phb.needsAttention.projects.length > 5 ? '...' : ''}`;
+        doc.text(doc.splitTextToSize(attentionText, pageWidth - 36), 18, currentY);
+        currentY += 3.5;
+        
+        doc.setTextColor(...colors.destructive as [number, number, number]);
+        const criticalText = `Critical (${phb.critical.count}): ${phb.critical.projects.slice(0, 5).join(', ')}${phb.critical.projects.length > 5 ? '...' : ''}`;
+        doc.text(doc.splitTextToSize(criticalText, pageWidth - 36), 18, currentY);
+        currentY += 5;
+      }
+
+      // Immediate Attention Required (comprehensive format)
+      if (aiSummary.immediateAttentionRequired && aiSummary.immediateAttentionRequired.length > 0) {
+        doc.setFillColor(255, 240, 240);
+        const attentionHeight = 6 + aiSummary.immediateAttentionRequired.length * 3.5;
+        doc.roundedRect(14, currentY, pageWidth - 28, attentionHeight, 2, 2, 'F');
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.destructive as [number, number, number]);
+        doc.text('Immediate Attention Required:', 18, currentY + 4);
+        currentY += 6;
+        
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        aiSummary.immediateAttentionRequired.slice(0, 3).forEach((item) => {
+          doc.text(`• ${item.project} (${item.lead}): ${item.issue}`, 18, currentY);
+          currentY += 3.5;
+        });
+        currentY += 3;
+      }
       
-      // Insights grid (2 columns)
-      const insightSections = [
+      // Key sections in compact format
+      const sections = [
         { title: 'Key Achievements', items: aiSummary.keyAchievements, color: colors.success },
         { title: 'Week Highlights', items: aiSummary.weekHighlights, color: colors.primary },
         { title: 'Needs Attention', items: aiSummary.attentionNeeded, color: colors.warning },
         { title: 'Upcoming Focus', items: aiSummary.upcomingFocus, color: colors.primary },
+        { title: 'Critical Issues', items: aiSummary.criticalIssues, color: colors.destructive },
       ].filter(s => s.items && s.items.length > 0);
       
-      if (aiSummary.criticalIssues && aiSummary.criticalIssues.length > 0) {
-        insightSections.unshift({ title: 'Critical Issues', items: aiSummary.criticalIssues, color: colors.destructive });
-      }
-      
-      const colWidth = (pageWidth - 32) / 2;
-      let leftY = currentY;
-      let rightY = currentY;
-      
-      insightSections.forEach((section, idx) => {
-        const isLeft = idx % 2 === 0;
-        const x = isLeft ? 14 : 14 + colWidth + 4;
-        let y = isLeft ? leftY : rightY;
-        
-        // Section title with colored dot
+      sections.forEach(section => {
         doc.setFillColor(...section.color as [number, number, number]);
-        doc.circle(x + 2, y + 2, 1.5, 'F');
+        doc.circle(16, currentY + 1.5, 1.2, 'F');
         
         doc.setTextColor(40, 40, 40);
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
-        doc.text(section.title, x + 6, y + 3);
-        y += 6;
+        doc.text(section.title, 20, currentY + 2);
+        currentY += 4;
         
-        // Items
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        doc.setFontSize(8);
+        doc.setFontSize(7);
         (section.items || []).slice(0, 3).forEach((item) => {
-          doc.setFillColor(...section.color as [number, number, number]);
-          doc.circle(x + 3, y + 1.5, 0.8, 'F');
-          const itemText = formatAIItem(item);
+          const itemText = renderTextItem(item);
           if (itemText) {
-            const lines = doc.splitTextToSize(itemText, colWidth - 10);
-            doc.text(lines, x + 7, y + 2);
-            y += lines.length * 3.5 + 1;
+            const lines = doc.splitTextToSize(`• ${itemText}`, pageWidth - 36);
+            doc.text(lines, 20, currentY);
+            currentY += lines.length * 3;
           }
         });
-        
-        y += 4;
-        if (isLeft) leftY = y;
-        else rightY = y;
+        currentY += 2;
       });
+
+      // Cross-Project Patterns (comprehensive format)
+      if (aiSummary.crossProjectPatterns) {
+        if (aiSummary.crossProjectPatterns.commonChallenges?.length > 0) {
+          doc.setFillColor(...colors.warning as [number, number, number]);
+          doc.circle(16, currentY + 1.5, 1.2, 'F');
+          doc.setTextColor(40, 40, 40);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Common Challenges', 20, currentY + 2);
+          currentY += 4;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          doc.setFontSize(7);
+          aiSummary.crossProjectPatterns.commonChallenges.slice(0, 2).forEach((item) => {
+            const lines = doc.splitTextToSize(`• ${item}`, pageWidth - 36);
+            doc.text(lines, 20, currentY);
+            currentY += lines.length * 3;
+          });
+          currentY += 2;
+        }
+      }
+
+      // Recommended Leadership Actions (comprehensive format)
+      if (aiSummary.recommendedLeadershipActions && aiSummary.recommendedLeadershipActions.length > 0) {
+        doc.setFillColor(...colors.primary as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.2, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Recommended Leadership Actions', 20, currentY + 2);
+        currentY += 4;
+        
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        aiSummary.recommendedLeadershipActions.slice(0, 3).forEach((item) => {
+          const priorityColor = item.priority === 'high' ? colors.destructive : colors.warning;
+          doc.setTextColor(...priorityColor as [number, number, number]);
+          doc.text(`[${item.priority.toUpperCase()}]`, 20, currentY);
+          doc.setTextColor(80, 80, 80);
+          const lines = doc.splitTextToSize(item.action, pageWidth - 55);
+          doc.text(lines, 38, currentY);
+          currentY += lines.length * 3 + 0.5;
+        });
+        currentY += 3;
+      }
+    }
+
+    // Comprehensive Team Summary Section (if available)
+    if (teamSummary) {
+      // Check if we need a new page
+      if (currentY > pageHeight - 50) {
+        doc.addPage();
+        currentY = 20;
+      }
       
-      currentY = Math.max(leftY, rightY) + 4;
+      // Section header
+      doc.setFillColor(...colors.navyLight as [number, number, number]);
+      doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
+      doc.setTextColor(59, 130, 246);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Team Member Insights (AI-Powered)', 18, currentY + 7);
       
-      // Separator line
+      // Morale badge
+      const moraleColors: Record<string, [number, number, number]> = {
+        'positive': colors.success as [number, number, number],
+        'mixed': colors.warning as [number, number, number],
+        'concerning': colors.destructive as [number, number, number]
+      };
+      const moraleColor = moraleColors[teamSummary.overallTeamMorale] || colors.muted as [number, number, number];
+      const moraleLabel = teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                          teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
+      
+      doc.setFillColor(...moraleColor);
+      doc.roundedRect(pageWidth - 14 - 50, currentY + 2, 48, 6, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.text(`Morale: ${moraleLabel}`, pageWidth - 14 - 26, currentY + 6, { align: 'center' });
+      
+      currentY += 14;
+      
+      // Team Summary text
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      const teamSummaryLines = doc.splitTextToSize(teamSummary.teamSummary, pageWidth - 32);
+      doc.text(teamSummaryLines, 14, currentY);
+      currentY += teamSummaryLines.length * 4 + 4;
+      
+      // Team sections
+      const teamSections = [
+        { title: 'Recognition Opportunities', items: teamSummary.recognitionOpportunities, color: colors.success },
+        { title: 'Team Highlights', items: teamSummary.teamHighlights, color: colors.primary },
+        { title: 'Team Concerns', items: teamSummary.teamConcerns, color: colors.warning },
+        { title: 'Support Needed', items: teamSummary.supportNeeded, color: colors.destructive },
+        { title: 'Workload Observations', items: teamSummary.workloadObservations, color: colors.primary },
+        { title: 'Development Opportunities', items: teamSummary.developmentOpportunities, color: colorsPurple },
+        { title: 'Retention Risks', items: teamSummary.retentionRisks, color: colors.destructive },
+      ].filter(s => s.items && s.items.length > 0);
+      
+      teamSections.forEach(section => {
+        // Check for page break
+        if (currentY > pageHeight - 25) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFillColor(...section.color as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.2, 'F');
+        
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(section.title, 20, currentY + 2);
+        currentY += 4;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(7);
+        (section.items || []).slice(0, 3).forEach((item) => {
+          const itemText = renderTeamItem(item);
+          if (itemText) {
+            const lines = doc.splitTextToSize(`• ${itemText}`, pageWidth - 36);
+            doc.text(lines, 20, currentY);
+            currentY += lines.length * 3;
+          }
+        });
+        currentY += 2;
+      });
+
+      // Recommended HR Actions (comprehensive format)
+      if (teamSummary.recommendedHRActions && teamSummary.recommendedHRActions.length > 0) {
+        if (currentY > pageHeight - 25) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFillColor(...colors.primary as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.2, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Recommended HR Actions', 20, currentY + 2);
+        currentY += 4;
+        
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        teamSummary.recommendedHRActions.slice(0, 3).forEach((item) => {
+          const priorityColor = item.priority === 'high' ? colors.destructive : 
+                               item.priority === 'medium' ? colors.warning : colors.muted;
+          doc.setTextColor(...priorityColor as [number, number, number]);
+          doc.text(`[${item.priority.toUpperCase()}]`, 20, currentY);
+          doc.setTextColor(80, 80, 80);
+          const lines = doc.splitTextToSize(item.action, pageWidth - 55);
+          doc.text(lines, 38, currentY);
+          currentY += lines.length * 3 + 0.5;
+        });
+        currentY += 3;
+      }
+    }
+
+    // Separator line before report summary
+    if (aiSummary || teamSummary) {
       doc.setDrawColor(...colors.border as [number, number, number]);
       doc.setLineWidth(0.3);
       doc.line(14, currentY, pageWidth - 14, currentY);
