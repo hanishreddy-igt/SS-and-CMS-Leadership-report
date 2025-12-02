@@ -73,7 +73,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [selectedReport, setSelectedReport] = useState<WeeklyReport | null>(null);
   const [showReportDetailModal, setShowReportDetailModal] = useState(false);
 
-  // AI Summary State
+  // AI Summary State - Leadership Summary
   interface AISummary {
     overallHealth: 'on-track' | 'needs-attention' | 'critical';
     weekHighlights: string[];
@@ -83,7 +83,19 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     upcomingFocus: string[];
     executiveSummary: string;
   }
+  
+  // Team Member Summary
+  interface TeamSummary {
+    overallTeamMorale: 'positive' | 'mixed' | 'concerning';
+    teamHighlights: string[];
+    teamConcerns: string[];
+    recognitionOpportunities: string[];
+    supportNeeded: string[];
+    teamSummary: string;
+  }
+  
   const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
+  const [teamSummary, setTeamSummary] = useState<TeamSummary | null>(null);
   const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<string | null>(null);
   const [reportsAnalyzed, setReportsAnalyzed] = useState<number>(0);
   
@@ -105,8 +117,14 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   })();
 
   // Load AI summary from database on mount
+  // Combined summary structure: { leadership: AISummary, team: TeamSummary | null }
+  interface CombinedSummary {
+    leadership: AISummary;
+    team: TeamSummary | null;
+  }
+  
   interface SavedAiSummaryResponse {
-    summary: AISummary | null;
+    summary: AISummary | CombinedSummary | null;
     reportsAnalyzed?: number;
     generatedAt?: string;
   }
@@ -118,7 +136,17 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   // Update local state when saved AI summary is loaded from database
   useEffect(() => {
     if (savedAiSummary && savedAiSummary.summary) {
-      setAiSummary(savedAiSummary.summary);
+      // Check if it's the new combined format or old format
+      const summary = savedAiSummary.summary as any;
+      if (summary.leadership) {
+        // New combined format
+        setAiSummary(summary.leadership);
+        setTeamSummary(summary.team || null);
+      } else if (summary.overallHealth) {
+        // Old format - just leadership summary
+        setAiSummary(summary as AISummary);
+        setTeamSummary(null);
+      }
       setSummaryGeneratedAt(savedAiSummary.generatedAt || null);
       setReportsAnalyzed(savedAiSummary.reportsAnalyzed || 0);
     }
@@ -161,31 +189,40 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
           const weekEnd = weekEndDate.toISOString().split('T')[0];
           
-          // ALWAYS generate AI summary before archiving if one doesn't exist
-          let summaryToArchive = aiSummary;
-          if (!summaryToArchive) {
-            console.log('Auto-archive: Generating AI summary before archiving...');
+          // ALWAYS generate AI summaries (leadership + team) before archiving if they don't exist
+          let leadershipSummaryToArchive = aiSummary;
+          let teamSummaryToArchive = teamSummary;
+          if (!leadershipSummaryToArchive) {
+            console.log('Auto-archive: Generating AI summaries before archiving...');
             try {
               const summaryResponse = await apiRequest('POST', '/api/weekly-reports/ai-summary');
               const summaryData = await summaryResponse.json();
               if (summaryData.summary) {
-                summaryToArchive = summaryData.summary;
-                // Update local state with the generated summary
+                leadershipSummaryToArchive = summaryData.summary;
+                teamSummaryToArchive = summaryData.teamSummary || null;
+                // Update local state with the generated summaries
                 setAiSummary(summaryData.summary);
+                setTeamSummary(summaryData.teamSummary || null);
                 setSummaryGeneratedAt(summaryData.generatedAt);
                 setReportsAnalyzed(summaryData.reportsAnalyzed || 0);
               }
             } catch (summaryError) {
-              console.error('Failed to generate AI summary for auto-archive:', summaryError);
+              console.error('Failed to generate AI summaries for auto-archive:', summaryError);
               // Continue with archiving even if summary generation fails
             }
           }
           
+          // Combine summaries for archiving (new format)
+          const combinedSummaryToArchive = leadershipSummaryToArchive ? {
+            leadership: leadershipSummaryToArchive,
+            team: teamSummaryToArchive
+          } : null;
+          
           // Generate PDF and CSV for auto-archive (same as manual Force Archive)
           console.log('Auto-archive: Generating PDF and CSV...');
           const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
-          const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, summaryToArchive);
-          const csvContent = generateCSVForReports(submittedReports);
+          const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, leadershipSummaryToArchive, teamSummaryToArchive);
+          const csvContent = generateCSVForReports(submittedReports, leadershipSummaryToArchive, teamSummaryToArchive);
           
           // Calculate health counts from submitted reports only (same as Force Archive)
           const healthCounts = {
@@ -194,13 +231,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             critical: submittedReports.filter(r => r.healthStatus === 'critical').length,
           };
           
-          // Archive via API with full PDF and CSV data
+          // Archive via API with full PDF and CSV data (using combined summary format)
           await apiRequest('POST', '/api/saved-reports', {
             weekStart: reportWeekStart,
             weekEnd: weekEnd,
             reportCount: String(submittedReports.length),
             healthCounts,
-            aiSummary: summaryToArchive || null,
+            aiSummary: combinedSummaryToArchive,
             pdfData: pdfBase64,
             csvData: csvContent,
           });
@@ -220,12 +257,14 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           
           // Clear local state
           setAiSummary(null);
+          setTeamSummary(null);
           setSummaryGeneratedAt(null);
           setReportsAnalyzed(0);
           
+          const summaryNote = leadershipSummaryToArchive ? (teamSummaryToArchive ? ' with AI summaries' : ' with leadership summary') : '';
           toast({
             title: 'Auto-Archive Complete',
-            description: `Previous week's ${weeklyReports.length} reports have been archived${summaryToArchive ? ' with AI summary' : ''} and reset for the new week.`,
+            description: `Previous week's ${weeklyReports.length} reports have been archived${summaryNote} and reset for the new week.`,
           });
         } catch (error) {
           console.error('Auto-archive failed:', error);
@@ -262,13 +301,16 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     onSuccess: (data) => {
       if (data.summary) {
         setAiSummary(data.summary);
+        setTeamSummary(data.teamSummary || null);
         setSummaryGeneratedAt(data.generatedAt);
         setReportsAnalyzed(data.reportsAnalyzed || 0);
         // Invalidate the cache so it will be reloaded when navigating back
         queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
+        
+        const teamSummaryNote = data.teamSummary ? ' (including team insights)' : '';
         toast({
           title: 'AI Summary Generated',
-          description: `Analyzed ${data.reportsAnalyzed} reports successfully`,
+          description: `Analyzed ${data.reportsAnalyzed} reports successfully${teamSummaryNote}`,
         });
       } else {
         toast({
@@ -649,7 +691,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   });
 
   // Generate PDF content and return as base64 - reusable for both manual and auto archive
-  const generatePDFBase64 = (reportsToUse: WeeklyReport[], weekEndDate: string, summaryToUse: AISummary | null): string => {
+  const generatePDFBase64 = (reportsToUse: WeeklyReport[], weekEndDate: string, leadershipSummary: AISummary | null, teamSummaryParam: TeamSummary | null = null): string => {
     const doc = new jsPDF({ orientation: 'landscape' });
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -722,22 +764,136 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
     currentY += 24;
 
-    // AI Summary section if available
-    if (summaryToUse) {
+    // Leadership AI Summary section if available
+    if (leadershipSummary) {
       doc.setFillColor(...colors.navyLight as [number, number, number]);
       doc.roundedRect(14, currentY, pageWidth - 28, 8, 2, 2, 'F');
       doc.setTextColor(...colors.primary as [number, number, number]);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('AI-Powered Weekly Insights', 18, currentY + 5.5);
+      doc.text('Leadership Insights (AI-Powered)', 18, currentY + 5.5);
       currentY += 12;
       
       doc.setFontSize(8);
       doc.setTextColor(80, 80, 80);
       doc.setFont('helvetica', 'normal');
-      const summaryLines = doc.splitTextToSize(summaryToUse.executiveSummary, pageWidth - 32);
+      const summaryLines = doc.splitTextToSize(leadershipSummary.executiveSummary, pageWidth - 32);
       doc.text(summaryLines, 14, currentY);
-      currentY += summaryLines.length * 4 + 8;
+      currentY += summaryLines.length * 4 + 4;
+      
+      // Add key points in two columns
+      const halfWidth = (pageWidth - 32) / 2;
+      const leftX = 14;
+      const rightX = 14 + halfWidth + 4;
+      
+      // Left column: Achievements & Highlights
+      if (leadershipSummary.keyAchievements.length > 0 || leadershipSummary.weekHighlights.length > 0) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.success as [number, number, number]);
+        doc.text('Key Achievements:', leftX, currentY);
+        currentY += 3;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        leadershipSummary.keyAchievements.slice(0, 3).forEach(item => {
+          const itemLines = doc.splitTextToSize(`• ${item}`, halfWidth - 4);
+          doc.text(itemLines, leftX, currentY);
+          currentY += itemLines.length * 3;
+        });
+      }
+      
+      // Right column: Attention Needed & Critical Issues (position tracked separately)
+      let rightY = currentY - (leadershipSummary.keyAchievements.slice(0, 3).length * 3) - 3;
+      if (leadershipSummary.attentionNeeded.length > 0 || leadershipSummary.criticalIssues.length > 0) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.warning as [number, number, number]);
+        doc.text('Needs Attention:', rightX, rightY);
+        rightY += 3;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        leadershipSummary.attentionNeeded.slice(0, 3).forEach(item => {
+          const itemLines = doc.splitTextToSize(`• ${item}`, halfWidth - 4);
+          doc.text(itemLines, rightX, rightY);
+          rightY += itemLines.length * 3;
+        });
+      }
+      
+      currentY = Math.max(currentY, rightY) + 4;
+    }
+    
+    // Team Member Summary section if available
+    if (teamSummaryParam) {
+      doc.setFillColor(...colors.navyLight as [number, number, number]);
+      doc.roundedRect(14, currentY, pageWidth - 28, 8, 2, 2, 'F');
+      doc.setTextColor([59, 130, 246] as unknown as number, 130, 246); // Blue color for team
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Team Member Insights (AI-Powered)', 18, currentY + 5.5);
+      currentY += 12;
+      
+      // Team morale indicator
+      const moraleColors: Record<string, [number, number, number]> = {
+        'positive': colors.success as [number, number, number],
+        'mixed': colors.warning as [number, number, number],
+        'concerning': colors.destructive as [number, number, number]
+      };
+      const moraleColor = moraleColors[teamSummaryParam.overallTeamMorale] || colors.muted as [number, number, number];
+      doc.setFontSize(8);
+      doc.setTextColor(...moraleColor);
+      doc.setFont('helvetica', 'bold');
+      const moraleLabel = teamSummaryParam.overallTeamMorale === 'positive' ? 'Positive' : 
+                          teamSummaryParam.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
+      doc.text(`Team Morale: ${moraleLabel}`, 14, currentY);
+      currentY += 4;
+      
+      doc.setTextColor(80, 80, 80);
+      doc.setFont('helvetica', 'normal');
+      const teamSummaryLines = doc.splitTextToSize(teamSummaryParam.teamSummary, pageWidth - 32);
+      doc.text(teamSummaryLines, 14, currentY);
+      currentY += teamSummaryLines.length * 4 + 4;
+      
+      // Team highlights and concerns
+      const halfWidth = (pageWidth - 32) / 2;
+      const leftX = 14;
+      const rightX = 14 + halfWidth + 4;
+      
+      let teamLeftY = currentY;
+      let teamRightY = currentY;
+      
+      // Left: Recognition & Highlights
+      if (teamSummaryParam.teamHighlights.length > 0 || teamSummaryParam.recognitionOpportunities.length > 0) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.success as [number, number, number]);
+        doc.text('Recognition Opportunities:', leftX, teamLeftY);
+        teamLeftY += 3;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        teamSummaryParam.recognitionOpportunities.slice(0, 3).forEach(item => {
+          const itemLines = doc.splitTextToSize(`• ${item}`, halfWidth - 4);
+          doc.text(itemLines, leftX, teamLeftY);
+          teamLeftY += itemLines.length * 3;
+        });
+      }
+      
+      // Right: Concerns & Support Needed
+      if (teamSummaryParam.teamConcerns.length > 0 || teamSummaryParam.supportNeeded.length > 0) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.warning as [number, number, number]);
+        doc.text('Support Needed:', rightX, teamRightY);
+        teamRightY += 3;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        teamSummaryParam.supportNeeded.slice(0, 3).forEach(item => {
+          const itemLines = doc.splitTextToSize(`• ${item}`, halfWidth - 4);
+          doc.text(itemLines, rightX, teamRightY);
+          teamRightY += itemLines.length * 3;
+        });
+      }
+      
+      currentY = Math.max(teamLeftY, teamRightY) + 4;
     }
 
     // Reports table
@@ -809,9 +965,42 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     return doc.output('datauristring').split(',')[1];
   };
 
-  // Generate CSV content for a given set of reports
-  const generateCSVForReports = (reportsToUse: WeeklyReport[]): string => {
+  // Generate CSV content for a given set of reports with optional AI summaries
+  const generateCSVForReports = (reportsToUse: WeeklyReport[], leadershipSummary: AISummary | null = null, teamSummaryParam: TeamSummary | null = null): string => {
+    const lines: string[] = [];
+    
+    // Add Leadership Summary section if available
+    if (leadershipSummary) {
+      lines.push('=== LEADERSHIP INSIGHTS (AI-POWERED) ===');
+      lines.push(`"Overall Health","${leadershipSummary.overallHealth === 'on-track' ? 'On Track' : leadershipSummary.overallHealth === 'needs-attention' ? 'Needs Attention' : 'Critical'}"`);
+      lines.push(`"Executive Summary","${leadershipSummary.executiveSummary.replace(/"/g, '""')}"`);
+      lines.push(`"Key Achievements","${leadershipSummary.keyAchievements.join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Week Highlights","${leadershipSummary.weekHighlights.join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Needs Attention","${leadershipSummary.attentionNeeded.join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Critical Issues","${leadershipSummary.criticalIssues.join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Upcoming Focus","${leadershipSummary.upcomingFocus.join('; ').replace(/"/g, '""')}"`);
+      lines.push('');
+    }
+    
+    // Add Team Summary section if available
+    if (teamSummaryParam) {
+      lines.push('=== TEAM MEMBER INSIGHTS (AI-POWERED) ===');
+      const moraleLabel = teamSummaryParam.overallTeamMorale === 'positive' ? 'Positive' : 
+                          teamSummaryParam.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
+      lines.push(`"Team Morale","${moraleLabel}"`);
+      lines.push(`"Team Summary","${teamSummaryParam.teamSummary.replace(/"/g, '""')}"`);
+      lines.push(`"Team Highlights","${teamSummaryParam.teamHighlights.join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Recognition Opportunities","${teamSummaryParam.recognitionOpportunities.join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Team Concerns","${teamSummaryParam.teamConcerns.join('; ').replace(/"/g, '""')}"`);
+      lines.push(`"Support Needed","${teamSummaryParam.supportNeeded.join('; ').replace(/"/g, '""')}"`);
+      lines.push('');
+    }
+    
+    // Add Reports section
+    lines.push('=== WEEKLY REPORTS ===');
     const headers = ['Project', 'Lead', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback', 'Submitted'];
+    lines.push(headers.join(','));
+    
     const rows = reportsToUse.map((report) => {
       const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
       const feedbackText = feedback && feedback.length > 0
@@ -831,10 +1020,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       ];
     });
 
-    return [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
-    ].join('\n');
+    rows.forEach(row => {
+      lines.push(row.map((cell) => `"${cell}"`).join(','));
+    });
+
+    return lines.join('\n');
   };
 
   const exportToPDF = () => {
@@ -1138,7 +1328,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   // Track if Force Archive is in progress
   const [isForceArchiving, setIsForceArchiving] = useState(false);
 
-  // Save current reports to archive (generates AI summary, PDF, CSV, archives, then resets)
+  // Save current reports to archive (generates AI summaries, PDF, CSV, archives, then resets)
   const saveToArchive = async () => {
     if (sortedReports.length === 0) {
       toast({
@@ -1159,32 +1349,41 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
       const weekEnd = weekEndDate.toISOString().split('T')[0];
 
-      // Step 2: Generate AI summary if one doesn't exist
-      let summaryToArchive = aiSummary;
-      if (!summaryToArchive) {
+      // Step 2: Generate both AI summaries (leadership + team) if they don't exist
+      let leadershipSummaryToArchive = aiSummary;
+      let teamSummaryToArchive = teamSummary;
+      if (!leadershipSummaryToArchive) {
         toast({
-          title: 'Generating AI Summary',
+          title: 'Generating AI Summaries',
           description: 'Please wait while we analyze the reports...',
         });
         try {
           const summaryResponse = await apiRequest('POST', '/api/weekly-reports/ai-summary');
           const summaryData = await summaryResponse.json();
           if (summaryData.summary) {
-            summaryToArchive = summaryData.summary;
+            leadershipSummaryToArchive = summaryData.summary;
+            teamSummaryToArchive = summaryData.teamSummary || null;
             setAiSummary(summaryData.summary);
+            setTeamSummary(summaryData.teamSummary || null);
             setSummaryGeneratedAt(summaryData.generatedAt);
             setReportsAnalyzed(summaryData.reportsAnalyzed || 0);
           }
         } catch (summaryError) {
-          console.error('Failed to generate AI summary:', summaryError);
-          // Continue without AI summary if it fails
+          console.error('Failed to generate AI summaries:', summaryError);
+          // Continue without AI summaries if it fails
         }
       }
 
-      // Step 3: Generate PDF and CSV using the reusable functions
+      // Combine summaries for archiving (new format)
+      const combinedSummaryToArchive = leadershipSummaryToArchive ? {
+        leadership: leadershipSummaryToArchive,
+        team: teamSummaryToArchive
+      } : null;
+
+      // Step 3: Generate PDF and CSV using the reusable functions (with both summaries)
       const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
-      const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, summaryToArchive);
-      const csvContent = generateCSVForReports(submittedReports);
+      const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, leadershipSummaryToArchive, teamSummaryToArchive);
+      const csvContent = generateCSVForReports(submittedReports, leadershipSummaryToArchive, teamSummaryToArchive);
 
       // Step 4: Calculate health counts
       const healthCounts = {
@@ -1193,13 +1392,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         critical: submittedReports.filter(r => r.healthStatus === 'critical').length,
       };
 
-      // Step 5: Archive via API
+      // Step 5: Archive via API (using combined summary format)
       await apiRequest('POST', '/api/saved-reports', {
         weekStart: reportWeekStart,
         weekEnd: weekEnd,
         reportCount: String(submittedReports.length),
         healthCounts,
-        aiSummary: summaryToArchive || null,
+        aiSummary: combinedSummaryToArchive,
         pdfData: pdfBase64,
         csvData: csvContent,
       });
@@ -1216,12 +1415,14 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
       
       setAiSummary(null);
+      setTeamSummary(null);
       setSummaryGeneratedAt(null);
       setReportsAnalyzed(0);
 
+      const summaryNote = leadershipSummaryToArchive ? (teamSummaryToArchive ? ' with AI summaries' : ' with leadership summary') : '';
       toast({
         title: 'Archive Complete',
-        description: `Week ending ${weekEnd} has been archived${summaryToArchive ? ' with AI summary' : ''} and reports have been reset.`,
+        description: `Week ending ${weekEnd} has been archived${summaryNote} and reports have been reset.`,
       });
     } catch (error) {
       console.error('Force archive failed:', error);
@@ -1426,6 +1627,123 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           )}
         </CardContent>
       </Card>
+
+      {/* Team Member Summary Section */}
+      {teamSummary && (
+        <Card className="glass-card border-white/10">
+          <CardHeader className="border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Users className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="section-label">AI-Powered Team Insights</p>
+                <CardTitle className="text-2xl">Team Members Summary</CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-6">
+              {/* Team Morale Overview */}
+              <div className={`p-4 rounded-lg ${
+                teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                'bg-destructive/10 border border-destructive/30'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className={`${
+                    teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
+                    teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
+                    'bg-destructive/10 text-destructive'
+                  } border-0`}>
+                    {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                    {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                    {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                    Team Morale: {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                                  teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                  </Badge>
+                </div>
+                <p className="text-foreground leading-relaxed">{teamSummary.teamSummary}</p>
+              </div>
+
+              {/* Team Insights Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Team Highlights */}
+                {teamSummary.teamHighlights.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-blue-500" />
+                      <h4 className="font-medium">Team Highlights</h4>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {teamSummary.teamHighlights.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Recognition Opportunities */}
+                {teamSummary.recognitionOpportunities.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Lightbulb className="h-4 w-4 text-success" />
+                      <h4 className="font-medium">Recognition Opportunities</h4>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {teamSummary.recognitionOpportunities.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Team Concerns */}
+                {teamSummary.teamConcerns.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-warning" />
+                      <h4 className="font-medium">Team Concerns</h4>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {teamSummary.teamConcerns.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Support Needed */}
+                {teamSummary.supportNeeded.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-destructive" />
+                      <h4 className="font-medium">Support Needed</h4>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {teamSummary.supportNeeded.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card id="weekly-reports-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
