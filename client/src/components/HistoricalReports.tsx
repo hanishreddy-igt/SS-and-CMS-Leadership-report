@@ -35,7 +35,11 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronLeft,
-  CalendarDays
+  CalendarDays,
+  Users,
+  TrendingUp,
+  Lightbulb,
+  Target
 } from 'lucide-react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { SavedReport } from '@shared/schema';
@@ -50,6 +54,44 @@ interface AISummary {
   attentionNeeded: string[];
   upcomingFocus: string[];
   executiveSummary: string;
+}
+
+interface TeamSummary {
+  overallTeamMorale: 'positive' | 'mixed' | 'concerning';
+  teamSummary: string;
+  teamHighlights: string[];
+  recognitionOpportunities: string[];
+  teamConcerns: string[];
+  supportNeeded: string[];
+}
+
+interface DualSummary {
+  leadership: AISummary;
+  team: TeamSummary | null;
+}
+
+// Helper to parse saved report AI summary (handles both legacy and new dual-summary format)
+function parseSavedSummary(aiSummaryData: unknown): { leadership: AISummary | null; team: TeamSummary | null } {
+  if (!aiSummaryData) return { leadership: null, team: null };
+  
+  // Check if it's the new dual-summary format
+  const data = aiSummaryData as { leadership?: AISummary; team?: TeamSummary | null; overallHealth?: string };
+  if (data.leadership && data.leadership.overallHealth) {
+    return {
+      leadership: data.leadership,
+      team: data.team || null
+    };
+  }
+  
+  // Legacy format - single summary object
+  if (data.overallHealth) {
+    return {
+      leadership: data as AISummary,
+      team: null
+    };
+  }
+  
+  return { leadership: null, team: null };
 }
 
 interface GroupedReports {
@@ -472,7 +514,7 @@ export default function HistoricalReports() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {savedReports.map((report) => {
                 const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
-                const reportAiSummary = report.aiSummary as AISummary | null;
+                const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(report.aiSummary);
                 const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
                 
                 return (
@@ -494,7 +536,7 @@ export default function HistoricalReports() {
                         <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                       
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex flex-wrap items-center gap-2 mb-4">
                         <Badge variant="secondary" className="gap-1">
                           <FileText className="h-3 w-3" />
                           {report.reportCount} Reports
@@ -502,7 +544,13 @@ export default function HistoricalReports() {
                         {reportAiSummary && (
                           <Badge variant="outline" className="gap-1 border-primary/30">
                             <Sparkles className="h-3 w-3 text-primary" />
-                            AI Summary
+                            Leadership
+                          </Badge>
+                        )}
+                        {reportTeamSummary && (
+                          <Badge variant="outline" className="gap-1 border-blue-500/30">
+                            <Users className="h-3 w-3 text-blue-500" />
+                            Team
                           </Badge>
                         )}
                       </div>
@@ -569,7 +617,7 @@ export default function HistoricalReports() {
           
           {selectedReport && (() => {
             const healthCounts = selectedReport.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
-            const reportAiSummary = selectedReport.aiSummary as AISummary | null;
+            const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(selectedReport.aiSummary);
             const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
 
             return (
@@ -657,7 +705,7 @@ export default function HistoricalReports() {
                   <div className={`p-4 rounded-lg ${healthConfig.bgColor} border ${healthConfig.borderColor} my-4`}>
                     <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      <h4 className="font-semibold">AI Summary</h4>
+                      <h4 className="font-semibold">Leadership Summary</h4>
                       <Badge className={`ml-auto ${healthConfig.bgColor} ${healthConfig.color} border-0`}>
                         <healthConfig.Icon className="h-3 w-3 mr-1" />
                         {healthConfig.label}
@@ -723,6 +771,87 @@ export default function HistoricalReports() {
                           <p className="text-xs font-medium text-destructive mb-2">Critical Issues</p>
                           <ul className="text-xs text-muted-foreground space-y-1">
                             {reportAiSummary.criticalIssues.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Team Member Summary Section */}
+                {reportTeamSummary && (
+                  <div className={`p-4 rounded-lg ${
+                    reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                    reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                    'bg-destructive/10 border border-destructive/30'
+                  } mb-4`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="h-4 w-4 text-blue-500" />
+                      <h4 className="font-semibold">Team Members Summary</h4>
+                      <Badge className={`ml-auto ${
+                        reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
+                        reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
+                        'bg-destructive/10 text-destructive'
+                      } border-0`}>
+                        {reportTeamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                        {reportTeamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3 w-3 mr-1" />}
+                        {reportTeamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3 w-3 mr-1" />}
+                        Morale: {reportTeamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                                 reportTeamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm mb-4">{reportTeamSummary.teamSummary}</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {reportTeamSummary.teamHighlights && reportTeamSummary.teamHighlights.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-blue-400 mb-2">Team Highlights</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportTeamSummary.teamHighlights.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {reportTeamSummary.recognitionOpportunities && reportTeamSummary.recognitionOpportunities.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-success mb-2">Recognition Opportunities</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportTeamSummary.recognitionOpportunities.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {reportTeamSummary.teamConcerns && reportTeamSummary.teamConcerns.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-warning mb-2">Team Concerns</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportTeamSummary.teamConcerns.map((item, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {reportTeamSummary.supportNeeded && reportTeamSummary.supportNeeded.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-destructive mb-2">Support Needed</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportTeamSummary.supportNeeded.map((item, i) => (
                               <li key={i} className="flex items-start gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
                                 {item}
