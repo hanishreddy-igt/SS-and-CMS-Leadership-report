@@ -742,6 +742,14 @@ export default function SubmitReport() {
                 const total = leadProjects.length;
                 const isComplete = submitted === total;
 
+                // Sort projects: drafted first, then pending, then submitted
+                const sortedLeadProjects = [...leadProjects].sort((a, b) => {
+                  const statusOrder = { 'drafted': 0, 'pending': 1, 'submitted': 2 };
+                  const statusA = getProjectReportStatus(a.id) as keyof typeof statusOrder;
+                  const statusB = getProjectReportStatus(b.id) as keyof typeof statusOrder;
+                  return (statusOrder[statusA] ?? 1) - (statusOrder[statusB] ?? 1);
+                });
+
                 return (
                   <div key={leadName} className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -754,7 +762,7 @@ export default function SubmitReport() {
                       </Badge>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {leadProjects.map((project) => {
+                      {sortedLeadProjects.map((project) => {
                         const reportStatus = getProjectReportStatus(project.id);
                         const submittedByName = reportStatus === 'submitted' ? getSubmittedByName(project.id) : null;
                         const isCoLead = hasCoLeads(project);
