@@ -453,29 +453,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      const leadershipPrompt = `You are an executive assistant analyzing weekly project reports for leadership. Analyze the following ${submittedReports.length} project reports and provide a concise executive summary.
+      const leadershipPrompt = `You are a senior executive assistant synthesizing weekly project reports for C-level leadership. You are analyzing ${submittedReports.length} project reports across the portfolio. Your goal is to provide a COMPREHENSIVE summary that eliminates the need for leadership to read individual reports.
 
-IMPORTANT: Focus ONLY on these fields from each report:
-- Health Status (on-track, at-risk, critical)
-- Progress This Week
-- Challenges and Blockers
-- Plans for Next Week
-
-REPORTS DATA:
+REPORT DATA TO ANALYZE:
 ${JSON.stringify(leadershipContext, null, 2)}
 
-Generate an executive summary in JSON format with the following structure:
+INSTRUCTIONS:
+- Be thorough and specific - name projects, customers, and leads where relevant
+- Do NOT limit insights arbitrarily - include ALL significant items
+- Focus on actionable intelligence that helps leadership make decisions
+- Group related insights together for clarity
+
+Generate a comprehensive executive summary in JSON format:
 {
   "overallHealth": "on-track" | "needs-attention" | "critical",
-  "weekHighlights": ["highlight 1", "highlight 2", "highlight 3"],
-  "keyAchievements": ["achievement 1", "achievement 2"],
-  "criticalIssues": ["issue 1", "issue 2"] or [],
-  "attentionNeeded": ["project/area needing attention"] or [],
-  "upcomingFocus": ["focus area 1", "focus area 2"],
-  "executiveSummary": "A 2-3 sentence overview of the week's performance across all projects"
+  "executiveSummary": "A comprehensive 4-5 sentence synthesis of the week: overall portfolio health, major themes, critical concerns, and outlook. Be specific about numbers and trends.",
+  
+  "portfolioHealthBreakdown": {
+    "onTrack": { "count": number, "projects": ["Project A (Customer) - Lead Name", ...] },
+    "needsAttention": { "count": number, "projects": ["Project B (Customer) - Lead Name: brief reason", ...] },
+    "critical": { "count": number, "projects": ["Project C (Customer) - Lead Name: brief reason", ...] }
+  },
+  
+  "immediateAttentionRequired": [
+    { "project": "Project Name", "customer": "Customer Name", "lead": "Lead Name", "issue": "Specific issue requiring leadership attention", "recommendedAction": "What leadership should do" }
+  ],
+  
+  "keyAchievements": [
+    { "project": "Project Name", "achievement": "Specific achievement or milestone", "impact": "Business impact or significance" }
+  ],
+  
+  "crossProjectPatterns": {
+    "commonChallenges": ["Pattern 1 affecting multiple projects", "Pattern 2", ...],
+    "resourceConstraints": ["Any bandwidth, staffing, or capacity issues observed"],
+    "processIssues": ["Any recurring process or workflow problems"]
+  },
+  
+  "upcomingFocus": [
+    { "project": "Project Name", "focus": "What the team will focus on next week", "priority": "high" | "medium" | "low" }
+  ],
+  
+  "recommendedLeadershipActions": [
+    { "action": "Specific action leadership should take", "priority": "high" | "medium", "rationale": "Why this matters" }
+  ],
+  
+  "weekHighlights": ["Key highlight 1 with context", "Key highlight 2", ...]
 }
 
-Be concise and focus on actionable insights. If there are no critical issues, return an empty array. Limit each array to 3-4 items maximum.`;
+IMPORTANT: 
+- Include ALL projects in portfolioHealthBreakdown, not just a sample
+- For immediateAttentionRequired, include any project that is critical or has significant blockers
+- For upcomingFocus, summarize the next week priorities across projects, grouping similar focuses
+- Be specific with project and customer names throughout`;
 
       // Build context for TEAM MEMBER AI summary - only team member feedback
       interface TeamMemberFeedbackItem {
@@ -504,12 +533,12 @@ Be concise and focus on actionable insights. If there are no critical issues, re
         };
       }).filter(r => r.teamFeedback.length > 0);
 
-      // Generate leadership summary
+      // Generate leadership summary (increased token limit for comprehensive analysis)
       const leadershipResponse = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: leadershipPrompt }],
         response_format: { type: "json_object" },
-        max_completion_tokens: 1024,
+        max_completion_tokens: 4096,
       });
 
       const leadershipContent = leadershipResponse.choices[0]?.message?.content;
@@ -522,28 +551,66 @@ Be concise and focus on actionable insights. If there are no critical issues, re
       // Generate team summary only if there's feedback
       let teamSummary = null;
       if (teamFeedbackContext.length > 0) {
-        const teamPrompt = `You are an HR analyst reviewing team member feedback from weekly project reports. Analyze the following team member feedback and provide insights for leadership.
+        const teamPrompt = `You are a senior HR analyst synthesizing team member feedback from weekly project reports. Your goal is to provide COMPREHENSIVE insights that help leadership understand team dynamics, recognize achievements, and address concerns proactively.
 
 TEAM MEMBER FEEDBACK DATA:
 ${JSON.stringify(teamFeedbackContext, null, 2)}
 
-Generate a team member summary in JSON format with the following structure:
+INSTRUCTIONS:
+- Be thorough - include ALL significant feedback, not just a sample
+- Name specific team members when recognizing achievements or noting concerns
+- Identify patterns across projects and teams
+- Provide actionable recommendations for leadership
+
+Generate a comprehensive team insights summary in JSON format:
 {
   "overallTeamMorale": "positive" | "mixed" | "concerning",
-  "teamHighlights": ["positive observation 1", "positive observation 2"],
-  "teamConcerns": ["concern 1", "concern 2"] or [],
-  "recognitionOpportunities": ["team member or achievement to recognize"] or [],
-  "supportNeeded": ["area where team needs support"] or [],
-  "teamSummary": "A 2-3 sentence overview of team sentiment and key feedback themes"
+  "teamSummary": "A comprehensive 4-5 sentence synthesis of team sentiment, key themes from feedback, notable achievements, and areas requiring attention. Be specific about patterns observed.",
+  
+  "teamHighlights": [
+    { "memberName": "Name", "project": "Project Name", "highlight": "Specific positive observation or achievement" }
+  ],
+  
+  "recognitionOpportunities": [
+    { "memberName": "Name", "project": "Project Name", "achievement": "What they did", "suggestedRecognition": "How to recognize (shoutout, award, etc.)" }
+  ],
+  
+  "teamConcerns": [
+    { "concern": "Specific concern identified", "affectedMembers": ["Name 1", "Name 2"] or "general", "project": "Project Name or 'Multiple'", "severity": "high" | "medium" | "low" }
+  ],
+  
+  "workloadObservations": [
+    { "observation": "Workload pattern observed", "affectedMembers": ["Names"], "recommendation": "Suggested action" }
+  ],
+  
+  "supportNeeded": [
+    { "area": "Area where support is needed", "members": ["Names or 'team-wide'"], "suggestedSupport": "Specific support recommendation" }
+  ],
+  
+  "developmentOpportunities": [
+    { "memberName": "Name", "opportunity": "Training or growth opportunity identified", "rationale": "Why this would help" }
+  ],
+  
+  "retentionRisks": [
+    { "indicator": "Warning sign observed", "members": ["Names if identifiable"], "recommendedAction": "Proactive step to address" }
+  ],
+  
+  "recommendedHRActions": [
+    { "action": "Specific action for HR/leadership", "priority": "high" | "medium", "rationale": "Why this matters" }
+  ]
 }
 
-Focus on team dynamics, morale, achievements worth recognizing, and areas needing leadership attention. Be balanced and constructive. Limit each array to 3-4 items maximum.`;
+IMPORTANT:
+- Include ALL team members mentioned in feedback where relevant
+- Be specific with names - leadership needs to know WHO to recognize or support
+- If no concerns in a category, return an empty array
+- Focus on actionable insights that help leadership engage with their team effectively`;
 
         const teamResponse = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [{ role: "user", content: teamPrompt }],
           response_format: { type: "json_object" },
-          max_completion_tokens: 1024,
+          max_completion_tokens: 4096,
         });
 
         const teamContent = teamResponse.choices[0]?.message?.content;
