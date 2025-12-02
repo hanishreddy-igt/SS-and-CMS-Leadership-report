@@ -2060,18 +2060,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <span className="text-muted-foreground">{getProjectLeadNames(project)}</span>
                     </div>
 
-                    <div className="flex items-start gap-2 text-sm">
-                      <Users className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <div className="flex-1">
-                        <span className="font-medium">Team:</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {getTeamMembersWithRoles(project.teamMembers).map((member, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {member.name}{member.role && <span className="text-primary ml-1">({member.role})</span>}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Team Members:</span>
+                      <span className="text-muted-foreground">{getTeamMembersWithRoles(project.teamMembers).length}</span>
                     </div>
 
                     {(project.startDate || project.endDate) && (
