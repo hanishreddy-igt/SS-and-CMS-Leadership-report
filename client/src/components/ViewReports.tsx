@@ -116,6 +116,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     commonChallenges: string[];
     resourceConstraints: string[];
     processIssues: string[];
+    emergingRisks?: string[];
+    positiveIndicators?: string[];
   }
   
   interface UpcomingFocusItem {
@@ -2194,7 +2196,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.save(`ai_executive_summary_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // Generate AI Summary PDF as base64 for archiving (no report table, just AI insights)
+  // Generate AI Summary PDF as base64 for archiving (comprehensive - all AI insight components)
   const generateAISummaryPDFBase64 = (weekEndDate: string, leadershipSummary: AISummary | null, teamSummaryParam: TeamSummary | null = null): string => {
     const doc = new jsPDF({ orientation: 'portrait' });
     const pageWidth = doc.internal.pageSize.width;
@@ -2239,6 +2241,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
     let currentY = 40;
 
+    // Helper to render text item
     const renderTextItem = (item: string | { project?: string; achievement?: string; focus?: string; priority?: string }, defaultText: string = '') => {
       if (typeof item === 'string') return item;
       if (item.project && item.achievement) return `${item.project}: ${item.achievement}`;
@@ -2246,22 +2249,22 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       return defaultText;
     };
 
-    const renderTeamItem = (item: unknown): string => {
+    // Helper for team items
+    const renderTeamItem = (item: string | { memberName?: string; achievement?: string; highlight?: string; project?: string; concern?: string; area?: string; suggestedSupport?: string; observation?: string; opportunity?: string; indicator?: string }) => {
       if (typeof item === 'string') return item;
-      if (!item || typeof item !== 'object') return '';
-      const obj = item as Record<string, unknown>;
-      if (obj.memberName && obj.achievement) return `${obj.memberName}: ${obj.achievement}`;
-      if (obj.memberName && obj.highlight) return `${obj.memberName}: ${obj.highlight}`;
-      if (obj.memberName && obj.opportunity) return `${obj.memberName}: ${obj.opportunity}`;
-      if (obj.concern) return `${obj.concern}`;
-      if (obj.area && obj.suggestedSupport) return `${obj.area}: ${obj.suggestedSupport}`;
-      if (obj.observation) return String(obj.observation);
-      if (obj.indicator) return String(obj.indicator);
+      if (item.memberName && item.achievement) return `${item.memberName}: ${item.achievement}`;
+      if (item.memberName && item.highlight) return `${item.memberName} (${item.project || ''}): ${item.highlight}`;
+      if (item.memberName && item.opportunity) return `${item.memberName}: ${item.opportunity}`;
+      if (item.concern) return `${item.concern} (${item.project || ''})`;
+      if (item.area && item.suggestedSupport) return `${item.area}: ${item.suggestedSupport}`;
+      if (item.observation) return item.observation;
+      if (item.indicator) return item.indicator;
       return '';
     };
 
     // Leadership Summary Section
     if (leadershipSummary) {
+      // Section header
       doc.setFillColor(...colors.navyLight as [number, number, number]);
       doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
       doc.setTextColor(...colors.primary as [number, number, number]);
@@ -2269,6 +2272,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       doc.setFont('helvetica', 'bold');
       doc.text('Leadership Insights', 18, currentY + 7);
       
+      // Overall health badge
       const healthColors: Record<string, [number, number, number]> = {
         'on-track': colors.success as [number, number, number],
         'needs-attention': colors.warning as [number, number, number],
@@ -2286,6 +2290,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       
       currentY += 15;
       
+      // Executive Summary
       doc.setTextColor(60, 60, 60);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
@@ -2293,34 +2298,89 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       doc.text(summaryLines, 14, currentY);
       currentY += summaryLines.length * 4.5 + 6;
 
-      // Portfolio Health Breakdown
+      // Portfolio Health Breakdown (comprehensive format with project names)
       if (leadershipSummary.portfolioHealthBreakdown) {
-        const phb = leadershipSummary.portfolioHealthBreakdown;
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(40, 40, 40);
-        doc.text('Portfolio Health:', 14, currentY);
-        currentY += 5;
+        doc.text('Portfolio Health Breakdown:', 14, currentY);
+        currentY += 6;
         
+        const phb = leadershipSummary.portfolioHealthBreakdown;
+        const maxWidth = pageWidth - 36;
+        
+        // On Track with project names
+        const onTrackText = `On Track (${phb.onTrack.count}): ${phb.onTrack.projects.slice(0, 5).join(', ')}${phb.onTrack.projects.length > 5 ? '...' : ''}`;
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...colors.success as [number, number, number]);
-        doc.text(`On Track (${phb.onTrack.count})`, 18, currentY);
-        currentY += 4;
+        const onTrackLines = doc.splitTextToSize(onTrackText, maxWidth);
+        doc.text(onTrackLines, 18, currentY);
+        currentY += onTrackLines.length * 3.5 + 1.5;
+        
+        // Needs Attention with project names
+        const needsAttentionText = `Needs Attention (${phb.needsAttention.count}): ${phb.needsAttention.projects.slice(0, 5).join(', ')}${phb.needsAttention.projects.length > 5 ? '...' : ''}`;
         doc.setTextColor(...colors.warning as [number, number, number]);
-        doc.text(`Needs Attention (${phb.needsAttention.count})`, 18, currentY);
-        currentY += 4;
+        const needsAttentionLines = doc.splitTextToSize(needsAttentionText, maxWidth);
+        doc.text(needsAttentionLines, 18, currentY);
+        currentY += needsAttentionLines.length * 3.5 + 1.5;
+        
+        // Critical with project names
+        const criticalText = `Critical (${phb.critical.count}): ${phb.critical.projects.slice(0, 5).join(', ')}${phb.critical.projects.length > 5 ? '...' : ''}`;
         doc.setTextColor(...colors.destructive as [number, number, number]);
-        doc.text(`Critical (${phb.critical.count})`, 18, currentY);
-        currentY += 6;
+        const criticalLines = doc.splitTextToSize(criticalText, maxWidth);
+        doc.text(criticalLines, 18, currentY);
+        currentY += criticalLines.length * 3.5 + 4;
       }
 
+      // Immediate Attention Required (comprehensive format)
+      if (leadershipSummary.immediateAttentionRequired && leadershipSummary.immediateAttentionRequired.length > 0) {
+        if (currentY > pageHeight - 50) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        const attentionItems = leadershipSummary.immediateAttentionRequired.slice(0, 5);
+        const maxWidth = pageWidth - 40;
+        
+        // Calculate height needed for box
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        let boxHeight = 12;
+        attentionItems.forEach((item) => {
+          const itemText = `• ${item.project} (${item.lead}): ${item.issue}`;
+          const itemLines = doc.splitTextToSize(itemText, maxWidth);
+          boxHeight += itemLines.length * 3.5 + 1.5;
+        });
+        
+        doc.setFillColor(255, 240, 240);
+        doc.roundedRect(14, currentY, pageWidth - 28, boxHeight, 2, 2, 'F');
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.destructive as [number, number, number]);
+        doc.text('Immediate Attention Required:', 18, currentY + 6);
+        currentY += 11;
+        
+        attentionItems.forEach((item) => {
+          const itemText = `• ${item.project} (${item.lead}): ${item.issue}`;
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          const itemLines = doc.splitTextToSize(itemText, maxWidth);
+          doc.text(itemLines, 18, currentY);
+          currentY += itemLines.length * 3.5 + 1.5;
+        });
+        currentY += 4;
+      }
+      
       // Key sections
       const sections = [
         { title: 'Key Achievements', items: leadershipSummary.keyAchievements, color: colors.success },
+        { title: 'Week Highlights', items: leadershipSummary.weekHighlights, color: colors.primary },
         { title: 'Needs Attention', items: leadershipSummary.attentionNeeded, color: colors.warning },
-        { title: 'Critical Issues', items: leadershipSummary.criticalIssues, color: colors.destructive },
         { title: 'Upcoming Focus', items: leadershipSummary.upcomingFocus, color: colors.primary },
+        { title: 'Critical Issues', items: leadershipSummary.criticalIssues, color: colors.destructive },
       ].filter(s => s.items && s.items.length > 0);
       
       sections.forEach(section => {
@@ -2348,15 +2408,136 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         });
         currentY += 3;
       });
+
+      // Cross-Project Patterns (comprehensive format)
+      if (leadershipSummary.crossProjectPatterns) {
+        const cpp = leadershipSummary.crossProjectPatterns;
+        
+        // Common Challenges
+        if (cpp.commonChallenges?.length > 0) {
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = 20;
+          }
+          
+          doc.setFillColor(...colors.warning as [number, number, number]);
+          doc.circle(16, currentY + 1.5, 1.5, 'F');
+          doc.setTextColor(40, 40, 40);
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Common Challenges', 20, currentY + 2.5);
+          currentY += 6;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          doc.setFontSize(8);
+          cpp.commonChallenges.slice(0, 5).forEach((item) => {
+            const lines = doc.splitTextToSize(`• ${item}`, pageWidth - 36);
+            doc.text(lines, 20, currentY);
+            currentY += lines.length * 3.5;
+          });
+          currentY += 3;
+        }
+        
+        // Emerging Risks
+        if (cpp.emergingRisks && cpp.emergingRisks.length > 0) {
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = 20;
+          }
+          
+          doc.setFillColor(...colors.destructive as [number, number, number]);
+          doc.circle(16, currentY + 1.5, 1.5, 'F');
+          doc.setTextColor(40, 40, 40);
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Emerging Risks', 20, currentY + 2.5);
+          currentY += 6;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          doc.setFontSize(8);
+          cpp.emergingRisks.slice(0, 5).forEach((item: string) => {
+            const lines = doc.splitTextToSize(`• ${item}`, pageWidth - 36);
+            doc.text(lines, 20, currentY);
+            currentY += lines.length * 3.5;
+          });
+          currentY += 3;
+        }
+        
+        // Positive Indicators
+        if (cpp.positiveIndicators && cpp.positiveIndicators.length > 0) {
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = 20;
+          }
+          
+          doc.setFillColor(...colors.success as [number, number, number]);
+          doc.circle(16, currentY + 1.5, 1.5, 'F');
+          doc.setTextColor(40, 40, 40);
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Positive Indicators', 20, currentY + 2.5);
+          currentY += 6;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          doc.setFontSize(8);
+          cpp.positiveIndicators.slice(0, 5).forEach((item: string) => {
+            const lines = doc.splitTextToSize(`• ${item}`, pageWidth - 36);
+            doc.text(lines, 20, currentY);
+            currentY += lines.length * 3.5;
+          });
+          currentY += 3;
+        }
+      }
+
+      // Recommended Leadership Actions (comprehensive format)
+      if (leadershipSummary.recommendedLeadershipActions && leadershipSummary.recommendedLeadershipActions.length > 0) {
+        if (currentY > pageHeight - 30) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFillColor(...colors.primary as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Recommended Leadership Actions', 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        leadershipSummary.recommendedLeadershipActions.forEach((item) => {
+          if (currentY > pageHeight - 20) {
+            doc.addPage();
+            currentY = 20;
+          }
+          const priorityColor = item.priority === 'high' ? colors.destructive : 
+                               item.priority === 'medium' ? colors.warning : colors.muted;
+          doc.setTextColor(...priorityColor as [number, number, number]);
+          doc.text(`[${item.priority.toUpperCase()}]`, 20, currentY);
+          doc.setTextColor(80, 80, 80);
+          const lines = doc.splitTextToSize(item.action, pageWidth - 55);
+          doc.text(lines, 42, currentY);
+          currentY += lines.length * 3.5 + 1;
+        });
+        currentY += 4;
+      }
+      
+      currentY += 6;
     }
 
     // Team Summary Section
     if (teamSummaryParam) {
-      if (currentY > pageHeight - 50) {
+      // Check if we need a new page
+      if (currentY > pageHeight - 80) {
         doc.addPage();
         currentY = 20;
       }
       
+      // Section header
       doc.setFillColor(...colors.navyLight as [number, number, number]);
       doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
       doc.setTextColor(59, 130, 246);
@@ -2364,6 +2545,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       doc.setFont('helvetica', 'bold');
       doc.text('Team Member Insights', 18, currentY + 7);
       
+      // Morale badge
       const moraleColors: Record<string, [number, number, number]> = {
         'positive': colors.success as [number, number, number],
         'mixed': colors.warning as [number, number, number],
@@ -2374,28 +2556,34 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                           teamSummaryParam.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
       
       doc.setFillColor(...moraleColor);
-      doc.roundedRect(pageWidth - 14 - 30, currentY + 2, 28, 6, 1, 1, 'F');
+      doc.roundedRect(pageWidth - 14 - 40, currentY + 2, 38, 6, 1, 1, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(7);
-      doc.text(moraleLabel, pageWidth - 14 - 15, currentY + 6, { align: 'center' });
+      doc.text(`Morale: ${moraleLabel}`, pageWidth - 14 - 20, currentY + 6, { align: 'center' });
       
       currentY += 15;
       
+      // Team Summary text
       doc.setTextColor(60, 60, 60);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      const teamLines = doc.splitTextToSize(teamSummaryParam.teamSummary, pageWidth - 28);
-      doc.text(teamLines, 14, currentY);
-      currentY += teamLines.length * 4.5 + 6;
-
+      const teamSummaryLines = doc.splitTextToSize(teamSummaryParam.teamSummary, pageWidth - 28);
+      doc.text(teamSummaryLines, 14, currentY);
+      currentY += teamSummaryLines.length * 4.5 + 6;
+      
+      // Team sections (comprehensive)
       const teamSections = [
         { title: 'Recognition Opportunities', items: teamSummaryParam.recognitionOpportunities, color: colors.success },
+        { title: 'Team Highlights', items: teamSummaryParam.teamHighlights, color: colors.primary },
         { title: 'Team Concerns', items: teamSummaryParam.teamConcerns, color: colors.warning },
-        { title: 'Support Needed', items: teamSummaryParam.supportNeeded, color: colors.purple },
-        { title: 'Development Opportunities', items: teamSummaryParam.developmentOpportunities, color: colors.primary },
+        { title: 'Support Needed', items: teamSummaryParam.supportNeeded, color: colors.destructive },
+        { title: 'Workload Observations', items: teamSummaryParam.workloadObservations, color: colors.primary },
+        { title: 'Development Opportunities', items: teamSummaryParam.developmentOpportunities, color: colors.purple },
+        { title: 'Retention Risks', items: teamSummaryParam.retentionRisks, color: colors.destructive },
       ].filter(s => s.items && s.items.length > 0);
       
       teamSections.forEach(section => {
+        // Check for page break
         if (currentY > pageHeight - 30) {
           doc.addPage();
           currentY = 20;
@@ -2403,6 +2591,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         
         doc.setFillColor(...section.color as [number, number, number]);
         doc.circle(16, currentY + 1.5, 1.5, 'F');
+        
         doc.setTextColor(40, 40, 40);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
@@ -2420,9 +2609,42 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         });
         currentY += 3;
       });
+
+      // Recommended HR Actions (comprehensive format)
+      if (teamSummaryParam.recommendedHRActions && teamSummaryParam.recommendedHRActions.length > 0) {
+        if (currentY > pageHeight - 30) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFillColor(...colors.primary as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Recommended HR Actions', 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        teamSummaryParam.recommendedHRActions.forEach((item) => {
+          if (currentY > pageHeight - 20) {
+            doc.addPage();
+            currentY = 20;
+          }
+          const priorityColor = item.priority === 'high' ? colors.destructive : 
+                               item.priority === 'medium' ? colors.warning : colors.muted;
+          doc.setTextColor(...priorityColor as [number, number, number]);
+          doc.text(`[${item.priority.toUpperCase()}]`, 20, currentY);
+          doc.setTextColor(80, 80, 80);
+          const lines = doc.splitTextToSize(item.action, pageWidth - 55);
+          doc.text(lines, 42, currentY);
+          currentY += lines.length * 3.5 + 1;
+        });
+      }
     }
 
-    // Footer
+    // Footer on last page
     doc.setFillColor(...colors.navy as [number, number, number]);
     doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
     doc.setFontSize(7);
