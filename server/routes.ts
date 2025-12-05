@@ -123,6 +123,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Active Reporting Week endpoint
+  // Returns the current active week for report submission based on the latest archive
+  // The reporting week stays open until archive runs (either auto or force)
+  app.get('/api/reporting-week', isAuthenticated, async (_req, res) => {
+    try {
+      // Helper to calculate Monday of the current calendar week
+      const calculateCurrentWeekStart = () => {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const daysToMonday = (dayOfWeek + 6) % 7;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - daysToMonday);
+        monday.setHours(0, 0, 0, 0);
+        const year = monday.getFullYear();
+        const month = String(monday.getMonth() + 1).padStart(2, '0');
+        const day = String(monday.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      // Get saved reports (archived weeks)
+      const savedReports = await storage.getSavedReports();
+      
+      if (savedReports.length > 0) {
+        // Find the most recent archived week
+        const sortedReports = savedReports.sort((a, b) => 
+          new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
+        );
+        const latestArchivedWeekStart = sortedReports[0].weekStart;
+        
+        // The active reporting week is the week AFTER the latest archive
+        const latestArchiveDate = new Date(latestArchivedWeekStart + 'T00:00:00');
+        const nextWeekMonday = new Date(latestArchiveDate);
+        nextWeekMonday.setDate(latestArchiveDate.getDate() + 7);
+        
+        const year = nextWeekMonday.getFullYear();
+        const month = String(nextWeekMonday.getMonth() + 1).padStart(2, '0');
+        const day = String(nextWeekMonday.getDate()).padStart(2, '0');
+        const activeWeekStart = `${year}-${month}-${day}`;
+        
+        // Calculate week end (Sunday)
+        const weekEndDate = new Date(nextWeekMonday);
+        weekEndDate.setDate(nextWeekMonday.getDate() + 6);
+        const endYear = weekEndDate.getFullYear();
+        const endMonth = String(weekEndDate.getMonth() + 1).padStart(2, '0');
+        const endDay = String(weekEndDate.getDate()).padStart(2, '0');
+        const activeWeekEnd = `${endYear}-${endMonth}-${endDay}`;
+        
+        res.json({ 
+          weekStart: activeWeekStart, 
+          weekEnd: activeWeekEnd,
+          source: 'archive'
+        });
+      } else {
+        // No archives exist - check for existing weekly reports
+        const weeklyReports = await storage.getWeeklyReports();
+        
+        if (weeklyReports.length > 0) {
+          // Use the weekStart from existing reports (should all be the same)
+          const existingWeekStart = weeklyReports[0].weekStart;
+          
+          // Calculate week end (Sunday)
+          const weekStartDate = new Date(existingWeekStart + 'T00:00:00');
+          const weekEndDate = new Date(weekStartDate);
+          weekEndDate.setDate(weekStartDate.getDate() + 6);
+          const endYear = weekEndDate.getFullYear();
+          const endMonth = String(weekEndDate.getMonth() + 1).padStart(2, '0');
+          const endDay = String(weekEndDate.getDate()).padStart(2, '0');
+          const activeWeekEnd = `${endYear}-${endMonth}-${endDay}`;
+          
+          res.json({ 
+            weekStart: existingWeekStart, 
+            weekEnd: activeWeekEnd,
+            source: 'existing-reports'
+          });
+        } else {
+          // No archives and no existing reports - use current calendar week
+          const weekStart = calculateCurrentWeekStart();
+          const weekStartDate = new Date(weekStart + 'T00:00:00');
+          const weekEndDate = new Date(weekStartDate);
+          weekEndDate.setDate(weekStartDate.getDate() + 6);
+          const endYear = weekEndDate.getFullYear();
+          const endMonth = String(weekEndDate.getMonth() + 1).padStart(2, '0');
+          const endDay = String(weekEndDate.getDate()).padStart(2, '0');
+          const weekEnd = `${endYear}-${endMonth}-${endDay}`;
+          
+          res.json({ 
+            weekStart, 
+            weekEnd,
+            source: 'calendar'
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error('Error getting reporting week:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Team Members routes (protected)
   app.get('/api/team-members', isAuthenticated, async (_req, res) => {
     try {

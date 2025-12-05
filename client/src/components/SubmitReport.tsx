@@ -49,12 +49,25 @@ function getNextWednesdayUTC() {
   return nextWed;
 }
 
+// Type for reporting week API response
+interface ReportingWeekResponse {
+  weekStart: string;
+  weekEnd: string;
+  source: 'archive' | 'existing-reports' | 'calendar';
+}
+
 export default function SubmitReport() {
   const { toast } = useToast();
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
+  
+  // Get the active reporting week from the API (stays open until archive runs)
+  const { data: reportingWeek } = useQuery<ReportingWeekResponse>({ 
+    queryKey: ['/api/reporting-week'],
+    staleTime: 30000, // Cache for 30 seconds
+  });
   
   const [selectedLead, setSelectedLead] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
@@ -82,7 +95,8 @@ export default function SubmitReport() {
   // Lock state for preventing simultaneous editing
   const [projectLockInfo, setProjectLockInfo] = useState<{ isLocked: boolean; lockedBy: string } | null>(null);
 
-  const currentWeek = getCurrentWeekStart();
+  // Use API-provided week or fall back to local calculation
+  const currentWeek = reportingWeek?.weekStart || getCurrentWeekStart();
   
   // Helper to get all lead IDs for a project (supports co-leads)
   const getProjectLeadIds = (project: Project): string[] => {

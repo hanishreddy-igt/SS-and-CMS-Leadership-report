@@ -47,12 +47,25 @@ interface ViewReportsProps {
   onClearExternalFilter?: () => void;
 }
 
+// Type for reporting week API response
+interface ReportingWeekResponse {
+  weekStart: string;
+  weekEnd: string;
+  source: 'archive' | 'existing-reports' | 'calendar';
+}
+
 export default function ViewReports({ externalHealthFilter, onClearExternalFilter }: ViewReportsProps) {
   const { toast } = useToast();
   const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
+  
+  // Get the active reporting week from the API (stays open until archive runs)
+  const { data: reportingWeek } = useQuery<ReportingWeekResponse>({ 
+    queryKey: ['/api/reporting-week'],
+    staleTime: 30000, // Cache for 30 seconds
+  });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({
     progress: '',
@@ -205,8 +218,9 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const autoArchiveTriggered = useRef(false);
   const [isAutoArchiving, setIsAutoArchiving] = useState(false);
 
-  // Get current week start from reports
-  const currentWeekStart = weeklyReports.length > 0 ? weeklyReports[0].weekStart : null;
+  // Get current week start from API (primary) or reports (fallback)
+  // The API ensures the week stays open until archive runs
+  const currentWeekStart = reportingWeek?.weekStart || (weeklyReports.length > 0 ? weeklyReports[0].weekStart : null);
 
   // Check if reports were modified after AI summary was generated
   const reportsModifiedAfterSummary = (() => {
@@ -364,6 +378,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
           queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
           queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/reporting-week'] }); // Advance to next week
           
           // Clear local state
           setAiSummary(null);
@@ -2267,6 +2282,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
       queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
       queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reporting-week'] }); // Advance to next week
       
       setAiSummary(null);
       setTeamSummary(null);
