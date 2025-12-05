@@ -25,11 +25,16 @@ const healthStatusOptions = [
 function getCurrentWeekStart(): string {
   const now = new Date();
   const dayOfWeek = now.getDay();
+  // Calculate days to go back to reach Monday (Sunday=0 goes back 6 days, Monday=1 stays, etc.)
   const daysToMonday = (dayOfWeek + 6) % 7;
   const monday = new Date(now);
   monday.setDate(now.getDate() - daysToMonday);
   monday.setHours(0, 0, 0, 0);
-  return monday.toISOString().split('T')[0];
+  // Use local date formatting to avoid timezone shift issues
+  const year = monday.getFullYear();
+  const month = String(monday.getMonth() + 1).padStart(2, '0');
+  const day = String(monday.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // Calculate next Wednesday at 00:00 UTC (auto-archive day)

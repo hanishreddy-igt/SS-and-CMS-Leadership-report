@@ -770,7 +770,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23, 59, 59, 999);
     
-    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    // Use local date formatting to avoid timezone shift issues
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
     return { weekStart: formatDate(monday), weekEnd: formatDate(sunday) };
   };
 
@@ -1255,8 +1261,14 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.muted as [number, number, number]);
-    const { weekEnd } = getCurrentWeekDates();
-    const weekEndFormatted = new Date(weekEnd + 'T00:00:00').toLocaleDateString('en-US', { 
+    // Get week dates from the component's currentWeekStart (derived from all reports)
+    // Falls back to getCurrentWeekDates() only if no reports exist
+    const pdfWeekStart = currentWeekStart || getCurrentWeekDates().weekStart;
+    const pdfWeekStartDate = new Date(pdfWeekStart + 'T00:00:00Z');
+    const pdfWeekEndDate = new Date(pdfWeekStartDate);
+    pdfWeekEndDate.setUTCDate(pdfWeekStartDate.getUTCDate() + 6);
+    const pdfWeekEnd = pdfWeekEndDate.toISOString().split('T')[0];
+    const weekEndFormatted = new Date(pdfWeekEnd + 'T00:00:00').toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
@@ -1800,8 +1812,14 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.setFont('helvetica', 'bold');
     doc.text('AI-Powered Executive Summary', 14, 15);
     
-    const { weekEnd } = getCurrentWeekDates();
-    const weekEndFormatted = new Date(weekEnd + 'T00:00:00').toLocaleDateString('en-US', { 
+    // Get week dates from the component's currentWeekStart (derived from all reports)
+    // Falls back to getCurrentWeekDates() only if no reports exist
+    const aiPdfWeekStart = currentWeekStart || getCurrentWeekDates().weekStart;
+    const aiWeekStartDate = new Date(aiPdfWeekStart + 'T00:00:00Z');
+    const aiWeekEndDate = new Date(aiWeekStartDate);
+    aiWeekEndDate.setUTCDate(aiWeekStartDate.getUTCDate() + 6);
+    const aiWeekEnd = aiWeekEndDate.toISOString().split('T')[0];
+    const weekEndFormatted = new Date(aiWeekEnd + 'T00:00:00').toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
