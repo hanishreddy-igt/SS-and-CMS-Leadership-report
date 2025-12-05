@@ -24,16 +24,21 @@ const healthStatusOptions = [
 
 function getCurrentWeekStart(): string {
   const now = new Date();
-  const dayOfWeek = now.getDay();
-  // Calculate days to go back to reach Monday (Sunday=0 goes back 6 days, Monday=1 stays, etc.)
-  const daysToMonday = (dayOfWeek + 6) % 7;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - daysToMonday);
-  monday.setHours(0, 0, 0, 0);
-  // Use local date formatting to avoid timezone shift issues
-  const year = monday.getFullYear();
-  const month = String(monday.getMonth() + 1).padStart(2, '0');
-  const day = String(monday.getDate()).padStart(2, '0');
+  // Get UTC date components
+  const utcYear = now.getUTCFullYear();
+  const utcMonth = now.getUTCMonth();
+  const utcDate = now.getUTCDate();
+  const utcDayOfWeek = now.getUTCDay();
+  
+  // Calculate days to go back to reach Monday
+  const daysToMonday = (utcDayOfWeek + 6) % 7;
+  
+  // Create pure UTC date for Monday midnight
+  const mondayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate - daysToMonday, 0, 0, 0, 0));
+  
+  const year = mondayUTC.getUTCFullYear();
+  const month = String(mondayUTC.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(mondayUTC.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 

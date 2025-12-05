@@ -133,28 +133,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 3. If no data → use current calendar week
   app.get('/api/reporting-week', isAuthenticated, async (_req, res) => {
     try {
-      // Helper to calculate Monday of the current calendar week
+      // Helper to calculate Monday of the current calendar week (UTC)
       const calculateCurrentWeekStart = () => {
         const now = new Date();
-        const dayOfWeek = now.getDay();
-        const daysToMonday = (dayOfWeek + 6) % 7;
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - daysToMonday);
-        monday.setHours(0, 0, 0, 0);
-        const year = monday.getFullYear();
-        const month = String(monday.getMonth() + 1).padStart(2, '0');
-        const day = String(monday.getDate()).padStart(2, '0');
+        // Get UTC date components
+        const utcYear = now.getUTCFullYear();
+        const utcMonth = now.getUTCMonth();
+        const utcDate = now.getUTCDate();
+        const utcDayOfWeek = now.getUTCDay();
+        
+        // Calculate days to go back to reach Monday
+        const daysToMonday = (utcDayOfWeek + 6) % 7;
+        
+        // Create pure UTC date for Monday midnight
+        const mondayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate - daysToMonday, 0, 0, 0, 0));
+        
+        const year = mondayUTC.getUTCFullYear();
+        const month = String(mondayUTC.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(mondayUTC.getUTCDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       };
 
-      // Helper to calculate week end (Sunday) from week start
+      // Helper to calculate week end (Sunday) from week start (UTC)
       const calculateWeekEnd = (weekStart: string) => {
-        const weekStartDate = new Date(weekStart + 'T00:00:00');
+        const weekStartDate = new Date(weekStart + 'T00:00:00Z'); // Parse as UTC
         const weekEndDate = new Date(weekStartDate);
-        weekEndDate.setDate(weekStartDate.getDate() + 6);
-        const endYear = weekEndDate.getFullYear();
-        const endMonth = String(weekEndDate.getMonth() + 1).padStart(2, '0');
-        const endDay = String(weekEndDate.getDate()).padStart(2, '0');
+        weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
+        const endYear = weekEndDate.getUTCFullYear();
+        const endMonth = String(weekEndDate.getUTCMonth() + 1).padStart(2, '0');
+        const endDay = String(weekEndDate.getUTCDate()).padStart(2, '0');
         return `${endYear}-${endMonth}-${endDay}`;
       };
 

@@ -285,12 +285,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       // Get the week start of the reports
       const reportWeekStart = weeklyReports[0].weekStart;
       
-      // Calculate the Monday of the current week
-      const currentMonday = new Date(now);
-      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      currentMonday.setUTCDate(now.getUTCDate() + diffToMonday);
-      currentMonday.setUTCHours(0, 0, 0, 0);
-      const currentWeekMonday = currentMonday.toISOString().split('T')[0];
+      // Calculate the Monday of the current week using pure UTC
+      const utcYear = now.getUTCFullYear();
+      const utcMonth = now.getUTCMonth();
+      const utcDate = now.getUTCDate();
+      const daysToMonday = (dayOfWeek + 6) % 7;
+      const currentMondayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate - daysToMonday, 0, 0, 0, 0));
+      const currentWeekMonday = `${currentMondayUTC.getUTCFullYear()}-${String(currentMondayUTC.getUTCMonth() + 1).padStart(2, '0')}-${String(currentMondayUTC.getUTCDate()).padStart(2, '0')}`;
       
       // If reports are from a previous week (not current week), auto-archive
       if (reportWeekStart < currentWeekMonday) {
@@ -773,26 +774,30 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     document.body.removeChild(link);
   };
 
-  // Get current week's date range (Monday to Sunday)
+  // Get current week's date range (Monday to Sunday) in UTC
   const getCurrentWeekDates = () => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + diffToMonday);
-    monday.setHours(0, 0, 0, 0);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23, 59, 59, 999);
+    const now = new Date();
+    // Get UTC date components
+    const utcYear = now.getUTCFullYear();
+    const utcMonth = now.getUTCMonth();
+    const utcDate = now.getUTCDate();
+    const utcDayOfWeek = now.getUTCDay();
     
-    // Use local date formatting to avoid timezone shift issues
+    // Calculate days to go back to reach Monday
+    const daysToMonday = (utcDayOfWeek + 6) % 7;
+    
+    // Create pure UTC dates for Monday and Sunday midnight
+    const mondayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate - daysToMonday, 0, 0, 0, 0));
+    const sundayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate - daysToMonday + 6, 23, 59, 59, 999));
+    
+    // Format as YYYY-MM-DD
     const formatDate = (d: Date) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
+      const year = d.getUTCFullYear();
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
-    return { weekStart: formatDate(monday), weekEnd: formatDate(sunday) };
+    return { weekStart: formatDate(mondayUTC), weekEnd: formatDate(sundayUTC) };
   };
 
   // Get next Wednesday 00:00:00 UTC for auto-archive display
