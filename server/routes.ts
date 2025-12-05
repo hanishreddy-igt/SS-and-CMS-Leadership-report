@@ -26,11 +26,11 @@ const projectEditLocks = new Map<string, ProjectLock>();
 setInterval(() => {
   const now = Date.now();
   const staleThreshold = 10 * 60 * 1000; // 10 minutes
-  for (const [projectId, lock] of projectEditLocks.entries()) {
+  Array.from(projectEditLocks.entries()).forEach(([projectId, lock]) => {
     if (now - lock.timestamp.getTime() > staleThreshold) {
       projectEditLocks.delete(projectId);
     }
-  }
+  });
 }, 60 * 1000); // Run every minute
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -677,11 +677,22 @@ IMPORTANT:
 
   app.post('/api/saved-reports', isAuthenticated, async (req, res) => {
     try {
+      // Log the size of incoming data for debugging
+      const bodySize = JSON.stringify(req.body).length;
+      console.log(`[Archive] Saving report - Body size: ${(bodySize / 1024 / 1024).toFixed(2)} MB`);
+      console.log(`[Archive] Week: ${req.body.weekStart} to ${req.body.weekEnd}`);
+      console.log(`[Archive] Report count: ${req.body.reportCount}`);
+      console.log(`[Archive] PDF data length: ${req.body.pdfData?.length || 0} chars`);
+      console.log(`[Archive] CSV data length: ${req.body.csvData?.length || 0} chars`);
+      console.log(`[Archive] Has AI summary: ${!!req.body.aiSummary}`);
+      
       const data = insertSavedReportSchema.parse(req.body);
       const report = await storage.upsertSavedReport(data);
+      console.log(`[Archive] Successfully saved report for week ${report.weekStart}`);
       res.json(report);
     } catch (error: any) {
-      console.error('Error saving report:', error);
+      console.error('[Archive] Error saving report:', error);
+      console.error('[Archive] Error stack:', error.stack);
       res.status(400).json({ error: error.message });
     }
   });

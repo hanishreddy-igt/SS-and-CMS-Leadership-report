@@ -326,6 +326,9 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, leadershipSummaryToArchive, teamSummaryToArchive);
           const csvContent = generateCSVForReports(submittedReports, leadershipSummaryToArchive, teamSummaryToArchive);
           
+          console.log(`[Auto-Archive] PDF size: ${(pdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
+          console.log(`[Auto-Archive] CSV size: ${(csvContent.length / 1024).toFixed(2)} KB`);
+          
           // Calculate health counts from submitted reports only (same as Force Archive)
           const healthCounts = {
             onTrack: submittedReports.filter(r => r.healthStatus === 'on-track').length,
@@ -334,7 +337,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           };
           
           // Archive via API with full PDF and CSV data (using combined summary format)
-          await apiRequest('POST', '/api/saved-reports', {
+          const archiveResponse = await apiRequest('POST', '/api/saved-reports', {
             weekStart: reportWeekStart,
             weekEnd: weekEnd,
             reportCount: String(submittedReports.length),
@@ -343,6 +346,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             pdfData: pdfBase64,
             csvData: csvContent,
           });
+          
+          if (!archiveResponse.ok) {
+            const errorData = await archiveResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Archive save failed with status ${archiveResponse.status}`);
+          }
           
           // Delete all current reports
           await apiRequest('DELETE', '/api/weekly-reports', {});
@@ -368,11 +376,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             title: 'Auto-Archive Complete',
             description: `Previous week's ${weeklyReports.length} reports have been archived${summaryNote} and reset for the new week.`,
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Auto-archive failed:', error);
+          const errorMessage = error.message || 'Unknown error occurred';
           toast({
             title: 'Auto-Archive Failed',
-            description: 'Failed to auto-archive reports. Please use Force Archive manually.',
+            description: `Failed to auto-archive: ${errorMessage}. Please use Force Archive manually.`,
             variant: 'destructive',
           });
         } finally {
@@ -2180,7 +2189,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       };
 
       // Step 5: Archive via API (using combined summary format)
-      await apiRequest('POST', '/api/saved-reports', {
+      console.log(`[Archive] Archiving ${submittedReports.length} reports for week ${reportWeekStart} to ${weekEnd}`);
+      console.log(`[Archive] PDF size: ${(pdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
+      console.log(`[Archive] CSV size: ${(csvContent.length / 1024).toFixed(2)} KB`);
+      
+      const archiveResponse = await apiRequest('POST', '/api/saved-reports', {
         weekStart: reportWeekStart,
         weekEnd: weekEnd,
         reportCount: String(submittedReports.length),
@@ -2189,6 +2202,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         pdfData: pdfBase64,
         csvData: csvContent,
       });
+      
+      if (!archiveResponse.ok) {
+        const errorData = await archiveResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Archive save failed with status ${archiveResponse.status}`);
+      }
 
       // Step 6: Reset - Delete all current reports and AI summary
       await apiRequest('DELETE', '/api/weekly-reports', {});
@@ -2211,11 +2229,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         title: 'Archive Complete',
         description: `Week ending ${weekEnd} has been archived${summaryNote} and reports have been reset.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Force archive failed:', error);
+      const errorMessage = error.message || 'Unknown error occurred';
       toast({
         title: 'Archive Failed',
-        description: 'Failed to archive reports. Please try again.',
+        description: `Failed to archive reports: ${errorMessage}`,
         variant: 'destructive',
       });
     } finally {
