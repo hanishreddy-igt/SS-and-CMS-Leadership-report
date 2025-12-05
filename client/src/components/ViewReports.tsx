@@ -807,6 +807,28 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
     
+    // Helper function to safely convert AI summary items to strings
+    const itemToString = (item: unknown): string => {
+      if (typeof item === 'string') return item;
+      if (!item || typeof item !== 'object') return '';
+      const obj = item as Record<string, unknown>;
+      // Handle various item formats
+      if (obj.project && obj.achievement) return `${obj.project}: ${obj.achievement}`;
+      if (obj.project && obj.issue) return `${obj.project}: ${obj.issue}`;
+      if (obj.project && obj.focus) return `${obj.project}: ${obj.focus}`;
+      if (obj.memberName && obj.achievement) return `${obj.memberName}: ${obj.achievement}`;
+      if (obj.memberName && obj.highlight) return `${obj.memberName}: ${obj.highlight}`;
+      if (obj.area && obj.suggestedSupport) return `${obj.area}: ${obj.suggestedSupport}`;
+      if (obj.concern) return String(obj.concern);
+      if (obj.observation) return String(obj.observation);
+      // Fallback: try to stringify
+      try {
+        return JSON.stringify(obj);
+      } catch {
+        return '';
+      }
+    };
+    
     const colors = {
       navy: [15, 23, 42],
       navyLight: [30, 41, 59],
@@ -907,10 +929,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
         (leadershipSummary.keyAchievements || []).slice(0, 3).forEach(item => {
-          const itemText = typeof item === 'string' ? item : `${item.project}: ${item.achievement}`;
-          const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
-          doc.text(itemLines, leftX, currentY);
-          currentY += itemLines.length * 3;
+          const itemText = itemToString(item);
+          if (itemText) {
+            const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
+            doc.text(itemLines, leftX, currentY);
+            currentY += itemLines.length * 3;
+          }
         });
       }
       
@@ -925,9 +949,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
         (leadershipSummary.attentionNeeded || []).slice(0, 3).forEach(item => {
-          const itemLines = doc.splitTextToSize(`• ${item}`, halfWidth - 4);
-          doc.text(itemLines, rightX, rightY);
-          rightY += itemLines.length * 3;
+          const itemText = itemToString(item);
+          if (itemText) {
+            const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
+            doc.text(itemLines, rightX, rightY);
+            rightY += itemLines.length * 3;
+          }
         });
       }
       
@@ -938,7 +965,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     if (teamSummaryParam) {
       doc.setFillColor(...colors.navyLight as [number, number, number]);
       doc.roundedRect(14, currentY, pageWidth - 28, 8, 2, 2, 'F');
-      doc.setTextColor([59, 130, 246] as unknown as number, 130, 246); // Blue color for team
+      doc.setTextColor(59, 130, 246); // Blue color for team
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('Team Member Insights (AI-Powered)', 18, currentY + 5.5);
@@ -983,10 +1010,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
         (teamSummaryParam.recognitionOpportunities || []).slice(0, 3).forEach(item => {
-          const itemText = typeof item === 'string' ? item : `${item.memberName}: ${item.achievement}`;
-          const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
-          doc.text(itemLines, leftX, teamLeftY);
-          teamLeftY += itemLines.length * 3;
+          const itemText = itemToString(item);
+          if (itemText) {
+            const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
+            doc.text(itemLines, leftX, teamLeftY);
+            teamLeftY += itemLines.length * 3;
+          }
         });
       }
       
@@ -1000,10 +1029,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
         (teamSummaryParam.supportNeeded || []).slice(0, 3).forEach(item => {
-          const itemText = typeof item === 'string' ? item : `${item.area}: ${item.suggestedSupport}`;
-          const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
-          doc.text(itemLines, rightX, teamRightY);
-          teamRightY += itemLines.length * 3;
+          const itemText = itemToString(item);
+          if (itemText) {
+            const itemLines = doc.splitTextToSize(`• ${itemText}`, halfWidth - 4);
+            doc.text(itemLines, rightX, teamRightY);
+            teamRightY += itemLines.length * 3;
+          }
         });
       }
       
