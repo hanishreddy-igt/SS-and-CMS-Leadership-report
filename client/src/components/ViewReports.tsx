@@ -335,11 +335,15 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             team: teamSummaryToArchive
           } : null;
           
-          // Generate PDF and CSV for auto-archive (same as manual Force Archive)
-          console.log('Auto-archive: Generating PDF and CSV...');
+          // Generate AI Summary PDF and Reports CSV for auto-archive
+          // PDF = AI Summary only (smaller file)
+          // CSV = Reports data only (no AI summary in CSV)
+          console.log('Auto-archive: Generating AI Summary PDF and Reports CSV...');
           const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
-          const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, leadershipSummaryToArchive, teamSummaryToArchive);
-          const csvContent = generateCSVForReports(submittedReports, leadershipSummaryToArchive, teamSummaryToArchive);
+          const pdfBase64 = leadershipSummaryToArchive 
+            ? generateAISummaryPDFBase64(weekEnd, leadershipSummaryToArchive, teamSummaryToArchive)
+            : '';
+          const csvContent = generateCSVContent(); // Reports only, no AI summary
           
           console.log(`[Auto-Archive] PDF size: ${(pdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
           console.log(`[Auto-Archive] CSV size: ${(csvContent.length / 1024).toFixed(2)} KB`);
@@ -2190,6 +2194,245 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.save(`ai_executive_summary_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  // Generate AI Summary PDF as base64 for archiving (no report table, just AI insights)
+  const generateAISummaryPDFBase64 = (weekEndDate: string, leadershipSummary: AISummary | null, teamSummaryParam: TeamSummary | null = null): string => {
+    const doc = new jsPDF({ orientation: 'portrait' });
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    
+    const colors = {
+      navy: [15, 23, 42],
+      navyLight: [30, 41, 59],
+      primary: [99, 102, 241],
+      success: [34, 197, 94],
+      warning: [245, 158, 11],
+      destructive: [239, 68, 68],
+      white: [255, 255, 255],
+      muted: [148, 163, 184],
+      border: [51, 65, 85],
+      purple: [139, 92, 246],
+    };
+
+    // Header
+    doc.setFillColor(...colors.navy as [number, number, number]);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    doc.setFillColor(...colors.primary as [number, number, number]);
+    doc.rect(0, 30, pageWidth, 2, 'F');
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('AI-Powered Executive Summary', 14, 15);
+    
+    const weekEndFormatted = new Date(weekEndDate + 'T00:00:00').toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    doc.setFontSize(10);
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    doc.text(`Week Ending ${weekEndFormatted}`, 14, 23);
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(8);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 14, 15, { align: 'right' });
+
+    let currentY = 40;
+
+    const renderTextItem = (item: string | { project?: string; achievement?: string; focus?: string; priority?: string }, defaultText: string = '') => {
+      if (typeof item === 'string') return item;
+      if (item.project && item.achievement) return `${item.project}: ${item.achievement}`;
+      if (item.project && item.focus) return `${item.project} (${item.priority || 'medium'}): ${item.focus}`;
+      return defaultText;
+    };
+
+    const renderTeamItem = (item: unknown): string => {
+      if (typeof item === 'string') return item;
+      if (!item || typeof item !== 'object') return '';
+      const obj = item as Record<string, unknown>;
+      if (obj.memberName && obj.achievement) return `${obj.memberName}: ${obj.achievement}`;
+      if (obj.memberName && obj.highlight) return `${obj.memberName}: ${obj.highlight}`;
+      if (obj.memberName && obj.opportunity) return `${obj.memberName}: ${obj.opportunity}`;
+      if (obj.concern) return `${obj.concern}`;
+      if (obj.area && obj.suggestedSupport) return `${obj.area}: ${obj.suggestedSupport}`;
+      if (obj.observation) return String(obj.observation);
+      if (obj.indicator) return String(obj.indicator);
+      return '';
+    };
+
+    // Leadership Summary Section
+    if (leadershipSummary) {
+      doc.setFillColor(...colors.navyLight as [number, number, number]);
+      doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
+      doc.setTextColor(...colors.primary as [number, number, number]);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Leadership Insights', 18, currentY + 7);
+      
+      const healthColors: Record<string, [number, number, number]> = {
+        'on-track': colors.success as [number, number, number],
+        'needs-attention': colors.warning as [number, number, number],
+        'critical': colors.destructive as [number, number, number],
+      };
+      const healthColor = healthColors[leadershipSummary.overallHealth] || colors.muted as [number, number, number];
+      const healthLabel = leadershipSummary.overallHealth === 'on-track' ? 'On Track' : 
+                         leadershipSummary.overallHealth === 'needs-attention' ? 'Needs Attention' : 'Critical';
+      
+      doc.setFillColor(...healthColor);
+      doc.roundedRect(pageWidth - 14 - 40, currentY + 2, 38, 6, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.text(healthLabel, pageWidth - 14 - 20, currentY + 6, { align: 'center' });
+      
+      currentY += 15;
+      
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const summaryLines = doc.splitTextToSize(leadershipSummary.executiveSummary, pageWidth - 28);
+      doc.text(summaryLines, 14, currentY);
+      currentY += summaryLines.length * 4.5 + 6;
+
+      // Portfolio Health Breakdown
+      if (leadershipSummary.portfolioHealthBreakdown) {
+        const phb = leadershipSummary.portfolioHealthBreakdown;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(40, 40, 40);
+        doc.text('Portfolio Health:', 14, currentY);
+        currentY += 5;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.success as [number, number, number]);
+        doc.text(`On Track (${phb.onTrack.count})`, 18, currentY);
+        currentY += 4;
+        doc.setTextColor(...colors.warning as [number, number, number]);
+        doc.text(`Needs Attention (${phb.needsAttention.count})`, 18, currentY);
+        currentY += 4;
+        doc.setTextColor(...colors.destructive as [number, number, number]);
+        doc.text(`Critical (${phb.critical.count})`, 18, currentY);
+        currentY += 6;
+      }
+
+      // Key sections
+      const sections = [
+        { title: 'Key Achievements', items: leadershipSummary.keyAchievements, color: colors.success },
+        { title: 'Needs Attention', items: leadershipSummary.attentionNeeded, color: colors.warning },
+        { title: 'Critical Issues', items: leadershipSummary.criticalIssues, color: colors.destructive },
+        { title: 'Upcoming Focus', items: leadershipSummary.upcomingFocus, color: colors.primary },
+      ].filter(s => s.items && s.items.length > 0);
+      
+      sections.forEach(section => {
+        if (currentY > pageHeight - 30) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFillColor(...section.color as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(section.title, 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(8);
+        (section.items || []).slice(0, 5).forEach((item) => {
+          const itemText = renderTextItem(item);
+          const lines = doc.splitTextToSize(`• ${itemText}`, pageWidth - 36);
+          doc.text(lines, 20, currentY);
+          currentY += lines.length * 3.5;
+        });
+        currentY += 3;
+      });
+    }
+
+    // Team Summary Section
+    if (teamSummaryParam) {
+      if (currentY > pageHeight - 50) {
+        doc.addPage();
+        currentY = 20;
+      }
+      
+      doc.setFillColor(...colors.navyLight as [number, number, number]);
+      doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
+      doc.setTextColor(59, 130, 246);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Team Member Insights', 18, currentY + 7);
+      
+      const moraleColors: Record<string, [number, number, number]> = {
+        'positive': colors.success as [number, number, number],
+        'mixed': colors.warning as [number, number, number],
+        'concerning': colors.destructive as [number, number, number]
+      };
+      const moraleColor = moraleColors[teamSummaryParam.overallTeamMorale] || colors.muted as [number, number, number];
+      const moraleLabel = teamSummaryParam.overallTeamMorale === 'positive' ? 'Positive' : 
+                          teamSummaryParam.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
+      
+      doc.setFillColor(...moraleColor);
+      doc.roundedRect(pageWidth - 14 - 30, currentY + 2, 28, 6, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.text(moraleLabel, pageWidth - 14 - 15, currentY + 6, { align: 'center' });
+      
+      currentY += 15;
+      
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const teamLines = doc.splitTextToSize(teamSummaryParam.teamSummary, pageWidth - 28);
+      doc.text(teamLines, 14, currentY);
+      currentY += teamLines.length * 4.5 + 6;
+
+      const teamSections = [
+        { title: 'Recognition Opportunities', items: teamSummaryParam.recognitionOpportunities, color: colors.success },
+        { title: 'Team Concerns', items: teamSummaryParam.teamConcerns, color: colors.warning },
+        { title: 'Support Needed', items: teamSummaryParam.supportNeeded, color: colors.purple },
+        { title: 'Development Opportunities', items: teamSummaryParam.developmentOpportunities, color: colors.primary },
+      ].filter(s => s.items && s.items.length > 0);
+      
+      teamSections.forEach(section => {
+        if (currentY > pageHeight - 30) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFillColor(...section.color as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(section.title, 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(8);
+        (section.items || []).slice(0, 5).forEach((item) => {
+          const itemText = renderTeamItem(item);
+          const lines = doc.splitTextToSize(`• ${itemText}`, pageWidth - 36);
+          doc.text(lines, 20, currentY);
+          currentY += lines.length * 3.5;
+        });
+        currentY += 3;
+      });
+    }
+
+    // Footer
+    doc.setFillColor(...colors.navy as [number, number, number]);
+    doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
+    doc.setFontSize(7);
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    doc.text('CMS & SS Executive Summary - AI Generated', 14, pageHeight - 4);
+    doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 4, { align: 'right' });
+
+    return doc.output('datauristring').split(',')[1];
+  };
+
   // Track if Force Archive is in progress
   const [isForceArchiving, setIsForceArchiving] = useState(false);
 
@@ -2245,10 +2488,14 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         team: teamSummaryToArchive
       } : null;
 
-      // Step 3: Generate PDF and CSV using the reusable functions (with both summaries)
+      // Step 3: Generate AI Summary PDF and Reports CSV separately
+      // PDF = AI Summary only (smaller file)
+      // CSV = Reports data only (no AI summary in CSV)
       const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
-      const pdfBase64 = generatePDFBase64(submittedReports, weekEnd, leadershipSummaryToArchive, teamSummaryToArchive);
-      const csvContent = generateCSVForReports(submittedReports, leadershipSummaryToArchive, teamSummaryToArchive);
+      const pdfBase64 = leadershipSummaryToArchive 
+        ? generateAISummaryPDFBase64(weekEnd, leadershipSummaryToArchive, teamSummaryToArchive)
+        : '';
+      const csvContent = generateCSVContent(); // Reports only, no AI summary
 
       // Step 4: Calculate health counts
       const healthCounts = {
@@ -3103,17 +3350,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={exportToPDF} data-testid="menu-export-pdf">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Download Full Report (PDF)
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={exportAISummaryPDF} data-testid="menu-export-ai-summary-pdf" disabled={!aiSummary && !teamSummary}>
                       <Sparkles className="h-4 w-4 mr-2" />
-                      Download AI Summary Only (PDF)
+                      AI Summary (PDF)
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={exportToCSV} data-testid="menu-export-csv">
                       <FileDown className="h-4 w-4 mr-2" />
-                      Download as CSV
+                      All Reports (CSV)
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -24,27 +24,22 @@ import {
   AlertTriangle, 
   AlertCircle, 
   FileDown, 
-  FileText, 
+  FileText,
   Calendar,
   Sparkles,
   History,
-  Download,
   Trash2,
   Eye,
   BarChart3,
   ChevronDown,
   ChevronRight,
-  ChevronLeft,
   CalendarDays,
   Users,
   TrendingUp,
   Lightbulb,
   Target
 } from 'lucide-react';
-import { Document, Page, pdfjs } from 'react-pdf';
 import type { SavedReport } from '@shared/schema';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 // Comprehensive Leadership Summary interfaces
 interface PortfolioHealthCategory {
@@ -252,58 +247,10 @@ export default function HistoricalReports() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
-
-  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setPageNumber(1);
-  }, []);
-
-  const goToPrevPage = () => setPageNumber(prev => Math.max(prev - 1, 1));
-  const goToNextPage = () => setPageNumber(prev => Math.min(prev + 1, numPages || 1));
 
   const { data: savedReports = [], isLoading } = useQuery<SavedReport[]>({ 
     queryKey: ['/api/saved-reports'] 
   });
-
-  // Create blob URL for PDF preview when a report is selected
-  useEffect(() => {
-    if (selectedReport?.pdfData && showPdfModal) {
-      try {
-        // Strip data: prefix if present
-        let base64Data = selectedReport.pdfData;
-        if (base64Data.startsWith('data:')) {
-          const commaIndex = base64Data.indexOf(',');
-          if (commaIndex !== -1) {
-            base64Data = base64Data.substring(commaIndex + 1);
-          }
-        }
-        
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        setPdfBlobUrl(url);
-        
-        // Cleanup on unmount or when report changes
-        return () => {
-          URL.revokeObjectURL(url);
-          setPdfBlobUrl(null);
-        };
-      } catch (error) {
-        console.error('Error creating PDF blob:', error);
-        setPdfBlobUrl(null);
-      }
-    } else {
-      setPdfBlobUrl(null);
-    }
-  }, [selectedReport, showPdfModal]);
 
   // Group reports by year and month based on weekEnd date
   const groupedReports = useMemo(() => {
@@ -749,16 +696,18 @@ export default function HistoricalReports() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => downloadPDF(selectedReport)}
-                      data-testid="button-download-pdf-modal"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download PDF
-                    </Button>
+                    {selectedReport.pdfData && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => downloadPDF(selectedReport)}
+                        data-testid="button-download-pdf-modal"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        AI Summary (PDF)
+                      </Button>
+                    )}
                     {selectedReport.csvData && (
                       <Button
                         size="sm"
@@ -768,7 +717,7 @@ export default function HistoricalReports() {
                         data-testid="button-download-csv-modal"
                       >
                         <FileDown className="h-4 w-4" />
-                        Download CSV
+                        Reports (CSV)
                       </Button>
                     )}
                     <AlertDialog>
@@ -1110,84 +1059,6 @@ export default function HistoricalReports() {
                   </div>
                 )}
 
-                <div className="rounded-lg border border-white/10 bg-white overflow-auto" style={{ minHeight: '400px', maxHeight: '50vh' }}>
-                  {pdfBlobUrl ? (
-                    <div className="flex flex-col items-center">
-                      <div className="w-full bg-primary/10 border-b border-primary/20 py-2 px-4 text-center">
-                        <h3 className="text-sm font-semibold text-primary">
-                          Weekly Report - Week Ending {formatWeekEnding(selectedReport.weekEnd)}
-                        </h3>
-                      </div>
-                      <Document
-                        file={pdfBlobUrl}
-                        onLoadSuccess={onDocumentLoadSuccess}
-                        loading={
-                          <div className="flex items-center justify-center p-8">
-                            <div className="text-center text-muted-foreground">
-                              <FileText className="h-8 w-8 mx-auto mb-2 opacity-30 animate-pulse" />
-                              <p>Loading PDF...</p>
-                            </div>
-                          </div>
-                        }
-                        error={
-                          <div className="flex items-center justify-center p-8">
-                            <div className="text-center text-muted-foreground">
-                              <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                              <p className="mb-2">Failed to load PDF</p>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-2"
-                                onClick={() => selectedReport && downloadPDF(selectedReport)}
-                              >
-                                <Download className="h-4 w-4" />
-                                Download PDF
-                              </Button>
-                            </div>
-                          </div>
-                        }
-                      >
-                        <Page 
-                          pageNumber={pageNumber} 
-                          width={750}
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                        />
-                      </Document>
-                      {numPages && numPages > 1 && (
-                        <div className="flex items-center gap-4 py-3 bg-muted/50 w-full justify-center border-t">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={goToPrevPage}
-                            disabled={pageNumber <= 1}
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <span className="text-sm text-muted-foreground">
-                            Page {pageNumber} of {numPages}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={goToNextPage}
-                            disabled={pageNumber >= numPages}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground" style={{ minHeight: '300px' }}>
-                      <div className="text-center">
-                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                        <p>Loading PDF preview...</p>
-                        <p className="text-sm mt-2">Use the Download PDF button above to view the full report.</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </>
             );
           })()}
