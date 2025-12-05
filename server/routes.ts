@@ -124,8 +124,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Active Reporting Week endpoint
-  // Returns the current active week for report submission based on the latest archive
-  // The reporting week stays open until archive runs (either auto or force)
+  // Returns the current active week for report submission
+  // Logic:
+  // 1. If unarchived reports exist → use their weekStart (stay with those reports)
+  // 2. If archives exist → use MAX(archived week, current calendar week)
+  //    - If still in the archived week (force archive on Sat) → stay on that week
+  //    - If calendar moved to new week → use current calendar week
+  // 3. If no data → use current calendar week
   app.get('/api/reporting-week', isAuthenticated, async (_req, res) => {
     try {
       // Helper to calculate Monday of the current calendar week
@@ -142,8 +147,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return `${year}-${month}-${day}`;
       };
 
-      // Get saved reports (archived weeks)
+      // Helper to calculate week end (Sunday) from week start
+      const calculateWeekEnd = (weekStart: string) => {
+        const weekStartDate = new Date(weekStart + 'T00:00:00');
+        const weekEndDate = new Date(weekStartDate);
+        weekEndDate.setDate(weekStartDate.getDate() + 6);
+        const endYear = weekEndDate.getFullYear();
+        const endMonth = String(weekEndDate.getMonth() + 1).padStart(2, '0');
+        const endDay = String(weekEndDate.getDate()).padStart(2, '0');
+        return `${endYear}-${endMonth}-${endDay}`;
+      };
+
+      // Priority 1: Check for existing unarchived weekly reports
+      const weeklyReports = await storage.getWeeklyReports();
+      
+      if (weeklyReports.length > 0) {
+        // Use the weekStart from existing reports (they define the active week)
+        const existingWeekStart = weeklyReports[0].weekStart;
+        res.json({ 
+          weekStart: existingWeekStart, 
+          weekEnd: calculateWeekEnd(existingWeekStart),
+          source: 'existing-reports'
+        });
+        return;
+      }
+
+      // Priority 2: Check archives and compare with current calendar week
       const savedReports = await storage.getSavedReports();
+      const currentCalendarWeek = calculateCurrentWeekStart();
       
       if (savedReports.length > 0) {
         // Find the most recent archived week
@@ -152,68 +183,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         const latestArchivedWeekStart = sortedReports[0].weekStart;
         
-        // The active reporting week is the week AFTER the latest archive
-        const latestArchiveDate = new Date(latestArchivedWeekStart + 'T00:00:00');
-        const nextWeekMonday = new Date(latestArchiveDate);
-        nextWeekMonday.setDate(latestArchiveDate.getDate() + 7);
+        // Compare dates: use the LATER of (archived week, current calendar week)
+        // This handles:
+        // - Force archive on Dec 6 (Sat): calendar=Dec 1, archived=Dec 1 → stay on Dec 1
+        // - Force archive on Dec 8 (Mon): calendar=Dec 8, archived=Dec 1 → advance to Dec 8
+        // - Auto archive on Dec 10 (Wed): calendar=Dec 8, archived=Dec 1 → advance to Dec 8
+        const archivedDate = new Date(latestArchivedWeekStart + 'T00:00:00');
+        const calendarDate = new Date(currentCalendarWeek + 'T00:00:00');
         
-        const year = nextWeekMonday.getFullYear();
-        const month = String(nextWeekMonday.getMonth() + 1).padStart(2, '0');
-        const day = String(nextWeekMonday.getDate()).padStart(2, '0');
-        const activeWeekStart = `${year}-${month}-${day}`;
+        // If calendar week is after the archived week, use calendar week
+        // If calendar week is same as or before archived week, use archived week
+        // (same week = force archive mid-week, should stay on that week)
+        let activeWeekStart: string;
+        let source: string;
         
-        // Calculate week end (Sunday)
-        const weekEndDate = new Date(nextWeekMonday);
-        weekEndDate.setDate(nextWeekMonday.getDate() + 6);
-        const endYear = weekEndDate.getFullYear();
-        const endMonth = String(weekEndDate.getMonth() + 1).padStart(2, '0');
-        const endDay = String(weekEndDate.getDate()).padStart(2, '0');
-        const activeWeekEnd = `${endYear}-${endMonth}-${endDay}`;
+        if (calendarDate > archivedDate) {
+          // Calendar has moved past the archived week → use current calendar week
+          activeWeekStart = currentCalendarWeek;
+          source = 'calendar-after-archive';
+        } else {
+          // Still in the same week as the archive (or earlier, edge case)
+          // Stay on the archived week so users can continue submitting
+          activeWeekStart = latestArchivedWeekStart;
+          source = 'archive-same-week';
+        }
         
         res.json({ 
           weekStart: activeWeekStart, 
-          weekEnd: activeWeekEnd,
-          source: 'archive'
+          weekEnd: calculateWeekEnd(activeWeekStart),
+          source
         });
       } else {
-        // No archives exist - check for existing weekly reports
-        const weeklyReports = await storage.getWeeklyReports();
-        
-        if (weeklyReports.length > 0) {
-          // Use the weekStart from existing reports (should all be the same)
-          const existingWeekStart = weeklyReports[0].weekStart;
-          
-          // Calculate week end (Sunday)
-          const weekStartDate = new Date(existingWeekStart + 'T00:00:00');
-          const weekEndDate = new Date(weekStartDate);
-          weekEndDate.setDate(weekStartDate.getDate() + 6);
-          const endYear = weekEndDate.getFullYear();
-          const endMonth = String(weekEndDate.getMonth() + 1).padStart(2, '0');
-          const endDay = String(weekEndDate.getDate()).padStart(2, '0');
-          const activeWeekEnd = `${endYear}-${endMonth}-${endDay}`;
-          
-          res.json({ 
-            weekStart: existingWeekStart, 
-            weekEnd: activeWeekEnd,
-            source: 'existing-reports'
-          });
-        } else {
-          // No archives and no existing reports - use current calendar week
-          const weekStart = calculateCurrentWeekStart();
-          const weekStartDate = new Date(weekStart + 'T00:00:00');
-          const weekEndDate = new Date(weekStartDate);
-          weekEndDate.setDate(weekStartDate.getDate() + 6);
-          const endYear = weekEndDate.getFullYear();
-          const endMonth = String(weekEndDate.getMonth() + 1).padStart(2, '0');
-          const endDay = String(weekEndDate.getDate()).padStart(2, '0');
-          const weekEnd = `${endYear}-${endMonth}-${endDay}`;
-          
-          res.json({ 
-            weekStart, 
-            weekEnd,
-            source: 'calendar'
-          });
-        }
+        // Priority 3: No archives and no existing reports - use current calendar week
+        res.json({ 
+          weekStart: currentCalendarWeek, 
+          weekEnd: calculateWeekEnd(currentCalendarWeek),
+          source: 'calendar'
+        });
       }
     } catch (error: any) {
       console.error('Error getting reporting week:', error);
