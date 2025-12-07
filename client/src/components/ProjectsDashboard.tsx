@@ -1097,12 +1097,12 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const validateProjectForm = () => {
     const errors: Record<string, string> = {};
     if (!projectFormData.name.trim()) {
-      errors.name = 'Project name is required';
+      errors.name = 'Project customer is required';
     } else if (projectNameError) {
       errors.name = projectNameError;
     }
     if (!projectFormData.customer.trim()) {
-      errors.customer = 'Customer is required';
+      errors.customer = 'Contact person name is required';
     }
     if (projectFormData.leadIds.length === 0) {
       errors.leadIds = 'At least one project lead is required';
@@ -1420,7 +1420,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </DialogHeader>
                   <form onSubmit={handleSubmitProject} className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label htmlFor="new-project-name">Project Name <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="new-project-name">Project Customer <span className="text-red-500">*</span></Label>
                       <Input
                         id="new-project-name"
                         data-testid="input-project-name"
@@ -1432,7 +1432,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                             setProjectFormErrors({ ...projectFormErrors, name: '' });
                           }
                         }}
-                        placeholder="Enter project name"
+                        placeholder="Enter project customer"
                         className={(projectFormErrors.name || projectNameError) ? 'border-red-500' : projectNameWarning ? 'border-yellow-500' : ''}
                       />
                       {projectFormErrors.name && (
@@ -1451,7 +1451,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="new-customer">Customer <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="new-customer">Contact Person Name <span className="text-red-500">*</span></Label>
                       <Input
                         id="new-customer"
                         data-testid="input-customer"
@@ -1463,7 +1463,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                             setProjectFormErrors({ ...projectFormErrors, customer: '' });
                           }
                         }}
-                        placeholder="Enter customer name"
+                        placeholder="Enter contact person name"
                         className={projectFormErrors.customer ? 'border-red-500' : ''}
                       />
                       {projectFormErrors.customer && (
@@ -2285,7 +2285,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Project Name <span className="text-red-500">*</span></Label>
+              <Label htmlFor="edit-name">Project Customer <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-name"
                 data-testid="input-edit-project-name"
@@ -2294,7 +2294,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-customer">Customer <span className="text-red-500">*</span></Label>
+              <Label htmlFor="edit-customer">Contact Person Name <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-customer"
                 data-testid="input-edit-customer"
@@ -3231,7 +3231,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   <Building2 className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Customer</p>
+                  <p className="text-sm font-medium text-muted-foreground">Contact Person Name</p>
                   <p className="text-lg font-semibold" data-testid="text-project-detail-customer">{selectedProject.customer}</p>
                 </div>
               </div>
