@@ -30,8 +30,8 @@ const inputTourSteps: TourStep[] = [
     id: 'click-lead',
     type: 'click-to-open',
     title: 'View Lead Details',
-    description: '**Click on any project lead\'s name** to see their details.',
-    targetSelector: '[data-testid^="text-lead-"]',
+    description: '**Click on any project lead tile** to see their details.',
+    targetSelector: '[data-testid^="lead-item-"]',
   },
   {
     id: 'lead-popup-explain',
@@ -75,8 +75,8 @@ const inputTourSteps: TourStep[] = [
     id: 'click-member',
     type: 'click-to-open',
     title: 'View Member Details',
-    description: '**Click on any team member\'s name** to see their assignments.',
-    targetSelector: '[data-testid^="text-member-"]',
+    description: '**Click on any team member tile** to see their assignments.',
+    targetSelector: '[data-testid^="member-item-"]',
   },
   {
     id: 'member-popup-explain',
@@ -453,45 +453,70 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     if (!isTouring || !awaitingClose) return;
 
     let checkInterval: ReturnType<typeof setInterval>;
+    let waitForOpenInterval: ReturnType<typeof setInterval>;
     let waitForOpenTimeout: ReturnType<typeof setTimeout>;
+    let initialDelayTimeout: ReturnType<typeof setTimeout>;
+    let isCleanedUp = false;
     
-    // First, wait for popup to be detected as open
-    const waitForOpen = setInterval(() => {
-      if (isPopupOpen()) {
-        setPopupWasOpen(true);
-        clearInterval(waitForOpen);
+    // Wait a bit before starting popup detection to let animations complete
+    initialDelayTimeout = setTimeout(() => {
+      if (isCleanedUp) return;
+      
+      // First, wait for popup to be detected as open
+      waitForOpenInterval = setInterval(() => {
+        if (isCleanedUp) {
+          clearInterval(waitForOpenInterval);
+          return;
+        }
         
-        // Now start checking for close
-        checkInterval = setInterval(() => {
-          if (!isPopupOpen()) {
-            clearInterval(checkInterval);
-            setAwaitingClose(false);
-            setPopupWasOpen(false);
+        if (isPopupOpen()) {
+          setPopupWasOpen(true);
+          clearInterval(waitForOpenInterval);
+          
+          // Wait a moment before starting to check for close
+          setTimeout(() => {
+            if (isCleanedUp) return;
             
-            // Small delay before advancing
-            setTimeout(() => {
-              setCurrentStep(prev => prev + 1);
-            }, 400);
-          }
-        }, 200);
-      }
-    }, 100);
+            // Now start checking for close
+            checkInterval = setInterval(() => {
+              if (isCleanedUp) {
+                clearInterval(checkInterval);
+                return;
+              }
+              
+              if (!isPopupOpen()) {
+                clearInterval(checkInterval);
+                setAwaitingClose(false);
+                setPopupWasOpen(false);
+                
+                // Small delay before advancing
+                setTimeout(() => {
+                  if (!isCleanedUp) {
+                    setCurrentStep(prev => prev + 1);
+                  }
+                }, 400);
+              }
+            }, 250);
+          }, 500); // Wait 500ms after popup detected before checking for close
+        }
+      }, 150);
 
-    // Timeout after 10 seconds if popup never opens
-    waitForOpenTimeout = setTimeout(() => {
-      clearInterval(waitForOpen);
-      if (!popupWasOpen) {
-        console.warn('Tour: Popup never opened, advancing anyway');
-        setAwaitingClose(false);
-      }
-    }, 10000);
+      // Timeout after 15 seconds if popup never opens
+      waitForOpenTimeout = setTimeout(() => {
+        if (!isCleanedUp && waitForOpenInterval) {
+          clearInterval(waitForOpenInterval);
+        }
+      }, 15000);
+    }, 300); // Initial delay before starting detection
 
     return () => {
-      clearInterval(waitForOpen);
-      clearTimeout(waitForOpenTimeout);
+      isCleanedUp = true;
+      if (initialDelayTimeout) clearTimeout(initialDelayTimeout);
+      if (waitForOpenInterval) clearInterval(waitForOpenInterval);
+      if (waitForOpenTimeout) clearTimeout(waitForOpenTimeout);
       if (checkInterval) clearInterval(checkInterval);
     };
-  }, [isTouring, awaitingClose, isPopupOpen, popupWasOpen]);
+  }, [isTouring, awaitingClose, isPopupOpen]);
 
   const startTour = () => {
     setShowModeSelect(false);
