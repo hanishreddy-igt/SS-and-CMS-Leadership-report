@@ -31,7 +31,7 @@ const inputTourSteps: TourStep[] = [
     type: 'click-to-open',
     title: 'View Lead Details',
     description: '**Click on any project lead\'s name** to see their details.',
-    targetSelector: '[data-testid^="lead-item-"]',
+    targetSelector: '[data-testid^="text-lead-"]',
   },
   {
     id: 'lead-popup-explain',
@@ -76,7 +76,7 @@ const inputTourSteps: TourStep[] = [
     type: 'click-to-open',
     title: 'View Member Details',
     description: '**Click on any team member\'s name** to see their assignments.',
-    targetSelector: '[data-testid^="member-item-"]',
+    targetSelector: '[data-testid^="text-member-"]',
   },
   {
     id: 'member-popup-explain',
@@ -322,6 +322,7 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
   const [awaitingClick, setAwaitingClick] = useState(false);
   const [awaitingClose, setAwaitingClose] = useState(false);
   const [popupWasOpen, setPopupWasOpen] = useState(false);
+  const [highlightFound, setHighlightFound] = useState(false);
   const stepProcessedRef = useRef(false);
 
   const steps = inputTourSteps;
@@ -332,17 +333,34 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     document.querySelectorAll('.tour-highlight-active').forEach(el => {
       el.classList.remove('tour-highlight-active');
     });
+    setHighlightFound(false);
   }, []);
 
-  // Scroll to and highlight an element
-  const scrollAndHighlight = useCallback((selector: string) => {
-    const element = document.querySelector(selector);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => {
-        element.classList.add('tour-highlight-active');
-      }, 300);
-    }
+  // Find and highlight element with retry
+  const findAndHighlight = useCallback((selector: string, maxRetries = 10): Promise<Element | null> => {
+    return new Promise((resolve) => {
+      let attempts = 0;
+      
+      const tryFind = () => {
+        const element = document.querySelector(selector);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => {
+            element.classList.add('tour-highlight-active');
+            setHighlightFound(true);
+          }, 300);
+          resolve(element);
+        } else if (attempts < maxRetries) {
+          attempts++;
+          setTimeout(tryFind, 200);
+        } else {
+          console.warn(`Tour: Could not find element with selector "${selector}"`);
+          resolve(null);
+        }
+      };
+      
+      tryFind();
+    });
   }, []);
 
   // Check if any popup is currently open
@@ -369,26 +387,27 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
       setAwaitingClick(false);
       setAwaitingClose(false);
       setPopupWasOpen(false);
+      setHighlightFound(false);
       clearHighlights();
 
       // Handle tab changes
       if (step.type === 'tab-change' && step.tabValue && onTabChange) {
         onTabChange(step.tabValue);
-        await new Promise(resolve => setTimeout(resolve, 400));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       // Handle info steps - scroll and highlight
       if (step.type === 'info') {
         if (step.targetSelector) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-          scrollAndHighlight(step.targetSelector);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          await findAndHighlight(step.targetSelector);
         }
       }
 
       // Handle click-to-open steps
       if (step.type === 'click-to-open' && step.targetSelector) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        scrollAndHighlight(step.targetSelector);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await findAndHighlight(step.targetSelector);
         setAwaitingClick(true);
       }
 
@@ -399,7 +418,7 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     };
 
     runStep();
-  }, [isTouring, currentStep, step, onTabChange, scrollAndHighlight, clearHighlights]);
+  }, [isTouring, currentStep, step, onTabChange, findAndHighlight, clearHighlights]);
 
   // Reset step processed flag when step changes
   useEffect(() => {
@@ -421,7 +440,7 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
         // Wait for popup to open, then advance
         setTimeout(() => {
           setCurrentStep(prev => prev + 1);
-        }, 500);
+        }, 600);
       }
     };
 
@@ -433,7 +452,8 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
   useEffect(() => {
     if (!isTouring || !awaitingClose) return;
 
-    let checkInterval: NodeJS.Timeout;
+    let checkInterval: ReturnType<typeof setInterval>;
+    let waitForOpenTimeout: ReturnType<typeof setTimeout>;
     
     // First, wait for popup to be detected as open
     const waitForOpen = setInterval(() => {
@@ -451,17 +471,27 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
             // Small delay before advancing
             setTimeout(() => {
               setCurrentStep(prev => prev + 1);
-            }, 300);
+            }, 400);
           }
         }, 200);
       }
     }, 100);
 
+    // Timeout after 10 seconds if popup never opens
+    waitForOpenTimeout = setTimeout(() => {
+      clearInterval(waitForOpen);
+      if (!popupWasOpen) {
+        console.warn('Tour: Popup never opened, advancing anyway');
+        setAwaitingClose(false);
+      }
+    }, 10000);
+
     return () => {
       clearInterval(waitForOpen);
+      clearTimeout(waitForOpenTimeout);
       if (checkInterval) clearInterval(checkInterval);
     };
-  }, [isTouring, awaitingClose, isPopupOpen]);
+  }, [isTouring, awaitingClose, isPopupOpen, popupWasOpen]);
 
   const startTour = () => {
     setShowModeSelect(false);
@@ -480,6 +510,7 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     setAwaitingClick(false);
     setAwaitingClose(false);
     setPopupWasOpen(false);
+    setHighlightFound(false);
     clearHighlights();
   };
 
@@ -502,22 +533,22 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     });
   };
 
-  // Tour tooltip content
-  const tourTooltip = (
+  // Tour panel - positioned on the right side
+  const tourPanel = (
     <div 
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-lg px-4 pointer-events-auto"
+      className="fixed top-20 right-4 w-80 max-h-[calc(100vh-6rem)] overflow-y-auto pointer-events-auto"
       style={{ zIndex: 2147483647 }}
-      data-tour-tooltip="true"
+      data-tour-panel="true"
     >
       <Card className="shadow-2xl border-2 border-primary bg-background">
-        <CardContent className="p-5">
+        <CardContent className="p-4">
           {/* Header */}
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="default" className="text-xs">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex-1 min-w-0">
+              <Badge variant="default" className="text-xs mb-1">
                 Step {currentStep + 1} of {steps.length}
               </Badge>
-              <h3 className="font-bold text-lg">{step?.title}</h3>
+              <h3 className="font-bold text-base leading-tight">{step?.title}</h3>
             </div>
             <Button
               variant="ghost"
@@ -531,26 +562,26 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
           </div>
           
           {/* Description */}
-          <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed mb-4">
+          <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed mb-3">
             {step && renderDescription(step.description)}
           </div>
 
           {/* Action indicator for click steps */}
           {awaitingClick && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/30 mb-4">
-              <MousePointer className="h-4 w-4 text-primary animate-bounce" />
-              <span className="text-sm font-medium text-primary">
-                Click the highlighted element above
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/30 mb-3">
+              <MousePointer className="h-4 w-4 text-primary animate-bounce shrink-0" />
+              <span className="text-xs font-medium text-primary">
+                {highlightFound ? 'Click the highlighted element' : 'Looking for element...'}
               </span>
             </div>
           )}
 
           {/* Action indicator for close steps */}
           {awaitingClose && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 mb-4">
-              <X className="h-4 w-4 text-amber-500" />
-              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                {popupWasOpen ? 'Close the popup to continue' : 'Waiting for popup to open...'}
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 mb-3">
+              <X className="h-4 w-4 text-amber-500 shrink-0" />
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                {popupWasOpen ? 'Close the popup to continue' : 'Waiting for popup...'}
               </span>
             </div>
           )}
@@ -639,8 +670,8 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Tour Tooltip - rendered via Portal with max z-index */}
-      {isTouring && step && createPortal(tourTooltip, document.body)}
+      {/* Tour Panel - rendered via Portal, positioned on the right */}
+      {isTouring && step && createPortal(tourPanel, document.body)}
 
       {/* CSS for highlighting */}
       <style>{`
