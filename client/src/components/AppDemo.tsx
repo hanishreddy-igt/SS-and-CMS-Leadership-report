@@ -553,9 +553,10 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
             style={{ mixBlendMode: 'multiply' }}
           />
 
-          {/* Tour instruction card - fixed at bottom */}
+          {/* Tour instruction card - fixed at bottom, above all dialogs */}
           <div 
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] w-full max-w-lg px-4"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-lg px-4"
+            style={{ zIndex: 99999 }}
             data-tour-tooltip="true"
           >
             <Card className="shadow-2xl border-2 border-primary bg-background">
