@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { HelpCircle, ChevronRight, X, Play, MousePointer, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -543,14 +544,14 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Tour Overlay & Tooltip */}
-      {isTouring && step && (
+      {/* Tour Overlay & Tooltip - rendered via Portal to ensure it's above all dialogs */}
+      {isTouring && step && createPortal(
         <>
           {/* Semi-transparent overlay */}
           <div 
             ref={overlayRef}
-            className="fixed inset-0 bg-black/50 z-[9990] pointer-events-none"
-            style={{ mixBlendMode: 'multiply' }}
+            className="fixed inset-0 bg-black/50 pointer-events-none"
+            style={{ zIndex: 99998 }}
           />
 
           {/* Tour instruction card - fixed at bottom, above all dialogs */}
@@ -622,7 +623,8 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
               </CardContent>
             </Card>
           </div>
-        </>
+        </>,
+        document.body
       )}
 
       {/* CSS for highlighting */}
