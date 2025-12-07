@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { FileText, FolderKanban, Eye, LogOut, Shield, BarChart3, TrendingUp, History } from 'lucide-react';
+import AppDemo from '@/components/AppDemo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import ProjectsDashboard from '@/components/ProjectsDashboard';
@@ -87,15 +88,18 @@ export default function Home() {
                 Comprehensive delivery status tracking for Community Managed & Strategic Services
               </p>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={handleLogout} 
-              data-testid="button-logout" 
-              className="shrink-0 glass-card border-white/10 hover:border-primary/50 hover:bg-primary/10 transition-all duration-200"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2">
+              <AppDemo />
+              <Button 
+                variant="outline" 
+                onClick={handleLogout} 
+                data-testid="button-logout" 
+                className="shrink-0 glass-card border-white/10 hover:border-primary/50 hover:bg-primary/10 transition-all duration-200"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
