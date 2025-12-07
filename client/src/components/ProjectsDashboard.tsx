@@ -37,6 +37,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [filterMemberSearch, setFilterMemberSearch] = useState<string>('');
   const [filterLeadSearch, setFilterLeadSearch] = useState<string>('');
   const [filterProjectStatus, setFilterProjectStatus] = useState<string[]>([]);
+  const [filterProjectsWithCaution, setFilterProjectsWithCaution] = useState(false);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [sortField, setSortField] = useState<SortField>('endDate');
   
@@ -137,6 +138,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       setFilterMembers([]);
       setFilterProjectName('');
       setFilterProjectStatus([]);
+      setFilterProjectsWithCaution(false);
       onFiltersClear?.();
     }
   }, [shouldClearFilters, onFiltersClear]);
@@ -281,6 +283,23 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     return regex.test(value);
   };
 
+  // Helper to check if a project has unfilled team member roles
+  const projectHasUnfilledRoles = (project: Project): boolean => {
+    const assignments = (project.teamMembers as TeamMemberAssignment[]) || [];
+    return assignments.some(a => !a.role || a.role.trim() === '');
+  };
+
+  // Helper to check if a project has caution (missing end date OR unfilled team member roles)
+  const projectHasCaution = (project: Project): boolean => {
+    // Check for missing end date
+    if (!project.endDate) return true;
+    
+    // Check for unfilled team member roles
+    if (projectHasUnfilledRoles(project)) return true;
+    
+    return false;
+  };
+
   const filteredProjects = projects.filter((project) => {
     // Get all leads for this project (support both legacy leadId and new leadIds array)
     const projectLeadIds = project.leadIds && project.leadIds.length > 0 
@@ -291,6 +310,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (filterMembers.length > 0 && !filterMembers.some(memberId => projectMemberIds.includes(memberId))) return false;
     if (filterProjectName && !project.name.toLowerCase().includes(filterProjectName.toLowerCase())) return false;
     if (filterProjectStatus.length > 0 && !filterProjectStatus.includes(getProjectStatus(project.endDate))) return false;
+    // Filter by projects with caution (missing end date OR unfilled roles)
+    if (filterProjectsWithCaution && !projectHasCaution(project)) return false;
     return true;
   });
 
@@ -1072,6 +1093,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (filterLeads.length > 0) count += filterLeads.length;
     if (filterMembers.length > 0) count += filterMembers.length;
     if (filterProjectStatus.length > 0) count += filterProjectStatus.length;
+    if (filterProjectsWithCaution) count++;
     return count;
   };
 
@@ -1082,6 +1104,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setFilterMemberSearch('');
     setFilterLeadSearch('');
     setFilterProjectStatus([]);
+    setFilterProjectsWithCaution(false);
   };
   
   // Exit selection mode and clear selections
@@ -1764,6 +1787,31 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         ))}
                       </div>
                     </div>
+
+                    {/* Filter by Projects with Caution */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Projects with Caution</Label>
+                        {filterProjectsWithCaution && (
+                          <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant={filterProjectsWithCaution ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setFilterProjectsWithCaution(!filterProjectsWithCaution)}
+                        className="w-full justify-start gap-2"
+                        data-testid="button-filter-caution"
+                      >
+                        <AlertTriangle className={`h-4 w-4 ${filterProjectsWithCaution ? 'text-white' : 'text-amber-500'}`} />
+                        <span>{filterProjectsWithCaution ? 'Showing Projects with Caution' : 'Show Projects with Caution'}</span>
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Projects missing end date or with unfilled team member roles
+                      </p>
+                    </div>
                     
                     {/* Sort Options */}
                     <div className="space-y-2">
@@ -2090,11 +2138,21 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       </div>
                     )}
                     
-                    {/* End date missing warning */}
-                    {!project.endDate && (
-                      <div className="flex items-center gap-2 text-sm text-red-500 mt-2" data-testid={`text-missing-end-date-${project.id}`}>
-                        <AlertCircle className="h-4 w-4" />
-                        <span>End date is missing</span>
+                    {/* Caution warnings */}
+                    {(!project.endDate || projectHasUnfilledRoles(project)) && (
+                      <div className="space-y-1 mt-2">
+                        {!project.endDate && (
+                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-end-date-${project.id}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>End date is missing</span>
+                          </div>
+                        )}
+                        {projectHasUnfilledRoles(project) && (
+                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-unfilled-roles-${project.id}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>Team member roles not filled</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
