@@ -321,71 +321,92 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [awaitingClick, setAwaitingClick] = useState(false);
   const [awaitingClose, setAwaitingClose] = useState(false);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const [popupWasOpen, setPopupWasOpen] = useState(false);
+  const stepProcessedRef = useRef(false);
 
   const steps = inputTourSteps;
   const step = steps[currentStep];
+
+  // Clear highlights
+  const clearHighlights = useCallback(() => {
+    document.querySelectorAll('.tour-highlight-active').forEach(el => {
+      el.classList.remove('tour-highlight-active');
+    });
+  }, []);
 
   // Scroll to and highlight an element
   const scrollAndHighlight = useCallback((selector: string) => {
     const element = document.querySelector(selector);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      
-      // Add highlight class
-      element.classList.add('tour-highlight-active');
-      
-      return () => {
-        element.classList.remove('tour-highlight-active');
-      };
+      setTimeout(() => {
+        element.classList.add('tour-highlight-active');
+      }, 300);
     }
-    return () => {};
+  }, []);
+
+  // Check if any popup is currently open
+  const isPopupOpen = useCallback(() => {
+    const dialogs = document.querySelectorAll('[role="dialog"]');
+    const popovers = document.querySelectorAll('[data-radix-popper-content-wrapper]');
+    
+    // Filter out our mode select dialog
+    const realDialogs = Array.from(dialogs).filter(d => 
+      !d.closest('[data-testid="dialog-demo-mode-select"]')
+    );
+    
+    return realDialogs.length > 0 || popovers.length > 0;
   }, []);
 
   // Execute current step
   useEffect(() => {
-    if (!isTouring || !step) return;
-
-    let cleanup = () => {};
+    if (!isTouring || !step || stepProcessedRef.current) return;
+    
+    stepProcessedRef.current = true;
 
     const runStep = async () => {
       // Reset states
       setAwaitingClick(false);
       setAwaitingClose(false);
+      setPopupWasOpen(false);
+      clearHighlights();
 
       // Handle tab changes
       if (step.type === 'tab-change' && step.tabValue && onTabChange) {
         onTabChange(step.tabValue);
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 400));
       }
 
       // Handle info steps - scroll and highlight
-      if (step.type === 'info' && step.targetSelector) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        cleanup = scrollAndHighlight(step.targetSelector);
+      if (step.type === 'info') {
+        if (step.targetSelector) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          scrollAndHighlight(step.targetSelector);
+        }
       }
 
       // Handle click-to-open steps
       if (step.type === 'click-to-open' && step.targetSelector) {
         await new Promise(resolve => setTimeout(resolve, 200));
-        cleanup = scrollAndHighlight(step.targetSelector);
+        scrollAndHighlight(step.targetSelector);
         setAwaitingClick(true);
       }
 
-      // Handle explain-popup steps
+      // Handle explain-popup steps - wait for popup to actually be open
       if (step.type === 'explain-popup') {
         setAwaitingClose(true);
       }
     };
 
     runStep();
+  }, [isTouring, currentStep, step, onTabChange, scrollAndHighlight, clearHighlights]);
 
-    return () => {
-      cleanup();
-    };
-  }, [isTouring, currentStep, step, onTabChange, scrollAndHighlight]);
+  // Reset step processed flag when step changes
+  useEffect(() => {
+    stepProcessedRef.current = false;
+  }, [currentStep]);
 
-  // Listen for clicks on target elements
+  // Listen for clicks on target elements (for click-to-open steps)
   useEffect(() => {
     if (!isTouring || !awaitingClick || !step?.targetSelector) return;
 
@@ -394,55 +415,62 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
       const clickedElement = target.closest(step.targetSelector!);
       
       if (clickedElement) {
-        // Remove highlight
-        document.querySelectorAll('.tour-highlight-active').forEach(el => {
-          el.classList.remove('tour-highlight-active');
-        });
+        clearHighlights();
+        setAwaitingClick(false);
         
         // Wait for popup to open, then advance
         setTimeout(() => {
           setCurrentStep(prev => prev + 1);
-        }, 400);
+        }, 500);
       }
     };
 
     document.addEventListener('click', handleDocClick, true);
     return () => document.removeEventListener('click', handleDocClick, true);
-  }, [isTouring, awaitingClick, step]);
+  }, [isTouring, awaitingClick, step, clearHighlights]);
 
-  // Listen for popup closes
+  // Listen for popup closes (for explain-popup steps)
   useEffect(() => {
     if (!isTouring || !awaitingClose) return;
 
-    const checkClosed = () => {
-      const dialogs = document.querySelectorAll('[role="dialog"]');
-      const popovers = document.querySelectorAll('[data-radix-popper-content-wrapper]');
-      
-      // Filter out our own tour tooltip
-      const realDialogs = Array.from(dialogs).filter(d => !d.querySelector('[data-tour-tooltip]'));
-      
-      if (realDialogs.length === 0 && popovers.length === 0) {
-        setCurrentStep(prev => prev + 1);
+    let checkInterval: NodeJS.Timeout;
+    
+    // First, wait for popup to be detected as open
+    const waitForOpen = setInterval(() => {
+      if (isPopupOpen()) {
+        setPopupWasOpen(true);
+        clearInterval(waitForOpen);
+        
+        // Now start checking for close
+        checkInterval = setInterval(() => {
+          if (!isPopupOpen()) {
+            clearInterval(checkInterval);
+            setAwaitingClose(false);
+            setPopupWasOpen(false);
+            
+            // Small delay before advancing
+            setTimeout(() => {
+              setCurrentStep(prev => prev + 1);
+            }, 300);
+          }
+        }, 200);
       }
+    }, 100);
+
+    return () => {
+      clearInterval(waitForOpen);
+      if (checkInterval) clearInterval(checkInterval);
     };
-
-    // Start checking after a delay
-    const startTimeout = setTimeout(() => {
-      const interval = setInterval(checkClosed, 200);
-      return () => clearInterval(interval);
-    }, 600);
-
-    return () => clearTimeout(startTimeout);
-  }, [isTouring, awaitingClose]);
+  }, [isTouring, awaitingClose, isPopupOpen]);
 
   const startTour = () => {
     setShowModeSelect(false);
     setCurrentStep(0);
     setIsTouring(true);
+    stepProcessedRef.current = false;
     if (onTabChange) {
       onTabChange('teams-projects');
     }
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -451,17 +479,12 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     setCurrentStep(0);
     setAwaitingClick(false);
     setAwaitingClose(false);
-    // Remove any highlights
-    document.querySelectorAll('.tour-highlight-active').forEach(el => {
-      el.classList.remove('tour-highlight-active');
-    });
+    setPopupWasOpen(false);
+    clearHighlights();
   };
 
   const nextStep = () => {
-    document.querySelectorAll('.tour-highlight-active').forEach(el => {
-      el.classList.remove('tour-highlight-active');
-    });
-    
+    clearHighlights();
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
@@ -478,6 +501,78 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
       return part;
     });
   };
+
+  // Tour tooltip content
+  const tourTooltip = (
+    <div 
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-lg px-4 pointer-events-auto"
+      style={{ zIndex: 2147483647 }}
+      data-tour-tooltip="true"
+    >
+      <Card className="shadow-2xl border-2 border-primary bg-background">
+        <CardContent className="p-5">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="default" className="text-xs">
+                Step {currentStep + 1} of {steps.length}
+              </Badge>
+              <h3 className="font-bold text-lg">{step?.title}</h3>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={endTour}
+              data-testid="button-tour-close"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Description */}
+          <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed mb-4">
+            {step && renderDescription(step.description)}
+          </div>
+
+          {/* Action indicator for click steps */}
+          {awaitingClick && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/30 mb-4">
+              <MousePointer className="h-4 w-4 text-primary animate-bounce" />
+              <span className="text-sm font-medium text-primary">
+                Click the highlighted element above
+              </span>
+            </div>
+          )}
+
+          {/* Action indicator for close steps */}
+          {awaitingClose && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 mb-4">
+              <X className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                {popupWasOpen ? 'Close the popup to continue' : 'Waiting for popup to open...'}
+              </span>
+            </div>
+          )}
+
+          {/* Next button - only show when not waiting */}
+          {!awaitingClick && !awaitingClose && (
+            <div className="flex justify-end pt-2 border-t">
+              <Button
+                size="sm"
+                onClick={nextStep}
+                className="gap-1"
+                data-testid="button-tour-next"
+              >
+                {currentStep === steps.length - 1 ? 'Finish Tour' : 'Next'}
+                {currentStep < steps.length - 1 && <ChevronRight className="h-4 w-4" />}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   return (
     <>
@@ -544,102 +639,22 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Tour Overlay & Tooltip - rendered via Portal to ensure it's above all dialogs */}
-      {isTouring && step && createPortal(
-        <>
-          {/* Semi-transparent overlay */}
-          <div 
-            ref={overlayRef}
-            className="fixed inset-0 bg-black/50 pointer-events-none"
-            style={{ zIndex: 99998 }}
-          />
-
-          {/* Tour instruction card - fixed at bottom, above all dialogs */}
-          <div 
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-lg px-4"
-            style={{ zIndex: 99999 }}
-            data-tour-tooltip="true"
-          >
-            <Card className="shadow-2xl border-2 border-primary bg-background">
-              <CardContent className="p-5">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="default" className="text-xs">
-                      Step {currentStep + 1} of {steps.length}
-                    </Badge>
-                    <h3 className="font-bold text-lg">{step.title}</h3>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0"
-                    onClick={endTour}
-                    data-testid="button-tour-close"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {/* Description */}
-                <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed mb-4">
-                  {renderDescription(step.description)}
-                </div>
-
-                {/* Action indicator for click steps */}
-                {awaitingClick && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/30 mb-4">
-                    <MousePointer className="h-4 w-4 text-primary animate-bounce" />
-                    <span className="text-sm font-medium text-primary">
-                      Click the highlighted element above
-                    </span>
-                  </div>
-                )}
-
-                {/* Action indicator for close steps */}
-                {awaitingClose && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 mb-4">
-                    <X className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                      Close the popup above to continue
-                    </span>
-                  </div>
-                )}
-
-                {/* Next button - only show when not waiting */}
-                {!awaitingClick && !awaitingClose && (
-                  <div className="flex justify-end pt-2 border-t">
-                    <Button
-                      size="sm"
-                      onClick={nextStep}
-                      className="gap-1"
-                      data-testid="button-tour-next"
-                    >
-                      {currentStep === steps.length - 1 ? 'Finish Tour' : 'Next'}
-                      {currentStep < steps.length - 1 && <ChevronRight className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </>,
-        document.body
-      )}
+      {/* Tour Tooltip - rendered via Portal with max z-index */}
+      {isTouring && step && createPortal(tourTooltip, document.body)}
 
       {/* CSS for highlighting */}
       <style>{`
         .tour-highlight-active {
           position: relative;
-          z-index: 9995 !important;
-          box-shadow: 0 0 0 4px hsl(var(--primary)), 0 0 20px 4px hsl(var(--primary) / 0.4) !important;
+          z-index: 50 !important;
+          box-shadow: 0 0 0 4px hsl(var(--primary)), 0 0 20px 4px hsl(var(--primary) / 0.5) !important;
           border-radius: 8px;
           animation: tour-pulse 1.5s ease-in-out infinite;
         }
         
         @keyframes tour-pulse {
-          0%, 100% { box-shadow: 0 0 0 4px hsl(var(--primary)), 0 0 20px 4px hsl(var(--primary) / 0.4); }
-          50% { box-shadow: 0 0 0 6px hsl(var(--primary)), 0 0 30px 8px hsl(var(--primary) / 0.6); }
+          0%, 100% { box-shadow: 0 0 0 4px hsl(var(--primary)), 0 0 20px 4px hsl(var(--primary) / 0.5); }
+          50% { box-shadow: 0 0 0 6px hsl(var(--primary)), 0 0 30px 8px hsl(var(--primary) / 0.7); }
         }
       `}</style>
     </>
