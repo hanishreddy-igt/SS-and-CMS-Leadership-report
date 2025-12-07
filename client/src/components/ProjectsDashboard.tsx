@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, Mail, Building2, Clock } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -118,6 +118,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   // Lead Detail Modal State
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Person | null>(null);
   const [showLeadDetailModal, setShowLeadDetailModal] = useState(false);
+
+  // Team Member Detail Modal State
+  const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Person | null>(null);
+  const [showMemberDetailModal, setShowMemberDetailModal] = useState(false);
 
   // Role selection state for add/edit project forms
   const [roleInputs, setRoleInputs] = useState<Record<string, string>>({}); // Keyed by popover id
@@ -1002,6 +1006,34 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const closeLeadDetailModal = () => {
     setShowLeadDetailModal(false);
     setSelectedLeadForDetail(null);
+  };
+
+  // Handle team member tile click to show detail popup
+  const handleMemberTileClick = (member: Person) => {
+    if (!selectionModeMembers) {
+      setSelectedMemberForDetail(member);
+      setShowMemberDetailModal(true);
+    }
+  };
+
+  const closeMemberDetailModal = () => {
+    setShowMemberDetailModal(false);
+    setSelectedMemberForDetail(null);
+  };
+
+  // Get projects a team member is working on with their roles
+  const getMemberProjects = (memberId: string) => {
+    return projects.filter(p => {
+      const assignments = (p.teamMembers as TeamMemberAssignment[]) || [];
+      return assignments.some(a => a.memberId === memberId);
+    }).map(p => {
+      const assignments = (p.teamMembers as TeamMemberAssignment[]) || [];
+      const assignment = assignments.find(a => a.memberId === memberId);
+      return {
+        project: p,
+        role: assignment?.role || 'No role assigned'
+      };
+    });
   };
 
   const validateProjectForm = () => {
@@ -2619,9 +2651,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               {[...teamMembers].sort((a, b) => a.name.localeCompare(b.name)).slice(0, membersToShow).map((member) => (
               <div
                 key={member.id}
-                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors ${selectedMembers.has(member.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeMembers ? 'cursor-pointer hover:bg-muted' : ''}`}
+                className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors cursor-pointer ${selectedMembers.has(member.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeMembers ? 'hover:bg-muted' : 'hover:bg-muted/70'}`}
                 data-testid={`member-item-${member.id}`}
-                onClick={selectionModeMembers && editingMemberId !== member.id ? () => toggleMemberSelection(member.id) : undefined}
+                onClick={editingMemberId !== member.id ? (selectionModeMembers ? () => toggleMemberSelection(member.id) : () => handleMemberTileClick(member)) : undefined}
               >
                 {editingMemberId === member.id ? (
                   <div className="flex-1 flex gap-2">
@@ -3336,6 +3368,72 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                               return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
                             }
                           })()}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Member Detail Modal */}
+      <Dialog open={showMemberDetailModal} onOpenChange={(open) => !open && closeMemberDetailModal()}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-member-detail">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Team Member Details
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              View details about this team member including projects they work on and their roles.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedMemberForDetail && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold" data-testid="text-member-detail-name">
+                    {selectedMemberForDetail.name}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Projects this member is working on */}
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Projects & Roles</p>
+                {(() => {
+                  const memberProjects = getMemberProjects(selectedMemberForDetail.id);
+                  if (memberProjects.length === 0) {
+                    return (
+                      <p className="text-sm text-muted-foreground italic">Not assigned to any projects</p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2" data-testid="list-member-projects">
+                      {memberProjects.map(({ project, role }) => (
+                        <div key={project.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium block truncate">{project.name}</span>
+                            <span className="text-xs text-muted-foreground">{role}</span>
+                          </div>
+                          <div className="ml-2 flex-shrink-0">
+                            {(() => {
+                              const status = getProjectStatus(project.endDate);
+                              if (status === 'active') {
+                                return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
+                              } else if (status === 'renewal') {
+                                return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
+                              } else {
+                                return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
+                              }
+                            })()}
+                          </div>
                         </div>
                       ))}
                     </div>
