@@ -1,213 +1,382 @@
 import { useState, useEffect, useCallback } from 'react';
-import { HelpCircle, ChevronLeft, ChevronRight, X, Play } from 'lucide-react';
+import { HelpCircle, ChevronRight, X, Play, MousePointer, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+type StepType = 'info' | 'click-action' | 'wait-for-close' | 'tab-change';
 
 interface TourStep {
   id: string;
+  type: StepType;
   title: string;
   description: string;
   targetSelector?: string;
-  action?: 'scroll' | 'click' | 'highlight' | 'tab-change';
+  clickSelector?: string;
   tabValue?: string;
   position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
-  delay?: number;
 }
 
 const inputTourSteps: TourStep[] = [
-  // Project Leads Section
+  // PROJECT LEADS SECTION
   {
     id: 'intro-leads',
+    type: 'info',
     title: 'Project Leads Section',
-    description: 'This section shows all your Project Leads - the people who oversee project delivery and submit weekly reports. Each lead can manage one or multiple projects.',
+    description: 'This section shows all your **Project Leads** - the people who oversee project delivery and submit weekly reports. Each lead can manage one or multiple projects.\n\nClick **Next** to continue.',
     targetSelector: '[data-testid="section-project-leads"]',
-    action: 'scroll',
     position: 'top'
   },
   {
-    id: 'lead-click',
-    title: 'View Lead Details',
-    description: 'Click on any project lead\'s name to see a popup with their details - including their email and all the projects they manage. Try clicking on a lead name!',
+    id: 'click-lead',
+    type: 'click-action',
+    title: 'Click on a Project Lead',
+    description: 'Now **click on any project lead\'s name** in the list to see their details popup.\n\nThe popup will show their email and all projects they manage.',
     targetSelector: '[data-testid^="lead-item-"]',
-    action: 'highlight',
+    clickSelector: '[data-testid^="lead-item-"]',
     position: 'bottom'
   },
   {
-    id: 'add-lead',
-    title: 'Add New Project Lead',
-    description: 'Click "Add Project Lead" to add a new lead. You\'ll need to enter their name and email address. The email is used for contact purposes.',
-    targetSelector: '[data-testid="button-add-lead"]',
-    action: 'highlight',
-    position: 'bottom'
-  },
-  // Team Members Section
-  {
-    id: 'intro-members',
-    title: 'Team Members Section',
-    description: 'This section displays all team members who work on projects. Team members are assigned to specific projects with designated roles (e.g., Developer, QA, Designer).',
-    targetSelector: '[data-testid="section-team-members"]',
-    action: 'scroll',
-    position: 'top'
-  },
-  {
-    id: 'member-click',
-    title: 'View Member Details',
-    description: 'Click on any team member\'s name to see their project assignments and roles. The popup shows all active/renewal projects they\'re working on with their specific role highlighted.',
-    targetSelector: '[data-testid^="member-item-"]',
-    action: 'highlight',
-    position: 'bottom'
-  },
-  {
-    id: 'member-filter',
-    title: 'Filter by Role',
-    description: 'Use the "Filter by Role" button to filter team members by their assigned roles. This helps you quickly find all developers, QA engineers, or other specific roles across projects.',
-    targetSelector: '[data-testid="button-filter-member-role"]',
-    action: 'highlight',
-    position: 'bottom'
-  },
-  {
-    id: 'add-member',
-    title: 'Add New Team Member',
-    description: 'Click "Add Team Member" to add someone new. Enter their name and email. Once added, they can be assigned to projects with specific roles.',
-    targetSelector: '[data-testid="button-add-member"]',
-    action: 'highlight',
-    position: 'bottom'
-  },
-  // All Projects Section
-  {
-    id: 'intro-projects',
-    title: 'All Projects Section',
-    description: 'This is your complete project portfolio. Projects are sorted by end date (soonest first) to help you focus on upcoming deadlines. Projects with no end date appear at the bottom.',
-    targetSelector: '#all-projects-section',
-    action: 'scroll',
-    position: 'top'
-  },
-  {
-    id: 'project-card',
-    title: 'Project Cards',
-    description: 'Each card shows the project customer name, project type (CMS/SS), assigned lead(s), and end date. The colored indicator on the left shows status: Green (active), Amber (ending within 60 days), Gray (ended). Click any card to see full details.',
-    targetSelector: '[data-testid^="project-card-"]',
-    action: 'highlight',
-    position: 'bottom'
-  },
-  {
-    id: 'project-filters',
-    title: 'Project Filters',
-    description: 'Use these filters to narrow down projects: Filter by Project Lead to see a specific lead\'s projects, by Team Member to find projects someone works on, and by Project Type (CMS or SS) for service type filtering.',
-    targetSelector: '[data-testid="button-filter-lead"]',
-    action: 'highlight',
-    position: 'bottom'
-  },
-  {
-    id: 'add-project',
-    title: 'Add New Project',
-    description: 'Click "Add New Project" to create a project. Let me explain each field...',
-    targetSelector: '[data-testid="button-add-project"]',
-    action: 'highlight',
-    position: 'bottom'
-  },
-  {
-    id: 'project-fields',
-    title: 'Project Form Fields',
-    description: `When adding a project, you'll fill in these fields:
+    id: 'lead-popup-explain',
+    type: 'wait-for-close',
+    title: 'Project Lead Details',
+    description: `You're viewing the lead's detail popup. Here you can see:
 
-• **Project Customer** - The customer/client name for this project
-• **Contact Person Name** - The customer's contact person
-• **Project Lead(s)** - Select 1 or 2 leads. If you select 2, they become "co-leads" sharing responsibility. The first selected is the primary lead.
-• **Team Members & Roles** - Assign team members and specify each person's role (e.g., "Developer", "QA Lead"). Leave role blank if TBD - this will show a caution warning.
-• **Project Type** - Choose CMS (Community Managed) or SS (Strategic Services)
-• **Start Date & End Date** - Project timeline. Projects without an end date show a caution indicator.`,
+• **Email** - Click the mail icon to reveal their email address
+• **Projects Managed** - All projects this lead oversees
+• **Project Status** - Color indicators show project timeline status
+
+When you're done exploring, **click the X button or outside the popup** to close it and continue.`,
     position: 'center'
   },
-  // Submit Report Tab
+  {
+    id: 'click-add-lead',
+    type: 'click-action',
+    title: 'Add New Project Lead',
+    description: 'Now let\'s see how to add a new lead.\n\n**Click the "Add Project Lead" button** to open the form.',
+    targetSelector: '[data-testid="button-add-lead"]',
+    clickSelector: '[data-testid="button-add-lead"]',
+    position: 'bottom'
+  },
+  {
+    id: 'add-lead-form',
+    type: 'wait-for-close',
+    title: 'Add Project Lead Form',
+    description: `This form lets you add a new project lead:
+
+• **Project Lead Name** - Enter the person's full name (required)
+• **Email** - Their email address for contact purposes (optional but recommended)
+
+After filling in the details, click "Add Project Lead" to save, or Cancel to close.
+
+**Close this dialog** to continue the tour.`,
+    position: 'center'
+  },
+  // TEAM MEMBERS SECTION
+  {
+    id: 'intro-members',
+    type: 'info',
+    title: 'Team Members Section',
+    description: 'Now let\'s look at the **Team Members** section. These are the people who work on projects with specific roles like Developer, QA, Designer, etc.\n\nClick **Next** to continue.',
+    targetSelector: '[data-testid="section-team-members"]',
+    position: 'top'
+  },
+  {
+    id: 'click-member',
+    type: 'click-action',
+    title: 'Click on a Team Member',
+    description: '**Click on any team member\'s name** to see their project assignments and roles.',
+    targetSelector: '[data-testid^="member-item-"]',
+    clickSelector: '[data-testid^="member-item-"]',
+    position: 'bottom'
+  },
+  {
+    id: 'member-popup-explain',
+    type: 'wait-for-close',
+    title: 'Team Member Details',
+    description: `This popup shows the team member's assignments:
+
+• **Email** - Click the mail icon to reveal their email
+• **Project Assignments** - Only shows active/renewal projects (not ended ones)
+• **Role Badge** - Each project shows their specific role (Developer, QA, etc.)
+
+**Close this popup** to continue.`,
+    position: 'center'
+  },
+  {
+    id: 'click-filter-role',
+    type: 'click-action',
+    title: 'Filter by Role',
+    description: 'Want to find all Developers or QA engineers?\n\n**Click the "Filter by Role" button** to see the filtering options.',
+    targetSelector: '[data-testid="button-filter-member-role"]',
+    clickSelector: '[data-testid="button-filter-member-role"]',
+    position: 'bottom'
+  },
+  {
+    id: 'filter-role-explain',
+    type: 'wait-for-close',
+    title: 'Role Filter Options',
+    description: `This filter helps you find team members by role:
+
+• **Search** - Type to quickly find a specific role
+• **Role Checkboxes** - Select one or more roles to filter
+• **Clear All** - Reset the filter to show everyone
+
+The header count updates to show filtered results (e.g., "5 of 13").
+
+**Click outside or press Escape** to close and continue.`,
+    position: 'center'
+  },
+  {
+    id: 'click-add-member',
+    type: 'click-action',
+    title: 'Add New Team Member',
+    description: '**Click "Add Team Member"** to see the form for adding new team members.',
+    targetSelector: '[data-testid="button-add-member"]',
+    clickSelector: '[data-testid="button-add-member"]',
+    position: 'bottom'
+  },
+  {
+    id: 'add-member-form',
+    type: 'wait-for-close',
+    title: 'Add Team Member Form',
+    description: `Add a new team member with:
+
+• **Team Member Name** - Their full name (required)
+• **Email** - Contact email (optional but recommended)
+
+Once added, they can be assigned to projects with specific roles.
+
+**Close this dialog** to continue.`,
+    position: 'center'
+  },
+  // ALL PROJECTS SECTION
+  {
+    id: 'intro-projects',
+    type: 'info',
+    title: 'All Projects Section',
+    description: `This is your complete **project portfolio**. 
+
+• Projects are **sorted by end date** (soonest first) so you can focus on upcoming deadlines
+• Projects with **no end date** appear at the bottom
+• Color indicators on cards show status: Green (active), Amber (ending soon), Gray (ended)
+
+Click **Next** to continue.`,
+    targetSelector: '#all-projects-section',
+    position: 'top'
+  },
+  {
+    id: 'click-project',
+    type: 'click-action',
+    title: 'Click on a Project',
+    description: '**Click on any project card** to see its full details.',
+    targetSelector: '[data-testid^="project-card-"]',
+    clickSelector: '[data-testid^="project-card-"]',
+    position: 'bottom'
+  },
+  {
+    id: 'project-popup-explain',
+    type: 'wait-for-close',
+    title: 'Project Details',
+    description: `The project detail popup shows:
+
+• **Contact Person Name** - The customer's contact person
+• **Project Lead(s)** - Who manages this project (click to see email)
+• **Team Members** - Everyone assigned with their roles
+• **Timeline** - Start and end dates with status indicator
+• **Project Type** - CMS (Community Managed) or SS (Strategic Services)
+
+**Close this popup** to continue.`,
+    position: 'center'
+  },
+  {
+    id: 'click-project-filter',
+    type: 'click-action',
+    title: 'Project Filters',
+    description: 'Let\'s explore filtering options.\n\n**Click the "Filter by Lead" button** to see how to filter projects.',
+    targetSelector: '[data-testid="button-filter-lead"]',
+    clickSelector: '[data-testid="button-filter-lead"]',
+    position: 'bottom'
+  },
+  {
+    id: 'project-filter-explain',
+    type: 'wait-for-close',
+    title: 'Filter Projects',
+    description: `Filter projects by:
+
+• **Project Lead** - See only a specific lead's projects
+• **Team Member** - Find projects a person works on
+• **Project Type** - Filter by CMS or SS
+
+Multiple filters can be combined. The project count updates to show results.
+
+**Close this** to continue.`,
+    position: 'center'
+  },
+  {
+    id: 'click-add-project',
+    type: 'click-action',
+    title: 'Add New Project',
+    description: '**Click "Add New Project"** to see all the fields needed to create a project.',
+    targetSelector: '[data-testid="button-add-project"]',
+    clickSelector: '[data-testid="button-add-project"]',
+    position: 'bottom'
+  },
+  {
+    id: 'add-project-form',
+    type: 'wait-for-close',
+    title: 'Add Project Form - Fields Explained',
+    description: `Each field in the project form:
+
+• **Project Customer** - The customer/client name (required)
+• **Contact Person Name** - Customer's contact (required)
+• **Project Lead(s)** - Select 1 or 2 leads:
+  - Selecting 2 makes them **Co-Leads** sharing responsibility
+  - First selected becomes the **Primary Lead**
+• **Team Members & Roles** - Assign people with their roles:
+  - Select a member, then type their role (e.g., "Developer")
+  - Leave role blank if TBD (shows caution warning)
+• **Project Type** - CMS or SS (required)
+• **Start Date** - When project begins
+• **End Date** - When project ends (missing = caution warning)
+
+**Close this dialog** to continue.`,
+    position: 'center'
+  },
+  // SUBMIT REPORT TAB
   {
     id: 'submit-tab',
+    type: 'tab-change',
     title: 'Submit Report Tab',
-    description: 'Now let\'s go to the Submit Report tab where project leads submit their weekly status updates.',
-    action: 'tab-change',
+    description: 'Now let\'s go to the **Submit Report** tab where project leads submit their weekly status updates.\n\nClick **Next** to switch tabs.',
     tabValue: 'submit',
     position: 'center'
   },
   {
     id: 'progress-bars',
+    type: 'click-action',
     title: 'Progress Overview',
-    description: 'At the top, you see two progress bars showing submission status for the current week. The first shows how many reports are submitted vs pending. Click on these bars to automatically filter and see which projects still need reports!',
+    description: `These cards show weekly submission progress:
+
+• **Reports Submitted** - How many reports are done
+• **Reports Pending** - How many still need submission
+
+**Click on either card** - it will filter the list below to show only those projects!`,
     targetSelector: '[data-testid="progress-submitted"]',
-    action: 'highlight',
+    clickSelector: '[data-testid="progress-submitted"]',
     position: 'bottom'
   },
   {
-    id: 'weekly-report-section',
-    title: 'Submit Weekly Report Form',
-    description: 'This is where project leads submit their weekly status. Select the project and reporting week, then fill in the health status, progress updates, challenges, and next steps.',
-    targetSelector: '[data-testid="card-submit-report"]',
-    action: 'scroll',
-    position: 'top'
-  },
-  {
-    id: 'auto-archive',
-    title: 'Auto-Archiving',
-    description: 'Reports are automatically archived at the end of each week. When a new week starts, the previous week\'s reports move to Historical Reports, and the current week starts fresh.',
-    position: 'center'
-  },
-  {
-    id: 'report-status',
-    title: 'Report Status by Lead',
-    description: 'Below the form, you can see report status organized by project lead. Find your name (or any lead) and click on their entry to see all their projects and submission status.',
-    targetSelector: '[data-testid="section-report-status"]',
-    action: 'scroll',
-    position: 'top'
-  },
-  {
-    id: 'lead-report-popup',
-    title: 'Lead Report Details',
-    description: 'When you click on a lead\'s name, a popup shows all their assigned projects with submission status. From here, you can quickly see which reports are pending and click to submit them directly.',
-    position: 'center'
-  },
-  {
-    id: 'report-fields',
-    title: 'Report Form Fields',
-    description: `Each report includes:
+    id: 'progress-filtered',
+    type: 'info',
+    title: 'Automatic Filtering',
+    description: `Notice how clicking the progress card filtered the list below! 
 
-• **Health Status** - On Track (green), Needs Attention (amber), or Critical (red)
+The cards are interactive - click again to clear the filter, or click the other card to see pending reports.
+
+**Auto-Archiving Note:** Reports automatically archive every Wednesday at 00:00 UTC. The next week starts fresh.
+
+Click **Next** to continue.`,
+    position: 'center'
+  },
+  {
+    id: 'click-lead-status',
+    type: 'click-action',
+    title: 'Find Your Projects',
+    description: 'Projects are organized by lead below. Find your name (or any lead) and **click on a project tile** to submit or view a report.',
+    targetSelector: '[data-testid^="status-"]',
+    clickSelector: '[data-testid^="status-"]',
+    position: 'bottom'
+  },
+  {
+    id: 'report-form-explain',
+    type: 'wait-for-close',
+    title: 'Weekly Report Form',
+    description: `This is where you submit the weekly report:
+
+• **Health Status** - Choose one:
+  - On Track (green) - Everything going well
+  - Needs Attention (amber) - Some concerns
+  - Critical (red) - Urgent issues
+
 • **Progress This Week** - What was accomplished
 • **Current Challenges** - Issues or blockers
-• **Next Steps** - Plans for the upcoming week
-• **Team Member Feedback** (optional) - Individual feedback for team members
+• **Next Steps** - Plans for next week
+• **Team Member Feedback** (optional) - Individual feedback
 
-You have two submission options:
-• **Save as Draft** - Save your work and come back later
-• **Submit Report** - Finalize and submit the report`,
+**Two options to save:**
+• **Save as Draft** - Save and finish later
+• **Submit Report** - Finalize the report
+
+**Close this dialog** to continue.`,
     position: 'center'
   },
   {
-    id: 'report-filters',
-    title: 'Filtering Reports',
-    description: 'Use the Filter button to find specific leads or filter by status. You can filter by lead name or see only pending/submitted/drafted reports. These filters help you quickly find what you need.',
+    id: 'click-status-filter',
+    type: 'click-action',
+    title: 'Filter Options',
+    description: '**Click the Filter button** to see filtering options for finding specific leads or statuses.',
     targetSelector: '[data-testid="button-status-filter"]',
-    action: 'highlight',
+    clickSelector: '[data-testid="button-status-filter"]',
     position: 'bottom'
   },
-  // View Current Report Tab
+  {
+    id: 'status-filter-explain',
+    type: 'wait-for-close',
+    title: 'Report Status Filters',
+    description: `Filter the report list by:
+
+• **By Lead** - Search and select specific leads
+• **By Status** - Show only Submitted, Drafted, or Pending
+
+These filters help you quickly find what you need.
+
+**Close this** to continue.`,
+    position: 'center'
+  },
+  // VIEW CURRENT REPORT TAB
   {
     id: 'view-tab',
+    type: 'tab-change',
     title: 'View Current Report Tab',
-    description: 'Finally, let\'s check the View Current Report tab.',
-    action: 'tab-change',
+    description: 'Finally, let\'s check the **View Current Report** tab.\n\nClick **Next** to switch tabs.',
     tabValue: 'view',
     position: 'center'
   },
   {
-    id: 'view-reports',
+    id: 'view-reports-explain',
+    type: 'info',
     title: 'View Submitted Reports',
-    description: 'This tab shows all submitted weekly reports for the current period. After submitting your report in the Submit tab, come here to verify it appears correctly. You\'ll see your report with the health status, progress, and other details you entered.',
+    description: `This tab shows all **submitted weekly reports** for the current period.
+
+After submitting your report in the Submit tab, **come here to verify it appears correctly**. You'll see:
+
+• Your report with health status
+• Progress, challenges, and next steps
+• Team member feedback if provided
+
+This is where leadership reviews all submissions.
+
+Click **Next** to finish the tour.`,
     position: 'center'
   },
   {
     id: 'input-complete',
+    type: 'info',
     title: 'Input Workflow Complete!',
-    description: 'You now know how to:\n\n✓ Manage Project Leads and Team Members\n✓ Create and configure Projects with roles\n✓ Submit Weekly Reports with health status\n✓ Use filters to find what you need\n✓ Verify your submissions in View Reports\n\nThe Review workflow (coming soon) will show you how to analyze reports, generate AI insights, and export data.',
+    description: `Congratulations! You now know how to:
+
+✓ Manage Project Leads and view their details
+✓ Manage Team Members and filter by role
+✓ Create Projects with team assignments and roles
+✓ Understand co-lead projects
+✓ Submit Weekly Reports with health status
+✓ Save drafts and submit final reports
+✓ Use filters to find what you need
+✓ Verify your submissions
+
+The **Review Workflow** (coming soon) will cover analyzing reports, AI insights, and exporting data.`,
     position: 'center'
   }
 ];
@@ -222,9 +391,14 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightStyle, setHighlightStyle] = useState<React.CSSProperties>({});
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const [waitingForAction, setWaitingForAction] = useState(false);
 
   const steps = inputTourSteps;
   const step = steps[currentStep];
+
+  const clearHighlight = useCallback(() => {
+    setHighlightStyle({});
+  }, []);
 
   const scrollToElement = useCallback((selector: string) => {
     const element = document.querySelector(selector);
@@ -239,8 +413,6 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     const element = document.querySelector(selector);
     if (element) {
       const rect = element.getBoundingClientRect();
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
       
       setHighlightStyle({
         position: 'fixed',
@@ -250,22 +422,22 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
         height: rect.height + 16,
         border: '3px solid hsl(var(--primary))',
         borderRadius: '12px',
-        boxShadow: '0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px hsl(var(--primary))',
+        boxShadow: '0 0 0 9999px rgba(0,0,0,0.6), 0 0 30px hsl(var(--primary))',
         pointerEvents: 'none',
         zIndex: 9998,
         transition: 'all 0.3s ease'
       });
 
-      // Position tooltip
-      const tooltipTop = rect.bottom + 16;
-      const tooltipLeft = Math.max(16, Math.min(rect.left, window.innerWidth - 420));
+      // Position tooltip near the element
+      const tooltipTop = rect.bottom + 20;
+      const tooltipLeft = Math.max(16, Math.min(rect.left, window.innerWidth - 450));
       
       setTooltipStyle({
         position: 'fixed',
-        top: tooltipTop > window.innerHeight - 300 ? rect.top - 200 : tooltipTop,
+        top: tooltipTop > window.innerHeight - 350 ? Math.max(16, rect.top - 320) : tooltipTop,
         left: tooltipLeft,
         zIndex: 9999,
-        maxWidth: '400px'
+        maxWidth: '420px'
       });
 
       return true;
@@ -273,47 +445,103 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     return false;
   }, []);
 
+  const positionTooltipCenter = useCallback(() => {
+    clearHighlight();
+    setTooltipStyle({
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      zIndex: 9999,
+      maxWidth: '500px'
+    });
+  }, [clearHighlight]);
+
   const executeStep = useCallback(async () => {
     if (!step) return;
 
-    // Handle tab changes
-    if (step.action === 'tab-change' && step.tabValue && onTabChange) {
+    // Handle tab changes first
+    if (step.type === 'tab-change' && step.tabValue && onTabChange) {
       onTabChange(step.tabValue);
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 400));
+      positionTooltipCenter();
+      return;
     }
 
-    // Handle scroll action
-    if (step.action === 'scroll' && step.targetSelector) {
-      scrollToElement(step.targetSelector);
-      await new Promise(resolve => setTimeout(resolve, 500));
+    // Info steps - just show tooltip
+    if (step.type === 'info') {
       if (step.targetSelector) {
-        highlightElement(step.targetSelector);
-      }
-    }
-
-    // Handle highlight action
-    if (step.action === 'highlight' && step.targetSelector) {
-      const element = document.querySelector(step.targetSelector);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        scrollToElement(step.targetSelector);
         await new Promise(resolve => setTimeout(resolve, 500));
         highlightElement(step.targetSelector);
+      } else {
+        positionTooltipCenter();
       }
+      return;
     }
 
-    // No target - center position (info only)
-    if (!step.targetSelector || step.position === 'center') {
-      setHighlightStyle({});
-      setTooltipStyle({
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 9999,
-        maxWidth: '500px'
-      });
+    // Click action - highlight and wait for user to click
+    if (step.type === 'click-action' && step.targetSelector) {
+      scrollToElement(step.targetSelector);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      highlightElement(step.targetSelector);
+      setWaitingForAction(true);
+      return;
     }
-  }, [step, onTabChange, scrollToElement, highlightElement]);
+
+    // Wait for close - show center tooltip
+    if (step.type === 'wait-for-close') {
+      positionTooltipCenter();
+      setWaitingForAction(true);
+      return;
+    }
+  }, [step, onTabChange, scrollToElement, highlightElement, positionTooltipCenter]);
+
+  // Listen for clicks on highlighted elements
+  useEffect(() => {
+    if (!isTouring || !step || step.type !== 'click-action' || !step.clickSelector) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const clickableElement = target.closest(step.clickSelector!);
+      if (clickableElement) {
+        // User clicked the right element, advance to next step after a delay
+        setWaitingForAction(false);
+        clearHighlight();
+        setTimeout(() => {
+          setCurrentStep(prev => prev + 1);
+        }, 600);
+      }
+    };
+
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
+  }, [isTouring, step, clearHighlight]);
+
+  // Listen for dialog/popup closes
+  useEffect(() => {
+    if (!isTouring || !step || step.type !== 'wait-for-close') return;
+
+    const checkForDialogClose = () => {
+      // Check if any dialog is open
+      const openDialogs = document.querySelectorAll('[role="dialog"]:not([data-testid="tour-tooltip"])');
+      const openPopovers = document.querySelectorAll('[data-radix-popper-content-wrapper]');
+      
+      if (openDialogs.length === 0 && openPopovers.length === 0) {
+        // All dialogs/popovers closed, advance
+        setWaitingForAction(false);
+        setCurrentStep(prev => prev + 1);
+      }
+    };
+
+    // Check periodically
+    const interval = setInterval(checkForDialogClose, 300);
+    
+    // Initial check after a short delay
+    setTimeout(checkForDialogClose, 500);
+
+    return () => clearInterval(interval);
+  }, [isTouring, step, currentStep]);
 
   useEffect(() => {
     if (isTouring && step) {
@@ -325,6 +553,7 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     setShowModeSelect(false);
     setCurrentStep(0);
     setIsTouring(true);
+    setWaitingForAction(false);
     // Navigate to Teams & Projects tab first
     if (onTabChange) {
       onTabChange('teams-projects');
@@ -336,20 +565,37 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     setCurrentStep(0);
     setHighlightStyle({});
     setTooltipStyle({});
+    setWaitingForAction(false);
   };
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
+      setWaitingForAction(false);
       setCurrentStep(prev => prev + 1);
     } else {
       endTour();
     }
   };
 
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
+  const renderDescription = (text: string) => {
+    // Simple markdown-like rendering for bold text
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} className="text-foreground">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
+  const getActionText = () => {
+    if (step?.type === 'click-action') {
+      return 'Click the highlighted element to continue';
     }
+    if (step?.type === 'wait-for-close') {
+      return 'Close the popup/dialog to continue';
+    }
+    return null;
   };
 
   return (
@@ -371,10 +617,10 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
           <DialogHeader>
             <DialogTitle className="text-xl flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-primary" />
-              App Guided Tour
+              Interactive App Tour
             </DialogTitle>
             <DialogDescription>
-              Choose a workflow to learn about the application features.
+              Choose a workflow to learn the application hands-on.
             </DialogDescription>
           </DialogHeader>
           
@@ -389,12 +635,13 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Play className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-semibold">Input Workflow</h3>
                     <p className="text-sm text-muted-foreground">
-                      Learn how to add leads, team members, projects, and submit weekly reports.
+                      Learn to add leads, members, projects, and submit reports.
                     </p>
                   </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
                 </div>
               </CardContent>
             </Card>
@@ -411,7 +658,7 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
                   <div>
                     <h3 className="font-semibold text-muted-foreground">Review Workflow</h3>
                     <p className="text-sm text-muted-foreground">
-                      Coming soon: Learn how to review reports, use AI insights, and export data.
+                      Coming soon: Review reports, AI insights, and exports.
                     </p>
                   </div>
                 </div>
@@ -431,14 +678,19 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
 
           {/* Tooltip */}
           <div style={tooltipStyle} data-testid="tour-tooltip">
-            <Card className="shadow-2xl border-2 border-primary/50 bg-background/95 backdrop-blur">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <h3 className="font-bold text-lg">{step?.title}</h3>
+            <Card className="shadow-2xl border-2 border-primary/50 bg-background/98 backdrop-blur-sm">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs font-normal">
+                      {currentStep + 1} / {steps.length}
+                    </Badge>
+                    <h3 className="font-bold text-lg">{step?.title}</h3>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 shrink-0"
+                    className="h-7 w-7 shrink-0 -mt-1 -mr-1"
                     onClick={endTour}
                     data-testid="button-tour-close"
                   >
@@ -446,35 +698,32 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
                   </Button>
                 </div>
                 
-                <div className="text-sm text-muted-foreground whitespace-pre-line mb-4">
-                  {step?.description}
+                <div className="text-sm text-muted-foreground whitespace-pre-line mb-4 leading-relaxed">
+                  {step && renderDescription(step.description)}
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="text-xs text-muted-foreground">
-                    Step {currentStep + 1} of {steps.length}
-                  </span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={prevStep}
-                      disabled={currentStep === 0}
-                      data-testid="button-tour-prev"
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Back
-                    </Button>
+                {/* Action indicator */}
+                {waitingForAction && getActionText() && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20 mb-4">
+                    <MousePointer className="h-4 w-4 text-primary animate-pulse" />
+                    <span className="text-sm font-medium text-primary">{getActionText()}</span>
+                  </div>
+                )}
+
+                {/* Navigation */}
+                {!waitingForAction && (
+                  <div className="flex justify-end pt-2 border-t">
                     <Button
                       size="sm"
                       onClick={nextStep}
+                      className="gap-1"
                       data-testid="button-tour-next"
                     >
-                      {currentStep === steps.length - 1 ? 'Finish' : 'Next'}
-                      {currentStep < steps.length - 1 && <ChevronRight className="h-4 w-4 ml-1" />}
+                      {currentStep === steps.length - 1 ? 'Finish Tour' : 'Next'}
+                      {currentStep < steps.length - 1 && <ChevronRight className="h-4 w-4" />}
                     </Button>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
