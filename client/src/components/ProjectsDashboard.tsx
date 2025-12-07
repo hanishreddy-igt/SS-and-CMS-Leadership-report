@@ -123,6 +123,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Person | null>(null);
   const [showMemberDetailModal, setShowMemberDetailModal] = useState(false);
 
+  // Team Member Role Filter State
+  const [filterMemberRoles, setFilterMemberRoles] = useState<string[]>([]);
+  const [memberRoleSearchQuery, setMemberRoleSearchQuery] = useState('');
+
   // Role selection state for add/edit project forms
   const [roleInputs, setRoleInputs] = useState<Record<string, string>>({}); // Keyed by popover id
   const [showAddRolePopover, setShowAddRolePopover] = useState<string | null>(null); // popover id or null
@@ -590,9 +594,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     }));
   };
 
-  const filteredTeamMembers = teamMembers
-    .filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // Note: filteredTeamMembers is defined later after getMemberRoles is available
 
   const handleImport = async () => {
     setIsImporting(true);
@@ -1034,6 +1036,62 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         role: assignment?.role || 'No role assigned'
       };
     });
+  };
+
+  // Get all unique roles from all projects (only from active/renewal projects)
+  const getAllUniqueRoles = (): string[] => {
+    const rolesSet = new Set<string>();
+    projects.forEach(p => {
+      const status = getProjectStatus(p.endDate);
+      if (status === 'active' || status === 'renewal') {
+        const assignments = (p.teamMembers as TeamMemberAssignment[]) || [];
+        assignments.forEach(a => {
+          if (a.role && a.role.trim()) {
+            rolesSet.add(a.role.trim());
+          }
+        });
+      }
+    });
+    return Array.from(rolesSet).sort();
+  };
+
+  // Get roles for a specific team member (from active/renewal projects)
+  const getMemberRoles = (memberId: string): string[] => {
+    const rolesSet = new Set<string>();
+    projects.forEach(p => {
+      const status = getProjectStatus(p.endDate);
+      if (status === 'active' || status === 'renewal') {
+        const assignments = (p.teamMembers as TeamMemberAssignment[]) || [];
+        const assignment = assignments.find(a => a.memberId === memberId);
+        if (assignment?.role && assignment.role.trim()) {
+          rolesSet.add(assignment.role.trim());
+        }
+      }
+    });
+    return Array.from(rolesSet);
+  };
+
+  // Filter team members by search query and selected roles
+  const filteredTeamMembers = teamMembers
+    .filter((member) => member.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(member => {
+      if (filterMemberRoles.length === 0) return true;
+      const memberRoles = getMemberRoles(member.id);
+      return filterMemberRoles.some(role => memberRoles.includes(role));
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const toggleMemberRoleFilter = (role: string) => {
+    setFilterMemberRoles(prev => 
+      prev.includes(role) 
+        ? prev.filter(r => r !== role)
+        : [...prev, role]
+    );
+  };
+
+  const clearMemberRoleFilters = () => {
+    setFilterMemberRoles([]);
+    setMemberRoleSearchQuery('');
   };
 
   const validateProjectForm = () => {
@@ -2523,9 +2581,72 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl flex items-center gap-2">
               <UsersRound className="h-6 w-6" />
-              Team Members ({teamMembers.length})
+              Team Members ({filterMemberRoles.length > 0 ? `${filteredTeamMembers.length} of ${teamMembers.length}` : teamMembers.length})
             </CardTitle>
             <div className="flex gap-2">
+              {/* Filter by Role Popover */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2" data-testid="button-filter-member-role">
+                    <Filter className="h-4 w-4" />
+                    Filter by Role
+                    {filterMemberRoles.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5">
+                        {filterMemberRoles.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-3" align="end">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-sm">Filter by Role</p>
+                      {filterMemberRoles.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearMemberRoleFilters}
+                          className="h-auto py-1 px-2 text-xs"
+                          data-testid="button-clear-role-filters"
+                        >
+                          Clear all
+                        </Button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search roles..."
+                        value={memberRoleSearchQuery}
+                        onChange={(e) => setMemberRoleSearchQuery(e.target.value)}
+                        className="pl-8 h-9"
+                        data-testid="input-search-roles"
+                      />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto space-y-1">
+                      {getAllUniqueRoles()
+                        .filter(role => role.toLowerCase().includes(memberRoleSearchQuery.toLowerCase()))
+                        .map(role => (
+                          <div
+                            key={role}
+                            className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer"
+                            onClick={() => toggleMemberRoleFilter(role)}
+                            data-testid={`filter-role-${role.replace(/\s+/g, '-').toLowerCase()}`}
+                          >
+                            <Checkbox
+                              checked={filterMemberRoles.includes(role)}
+                              onCheckedChange={() => toggleMemberRoleFilter(role)}
+                            />
+                            <span className="text-sm truncate">{role}</span>
+                          </div>
+                        ))}
+                      {getAllUniqueRoles().filter(role => role.toLowerCase().includes(memberRoleSearchQuery.toLowerCase())).length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-2">No roles found</p>
+                      )}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Dialog open={showAddMemberDialog} onOpenChange={(open) => {
                 setShowAddMemberDialog(open);
                 if (!open) {
@@ -2648,7 +2769,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {[...teamMembers].sort((a, b) => a.name.localeCompare(b.name)).slice(0, membersToShow).map((member) => (
+              {filteredTeamMembers.slice(0, membersToShow).map((member) => (
               <div
                 key={member.id}
                 className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors cursor-pointer ${selectedMembers.has(member.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeMembers ? 'hover:bg-muted' : 'hover:bg-muted/70'}`}
@@ -2733,18 +2854,18 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               </div>
               ))}
               </div>
-              {teamMembers.length > membersToShow && (
+              {filteredTeamMembers.length > membersToShow && (
                 <div className="flex justify-center mt-4">
                   <Button
                     variant="outline"
                     onClick={() => setMembersToShow(prev => prev + 15)}
                     data-testid="button-view-more-members"
                   >
-                    View More ({teamMembers.length - membersToShow} remaining)
+                    View More ({filteredTeamMembers.length - membersToShow} remaining)
                   </Button>
                 </div>
               )}
-              {membersToShow > 15 && teamMembers.length > 15 && (
+              {membersToShow > 15 && filteredTeamMembers.length > 15 && (
                 <div className="flex justify-center mt-2">
                   <Button
                     variant="ghost"
