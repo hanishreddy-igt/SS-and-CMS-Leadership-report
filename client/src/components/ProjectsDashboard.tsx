@@ -3404,14 +3404,18 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </div>
               </div>
               
-              {/* Projects this member is working on */}
+              {/* Projects this member is working on (only active/renewal) */}
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-2">Projects & Roles</p>
                 {(() => {
-                  const memberProjects = getMemberProjects(selectedMemberForDetail.id);
+                  const memberProjects = getMemberProjects(selectedMemberForDetail.id)
+                    .filter(({ project }) => {
+                      const status = getProjectStatus(project.endDate);
+                      return status === 'active' || status === 'renewal';
+                    });
                   if (memberProjects.length === 0) {
                     return (
-                      <p className="text-sm text-muted-foreground italic">Not assigned to any projects</p>
+                      <p className="text-sm text-muted-foreground italic">No active projects</p>
                     );
                   }
                   return (
@@ -3420,19 +3424,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <div key={project.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
                           <div className="flex-1 min-w-0">
                             <span className="text-sm font-medium block truncate">{project.name}</span>
-                            <span className="text-xs text-muted-foreground">{role}</span>
                           </div>
                           <div className="ml-2 flex-shrink-0">
-                            {(() => {
-                              const status = getProjectStatus(project.endDate);
-                              if (status === 'active') {
-                                return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
-                              } else if (status === 'renewal') {
-                                return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
-                              } else {
-                                return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
-                              }
-                            })()}
+                            <Badge variant="secondary" className="text-xs font-medium">
+                              {role}
+                            </Badge>
                           </div>
                         </div>
                       ))}
