@@ -425,20 +425,30 @@ export default function AppDemo({ onTabChange }: AppDemoProps) {
     stepProcessedRef.current = false;
   }, [currentStep]);
 
+  // Track click handling state in a ref to avoid stale closures
+  const clickHandledRef = useRef(false);
+  
   // Listen for clicks on target elements (for click-to-open steps)
+  // Always listen during tour, check step type in handler
   useEffect(() => {
-    if (!isTouring || !awaitingClick || !step?.targetSelector) return;
+    if (!isTouring) return;
 
     const handleDocClick = (e: MouseEvent) => {
+      // Only handle clicks for click-to-open steps when awaiting
+      if (!awaitingClick || !step?.targetSelector || step.type !== 'click-to-open') return;
+      if (clickHandledRef.current) return; // Prevent double-handling
+      
       const target = e.target as HTMLElement;
-      const clickedElement = target.closest(step.targetSelector!);
+      const clickedElement = target.closest(step.targetSelector);
       
       if (clickedElement) {
+        clickHandledRef.current = true;
         clearHighlights();
         setAwaitingClick(false);
         
         // Wait for popup to open, then advance
         setTimeout(() => {
+          clickHandledRef.current = false;
           setCurrentStep(prev => prev + 1);
         }, 600);
       }
