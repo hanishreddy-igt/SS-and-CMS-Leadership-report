@@ -3421,15 +3421,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   return (
                     <div className="space-y-2" data-testid="list-member-projects">
                       {memberProjects.map(({ project, role }) => (
-                        <div key={project.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium block truncate">{project.name}</span>
-                          </div>
-                          <div className="ml-2 flex-shrink-0">
-                            <Badge variant="secondary" className="text-xs font-medium">
-                              {role}
-                            </Badge>
-                          </div>
+                        <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
+                          <span className="text-sm font-medium truncate">{project.name}</span>
+                          <Badge variant="secondary" className="text-xs font-medium w-fit max-w-full">
+                            <span className="truncate">{role}</span>
+                          </Badge>
                         </div>
                       ))}
                     </div>
