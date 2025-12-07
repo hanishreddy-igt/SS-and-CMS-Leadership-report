@@ -622,7 +622,7 @@ export default function SubmitReport() {
         <div 
           className={`glass-card rounded-xl p-6 cursor-pointer transition-all hover:border-success/30 ${statusFilterStatus === 'submitted' ? 'border-success/50 ring-1 ring-success/20' : ''}`}
           onClick={handleSubmittedTileClick}
-          data-testid="tile-submitted-reports"
+          data-testid="progress-submitted"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -672,7 +672,7 @@ export default function SubmitReport() {
         </div>
       </div>
 
-      <Card id="report-status-section" className="glass-card border-white/10">
+      <Card id="report-status-section" data-testid="card-submit-report" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -783,7 +783,7 @@ export default function SubmitReport() {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6" data-testid="section-report-status">
             {Object.keys(groupedByLead).length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No projects found matching the filters.</p>
             ) : (

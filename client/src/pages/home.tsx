@@ -89,7 +89,7 @@ export default function Home() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <AppDemo />
+              <AppDemo onTabChange={setActiveTab} />
               <Button 
                 variant="outline" 
                 onClick={handleLogout} 
