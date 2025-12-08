@@ -1289,6 +1289,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const renewalProjectsCMS = renewalProjects.filter(p => p.projectType === 'CMS').length;
   const renewalProjectsSS = renewalProjects.filter(p => p.projectType === 'SS').length;
 
+  // All active contracts (not ended) = long-term active + renewal
+  const allActiveContracts = projects.filter(p => getProjectStatus(p.endDate) !== 'ended');
+
   // Tile click handlers - clear all filters first, then apply specific filter and scroll
   // If clicking the same tile that's already filtered, toggle it off (clear all filters)
   const handleLongTermActiveClick = () => {
@@ -1381,7 +1384,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <p className="section-label">Contract Portfolio</p>
-              <CardTitle className="text-2xl">All Contracts <span className="text-primary">({longTermActiveProjects.length} Active)</span></CardTitle>
+              <CardTitle className="text-2xl">All Contracts <span className="text-primary">({allActiveContracts.length} Active)</span></CardTitle>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
               {/* Add New Project Button */}
