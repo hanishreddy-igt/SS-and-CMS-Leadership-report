@@ -665,15 +665,18 @@ export default function SubmitReport() {
                 <div
                   key={lead.id}
                   onClick={() => handleLeadProgressClick(lead.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all hover-elevate ${isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/20'}`}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all hover-elevate ${isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/20'}`}
                   data-testid={`lead-progress-${lead.id}`}
                 >
-                  {stats.allSubmitted ? (
-                    <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
-                  )}
-                  <span className="text-sm truncate">{lead.name}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {stats.allSubmitted ? (
+                      <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                    )}
+                    <span className="text-sm truncate">{lead.name}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">{stats.submitted}/{stats.total}</span>
                 </div>
               );
             })}
