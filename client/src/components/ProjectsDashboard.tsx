@@ -1786,7 +1786,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           className={(!isValidDateFormat(projectStartDateInput) && projectStartDateInput) || validateStartDate(projectStartDateInput) ? 'border-red-500' : ''}
                         />
                         {!isValidDateFormat(projectStartDateInput) && projectStartDateInput && (
-                          <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                          <p className="text-xs text-red-500">Enter a valid date</p>
                         )}
                         {isValidDateFormat(projectStartDateInput) && validateStartDate(projectStartDateInput) && (
                           <p className="text-xs text-red-500">{validateStartDate(projectStartDateInput)}</p>
@@ -1804,7 +1804,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           className={(!isValidDateFormat(projectEndDateInput) && projectEndDateInput) || validateEndDate(projectStartDateInput, projectEndDateInput) ? 'border-red-500' : ''}
                         />
                         {!isValidDateFormat(projectEndDateInput) && projectEndDateInput && (
-                          <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                          <p className="text-xs text-red-500">Enter a valid date</p>
                         )}
                         {isValidDateFormat(projectEndDateInput) && validateEndDate(projectStartDateInput, projectEndDateInput) && (
                           <p className="text-xs text-red-500">{validateEndDate(projectStartDateInput, projectEndDateInput)}</p>
@@ -2605,7 +2605,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   className={(!isValidDateFormat(editStartDateInput) && editStartDateInput) || validateStartDate(editStartDateInput) ? 'border-red-500' : ''}
                 />
                 {!isValidDateFormat(editStartDateInput) && editStartDateInput && (
-                  <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                  <p className="text-xs text-red-500">Enter a valid date</p>
                 )}
                 {isValidDateFormat(editStartDateInput) && validateStartDate(editStartDateInput) && (
                   <p className="text-xs text-red-500">{validateStartDate(editStartDateInput)}</p>
@@ -2623,7 +2623,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   className={(!isValidDateFormat(editEndDateInput) && editEndDateInput) || validateEndDate(editStartDateInput, editEndDateInput) ? 'border-red-500' : ''}
                 />
                 {!isValidDateFormat(editEndDateInput) && editEndDateInput && (
-                  <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                  <p className="text-xs text-red-500">Enter a valid date</p>
                 )}
                 {isValidDateFormat(editEndDateInput) && validateEndDate(editStartDateInput, editEndDateInput) && (
                   <p className="text-xs text-red-500">{validateEndDate(editStartDateInput, editEndDateInput)}</p>
