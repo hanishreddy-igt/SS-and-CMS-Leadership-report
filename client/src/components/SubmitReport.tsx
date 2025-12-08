@@ -804,7 +804,65 @@ export default function SubmitReport() {
           <div className="space-y-6" data-testid="section-report-status">
             {Object.keys(groupedByLead).length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No projects found matching the filters.</p>
+            ) : statusFilterLeads.size === 1 ? (
+              // Single lead filter - show flat list without lead header
+              (() => {
+                const allProjects = Object.values(groupedByLead).flat();
+                // Sort projects: drafted first, then pending, then submitted
+                const sortedProjects = [...allProjects].sort((a, b) => {
+                  const statusOrder = { 'drafted': 0, 'pending': 1, 'submitted': 2 };
+                  const statusA = getProjectReportStatus(a.id) as keyof typeof statusOrder;
+                  const statusB = getProjectReportStatus(b.id) as keyof typeof statusOrder;
+                  return (statusOrder[statusA] ?? 1) - (statusOrder[statusB] ?? 1);
+                });
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {sortedProjects.map((project) => {
+                      const reportStatus = getProjectReportStatus(project.id);
+                      const isCoLead = hasCoLeads(project);
+                      return (
+                        <div
+                          key={project.id}
+                          className="flex items-center justify-between bg-muted/30 border border-white/10 rounded-lg p-4 transition-all hover:bg-muted/50 cursor-pointer hover:border-primary/30"
+                          data-testid={`status-${project.id}`}
+                          onClick={() => handleProjectTileClick(project)}
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium">{project.name}</p>
+                            {isCoLead && (
+                              <Badge variant="outline" className="text-xs mt-1">Co-Lead</Badge>
+                            )}
+                          </div>
+                          {reportStatus === 'submitted' ? (
+                            <div className="flex items-center gap-2 text-success">
+                              <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+                                <Check className="h-4 w-4" />
+                              </div>
+                              <span className="text-sm font-medium">Submitted</span>
+                            </div>
+                          ) : reportStatus === 'drafted' ? (
+                            <div className="flex items-center gap-2 text-primary">
+                              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <PenLine className="h-4 w-4" />
+                              </div>
+                              <span className="text-sm font-medium">Drafted</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-warning">
+                              <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center">
+                                <Clock className="h-4 w-4" />
+                              </div>
+                              <span className="text-sm font-medium">Pending</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()
             ) : (
+              // Multiple leads or no filter - show grouped by lead
               Object.entries(groupedByLead).map(([leadName, leadProjects]) => {
                 const submitted = leadProjects.filter((p) => getProjectReportStatus(p.id) === 'submitted').length;
                 const total = leadProjects.length;
@@ -832,7 +890,6 @@ export default function SubmitReport() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {sortedLeadProjects.map((project) => {
                         const reportStatus = getProjectReportStatus(project.id);
-                        const submittedByName = reportStatus === 'submitted' ? getSubmittedByName(project.id) : null;
                         const isCoLead = hasCoLeads(project);
                         return (
                           <div
