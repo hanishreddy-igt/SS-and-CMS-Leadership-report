@@ -637,8 +637,14 @@ export default function SubmitReport() {
 
   // Handle clicking on a lead in the Weekly Progress section
   const handleLeadProgressClick = (leadId: string) => {
-    // Set the filter to show only this lead's projects
-    setStatusFilterLeads(new Set([leadId]));
+    // Toggle: if already filtered to this lead, clear the filter
+    const isAlreadySelected = statusFilterLeads.has(leadId) && statusFilterLeads.size === 1;
+    
+    if (isAlreadySelected) {
+      setStatusFilterLeads(new Set());
+    } else {
+      setStatusFilterLeads(new Set([leadId]));
+    }
     setStatusLeadSearch('');
     setStatusFilterStatus('all');
     
