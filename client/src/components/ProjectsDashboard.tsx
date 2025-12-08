@@ -1408,14 +1408,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 <DialogTrigger asChild>
                   <Button variant="default" className="gap-2" data-testid="button-add-project">
                     <Plus className="h-4 w-4" />
-                    Add New Project
+                    Add New Contract
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Add New Project</DialogTitle>
+                    <DialogTitle>Add New Contract</DialogTitle>
                     <DialogDescription>
-                      Create a new project with team members and project lead.
+                      Create a new contract with team member(s) and team lead(s).
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleSubmitProject} className="space-y-4 py-4">
@@ -1473,7 +1473,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Project Lead(s) <span className="text-red-500">*</span></Label>
+                        <Label>Team Lead(s) <span className="text-red-500">*</span></Label>
                         {projectFormData.leadIds.length > 0 && (
                           <Badge variant="secondary" data-testid="badge-lead-count">
                             {projectFormData.leadIds.length} selected {projectFormData.leadIds.length === 2 && '(Co-leads)'}
@@ -1518,7 +1518,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       {projectFormErrors.leadIds && (
                         <p className="text-sm text-red-500" data-testid="error-lead">{projectFormErrors.leadIds}</p>
                       )}
-                      <p className="text-xs text-muted-foreground">Select one lead, or select two for co-lead projects. First selected becomes primary.</p>
+                      <p className="text-xs text-muted-foreground">Select one lead, or select two for co-lead. First selected becomes primary.</p>
                     </div>
 
                     <div className="space-y-2">
@@ -1704,7 +1704,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Type of Project <span className="text-red-500">*</span></Label>
+                      <Label>Contract Business Nature <span className="text-red-500">*</span></Label>
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
                           <Checkbox
@@ -2090,7 +2090,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         <CardContent>
           {sortedProjects.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-projects">
-              No projects found. Click "Add New Project" to create one.
+              No contracts found. Click "Add New Contract" to create one.
             </p>
           ) : (
             <>
@@ -2281,7 +2281,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
+            <DialogTitle>Edit Contract</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -2304,7 +2304,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Project Lead(s) <span className="text-red-500">*</span></Label>
+                <Label>Team Lead(s) <span className="text-red-500">*</span></Label>
                 {editFormData.leadIds.length > 0 && (
                   <Badge variant="secondary" data-testid="badge-edit-lead-count">
                     {editFormData.leadIds.length} selected {editFormData.leadIds.length === 2 && '(Co-leads)'}
@@ -2343,7 +2343,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   <p className="text-sm text-muted-foreground text-center py-2">No project leads available</p>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">Select one lead, or select two for co-lead projects. First selected becomes primary.</p>
+              <p className="text-xs text-muted-foreground">Select one lead, or select two for co-lead. First selected becomes primary.</p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -2516,7 +2516,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Type of Project <span className="text-red-500">*</span></Label>
+              <Label>Contract Business Nature <span className="text-red-500">*</span></Label>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <Checkbox
