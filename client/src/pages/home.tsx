@@ -52,6 +52,11 @@ export default function Home() {
     queryKey: ['/api/weekly-reports'],
   });
 
+  // Fetch the reporting week from the API
+  const { data: reportingWeek } = useQuery<{ weekStart: string; weekEnd: string }>({
+    queryKey: ['/api/reporting-week'],
+  });
+
   const getProjectStatus = (endDate: string | null) => {
     if (!endDate) return 'active-renewal';
     const end = new Date(endDate);
@@ -64,25 +69,11 @@ export default function Home() {
 
   const activeProjects = projects.filter(p => getProjectStatus(p.endDate) !== 'ended');
   
-  // Get current week start (Monday) using UTC - same logic as other components
-  const getCurrentWeekStart = (): string => {
-    const now = new Date();
-    const utcYear = now.getUTCFullYear();
-    const utcMonth = now.getUTCMonth();
-    const utcDate = now.getUTCDate();
-    const utcDayOfWeek = now.getUTCDay();
-    const daysToMonday = (utcDayOfWeek + 6) % 7;
-    const mondayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate - daysToMonday, 0, 0, 0, 0));
-    const year = mondayUTC.getUTCFullYear();
-    const month = String(mondayUTC.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(mondayUTC.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+  // Use the reporting week from API
+  const reportingWeekStart = reportingWeek?.weekStart || '';
   
-  const currentWeek = getCurrentWeekStart();
-  
-  // Filter reports for current week only - compare string dates
-  const currentWeekReports = reports.filter((r) => r.weekStart === currentWeek);
+  // Filter reports for the reporting week - compare string dates
+  const currentWeekReports = reports.filter((r) => r.weekStart === reportingWeekStart);
   
   // Only count submitted reports for health status tiles
   const submittedReports = currentWeekReports.filter((r) => r.status === 'submitted');
