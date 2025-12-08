@@ -1335,28 +1335,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div 
-          className="metric-card metric-card-success cursor-pointer hover:border-success/30 transition-all"
-          onClick={handleLongTermActiveClick}
-          data-testid="tile-long-term-active"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="section-label">Long-term Active Contracts</p>
-              <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
-              <p className="text-4xl font-bold tabular-nums text-success" data-testid="text-long-term-active">
-                {longTermActiveProjects.length} <span className="text-xl font-normal text-muted-foreground">({longTermActiveCMS} | {longTermActiveSS})</span>
-              </p>
-            </div>
-            <div className="p-3 rounded-xl bg-success/10 border border-success/20">
-              <CheckCircle2 className="h-8 w-8 text-success" />
-            </div>
-          </div>
-        </div>
-
-        <div 
-          className="metric-card metric-card-warning cursor-pointer hover:border-warning/30 transition-all"
+      <div 
+          className="metric-card metric-card-warning cursor-pointer hover:border-warning/30 transition-all max-w-md"
           onClick={handleRenewalsSoonClick}
           data-testid="tile-renewals-soon"
         >
@@ -1373,7 +1353,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
             </div>
           </div>
         </div>
-      </div>
 
       {/* All Projects Section */}
       <Card id="all-projects-section" className="glass-card border-white/10">
@@ -1381,7 +1360,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <p className="section-label">Contract Portfolio</p>
-              <CardTitle className="text-2xl">All Contracts <span className="text-primary">({sortedProjects.length})</span></CardTitle>
+              <CardTitle className="text-2xl">All Contracts <span className="text-primary">({longTermActiveProjects.length} Active)</span></CardTitle>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
               {/* Add New Project Button */}
