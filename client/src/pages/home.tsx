@@ -63,11 +63,28 @@ export default function Home() {
   };
 
   const activeProjects = projects.filter(p => getProjectStatus(p.endDate) !== 'ended');
+  
+  // Get current week boundaries (Monday to Sunday) using UTC
+  const now = new Date();
+  const currentDay = now.getUTCDay();
+  const daysToMonday = currentDay === 0 ? 6 : currentDay - 1;
+  const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysToMonday, 0, 0, 0, 0));
+  const weekEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + (6 - daysToMonday), 23, 59, 59, 999));
+  
+  // Filter reports for current week only
+  const currentWeekReports = reports.filter((r) => {
+    const reportDate = new Date(r.weekStart);
+    return reportDate >= weekStart && reportDate <= weekEnd;
+  });
+  
   // Only count submitted reports for health status tiles
-  const submittedReports = reports.filter((r) => r.status === 'submitted');
+  const submittedReports = currentWeekReports.filter((r) => r.status === 'submitted');
   const onTrackCount = submittedReports.filter((r) => r.healthStatus === 'on-track').length;
   const atRiskCount = submittedReports.filter((r) => r.healthStatus === 'at-risk').length;
   const criticalCount = submittedReports.filter((r) => r.healthStatus === 'critical').length;
+  
+  // Count unique contracts with submitted reports this week
+  const contractsWithReports = new Set(submittedReports.map(r => r.projectId)).size;
 
   return (
     <div className="min-h-screen">
@@ -141,6 +158,16 @@ export default function Home() {
               <p className="text-4xl font-bold tabular-nums text-destructive">{criticalCount}</p>
               <p className="text-sm text-muted-foreground mt-1">Critical</p>
             </div>
+          </div>
+
+          {/* Report submission completeness banner */}
+          <div 
+            className="mt-4 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-center"
+            data-testid="banner-report-completeness"
+          >
+            <p className="text-sm text-muted-foreground">
+              Reports submitted for <span className="font-semibold text-foreground">{contractsWithReports}</span> out of <span className="font-semibold text-foreground">{activeProjects.length}</span> active contracts this week
+            </p>
           </div>
         </div>
       </header>
