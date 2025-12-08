@@ -176,10 +176,10 @@ export default function TeamAndProjectManagement() {
         </CardContent>
       </Card>
 
-      {/* Add Project Lead */}
+      {/* Add Team Lead */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Add Project Lead</CardTitle>
+          <CardTitle className="text-2xl">Add Team Lead</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 max-w-2xl">
@@ -189,7 +189,7 @@ export default function TeamAndProjectManagement() {
               value={newLead}
               onChange={(e) => setNewLead(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddLead()}
-              placeholder="Enter project lead name"
+              placeholder="Enter team lead name"
               className="flex-1"
             />
             <Button
@@ -235,13 +235,13 @@ export default function TeamAndProjectManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lead">Project Lead <span className="text-red-500">*</span></Label>
+              <Label htmlFor="lead">Team Lead <span className="text-red-500">*</span></Label>
               <Select
                 value={projectFormData.leadId}
                 onValueChange={(value) => setProjectFormData({ ...projectFormData, leadId: value })}
               >
                 <SelectTrigger id="lead" data-testid="select-lead">
-                  <SelectValue placeholder="Select project lead" />
+                  <SelectValue placeholder="Select team lead" />
                 </SelectTrigger>
                 <SelectContent>
                   {projectLeads.map((lead) => (

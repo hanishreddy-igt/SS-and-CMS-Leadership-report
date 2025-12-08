@@ -119,13 +119,13 @@ export default function ProjectManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lead">Project Lead</Label>
+              <Label htmlFor="lead">Team Lead</Label>
               <Select
                 value={formData.leadId}
                 onValueChange={(value) => setFormData({ ...formData, leadId: value })}
               >
                 <SelectTrigger id="lead" data-testid="select-lead">
-                  <SelectValue placeholder="Select project lead" />
+                  <SelectValue placeholder="Select team lead" />
                 </SelectTrigger>
                 <SelectContent>
                   {projectLeads.map((lead) => (

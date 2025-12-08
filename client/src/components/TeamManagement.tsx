@@ -264,7 +264,7 @@ export default function TeamManagement() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Project Leads</CardTitle>
+          <CardTitle className="text-2xl">Team Leads</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -274,7 +274,7 @@ export default function TeamManagement() {
               value={newLead}
               onChange={(e) => setNewLead(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddLead()}
-              placeholder="Enter project lead name"
+              placeholder="Enter team lead name"
               className="flex-1"
             />
             <Button

@@ -3970,7 +3970,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       <User className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="text-xs text-muted-foreground">
-                          {project && hasCoLeads(project) ? 'Project Leads' : 'Project Lead'}
+                          {project && hasCoLeads(project) ? 'Team Leads' : 'Team Lead'}
                         </p>
                         <p className="font-medium">
                           {project ? getProjectLeadNames(project) : getLeadName(selectedReport.leadId)}

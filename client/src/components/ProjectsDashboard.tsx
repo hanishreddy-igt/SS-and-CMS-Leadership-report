@@ -2882,13 +2882,13 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         </CardContent>
       </Card>
 
-      {/* Project Leads Section */}
+      {/* Team Leads Section */}
       <Card data-testid="section-project-leads">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="text-2xl flex items-center gap-2">
               <UserCog className="h-6 w-6" />
-              Project Leads ({projectLeads.length})
+              Team Leads ({projectLeads.length})
             </CardTitle>
             <div className="flex gap-2">
               <Dialog open={showAddLeadDialog} onOpenChange={(open) => {
@@ -2903,26 +2903,26 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 <DialogTrigger asChild>
                   <Button variant="default" className="gap-2" data-testid="button-add-lead">
                     <UserPlus className="h-4 w-4" />
-                    Add Project Lead
+                    Add Team Lead
                   </Button>
                 </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add Project Lead</DialogTitle>
+                  <DialogTitle>Add Team Lead</DialogTitle>
                   <DialogDescription>
-                    Add a new project lead to the system.
+                    Add a new team lead to the system.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="new-lead-name">Project Lead Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="new-lead-name">Team Lead Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="new-lead-name"
                       data-testid="input-lead-name"
                       type="text"
                       value={newLead}
                       onChange={(e) => handleLeadNameChange(e.target.value)}
-                      placeholder="Enter project lead name"
+                      placeholder="Enter team lead name"
                       className={leadNameError ? 'border-red-500' : leadNameWarning ? 'border-amber-500' : ''}
                     />
                     {leadNameError && (
@@ -2974,7 +2974,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         <CardContent>
           {projectLeads.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-leads">
-              No project leads added yet. Click "Add Project Lead" to add one.
+              No team leads added yet. Click "Add Team Lead" to add one.
             </p>
           ) : (
             <>
@@ -3192,7 +3192,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       <AlertDialog open={showBulkDeleteLeads} onOpenChange={setShowBulkDeleteLeads}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedLeads.size} Project Lead(s)</AlertDialogTitle>
+            <AlertDialogTitle>Delete {selectedLeads.size} Team Lead(s)</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete {selectedLeads.size} selected project lead(s)? This action cannot be undone.
             </AlertDialogDescription>
@@ -3243,7 +3243,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-muted-foreground">
-                    {hasCoLeads(selectedProject) ? 'Project Leads (Co-Lead)' : 'Project Lead'}
+                    {hasCoLeads(selectedProject) ? 'Team Leads (Co-Lead)' : 'Team Lead'}
                   </p>
                   <div className="space-y-2">
                     {(selectedProject.leadIds && selectedProject.leadIds.length > 0 
@@ -3374,21 +3374,21 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       <Dialog open={showEditLeadDialog} onOpenChange={(open) => !open && cancelEditLead()}>
         <DialogContent data-testid="dialog-edit-lead">
           <DialogHeader>
-            <DialogTitle>Edit Project Lead</DialogTitle>
+            <DialogTitle>Edit Team Lead</DialogTitle>
             <DialogDescription>
-              Update the project lead's name and email address.
+              Update the team lead's name and email address.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-lead-name">Project Lead Name <span className="text-red-500">*</span></Label>
+              <Label htmlFor="edit-lead-name">Team Lead Name <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-lead-name"
                 data-testid="input-edit-lead-name"
                 type="text"
                 value={editLeadValue}
                 onChange={(e) => setEditLeadValue(e.target.value)}
-                placeholder="Enter project lead name"
+                placeholder="Enter team lead name"
               />
             </div>
             <div className="space-y-2">
@@ -3428,7 +3428,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserCog className="h-5 w-5" />
-              Project Lead Details
+              Team Lead Details
             </DialogTitle>
             <DialogDescription className="sr-only">
               View details about this project lead including their email and projects they manage.
