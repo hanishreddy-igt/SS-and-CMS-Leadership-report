@@ -215,6 +215,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [teamSummary, setTeamSummary] = useState<TeamSummary | null>(null);
   const [summaryGeneratedAt, setSummaryGeneratedAt] = useState<string | null>(null);
   const [reportsAnalyzed, setReportsAnalyzed] = useState<number>(0);
+  const [showLeadershipModal, setShowLeadershipModal] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
   
   // Auto-archive tracking
   const autoArchiveTriggered = useRef(false);
@@ -2848,7 +2850,100 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               <p className="text-sm">Click "Generate AI Summary" to analyze all submitted reports and get comprehensive insights for the week.</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
+              {/* Clickable tiles for summaries */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Leadership Summary Tile */}
+                <div 
+                  className={`p-4 rounded-lg cursor-pointer transition-all hover:border-primary/50 ${getOverallHealthConfig(aiSummary.overallHealth).bgColor} border ${getOverallHealthConfig(aiSummary.overallHealth).borderColor}`}
+                  onClick={() => setShowLeadershipModal(true)}
+                  data-testid="tile-leadership-summary"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                      </div>
+                      <h4 className="font-semibold">Leadership Summary</h4>
+                    </div>
+                    <Badge className={`${getOverallHealthConfig(aiSummary.overallHealth).bgColor} ${getOverallHealthConfig(aiSummary.overallHealth).color} border-0`}>
+                      {aiSummary.overallHealth === 'on-track' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                      {aiSummary.overallHealth === 'needs-attention' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                      {aiSummary.overallHealth === 'critical' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                      {getOverallHealthConfig(aiSummary.overallHealth).label}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{aiSummary.executiveSummary}</p>
+                  <p className="text-xs text-primary mt-2">Click to view full summary</p>
+                </div>
+
+                {/* Team Members Summary Tile */}
+                {teamSummary && (
+                  <div 
+                    className={`p-4 rounded-lg cursor-pointer transition-all hover:border-blue-500/50 ${
+                      teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                      teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                      'bg-destructive/10 border border-destructive/30'
+                    }`}
+                    onClick={() => setShowTeamModal(true)}
+                    data-testid="tile-team-summary"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <Users className="h-4 w-4 text-blue-500" />
+                        </div>
+                        <h4 className="font-semibold">Team Members Summary</h4>
+                      </div>
+                      <Badge className={`${
+                        teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
+                        teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
+                        'bg-destructive/10 text-destructive'
+                      } border-0`}>
+                        {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                        {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                        {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                        {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                         teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{teamSummary.teamSummary}</p>
+                    <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Generated timestamp */}
+              {summaryGeneratedAt && (
+                <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-white/10 pt-3">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Generated: {formatUTC(summaryGeneratedAt)}
+                  </span>
+                  <span>{reportsAnalyzed} reports analyzed</span>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Leadership Summary Modal */}
+      <Dialog open={showLeadershipModal} onOpenChange={setShowLeadershipModal}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="section-label">AI-Powered Insights</p>
+                <DialogTitle className="text-2xl">Leadership Summary</DialogTitle>
+              </div>
+            </div>
+          </DialogHeader>
+          {aiSummary && (
+            <div className="space-y-6 mt-4">
               {/* Executive Summary */}
               <div className={`p-4 rounded-lg ${getOverallHealthConfig(aiSummary.overallHealth).bgColor} border ${getOverallHealthConfig(aiSummary.overallHealth).borderColor}`}>
                 <div className="flex items-center gap-2 mb-2">
@@ -2865,7 +2960,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 <p className="text-foreground leading-relaxed">{aiSummary.executiveSummary}</p>
               </div>
 
-              {/* Portfolio Health Breakdown (new comprehensive format) */}
+              {/* Portfolio Health Breakdown */}
               {aiSummary.portfolioHealthBreakdown && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 rounded-lg bg-success/10 border border-success/30">
@@ -2904,7 +2999,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Immediate Attention Required (new comprehensive format) */}
+              {/* Immediate Attention Required */}
               {aiSummary.immediateAttentionRequired && aiSummary.immediateAttentionRequired.length > 0 && (
                 <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20">
                   <div className="flex items-center gap-2 mb-3">
@@ -2930,7 +3025,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Key Achievements (handles both new and legacy formats) */}
+              {/* Key Achievements */}
               {aiSummary.keyAchievements && aiSummary.keyAchievements.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -2959,7 +3054,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Cross-Project Patterns (new comprehensive format) */}
+              {/* Cross-Project Patterns */}
               {aiSummary.crossProjectPatterns && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -3010,7 +3105,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Upcoming Focus (handles both new and legacy formats) */}
+              {/* Upcoming Focus */}
               {aiSummary.upcomingFocus && aiSummary.upcomingFocus.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -3039,7 +3134,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Recommended Leadership Actions (new comprehensive format) */}
+              {/* Recommended Leadership Actions */}
               {aiSummary.recommendedLeadershipActions && aiSummary.recommendedLeadershipActions.length > 0 && (
                 <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-2 mb-3">
@@ -3065,7 +3160,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               {/* Legacy fields for backward compatibility */}
               {!aiSummary.portfolioHealthBreakdown && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Week Highlights (legacy) */}
                   {aiSummary.weekHighlights && aiSummary.weekHighlights.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -3082,8 +3176,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       </ul>
                     </div>
                   )}
-
-                  {/* Critical Issues (legacy) */}
                   {aiSummary.criticalIssues && aiSummary.criticalIssues.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -3100,8 +3192,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       </ul>
                     </div>
                   )}
-
-                  {/* Attention Needed (legacy) */}
                   {aiSummary.attentionNeeded && aiSummary.attentionNeeded.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -3121,7 +3211,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Week Highlights (new format, shown alongside comprehensive) */}
+              {/* Week Highlights (new format) */}
               {aiSummary.portfolioHealthBreakdown && aiSummary.weekHighlights && aiSummary.weekHighlights.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -3138,38 +3228,27 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </ul>
                 </div>
               )}
-
-              {/* Generated timestamp */}
-              {summaryGeneratedAt && (
-                <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-white/10 pt-3 mt-4">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Generated: {formatUTC(summaryGeneratedAt)}
-                  </span>
-                  <span>{reportsAnalyzed} reports analyzed</span>
-                </div>
-              )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
-      {/* Team Member Summary Section */}
-      {teamSummary && (
-        <Card className="glass-card border-white/10">
-          <CardHeader className="border-b border-white/5">
+      {/* Team Members Summary Modal */}
+      <Dialog open={showTeamModal} onOpenChange={setShowTeamModal}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
                 <Users className="h-5 w-5 text-blue-500" />
               </div>
               <div>
                 <p className="section-label">AI-Powered Team Insights</p>
-                <CardTitle className="text-2xl">Team Members Summary</CardTitle>
+                <DialogTitle className="text-2xl">Team Members Summary</DialogTitle>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-6">
+          </DialogHeader>
+          {teamSummary && (
+            <div className="space-y-6 mt-4">
               {/* Team Morale Overview */}
               <div className={`p-4 rounded-lg ${
                 teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
@@ -3192,7 +3271,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 <p className="text-foreground leading-relaxed">{teamSummary.teamSummary}</p>
               </div>
 
-              {/* Team Highlights (handles both new and legacy formats) */}
+              {/* Team Highlights */}
               {teamSummary.teamHighlights && teamSummary.teamHighlights.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -3219,7 +3298,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Recognition Opportunities (handles both new and legacy formats) */}
+              {/* Recognition Opportunities */}
               {teamSummary.recognitionOpportunities && teamSummary.recognitionOpportunities.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -3249,7 +3328,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Team Concerns (handles both new and legacy formats) */}
+              {/* Team Concerns */}
               {teamSummary.teamConcerns && teamSummary.teamConcerns.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -3283,7 +3362,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Workload Observations (new comprehensive format) */}
+              {/* Workload Observations */}
               {teamSummary.workloadObservations && teamSummary.workloadObservations.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -3307,7 +3386,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Support Needed (handles both new and legacy formats) */}
+              {/* Support Needed */}
               {teamSummary.supportNeeded && teamSummary.supportNeeded.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -3334,7 +3413,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Development Opportunities (new comprehensive format) */}
+              {/* Development Opportunities */}
               {teamSummary.developmentOpportunities && teamSummary.developmentOpportunities.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -3353,7 +3432,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Retention Risks (new comprehensive format) */}
+              {/* Retention Risks */}
               {teamSummary.retentionRisks && teamSummary.retentionRisks.length > 0 && (
                 <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20">
                   <div className="flex items-center gap-2 mb-3">
@@ -3379,7 +3458,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
 
-              {/* Recommended HR Actions (new comprehensive format) */}
+              {/* Recommended HR Actions */}
               {teamSummary.recommendedHRActions && teamSummary.recommendedHRActions.length > 0 && (
                 <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
                   <div className="flex items-center gap-2 mb-3">
@@ -3402,9 +3481,9 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Card id="weekly-reports-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
