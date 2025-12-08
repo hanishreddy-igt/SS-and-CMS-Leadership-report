@@ -3455,7 +3455,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               
               {/* Projects managed by this lead (includes co-lead projects) */}
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Projects Led</p>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Contracts Led</p>
                 {(() => {
                   const ledProjects = projects.filter(p => {
                     // Check leadIds array first (co-lead support), then fall back to leadId
@@ -3464,7 +3464,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   });
                   if (ledProjects.length === 0) {
                     return (
-                      <p className="text-sm text-muted-foreground italic">No projects assigned</p>
+                      <p className="text-sm text-muted-foreground italic">No contracts assigned</p>
                     );
                   }
                   return (
@@ -3527,7 +3527,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               
               {/* Projects this member is working on (only active/renewal) */}
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Projects & Roles</p>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Contracts & Roles</p>
                 {(() => {
                   const memberProjects = getMemberProjects(selectedMemberForDetail.id)
                     .filter(({ project }) => {
@@ -3536,7 +3536,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     });
                   if (memberProjects.length === 0) {
                     return (
-                      <p className="text-sm text-muted-foreground italic">No active projects</p>
+                      <p className="text-sm text-muted-foreground italic">No active contracts</p>
                     );
                   }
                   return (
