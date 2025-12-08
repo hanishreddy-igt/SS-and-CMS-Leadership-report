@@ -419,9 +419,12 @@ export default function SubmitReport() {
       setExistingDraftId(null);
     },
     onError: (error: Error) => {
+      const isConnectionError = error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch');
       toast({ 
-        title: 'Error', 
-        description: error.message || 'Failed to save draft',
+        title: isConnectionError ? 'Connection Lost' : 'Error', 
+        description: isConnectionError 
+          ? 'Unable to save. Please refresh the page and try again.' 
+          : (error.message || 'Failed to save draft'),
         variant: 'destructive'
       });
     }
@@ -449,9 +452,12 @@ export default function SubmitReport() {
       setExistingDraftId(null);
     },
     onError: (error: Error) => {
+      const isConnectionError = error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch');
       toast({ 
-        title: 'Error', 
-        description: error.message || 'Failed to submit report',
+        title: isConnectionError ? 'Connection Lost' : 'Error', 
+        description: isConnectionError 
+          ? 'Unable to submit. Please refresh the page and try again.' 
+          : (error.message || 'Failed to submit report'),
         variant: 'destructive'
       });
     }
@@ -500,9 +506,12 @@ export default function SubmitReport() {
       closeReportModal();
     },
     onError: (error: Error) => {
+      const isConnectionError = error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch');
       toast({ 
-        title: 'Error', 
-        description: error.message || 'Failed to save draft',
+        title: isConnectionError ? 'Connection Lost' : 'Error', 
+        description: isConnectionError 
+          ? 'Unable to save. Please refresh the page and try again.' 
+          : (error.message || 'Failed to save draft'),
         variant: 'destructive'
       });
     }
@@ -524,9 +533,12 @@ export default function SubmitReport() {
       closeReportModal();
     },
     onError: (error: Error) => {
+      const isConnectionError = error.message?.includes('fetch') || error.message?.includes('network') || error.message?.includes('Failed to fetch');
       toast({ 
-        title: 'Error', 
-        description: error.message || 'Failed to submit report',
+        title: isConnectionError ? 'Connection Lost' : 'Error', 
+        description: isConnectionError 
+          ? 'Unable to submit. Please refresh the page and try again.' 
+          : (error.message || 'Failed to submit report'),
         variant: 'destructive'
       });
     }
