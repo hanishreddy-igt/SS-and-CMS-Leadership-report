@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { FileText, FolderKanban, Eye, LogOut, Shield, BarChart3, TrendingUp, History } from 'lucide-react';
+import { FileText, FolderKanban, Eye, LogOut, Shield, BarChart3, TrendingUp, History, CheckCircle2, AlertTriangle } from 'lucide-react';
 import AppDemo from '@/components/AppDemo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -160,12 +160,22 @@ export default function Home() {
 
           {/* Report submission completeness banner */}
           <div 
-            className="mt-4 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-center cursor-pointer hover:bg-white/10 hover:border-white/20 transition-all"
+            className={`mt-4 px-4 py-3 rounded-lg cursor-pointer transition-all flex items-center justify-center gap-3 ${
+              contractsWithReports === activeProjects.length
+                ? 'bg-success/10 border border-success/30 hover:bg-success/15 hover:border-success/40'
+                : 'bg-warning/10 border border-warning/30 hover:bg-warning/15 hover:border-warning/40'
+            }`}
             data-testid="banner-report-completeness"
             onClick={() => setActiveTab('submit')}
           >
-            <p className="text-sm text-muted-foreground">
-              Reports are submitted for <span className="font-semibold text-foreground">{contractsWithReports}</span> out of <span className="font-semibold text-foreground">{activeProjects.length}</span> active contracts this week
+            {contractsWithReports === activeProjects.length ? (
+              <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
+            ) : (
+              <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+            )}
+            <p className={`text-sm ${contractsWithReports === activeProjects.length ? 'text-success' : 'text-warning'}`}>
+              Reports are submitted for <span className="font-semibold">{contractsWithReports}</span> out of <span className="font-semibold">{activeProjects.length}</span> active contracts this week
+              {contractsWithReports === activeProjects.length && <span className="ml-1">- All complete!</span>}
             </p>
           </div>
         </div>
