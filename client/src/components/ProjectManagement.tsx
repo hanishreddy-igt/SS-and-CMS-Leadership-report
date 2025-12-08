@@ -95,26 +95,26 @@ export default function ProjectManagement() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
             <div className="space-y-2">
-              <Label htmlFor="project-name">Project Name</Label>
+              <Label htmlFor="project-name">Account Name</Label>
               <Input
                 id="project-name"
                 data-testid="input-project-name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter project name"
+                placeholder="Enter account name"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customer">Customer</Label>
+              <Label htmlFor="customer">Customer Contact Name</Label>
               <Input
                 id="customer"
                 data-testid="input-customer"
                 type="text"
                 value={formData.customer}
                 onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
-                placeholder="Enter customer name"
+                placeholder="Enter customer contact name"
               />
             </div>
 

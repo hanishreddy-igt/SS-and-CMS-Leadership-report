@@ -211,26 +211,26 @@ export default function TeamAndProjectManagement() {
         <CardContent>
           <form onSubmit={handleSubmitProject} className="space-y-4 max-w-2xl">
             <div className="space-y-2">
-              <Label htmlFor="project-name">Project Name <span className="text-red-500">*</span></Label>
+              <Label htmlFor="project-name">Account Name <span className="text-red-500">*</span></Label>
               <Input
                 id="project-name"
                 data-testid="input-project-name"
                 type="text"
                 value={projectFormData.name}
                 onChange={(e) => setProjectFormData({ ...projectFormData, name: e.target.value })}
-                placeholder="Enter project name"
+                placeholder="Enter account name"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customer">Customer <span className="text-red-500">*</span></Label>
+              <Label htmlFor="customer">Customer Contact Name <span className="text-red-500">*</span></Label>
               <Input
                 id="customer"
                 data-testid="input-customer"
                 type="text"
                 value={projectFormData.customer}
                 onChange={(e) => setProjectFormData({ ...projectFormData, customer: e.target.value })}
-                placeholder="Enter customer name"
+                placeholder="Enter customer contact name"
               />
             </div>
 
