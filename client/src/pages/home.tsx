@@ -64,18 +64,25 @@ export default function Home() {
 
   const activeProjects = projects.filter(p => getProjectStatus(p.endDate) !== 'ended');
   
-  // Get current week boundaries (Monday to Sunday) using UTC
-  const now = new Date();
-  const currentDay = now.getUTCDay();
-  const daysToMonday = currentDay === 0 ? 6 : currentDay - 1;
-  const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysToMonday, 0, 0, 0, 0));
-  const weekEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + (6 - daysToMonday), 23, 59, 59, 999));
+  // Get current week start (Monday) using UTC - same logic as other components
+  const getCurrentWeekStart = (): string => {
+    const now = new Date();
+    const utcYear = now.getUTCFullYear();
+    const utcMonth = now.getUTCMonth();
+    const utcDate = now.getUTCDate();
+    const utcDayOfWeek = now.getUTCDay();
+    const daysToMonday = (utcDayOfWeek + 6) % 7;
+    const mondayUTC = new Date(Date.UTC(utcYear, utcMonth, utcDate - daysToMonday, 0, 0, 0, 0));
+    const year = mondayUTC.getUTCFullYear();
+    const month = String(mondayUTC.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(mondayUTC.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   
-  // Filter reports for current week only
-  const currentWeekReports = reports.filter((r) => {
-    const reportDate = new Date(r.weekStart);
-    return reportDate >= weekStart && reportDate <= weekEnd;
-  });
+  const currentWeek = getCurrentWeekStart();
+  
+  // Filter reports for current week only - compare string dates
+  const currentWeekReports = reports.filter((r) => r.weekStart === currentWeek);
   
   // Only count submitted reports for health status tiles
   const submittedReports = currentWeekReports.filter((r) => r.status === 'submitted');
