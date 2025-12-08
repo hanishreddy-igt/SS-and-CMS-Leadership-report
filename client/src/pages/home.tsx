@@ -113,7 +113,7 @@ export default function Home() {
                 <FolderKanban className="h-5 w-5 text-muted-foreground" />
               </div>
               <p className="text-4xl font-bold tabular-nums platinum-text">{activeProjects.length}</p>
-              <p className="text-sm text-muted-foreground mt-1">Active Projects</p>
+              <p className="text-sm text-muted-foreground mt-1">Active Contracts</p>
             </div>
 
             <div 
