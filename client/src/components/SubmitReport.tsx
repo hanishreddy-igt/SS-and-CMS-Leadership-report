@@ -653,94 +653,33 @@ export default function SubmitReport() {
 
   return (
     <div className="space-y-8">
-      {/* Premium Metric Cards - Clickable to filter Report Status section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div 
-          className="glass-card rounded-xl p-6"
-          data-testid="progress-submitted"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="section-label">Weekly Progress</p>
-              <p className="text-3xl font-bold tabular-nums" data-testid="text-submitted">
-                <span className="text-success">{submittedCount}</span>
-                <span className="text-muted-foreground text-lg">/{totalProjects}</span>
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Reports Submitted</p>
-            </div>
-            <div className="h-14 w-14 rounded-xl bg-success/10 flex items-center justify-center">
-              <FileText className="h-7 w-7 text-success" />
-            </div>
-          </div>
-          <div className="mt-4 h-2 bg-muted/30 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-success transition-all duration-500"
-              style={{ width: `${totalProjects ? (submittedCount / totalProjects) * 100 : 0}%` }}
-            />
-          </div>
-          
-          {/* Lead Status List */}
-          {leadsWithActiveProjects.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <p className="text-xs text-muted-foreground mb-2">Team Lead Status</p>
-              <ScrollArea className="h-[140px] scrollbar-visible">
-                <div className="space-y-1">
-                  {leadsWithActiveProjects.map((lead) => {
-                    const stats = getLeadActiveProjectStats(lead.id);
-                    const isSelected = statusFilterLeads.has(lead.id) && statusFilterLeads.size === 1;
-                    return (
-                      <div
-                        key={lead.id}
-                        onClick={() => handleLeadProgressClick(lead.id)}
-                        className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-all hover-elevate ${isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : ''}`}
-                        data-testid={`lead-progress-${lead.id}`}
-                      >
-                        <span className="text-sm truncate">{lead.name}</span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-muted-foreground">
-                            {stats.submitted}/{stats.total}
-                          </span>
-                          {stats.allSubmitted ? (
-                            <CheckCircle2 className="h-4 w-4 text-success" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4 text-warning" />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+      {/* Weekly Progress - Team Lead Status Grid */}
+      {leadsWithActiveProjects.length > 0 && (
+        <div className="glass-card rounded-xl p-6" data-testid="progress-submitted">
+          <p className="section-label mb-4">Weekly Progress</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {leadsWithActiveProjects.map((lead) => {
+              const stats = getLeadActiveProjectStats(lead.id);
+              const isSelected = statusFilterLeads.has(lead.id) && statusFilterLeads.size === 1;
+              return (
+                <div
+                  key={lead.id}
+                  onClick={() => handleLeadProgressClick(lead.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all hover-elevate ${isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/20'}`}
+                  data-testid={`lead-progress-${lead.id}`}
+                >
+                  {stats.allSubmitted ? (
+                    <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                  )}
+                  <span className="text-sm truncate">{lead.name}</span>
                 </div>
-              </ScrollArea>
-            </div>
-          )}
-        </div>
-
-        <div 
-          className={`glass-card rounded-xl p-6 cursor-pointer transition-all hover:border-warning/30 ${statusFilterStatus === 'awaiting' ? 'border-warning/50 ring-1 ring-warning/20' : ''}`}
-          onClick={handlePendingTileClick}
-          data-testid="tile-pending-reports"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="section-label">Awaiting Submission</p>
-              <p className="text-3xl font-bold tabular-nums" data-testid="text-pending">
-                <span className="text-warning">{pendingCount}</span>
-                <span className="text-muted-foreground text-lg">/{totalProjects}</span>
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Reports Pending</p>
-            </div>
-            <div className="h-14 w-14 rounded-xl bg-warning/10 flex items-center justify-center">
-              <ClipboardList className="h-7 w-7 text-warning" />
-            </div>
-          </div>
-          <div className="mt-4 h-2 bg-muted/30 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-warning transition-all duration-500"
-              style={{ width: `${totalProjects ? (pendingCount / totalProjects) * 100 : 0}%` }}
-            />
+              );
+            })}
           </div>
         </div>
-      </div>
+      )}
 
       <Card id="report-status-section" data-testid="card-submit-report" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
