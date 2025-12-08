@@ -807,9 +807,13 @@ export default function SubmitReport() {
             ) : statusFilterLeads.size === 1 ? (
               // Single lead filter - show flat list without lead header
               (() => {
+                // Deduplicate projects (co-lead projects may appear multiple times)
                 const allProjects = Object.values(groupedByLead).flat();
+                const uniqueProjects = allProjects.filter((project, index, self) => 
+                  index === self.findIndex(p => p.id === project.id)
+                );
                 // Sort projects: drafted first, then pending, then submitted
-                const sortedProjects = [...allProjects].sort((a, b) => {
+                const sortedProjects = [...uniqueProjects].sort((a, b) => {
                   const statusOrder = { 'drafted': 0, 'pending': 1, 'submitted': 2 };
                   const statusA = getProjectReportStatus(a.id) as keyof typeof statusOrder;
                   const statusB = getProjectReportStatus(b.id) as keyof typeof statusOrder;
