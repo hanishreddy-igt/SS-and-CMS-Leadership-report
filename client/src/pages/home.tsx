@@ -162,11 +162,12 @@ export default function Home() {
 
           {/* Report submission completeness banner */}
           <div 
-            className="mt-4 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-center"
+            className="mt-4 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-center cursor-pointer hover:bg-white/10 hover:border-white/20 transition-all"
             data-testid="banner-report-completeness"
+            onClick={() => setActiveTab('submit')}
           >
             <p className="text-sm text-muted-foreground">
-              Reports submitted for <span className="font-semibold text-foreground">{contractsWithReports}</span> out of <span className="font-semibold text-foreground">{activeProjects.length}</span> active contracts this week
+              Reports are submitted for <span className="font-semibold text-foreground">{contractsWithReports}</span> out of <span className="font-semibold text-foreground">{activeProjects.length}</span> active contracts this week
             </p>
           </div>
         </div>
