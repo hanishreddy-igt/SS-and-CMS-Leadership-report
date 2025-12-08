@@ -102,23 +102,10 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-            <div 
-              className="metric-card fade-in cursor-pointer hover:border-white/20 transition-all" 
-              style={{ animationDelay: '0ms' }}
-              onClick={handleActiveProjectsClick}
-              data-testid="tile-active-projects"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <FolderKanban className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <p className="text-4xl font-bold tabular-nums platinum-text">{activeProjects.length}</p>
-              <p className="text-sm text-muted-foreground mt-1">Active Contracts</p>
-            </div>
-
+          <div className="grid grid-cols-3 gap-3 mt-6">
             <div 
               className="metric-card metric-card-success fade-in cursor-pointer hover:border-success/30 transition-all" 
-              style={{ animationDelay: '50ms' }}
+              style={{ animationDelay: '0ms' }}
               onClick={() => handleHealthTileClick('on-track')}
               data-testid="tile-on-track"
             >
@@ -131,7 +118,7 @@ export default function Home() {
 
             <div 
               className="metric-card metric-card-warning fade-in cursor-pointer hover:border-warning/30 transition-all" 
-              style={{ animationDelay: '100ms' }}
+              style={{ animationDelay: '50ms' }}
               onClick={() => handleHealthTileClick('at-risk')}
               data-testid="tile-needs-attention"
             >
@@ -144,7 +131,7 @@ export default function Home() {
 
             <div 
               className={`metric-card metric-card-danger fade-in cursor-pointer hover:border-destructive/30 transition-all ${criticalCount > 0 ? 'pulse-critical' : ''}`} 
-              style={{ animationDelay: '150ms' }}
+              style={{ animationDelay: '100ms' }}
               onClick={() => handleHealthTileClick('critical')}
               data-testid="tile-critical"
             >
