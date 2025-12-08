@@ -174,8 +174,11 @@ export default function Home() {
               <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
             )}
             <p className={`text-sm ${contractsWithReports === activeProjects.length ? 'text-success' : 'text-warning'}`}>
-              Reports are submitted for <span className="font-semibold">{contractsWithReports}</span> out of <span className="font-semibold">{activeProjects.length}</span> active contracts this week
-              {contractsWithReports === activeProjects.length && <span className="ml-1">- All complete!</span>}
+              {contractsWithReports === activeProjects.length ? (
+                <span className="font-semibold">ALL reports are submitted this week!</span>
+              ) : (
+                <>ONLY <span className="font-semibold">{contractsWithReports}</span> out of <span className="font-semibold">{activeProjects.length}</span> reports are submitted this week.</>
+              )}
             </p>
           </div>
         </div>
