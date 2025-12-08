@@ -1362,7 +1362,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="section-label">Renewals Soon</p>
+              <p className="section-label">Contracts with renewals &lt; 2 months</p>
               <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
               <p className="text-4xl font-bold tabular-nums text-warning" data-testid="text-renewals-soon">
                 {renewalProjects.length} <span className="text-xl font-normal text-muted-foreground">({renewalProjectsCMS} | {renewalProjectsSS})</span>
@@ -1380,7 +1380,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <p className="section-label">Project Portfolio</p>
+              <p className="section-label">Contract Portfolio</p>
               <CardTitle className="text-2xl">All Contracts <span className="text-primary">({sortedProjects.length})</span></CardTitle>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 flex-wrap">

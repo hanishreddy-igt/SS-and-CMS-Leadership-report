@@ -938,7 +938,7 @@ export default function SubmitReport() {
               ) : (
                 <form onSubmit={handleModalSubmit} className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="modal-health-status">Project Health Status <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="modal-health-status">Contract Health Status <span className="text-red-500">*</span></Label>
                     <Select value={modalHealthStatus} onValueChange={setModalHealthStatus}>
                       <SelectTrigger id="modal-health-status" data-testid="modal-select-health-status">
                         <SelectValue placeholder="Select health status" />

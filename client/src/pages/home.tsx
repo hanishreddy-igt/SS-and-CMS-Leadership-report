@@ -167,7 +167,7 @@ export default function Home() {
               className="premium-tab gap-2 py-4"
             >
               <FolderKanban className="h-5 w-5" />
-              <span className="hidden sm:inline font-semibold">Teams & Projects</span>
+              <span className="hidden sm:inline font-semibold">Teams & Contracts</span>
             </TabsTrigger>
             <TabsTrigger 
               value="submit" 
