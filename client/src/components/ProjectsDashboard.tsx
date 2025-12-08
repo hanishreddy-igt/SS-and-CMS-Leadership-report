@@ -1338,42 +1338,21 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div 
-          className="metric-card metric-card-success cursor-pointer hover:border-success/30 transition-all"
-          onClick={handleLongTermActiveClick}
-          data-testid="tile-long-term-active"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="section-label">Long-term Active Contracts</p>
-              <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
-              <p className="text-4xl font-bold tabular-nums text-success" data-testid="text-long-term-active">
-                {longTermActiveProjects.length} <span className="text-xl font-normal text-muted-foreground">({longTermActiveCMS} | {longTermActiveSS})</span>
-              </p>
-            </div>
-            <div className="p-3 rounded-xl bg-success/10 border border-success/20">
-              <CheckCircle2 className="h-8 w-8 text-success" />
-            </div>
+      <div 
+        className="metric-card metric-card-warning cursor-pointer hover:border-warning/30 transition-all max-w-md"
+        onClick={handleRenewalsSoonClick}
+        data-testid="tile-renewals-soon"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="section-label">Contracts with renewals &lt; 2 months</p>
+            <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
+            <p className="text-4xl font-bold tabular-nums text-warning" data-testid="text-renewals-soon">
+              {renewalProjects.length} <span className="text-xl font-normal text-muted-foreground">({renewalProjectsCMS} | {renewalProjectsSS})</span>
+            </p>
           </div>
-        </div>
-
-        <div 
-          className="metric-card metric-card-warning cursor-pointer hover:border-warning/30 transition-all"
-          onClick={handleRenewalsSoonClick}
-          data-testid="tile-renewals-soon"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="section-label">Contracts with renewals &lt; 2 months</p>
-              <p className="text-sm text-muted-foreground mb-2">CMS | SS</p>
-              <p className="text-4xl font-bold tabular-nums text-warning" data-testid="text-renewals-soon">
-                {renewalProjects.length} <span className="text-xl font-normal text-muted-foreground">({renewalProjectsCMS} | {renewalProjectsSS})</span>
-              </p>
-            </div>
-            <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
-              <AlertCircle className="h-8 w-8 text-warning" />
-            </div>
+          <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
+            <AlertCircle className="h-8 w-8 text-warning" />
           </div>
         </div>
       </div>
