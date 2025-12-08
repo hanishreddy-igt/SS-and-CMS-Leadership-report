@@ -169,6 +169,26 @@ export default function SubmitReport() {
     return leadsProjects.every((p) => hasSubmittedForProject(p.id));
   };
 
+  // Get lead's active projects and check if all reports are submitted
+  const getLeadActiveProjectStats = (leadId: string) => {
+    const leadsActiveProjects = activeProjects.filter((p) => isLeadAssignedToProject(p, leadId));
+    const totalActive = leadsActiveProjects.length;
+    const submittedActive = leadsActiveProjects.filter((p) => hasSubmittedForProject(p.id)).length;
+    return {
+      total: totalActive,
+      submitted: submittedActive,
+      allSubmitted: totalActive > 0 && submittedActive === totalActive
+    };
+  };
+
+  // Get all leads with active projects, sorted by name
+  const leadsWithActiveProjects = projectLeads
+    .filter((lead) => {
+      const stats = getLeadActiveProjectStats(lead.id);
+      return stats.total > 0;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const isProjectEnded = (endDate: string | null | undefined) => {
     if (!endDate) return false;
     const today = new Date();
@@ -615,13 +635,28 @@ export default function SubmitReport() {
     }, 100);
   };
 
+  // Handle clicking on a lead in the Weekly Progress section
+  const handleLeadProgressClick = (leadId: string) => {
+    // Set the filter to show only this lead's projects
+    setStatusFilterLeads(new Set([leadId]));
+    setStatusLeadSearch('');
+    setStatusFilterStatus('all');
+    
+    // Scroll to the report status section
+    setTimeout(() => {
+      const statusSection = document.getElementById('report-status-section');
+      if (statusSection) {
+        statusSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   return (
     <div className="space-y-8">
       {/* Premium Metric Cards - Clickable to filter Report Status section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div 
-          className={`glass-card rounded-xl p-6 cursor-pointer transition-all hover:border-success/30 ${statusFilterStatus === 'submitted' ? 'border-success/50 ring-1 ring-success/20' : ''}`}
-          onClick={handleSubmittedTileClick}
+          className="glass-card rounded-xl p-6"
           data-testid="progress-submitted"
         >
           <div className="flex items-center justify-between">
@@ -643,6 +678,41 @@ export default function SubmitReport() {
               style={{ width: `${totalProjects ? (submittedCount / totalProjects) * 100 : 0}%` }}
             />
           </div>
+          
+          {/* Lead Status List */}
+          {leadsWithActiveProjects.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <p className="text-xs text-muted-foreground mb-2">Team Lead Status</p>
+              <ScrollArea className="h-[140px] scrollbar-visible">
+                <div className="space-y-1">
+                  {leadsWithActiveProjects.map((lead) => {
+                    const stats = getLeadActiveProjectStats(lead.id);
+                    const isSelected = statusFilterLeads.has(lead.id) && statusFilterLeads.size === 1;
+                    return (
+                      <div
+                        key={lead.id}
+                        onClick={() => handleLeadProgressClick(lead.id)}
+                        className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-all hover-elevate ${isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : ''}`}
+                        data-testid={`lead-progress-${lead.id}`}
+                      >
+                        <span className="text-sm truncate">{lead.name}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-muted-foreground">
+                            {stats.submitted}/{stats.total}
+                          </span>
+                          {stats.allSubmitted ? (
+                            <CheckCircle2 className="h-4 w-4 text-success" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-warning" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
         </div>
 
         <div 
