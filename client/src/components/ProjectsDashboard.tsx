@@ -291,6 +291,72 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     return regex.test(value);
   };
 
+  // Auto-format date input with slashes (MM/DD/YYYY)
+  const formatDateInput = (value: string): string => {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, '');
+    
+    // Build formatted string with slashes
+    let formatted = '';
+    if (digits.length > 0) {
+      formatted = digits.substring(0, 2);
+    }
+    if (digits.length > 2) {
+      formatted += '/' + digits.substring(2, 4);
+    }
+    if (digits.length > 4) {
+      formatted += '/' + digits.substring(4, 8);
+    }
+    return formatted;
+  };
+
+  // Validate start date is not in the future
+  const validateStartDate = (dateInput: string): string | null => {
+    if (!dateInput || !isValidDateFormat(dateInput)) return null;
+    const parsed = parseInputDate(dateInput);
+    if (!parsed) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(parsed);
+    startDate.setHours(0, 0, 0, 0);
+    
+    if (startDate > today) {
+      return 'Start date cannot be in the future';
+    }
+    return null;
+  };
+
+  // Validate end date is after start date and after current date
+  const validateEndDate = (startInput: string, endInput: string): string | null => {
+    if (!endInput || !isValidDateFormat(endInput)) return null;
+    const endParsed = parseInputDate(endInput);
+    if (!endParsed) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(endParsed);
+    endDate.setHours(0, 0, 0, 0);
+    
+    // End date must be after today
+    if (endDate <= today) {
+      return 'End date must be in the future';
+    }
+    
+    // If start date is valid, end date must be after start date
+    if (startInput && isValidDateFormat(startInput)) {
+      const startParsed = parseInputDate(startInput);
+      if (startParsed) {
+        const startDate = new Date(startParsed);
+        startDate.setHours(0, 0, 0, 0);
+        if (endDate <= startDate) {
+          return 'End date must be after start date';
+        }
+      }
+    }
+    return null;
+  };
+
   // Helper to check if a project has unfilled team member roles
   const projectHasUnfilledRoles = (project: Project): boolean => {
     const assignments = (project.teamMembers as TeamMemberAssignment[]) || [];
@@ -548,6 +614,28 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         toast({
           title: 'Invalid Date',
           description: 'End date must be in MM/DD/YYYY format',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Validate start date is not in the future
+      const startDateError = validateStartDate(editStartDateInput);
+      if (startDateError) {
+        toast({
+          title: 'Invalid Date',
+          description: startDateError,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Validate end date is after start date and in the future
+      const endDateError = validateEndDate(editStartDateInput, editEndDateInput);
+      if (endDateError) {
+        toast({
+          title: 'Invalid Date',
+          description: endDateError,
           variant: 'destructive',
         });
         return;
@@ -1128,6 +1216,18 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       errors.endDate = 'Invalid date format. Use MM/DD/YYYY';
     }
     
+    // Validate start date is not in the future
+    const startDateError = validateStartDate(projectStartDateInput);
+    if (startDateError) {
+      errors.startDate = startDateError;
+    }
+    
+    // Validate end date is after start date and in the future
+    const endDateError = validateEndDate(projectStartDateInput, projectEndDateInput);
+    if (endDateError) {
+      errors.endDate = endDateError;
+    }
+    
     setProjectFormErrors(errors);
     
     if (Object.keys(errors).length === 0) {
@@ -1145,7 +1245,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     } else {
       toast({
         title: 'Validation Error',
-        description: 'Please fill in all required fields',
+        description: 'Please fill in all required fields correctly',
         variant: 'destructive',
       });
     }
@@ -1682,11 +1782,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           type="text"
                           placeholder="MM/DD/YYYY"
                           value={projectStartDateInput}
-                          onChange={(e) => setProjectStartDateInput(e.target.value)}
-                          className={!isValidDateFormat(projectStartDateInput) && projectStartDateInput ? 'border-red-500' : ''}
+                          onChange={(e) => setProjectStartDateInput(formatDateInput(e.target.value))}
+                          className={(!isValidDateFormat(projectStartDateInput) && projectStartDateInput) || validateStartDate(projectStartDateInput) ? 'border-red-500' : ''}
                         />
                         {!isValidDateFormat(projectStartDateInput) && projectStartDateInput && (
                           <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                        )}
+                        {isValidDateFormat(projectStartDateInput) && validateStartDate(projectStartDateInput) && (
+                          <p className="text-xs text-red-500">{validateStartDate(projectStartDateInput)}</p>
                         )}
                       </div>
                       <div className="space-y-2">
@@ -1697,11 +1800,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           type="text"
                           placeholder="MM/DD/YYYY"
                           value={projectEndDateInput}
-                          onChange={(e) => setProjectEndDateInput(e.target.value)}
-                          className={!isValidDateFormat(projectEndDateInput) && projectEndDateInput ? 'border-red-500' : ''}
+                          onChange={(e) => setProjectEndDateInput(formatDateInput(e.target.value))}
+                          className={(!isValidDateFormat(projectEndDateInput) && projectEndDateInput) || validateEndDate(projectStartDateInput, projectEndDateInput) ? 'border-red-500' : ''}
                         />
                         {!isValidDateFormat(projectEndDateInput) && projectEndDateInput && (
                           <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                        )}
+                        {isValidDateFormat(projectEndDateInput) && validateEndDate(projectStartDateInput, projectEndDateInput) && (
+                          <p className="text-xs text-red-500">{validateEndDate(projectStartDateInput, projectEndDateInput)}</p>
                         )}
                       </div>
                     </div>
@@ -2495,11 +2601,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   type="text"
                   placeholder="MM/DD/YYYY"
                   value={editStartDateInput}
-                  onChange={(e) => setEditStartDateInput(e.target.value)}
-                  className={!isValidDateFormat(editStartDateInput) && editStartDateInput ? 'border-red-500' : ''}
+                  onChange={(e) => setEditStartDateInput(formatDateInput(e.target.value))}
+                  className={(!isValidDateFormat(editStartDateInput) && editStartDateInput) || validateStartDate(editStartDateInput) ? 'border-red-500' : ''}
                 />
                 {!isValidDateFormat(editStartDateInput) && editStartDateInput && (
                   <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                )}
+                {isValidDateFormat(editStartDateInput) && validateStartDate(editStartDateInput) && (
+                  <p className="text-xs text-red-500">{validateStartDate(editStartDateInput)}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -2510,11 +2619,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   type="text"
                   placeholder="MM/DD/YYYY"
                   value={editEndDateInput}
-                  onChange={(e) => setEditEndDateInput(e.target.value)}
-                  className={!isValidDateFormat(editEndDateInput) && editEndDateInput ? 'border-red-500' : ''}
+                  onChange={(e) => setEditEndDateInput(formatDateInput(e.target.value))}
+                  className={(!isValidDateFormat(editEndDateInput) && editEndDateInput) || validateEndDate(editStartDateInput, editEndDateInput) ? 'border-red-500' : ''}
                 />
                 {!isValidDateFormat(editEndDateInput) && editEndDateInput && (
                   <p className="text-xs text-red-500">Use MM/DD/YYYY format</p>
+                )}
+                {isValidDateFormat(editEndDateInput) && validateEndDate(editStartDateInput, editEndDateInput) && (
+                  <p className="text-xs text-red-500">{validateEndDate(editStartDateInput, editEndDateInput)}</p>
                 )}
               </div>
             </div>
