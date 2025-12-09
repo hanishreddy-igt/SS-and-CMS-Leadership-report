@@ -905,21 +905,13 @@ export default function SubmitReport() {
 
                 return (
                   <div key={leadName} className="space-y-3">
-                    <div className="flex items-center justify-between bg-muted/40 rounded-lg px-4 py-3 border-l-4 border-primary/60">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <Users className="h-4 w-4 text-primary" />
-                        </div>
-                        <h3 className="text-lg font-semibold">{leadName}</h3>
-                      </div>
-                      <Badge
-                        variant={isComplete ? 'default' : 'secondary'}
-                        data-testid={`badge-status-${leadName}`}
-                      >
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <h3 className="text-base font-bold uppercase tracking-wide text-muted-foreground">{leadName}</h3>
+                      <span className="text-sm text-muted-foreground">
                         {submitted}/{total} submitted
-                      </Badge>
+                      </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pl-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {sortedLeadProjects.map((project) => {
                         const reportStatus = getProjectReportStatus(project.id);
                         const isCoLead = hasCoLeads(project);
