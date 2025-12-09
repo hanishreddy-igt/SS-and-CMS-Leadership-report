@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, Info } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, Info, Users } from 'lucide-react';
 import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusOptions = [
@@ -905,8 +905,13 @@ export default function SubmitReport() {
 
                 return (
                   <div key={leadName} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">{leadName}</h3>
+                    <div className="flex items-center justify-between bg-muted/40 rounded-lg px-4 py-3 border-l-4 border-primary/60">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Users className="h-4 w-4 text-primary" />
+                        </div>
+                        <h3 className="text-lg font-semibold">{leadName}</h3>
+                      </div>
                       <Badge
                         variant={isComplete ? 'default' : 'secondary'}
                         data-testid={`badge-status-${leadName}`}
@@ -914,7 +919,7 @@ export default function SubmitReport() {
                         {submitted}/{total} submitted
                       </Badge>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pl-2">
                       {sortedLeadProjects.map((project) => {
                         const reportStatus = getProjectReportStatus(project.id);
                         const isCoLead = hasCoLeads(project);
