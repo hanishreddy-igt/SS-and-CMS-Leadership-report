@@ -169,26 +169,6 @@ export default function SubmitReport() {
     return leadsProjects.every((p) => hasSubmittedForProject(p.id));
   };
 
-  // Get lead's active projects and check if all reports are submitted
-  const getLeadActiveProjectStats = (leadId: string) => {
-    const leadsActiveProjects = activeProjects.filter((p) => isLeadAssignedToProject(p, leadId));
-    const totalActive = leadsActiveProjects.length;
-    const submittedActive = leadsActiveProjects.filter((p) => hasSubmittedForProject(p.id)).length;
-    return {
-      total: totalActive,
-      submitted: submittedActive,
-      allSubmitted: totalActive > 0 && submittedActive === totalActive
-    };
-  };
-
-  // Get all leads with active projects, sorted by name
-  const leadsWithActiveProjects = projectLeads
-    .filter((lead) => {
-      const stats = getLeadActiveProjectStats(lead.id);
-      return stats.total > 0;
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
-
   const isProjectEnded = (endDate: string | null | undefined) => {
     if (!endDate) return false;
     const today = new Date();
@@ -322,9 +302,17 @@ export default function SubmitReport() {
     // Exclude ended projects from the status list
     if (isProjectEndedCheck(project.endDate)) return false;
     
-    // Check if any of the project's leads match the filter (supports co-leads)
+    // Check if project's lead combination matches the filter exactly
+    // When filtering by a combined category (e.g., "John & Jane"), only show projects 
+    // that have EXACTLY that combination of leads
     const projectLeadIds = getProjectLeadIds(project);
-    if (statusFilterLeads.size > 0 && !projectLeadIds.some(leadId => statusFilterLeads.has(leadId))) return false;
+    if (statusFilterLeads.size > 0) {
+      // Project must have exactly the same leads as the filter
+      const projectLeadSet = new Set(projectLeadIds);
+      const sameSize = projectLeadSet.size === statusFilterLeads.size;
+      const allMatch = Array.from(statusFilterLeads).every(id => projectLeadSet.has(id));
+      if (!sameSize || !allMatch) return false;
+    }
     
     const reportStatus = getProjectReportStatus(project.id);
     if (statusFilterStatus === 'submitted' && reportStatus !== 'submitted') return false;
@@ -354,6 +342,29 @@ export default function SubmitReport() {
     return project.leadIds && project.leadIds.length > 1;
   };
 
+  // Group active projects by combined lead names for Weekly Progress
+  const leadCategoryStats = activeProjects.reduce((acc, project) => {
+    const combinedName = getProjectLeadNames(project);
+    const leadIds = getProjectLeadIds(project);
+    if (!acc[combinedName]) {
+      acc[combinedName] = { 
+        name: combinedName, 
+        leadIds, 
+        total: 0, 
+        submitted: 0 
+      };
+    }
+    acc[combinedName].total++;
+    if (hasSubmittedForProject(project.id)) {
+      acc[combinedName].submitted++;
+    }
+    return acc;
+  }, {} as Record<string, { name: string; leadIds: string[]; total: number; submitted: number }>);
+
+  // Get all lead categories sorted by name
+  const leadCategoriesWithActiveProjects = Object.values(leadCategoryStats)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   // Get the name of who submitted a report
   const getSubmittedByName = (projectId: string): string | null => {
     const report = currentWeekReports.find((r) => r.projectId === projectId && r.status === 'submitted');
@@ -363,19 +374,16 @@ export default function SubmitReport() {
     return null;
   };
 
-  // Group projects by lead - co-lead projects appear under each assigned lead
+  // Group projects by combined lead names - co-lead projects show as "Primary & Co-Lead"
   const groupedByLead = filteredStatusProjects.reduce((acc, project) => {
-    const projectLeadIds = getProjectLeadIds(project);
-    projectLeadIds.forEach(leadId => {
-      const leadName = getLeadName(leadId);
-      if (!acc[leadName]) {
-        acc[leadName] = [];
-      }
-      // Avoid duplicates if project was already added for this lead
-      if (!acc[leadName].some(p => p.id === project.id)) {
-        acc[leadName].push(project);
-      }
-    });
+    const combinedLeadName = getProjectLeadNames(project);
+    if (!acc[combinedLeadName]) {
+      acc[combinedLeadName] = [];
+    }
+    // Avoid duplicates
+    if (!acc[combinedLeadName].some(p => p.id === project.id)) {
+      acc[combinedLeadName].push(project);
+    }
     return acc;
   }, {} as Record<string, Project[]>);
 
@@ -647,15 +655,17 @@ export default function SubmitReport() {
     }, 100);
   };
 
-  // Handle clicking on a lead in the Weekly Progress section
-  const handleLeadProgressClick = (leadId: string) => {
-    // Toggle: if already filtered to this lead, clear the filter
-    const isAlreadySelected = statusFilterLeads.has(leadId) && statusFilterLeads.size === 1;
+  // Handle clicking on a lead category in the Weekly Progress section
+  const handleLeadProgressClick = (leadIds: string[]) => {
+    // Toggle: if already filtered to these exact leads, clear the filter
+    const leadIdSet = new Set(leadIds);
+    const isAlreadySelected = leadIds.length === statusFilterLeads.size && 
+      leadIds.every(id => statusFilterLeads.has(id));
     
     if (isAlreadySelected) {
       setStatusFilterLeads(new Set());
     } else {
-      setStatusFilterLeads(new Set([leadId]));
+      setStatusFilterLeads(leadIdSet);
     }
     setStatusLeadSearch('');
     setStatusFilterStatus('all');
@@ -671,30 +681,31 @@ export default function SubmitReport() {
 
   return (
     <div className="space-y-8">
-      {/* Weekly Progress - Team Lead Status Grid */}
-      {leadsWithActiveProjects.length > 0 && (
+      {/* Weekly Progress - Lead Category Status Grid */}
+      {leadCategoriesWithActiveProjects.length > 0 && (
         <div className="glass-card rounded-xl p-6" data-testid="progress-submitted">
           <p className="section-label mb-4">Weekly Progress</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {leadsWithActiveProjects.map((lead) => {
-              const stats = getLeadActiveProjectStats(lead.id);
-              const isSelected = statusFilterLeads.has(lead.id) && statusFilterLeads.size === 1;
+            {leadCategoriesWithActiveProjects.map((category) => {
+              const allSubmitted = category.total > 0 && category.submitted === category.total;
+              const isSelected = category.leadIds.length === statusFilterLeads.size && 
+                category.leadIds.every(id => statusFilterLeads.has(id));
               return (
                 <div
-                  key={lead.id}
-                  onClick={() => handleLeadProgressClick(lead.id)}
+                  key={category.name}
+                  onClick={() => handleLeadProgressClick(category.leadIds)}
                   className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all hover-elevate ${isSelected ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/20'}`}
-                  data-testid={`lead-progress-${lead.id}`}
+                  data-testid={`lead-progress-${category.leadIds.join('-')}`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    {stats.allSubmitted ? (
+                    {allSubmitted ? (
                       <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
                     ) : (
                       <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
                     )}
-                    <span className="text-sm truncate">{lead.name}</span>
+                    <span className="text-sm truncate">{category.name}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">{stats.submitted}/{stats.total}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{category.submitted}/{category.total}</span>
                 </div>
               );
             })}
