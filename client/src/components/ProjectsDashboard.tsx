@@ -55,6 +55,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [editFormData, setEditFormData] = useState({
     name: '',
     customer: '',
+    customerContactEmail: '',
+    totalContractualHours: '',
     leadIds: [] as string[],
     teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
@@ -78,6 +80,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [projectFormData, setProjectFormData] = useState({
     name: '',
     customer: '',
+    customerContactEmail: '',
+    totalContractualHours: '',
     leadIds: [] as string[],
     teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
@@ -543,6 +547,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setEditFormData({
       name: project.name,
       customer: project.customer,
+      customerContactEmail: project.customerContactEmail || '',
+      totalContractualHours: project.totalContractualHours || '',
       leadIds: leadIdsArray,
       teamMembers: (project.teamMembers as TeamMemberAssignment[]) || [],
       startDate: project.startDate || '',
@@ -598,8 +604,19 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   });
 
   const handleSaveEdit = () => {
-    if (editingProject && editFormData.name && editFormData.customer && editFormData.leadIds.length > 0 && 
-        editFormData.teamMembers.length > 0 && editFormData.projectType) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (editFormData.customerContactEmail && !emailRegex.test(editFormData.customerContactEmail.trim())) {
+      toast({
+        title: 'Invalid Email',
+        description: 'Please enter a valid customer contact email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (editingProject && editFormData.name && editFormData.customer && editFormData.customerContactEmail && 
+        editFormData.leadIds.length > 0 && editFormData.teamMembers.length > 0 && editFormData.projectType) {
       
       // Validate date formats
       if (editStartDateInput && !isValidDateFormat(editStartDateInput)) {
@@ -853,6 +870,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       setProjectFormData({
         name: '',
         customer: '',
+        customerContactEmail: '',
+        totalContractualHours: '',
         leadIds: [],
         teamMembers: [],
         startDate: '',
@@ -1192,6 +1211,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (!projectFormData.customer.trim()) {
       errors.customer = 'Contact person name is required';
     }
+    if (!projectFormData.customerContactEmail.trim()) {
+      errors.customerContactEmail = 'Customer contact email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(projectFormData.customerContactEmail.trim())) {
+      errors.customerContactEmail = 'Please enter a valid email address';
+    }
     if (projectFormData.leadIds.length === 0) {
       errors.leadIds = 'At least one project lead is required';
     }
@@ -1494,6 +1518,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   setProjectFormData({
                     name: '',
                     customer: '',
+                    customerContactEmail: '',
+                    totalContractualHours: '',
                     leadIds: [],
                     teamMembers: [],
                     startDate: '',
@@ -1572,6 +1598,42 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       {projectFormErrors.customer && (
                         <p className="text-sm text-red-500" data-testid="error-customer">{projectFormErrors.customer}</p>
                       )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-customer-email">Customer Contact Email <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="new-customer-email"
+                        data-testid="input-customer-email"
+                        type="email"
+                        value={projectFormData.customerContactEmail}
+                        onChange={(e) => {
+                          setProjectFormData({ ...projectFormData, customerContactEmail: e.target.value });
+                          if (projectFormErrors.customerContactEmail) {
+                            setProjectFormErrors({ ...projectFormErrors, customerContactEmail: '' });
+                          }
+                        }}
+                        placeholder="Enter customer contact email"
+                        className={projectFormErrors.customerContactEmail ? 'border-red-500' : ''}
+                      />
+                      {projectFormErrors.customerContactEmail && (
+                        <p className="text-sm text-red-500" data-testid="error-customer-email">{projectFormErrors.customerContactEmail}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-contractual-hours">Total Contractual Hours</Label>
+                      <Input
+                        id="new-contractual-hours"
+                        data-testid="input-contractual-hours"
+                        type="text"
+                        value={projectFormData.totalContractualHours}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9]/g, '');
+                          setProjectFormData({ ...projectFormData, totalContractualHours: value });
+                        }}
+                        placeholder="Enter total contractual hours (optional)"
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -2409,6 +2471,31 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 data-testid="input-edit-customer"
                 value={editFormData.customer}
                 onChange={(e) => setEditFormData({ ...editFormData, customer: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-customer-email">Customer Contact Email <span className="text-red-500">*</span></Label>
+              <Input
+                id="edit-customer-email"
+                data-testid="input-edit-customer-email"
+                type="email"
+                value={editFormData.customerContactEmail}
+                onChange={(e) => setEditFormData({ ...editFormData, customerContactEmail: e.target.value })}
+                placeholder="Enter customer contact email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-contractual-hours">Total Contractual Hours</Label>
+              <Input
+                id="edit-contractual-hours"
+                data-testid="input-edit-contractual-hours"
+                type="text"
+                value={editFormData.totalContractualHours}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setEditFormData({ ...editFormData, totalContractualHours: value });
+                }}
+                placeholder="Enter total contractual hours (optional)"
               />
             </div>
             <div className="space-y-2">
@@ -3348,8 +3435,27 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Customer Contact Name</p>
                   <p className="text-lg font-semibold" data-testid="text-project-detail-customer">{selectedProject.customer}</p>
+                  {selectedProject.customerContactEmail && (
+                    <p className="text-sm text-primary flex items-center gap-1.5 mt-1" data-testid="text-project-detail-customer-email">
+                      <Mail className="h-3.5 w-3.5" />
+                      {selectedProject.customerContactEmail}
+                    </p>
+                  )}
                 </div>
               </div>
+
+              {/* Contractual Hours Section */}
+              {selectedProject.totalContractualHours && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Contractual Hours</p>
+                    <p className="text-lg font-semibold" data-testid="text-project-detail-hours">{selectedProject.totalContractualHours} hours</p>
+                  </div>
+                </div>
+              )}
 
               {/* Project Lead Section - with clickable email (supports co-leads) */}
               <div className="flex items-start gap-3">

@@ -37,6 +37,8 @@ export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   customer: text("customer").notNull(),
+  customerContactEmail: text("customer_contact_email"), // Customer contact email (optional in DB, validated in form)
+  totalContractualHours: text("total_contractual_hours"), // Total contractual hours (optional)
   leadId: varchar("lead_id").notNull(), // Primary lead (for backward compatibility)
   leadIds: text("lead_ids").array().notNull().default(sql`'{}'`), // All leads including co-leads
   teamMembers: jsonb("team_members").notNull().default(sql`'[]'`), // Array of { memberId, role }
