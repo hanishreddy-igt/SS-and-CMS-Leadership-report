@@ -79,6 +79,7 @@ export interface IStorage {
   getAllPeople(): Promise<Person[]>;
   getPersonById(id: string): Promise<Person | undefined>;
   updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined>;
+  clearAllFeedback(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -271,6 +272,7 @@ export class MemStorage implements IStorage {
         ...insertReport, 
         csvData: insertReport.csvData ?? null,
         aiSummary: insertReport.aiSummary ?? null,
+        teamFeedback: insertReport.teamFeedback ?? null,
         healthCounts: insertReport.healthCounts ?? null,
         savedAt: new Date() 
       };
@@ -283,6 +285,7 @@ export class MemStorage implements IStorage {
       id, 
       csvData: insertReport.csvData ?? null,
       aiSummary: insertReport.aiSummary ?? null,
+      teamFeedback: insertReport.teamFeedback ?? null,
       healthCounts: insertReport.healthCounts ?? null,
       savedAt: new Date() 
     };
@@ -381,6 +384,15 @@ export class MemStorage implements IStorage {
     const updated = { ...person, feedback };
     this.people.set(id, updated);
     return updated;
+  }
+
+  async clearAllFeedback(): Promise<void> {
+    const entries = Array.from(this.people.entries());
+    for (const [id, person] of entries) {
+      if (person.feedback) {
+        this.people.set(id, { ...person, feedback: null });
+      }
+    }
   }
 }
 
@@ -489,6 +501,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllPeople(): Promise<Person[]> {
     return await db.select().from(people);
+  }
+
+  async clearAllFeedback(): Promise<void> {
+    await db.update(people).set({ feedback: null });
   }
 
   async getProjects(): Promise<Project[]> {

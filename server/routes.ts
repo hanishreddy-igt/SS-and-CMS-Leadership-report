@@ -363,6 +363,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear all feedback (for archiving)
+  app.delete('/api/people/feedback', isAuthenticated, async (_req, res) => {
+    try {
+      await storage.clearAllFeedback();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Project Roles routes (protected)
   app.get('/api/project-roles', isAuthenticated, async (_req, res) => {
     try {

@@ -2753,6 +2753,16 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         critical: submittedReports.filter(r => r.healthStatus === 'critical').length,
       };
 
+      // Step 4.5: Prepare team feedback for archiving
+      const teamFeedbackToArchive = peopleWithFeedback.length > 0 
+        ? peopleWithFeedback.map(p => ({
+            id: p.id,
+            name: p.name,
+            roles: p.roles,
+            feedback: p.feedback
+          }))
+        : null;
+
       // Step 5: Archive via API (using combined summary format)
       console.log(`[Archive] Archiving ${submittedReports.length} reports for week ${reportWeekStart} to ${weekEnd}`);
       console.log(`[Archive] PDF size: ${(pdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
@@ -2764,6 +2774,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         reportCount: String(submittedReports.length),
         healthCounts,
         aiSummary: combinedSummaryToArchive,
+        teamFeedback: teamFeedbackToArchive,
         pdfData: pdfBase64,
         csvData: csvContent,
       });
@@ -2773,17 +2784,20 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         throw new Error(errorData.error || `Archive save failed with status ${archiveResponse.status}`);
       }
 
-      // Step 6: Reset - Delete all current reports and AI summary
+      // Step 6: Reset - Delete all current reports, AI summary, and team feedback
       await apiRequest('DELETE', '/api/weekly-reports', {});
       if (currentWeekStart) {
         await apiRequest('DELETE', `/api/current-ai-summary/${currentWeekStart}`, {});
       }
+      // Clear all team feedback after archiving
+      await apiRequest('DELETE', '/api/people/feedback', {});
 
       // Step 7: Invalidate queries and clear local state
       queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
       queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
       queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reporting-week'] }); // Advance to next week
+      queryClient.invalidateQueries({ queryKey: ['/api/people/feedback'] }); // Clear feedback UI
       
       setAiSummary(null);
       setTeamSummary(null);

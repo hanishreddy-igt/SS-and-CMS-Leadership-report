@@ -73,6 +73,7 @@ export const savedReports = pgTable("saved_reports", {
   pdfData: text("pdf_data").notNull(), // Base64 encoded PDF
   csvData: text("csv_data"), // CSV content
   aiSummary: jsonb("ai_summary"), // AI summary if generated
+  teamFeedback: jsonb("team_feedback"), // Archived team member/lead feedback
   reportCount: text("report_count").notNull(), // Number of reports included
   healthCounts: jsonb("health_counts"), // { onTrack: n, needsAttention: n, critical: n }
   savedAt: timestamp("saved_at").notNull().defaultNow(),
