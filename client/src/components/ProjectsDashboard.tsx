@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,6 +29,7 @@ interface ProjectsDashboardProps {
 
 export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }: ProjectsDashboardProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
@@ -3876,48 +3878,57 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 })()}
               </div>
 
-              {/* Anonymous Feedback Submission Section */}
-              <div className="border-t pt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-medium">Submit Feedback</p>
-                </div>
-                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                    <span>Only fill this form if you have worked with this person this week.</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                    <span>Your feedback is anonymous and will not be attributed to you.</span>
-                  </div>
-                  <Textarea
-                    value={leadFeedbackValue}
-                    onChange={(e) => setLeadFeedbackValue(e.target.value)}
-                    placeholder="Share your feedback about working with this person..."
-                    rows={3}
-                    className="mt-2"
-                    data-testid="textarea-lead-feedback"
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        if (leadFeedbackValue.trim()) {
-                          submitLeadFeedbackMutation.mutate({ 
-                            id: selectedLeadForDetail.id, 
-                            feedback: leadFeedbackValue 
-                          });
-                        }
-                      }}
-                      disabled={submitLeadFeedbackMutation.isPending || !leadFeedbackValue.trim()}
-                      data-testid="button-submit-lead-feedback"
-                    >
-                      {submitLeadFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
-                    </Button>
+              {/* Anonymous Feedback Submission Section - Hidden for self-feedback */}
+              {user?.email?.toLowerCase() === selectedLeadForDetail.email?.toLowerCase() ? (
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <AlertCircle className="h-4 w-4" />
+                    <p className="text-sm italic">You cannot submit feedback about yourself.</p>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-medium">Submit Feedback</p>
+                  </div>
+                  <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <span>Only fill this form if you have worked with this person this week.</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <span>Your feedback is anonymous and will not be attributed to you.</span>
+                    </div>
+                    <Textarea
+                      value={leadFeedbackValue}
+                      onChange={(e) => setLeadFeedbackValue(e.target.value)}
+                      placeholder="Share your feedback about working with this person..."
+                      rows={3}
+                      className="mt-2"
+                      data-testid="textarea-lead-feedback"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (leadFeedbackValue.trim()) {
+                            submitLeadFeedbackMutation.mutate({ 
+                              id: selectedLeadForDetail.id, 
+                              feedback: leadFeedbackValue 
+                            });
+                          }
+                        }}
+                        disabled={submitLeadFeedbackMutation.isPending || !leadFeedbackValue.trim()}
+                        data-testid="button-submit-lead-feedback"
+                      >
+                        {submitLeadFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
@@ -3977,48 +3988,57 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 })()}
               </div>
 
-              {/* Anonymous Feedback Submission Section */}
-              <div className="border-t pt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare className="h-4 w-4 text-primary" />
-                  <p className="text-sm font-medium">Submit Feedback</p>
-                </div>
-                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                    <span>Only fill this form if you have worked with this person this week.</span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                    <span>Your feedback is anonymous and will not be attributed to you.</span>
-                  </div>
-                  <Textarea
-                    value={memberFeedbackValue}
-                    onChange={(e) => setMemberFeedbackValue(e.target.value)}
-                    placeholder="Share your feedback about working with this person..."
-                    rows={3}
-                    className="mt-2"
-                    data-testid="textarea-member-feedback"
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        if (memberFeedbackValue.trim()) {
-                          submitMemberFeedbackMutation.mutate({ 
-                            id: selectedMemberForDetail.id, 
-                            feedback: memberFeedbackValue 
-                          });
-                        }
-                      }}
-                      disabled={submitMemberFeedbackMutation.isPending || !memberFeedbackValue.trim()}
-                      data-testid="button-submit-member-feedback"
-                    >
-                      {submitMemberFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
-                    </Button>
+              {/* Anonymous Feedback Submission Section - Hidden for self-feedback */}
+              {user?.email?.toLowerCase() === selectedMemberForDetail.email?.toLowerCase() ? (
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <AlertCircle className="h-4 w-4" />
+                    <p className="text-sm italic">You cannot submit feedback about yourself.</p>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-medium">Submit Feedback</p>
+                  </div>
+                  <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <span>Only fill this form if you have worked with this person this week.</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <span>Your feedback is anonymous and will not be attributed to you.</span>
+                    </div>
+                    <Textarea
+                      value={memberFeedbackValue}
+                      onChange={(e) => setMemberFeedbackValue(e.target.value)}
+                      placeholder="Share your feedback about working with this person..."
+                      rows={3}
+                      className="mt-2"
+                      data-testid="textarea-member-feedback"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (memberFeedbackValue.trim()) {
+                            submitMemberFeedbackMutation.mutate({ 
+                              id: selectedMemberForDetail.id, 
+                              feedback: memberFeedbackValue 
+                            });
+                          }
+                        }}
+                        disabled={submitMemberFeedbackMutation.isPending || !memberFeedbackValue.trim()}
+                        data-testid="button-submit-member-feedback"
+                      >
+                        {submitMemberFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
