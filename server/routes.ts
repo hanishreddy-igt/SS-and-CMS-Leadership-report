@@ -571,7 +571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Anonymous feedback submission endpoints - appends feedback with timestamp
-  app.post('/api/people/:id/feedback', isAuthenticated, async (req, res) => {
+  app.post('/api/people/:id/feedback', isAuthenticated, requirePermission('canSubmitFeedback'), async (req, res) => {
     try {
       const { feedback } = req.body;
       if (!feedback || typeof feedback !== 'string' || !feedback.trim()) {
@@ -618,7 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/project-roles', isAuthenticated, async (req, res) => {
+  app.post('/api/project-roles', isAuthenticated, requirePermission('canAddContracts'), async (req, res) => {
     try {
       const data = insertProjectRoleSchema.parse(req.body);
       const role = await storage.createProjectRole(data);
@@ -628,7 +628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/project-roles/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/project-roles/:id', isAuthenticated, requirePermission('canDeleteContracts'), async (req, res) => {
     try {
       const success = await storage.deleteProjectRole(req.params.id);
       if (!success) {
@@ -640,8 +640,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Seed default roles endpoint
-  app.post('/api/project-roles/seed', isAuthenticated, async (_req, res) => {
+  // Seed default roles endpoint (admin/manager only)
+  app.post('/api/project-roles/seed', isAuthenticated, requirePermission('canAddContracts'), async (_req, res) => {
     try {
       await storage.seedDefaultRoles();
       const roles = await storage.getProjectRoles();
