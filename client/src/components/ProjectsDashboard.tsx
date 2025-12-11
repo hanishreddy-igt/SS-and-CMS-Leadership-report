@@ -158,7 +158,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     name: string;
   }
 
-  const { data: eligibleLeads } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
+  const { data: eligibleLeads, refetch: refetchEligibleLeads } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
     queryKey: ['/api/feedback/eligible-recipients', 'to_lead'],
     queryFn: async () => {
       const res = await fetch('/api/feedback/eligible-recipients?type=to_lead', { credentials: 'include' });
@@ -167,7 +167,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     },
   });
 
-  const { data: eligibleMembers } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
+  const { data: eligibleMembers, refetch: refetchEligibleMembers } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
     queryKey: ['/api/feedback/eligible-recipients', 'to_member'],
     queryFn: async () => {
       const res = await fetch('/api/feedback/eligible-recipients?type=to_member', { credentials: 'include' });
@@ -175,6 +175,12 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       return res.json();
     },
   });
+
+  // Refetch feedback eligibility when team members, leads, or projects change
+  useEffect(() => {
+    refetchEligibleLeads();
+    refetchEligibleMembers();
+  }, [teamMembers, projectLeads, projects]);
 
   const submitFeedbackMutation = useMutation({
     mutationFn: async (data: { recipientId: string; feedbackType: string; feedbackText: string }) => {
