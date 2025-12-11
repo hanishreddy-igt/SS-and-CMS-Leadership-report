@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -56,6 +57,7 @@ interface ReportingWeekResponse {
 
 export default function ViewReports({ externalHealthFilter, onClearExternalFilter }: ViewReportsProps) {
   const { toast } = useToast();
+  const permissions = usePermissions();
   const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
@@ -2845,6 +2847,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 <CardTitle className="text-2xl">AI Summary</CardTitle>
               </div>
             </div>
+            {permissions.canGenerateAISummary && (
             <Button
               onClick={() => generateSummaryMutation.mutate()}
               disabled={generateSummaryMutation.isPending}
@@ -2863,6 +2866,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 </>
               )}
             </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="pt-6">

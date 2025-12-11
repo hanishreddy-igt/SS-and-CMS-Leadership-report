@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -63,6 +64,7 @@ interface ReportingWeekResponse {
 
 export default function SubmitReport() {
   const { toast } = useToast();
+  const permissions = usePermissions();
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
@@ -1103,7 +1105,7 @@ export default function SubmitReport() {
                     >
                       Cancel
                     </Button>
-                    {canModalSubmit ? (
+                    {canModalSubmit && permissions.canSubmitReports ? (
                       <Button 
                         data-testid="modal-button-submit-report" 
                         type="submit" 
@@ -1112,7 +1114,7 @@ export default function SubmitReport() {
                       >
                         {modalSubmitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
                       </Button>
-                    ) : (
+                    ) : permissions.canSubmitReports ? (
                       <Button 
                         data-testid="modal-button-save-draft" 
                         type="button"
@@ -1122,6 +1124,15 @@ export default function SubmitReport() {
                       >
                         <Save className="h-4 w-4 mr-2" />
                         {modalSaveDraftMutation.isPending ? 'Saving...' : modalExistingDraftId ? 'Update Draft' : 'Save as Draft'}
+                      </Button>
+                    ) : (
+                      <Button 
+                        data-testid="modal-button-no-permission" 
+                        type="button"
+                        className="flex-1"
+                        disabled
+                      >
+                        No Permission to Submit
                       </Button>
                     )}
                   </div>

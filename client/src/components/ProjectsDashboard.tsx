@@ -2981,6 +2981,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </div>
                 </PopoverContent>
               </Popover>
+              {permissions.canAddPeople && (
               <Dialog open={showAddMemberDialog} onOpenChange={(open) => {
                 setShowAddMemberDialog(open);
                 if (!open) {
@@ -3058,13 +3059,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </div>
               </DialogContent>
               </Dialog>
+              )}
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {teamMembers.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-members">
-              No team members added yet. Click "Add Team Member" to add one.
+              No team members added yet. {permissions.canAddPeople ? 'Click "Add Team Member" to add one.' : ''}
             </p>
           ) : (
             <>
@@ -3221,6 +3223,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               Team Leads ({projectLeads.length})
             </CardTitle>
             <div className="flex gap-2">
+              {permissions.canAddPeople && (
               <Dialog open={showAddLeadDialog} onOpenChange={(open) => {
                 setShowAddLeadDialog(open);
                 if (!open) {
@@ -3299,13 +3302,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </div>
               </DialogContent>
               </Dialog>
+              )}
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {projectLeads.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-leads">
-              No team leads added yet. Click "Add Team Lead" to add one.
+              No team leads added yet. {permissions.canAddPeople ? 'Click "Add Team Lead" to add one.' : ''}
             </p>
           ) : (
             <>

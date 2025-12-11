@@ -67,6 +67,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return (roleHierarchy[userRole] || 0) >= (roleHierarchy[requiredRole] || 0);
   };
 
+  // Permission definitions based on roles - must match frontend usePermissions.ts
+  const ROLE_PERMISSIONS: Record<string, string[]> = {
+    admin: [
+      'canManageUsers', 'canViewAllReports', 'canSubmitReports', 'canEditReports', 
+      'canDeleteReports', 'canAddPeople', 'canEditPeople', 'canDeletePeople',
+      'canAddContracts', 'canEditContracts', 'canDeleteContracts', 'canGenerateAISummary',
+      'canViewAISummary', 'canExportReports', 'canArchiveReports', 'canViewFeedback', 'canSubmitFeedback'
+    ],
+    manager: [
+      'canViewAllReports', 'canSubmitReports', 'canEditReports', 'canDeleteReports',
+      'canAddPeople', 'canEditPeople', 'canDeletePeople', 'canAddContracts', 
+      'canEditContracts', 'canDeleteContracts', 'canGenerateAISummary', 'canViewAISummary',
+      'canExportReports', 'canArchiveReports', 'canViewFeedback', 'canSubmitFeedback'
+    ],
+    lead: [
+      'canViewAllReports', 'canSubmitReports', 'canEditReports', 'canAddPeople', 'canEditPeople',
+      'canViewAISummary', 'canExportReports', 'canArchiveReports', 'canGenerateAISummary',
+      'canViewFeedback', 'canSubmitFeedback'
+    ],
+    member: [
+      'canViewAllReports', 'canViewAISummary', 'canViewFeedback', 'canSubmitFeedback'
+    ]
+  };
+
+  // Check if user has specific permission
+  const hasPermission = (userRole: string, permission: string): boolean => {
+    const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS['member'];
+    return permissions.includes(permission);
+  };
+
+  // Middleware factory for permission checking
+  const requirePermission = (permission: string) => {
+    return async (req: any, res: any, next: any) => {
+      try {
+        const userId = req.user?.claims?.sub;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
+        const userRole = await getUserRole(userId);
+        if (!hasPermission(userRole, permission)) {
+          return res.status(403).json({ error: `Permission denied: ${permission} required` });
+        }
+        next();
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    };
+  };
+
   // User profile routes
   app.patch('/api/users/profile', isAuthenticated, async (req: any, res) => {
     try {
@@ -430,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/team-members', isAuthenticated, async (req, res) => {
+  app.post('/api/team-members', isAuthenticated, requirePermission('canAddPeople'), async (req, res) => {
     try {
       const data = insertPersonSchema.parse(req.body);
       const member = await storage.createTeamMember(data);
@@ -440,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/team-members/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/team-members/:id', isAuthenticated, requirePermission('canEditPeople'), async (req, res) => {
     try {
       const data = insertPersonSchema.partial().parse(req.body);
       const member = await storage.updateTeamMember(req.params.id, data);
@@ -453,7 +502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/team-members/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/team-members/:id', isAuthenticated, requirePermission('canDeletePeople'), async (req, res) => {
     try {
       const success = await storage.deleteTeamMember(req.params.id);
       if (!success) {
@@ -475,7 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/project-leads', isAuthenticated, async (req, res) => {
+  app.post('/api/project-leads', isAuthenticated, requirePermission('canAddPeople'), async (req, res) => {
     try {
       const data = insertPersonSchema.parse(req.body);
       const lead = await storage.createProjectLead(data);
@@ -485,7 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/project-leads/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/project-leads/:id', isAuthenticated, requirePermission('canEditPeople'), async (req, res) => {
     try {
       const data = insertPersonSchema.partial().parse(req.body);
       const lead = await storage.updateProjectLead(req.params.id, data);
@@ -498,7 +547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/project-leads/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/project-leads/:id', isAuthenticated, requirePermission('canDeletePeople'), async (req, res) => {
     try {
       const success = await storage.deleteProjectLead(req.params.id);
       if (!success) {
@@ -549,8 +598,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clear all feedback (for archiving)
-  app.delete('/api/people/feedback', isAuthenticated, async (_req, res) => {
+  // Clear all feedback (for archiving - requires canArchiveReports)
+  app.delete('/api/people/feedback', isAuthenticated, requirePermission('canArchiveReports'), async (_req, res) => {
     try {
       await storage.clearAllFeedback();
       res.json({ success: true });
@@ -612,7 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/projects', isAuthenticated, async (req, res) => {
+  app.post('/api/projects', isAuthenticated, requirePermission('canAddContracts'), async (req, res) => {
     try {
       const data = insertProjectSchema.parse(req.body);
       const project = await storage.createProject(data);
@@ -622,7 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/projects/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/projects/:id', isAuthenticated, requirePermission('canEditContracts'), async (req, res) => {
     try {
       const data = insertProjectSchema.partial().parse(req.body);
       const project = await storage.updateProject(req.params.id, data);
@@ -635,7 +684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/projects/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/projects/:id', isAuthenticated, requirePermission('canDeleteContracts'), async (req, res) => {
     try {
       const success = await storage.deleteProject(req.params.id);
       if (!success) {
@@ -657,7 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/weekly-reports', isAuthenticated, async (req, res) => {
+  app.post('/api/weekly-reports', isAuthenticated, requirePermission('canSubmitReports'), async (req, res) => {
     try {
       const data = insertWeeklyReportSchema.parse(req.body);
       const report = await storage.createWeeklyReport(data);
@@ -667,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/weekly-reports/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/weekly-reports/:id', isAuthenticated, requirePermission('canEditReports'), async (req, res) => {
     try {
       const data = insertWeeklyReportSchema.partial().parse(req.body);
       const report = await storage.updateWeeklyReport(req.params.id, data);
@@ -680,7 +729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/weekly-reports/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/weekly-reports/:id', isAuthenticated, requirePermission('canDeleteReports'), async (req, res) => {
     try {
       // First, get the report to know its projectId and weekStart
       const reportToDelete = await storage.getWeeklyReport(req.params.id);
@@ -714,8 +763,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete all weekly reports (protected)
-  app.delete('/api/weekly-reports', isAuthenticated, async (_req, res) => {
+  // Delete all weekly reports (protected - admin only)
+  app.delete('/api/weekly-reports', isAuthenticated, requirePermission('canDeleteReports'), async (_req, res) => {
     try {
       const reports = await storage.getWeeklyReports();
       for (const report of reports) {
@@ -744,8 +793,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete current week's AI summary (for Force Reset) (protected)
-  app.delete('/api/current-ai-summary/:weekStart', isAuthenticated, async (req, res) => {
+  // Delete current week's AI summary (for Force Reset) (protected - requires canGenerateAISummary)
+  app.delete('/api/current-ai-summary/:weekStart', isAuthenticated, requirePermission('canGenerateAISummary'), async (req, res) => {
     try {
       await storage.deleteCurrentAiSummary(req.params.weekStart);
       res.json({ success: true });
@@ -755,7 +804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Summary endpoint - Generate BOTH leadership and team insights from reports (protected)
-  app.post('/api/weekly-reports/ai-summary', isAuthenticated, async (_req, res) => {
+  app.post('/api/weekly-reports/ai-summary', isAuthenticated, requirePermission('canGenerateAISummary'), async (_req, res) => {
     try {
       const reports = await storage.getWeeklyReports();
       const projects = await storage.getProjects();
@@ -1031,7 +1080,7 @@ IMPORTANT:
     }
   });
 
-  app.post('/api/saved-reports', isAuthenticated, async (req, res) => {
+  app.post('/api/saved-reports', isAuthenticated, requirePermission('canArchiveReports'), async (req, res) => {
     try {
       // Log the size of incoming data for debugging
       const bodySize = JSON.stringify(req.body).length;
@@ -1053,7 +1102,7 @@ IMPORTANT:
     }
   });
 
-  app.delete('/api/saved-reports/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/saved-reports/:id', isAuthenticated, requirePermission('canArchiveReports'), async (req, res) => {
     try {
       const success = await storage.deleteSavedReport(req.params.id);
       if (!success) {
@@ -1065,8 +1114,8 @@ IMPORTANT:
     }
   });
 
-  // Import projects from Jira (protected)
-  app.post('/api/jira/import', isAuthenticated, async (req, res) => {
+  // Import projects from Jira (protected - requires canAddContracts)
+  app.post('/api/jira/import', isAuthenticated, requirePermission('canAddContracts'), async (req, res) => {
     try {
       const { projectKey } = req.body;
 
