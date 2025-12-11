@@ -2934,7 +2934,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                         <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
                           <Users className="h-4 w-4 text-blue-500" />
                         </div>
-                        <h4 className="font-semibold">Team Members Summary</h4>
+                        <h4 className="font-semibold">SS/CMS Team Feedback Summary</h4>
                       </div>
                       <Badge className={`${
                         teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
@@ -3274,7 +3274,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         </DialogContent>
       </Dialog>
 
-      {/* Team Members Summary Modal */}
+      {/* SS/CMS Team Feedback Summary Modal */}
       <Dialog open={showTeamModal} onOpenChange={setShowTeamModal}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -3284,7 +3284,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               </div>
               <div>
                 <p className="section-label">AI-Powered Team Insights</p>
-                <DialogTitle className="text-2xl">Team Members Summary</DialogTitle>
+                <DialogTitle className="text-2xl">SS/CMS Team Feedback Summary</DialogTitle>
               </div>
             </div>
           </DialogHeader>
