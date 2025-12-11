@@ -2369,35 +2369,27 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{hasCoLeads(project) ? 'Co-Leads:' : 'Lead:'}</span>
-                      <span className="text-muted-foreground">{getProjectLeadNames(project)}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Team Members:</span>
-                      <span className="text-muted-foreground">{getTeamMembersWithRoles(project.teamMembers).length}</span>
-                    </div>
-
-                    {(project.startDate || project.endDate) && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          {formatDisplayDate(project.startDate)} - {formatDisplayDate(project.endDate)}
-                        </span>
-                      </div>
-                    )}
-
-                    {project.projectType && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <Badge variant="outline" className="text-xs" data-testid={`badge-project-type-${project.id}`}>
-                          {project.projectType === 'CMS' ? 'Community Managed Services' : 'Strategic Services'}
-                        </Badge>
-                      </div>
-                    )}
+                    <p className="text-sm text-muted-foreground leading-relaxed" data-testid={`text-project-summary-${project.id}`}>
+                      <span className="font-medium text-foreground">{getProjectLeadNames(project)}</span>
+                      {' '}leads the{' '}
+                      <span className="font-medium text-foreground">
+                        {project.projectType === 'CMS' ? 'Community Managed Services' : 'Strategic Services'}
+                      </span>
+                      {' '}account with a team of{' '}
+                      <span className="font-medium text-foreground">{getTeamMembersWithRoles(project.teamMembers).length}</span>
+                      {project.totalContractualHours ? (
+                        <>
+                          {' '}for{' '}
+                          <span className="font-medium text-foreground">{project.totalContractualHours} hrs/week</span>
+                        </>
+                      ) : null}
+                      {project.endDate ? (
+                        <>
+                          {' '}till{' '}
+                          <span className="font-medium text-foreground">{formatDisplayDate(project.endDate)}</span>
+                        </>
+                      ) : null}
+                    </p>
                     
                     {/* Caution warnings */}
                     {(!project.endDate || projectHasUnfilledRoles(project)) && (
