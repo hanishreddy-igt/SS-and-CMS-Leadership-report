@@ -3851,7 +3851,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </div>
               </div>
               
-              {/* Projects managed by this lead (includes co-lead projects) */}
+              {/* Projects managed by this lead (includes co-lead projects) - max 4 shown */}
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-2">Contracts Led</p>
                 {(() => {
@@ -3865,9 +3865,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <p className="text-sm text-muted-foreground italic">No contracts assigned</p>
                     );
                   }
+                  const displayedProjects = ledProjects.slice(0, 4);
+                  const remainingCount = ledProjects.length - 4;
                   return (
                     <div className="space-y-2" data-testid="list-lead-projects">
-                      {ledProjects.map(project => (
+                      {displayedProjects.map(project => (
                         <div key={project.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium">{project.name}</span>
@@ -3889,6 +3891,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           })()}
                         </div>
                       ))}
+                      {remainingCount > 0 && (
+                        <p className="text-xs text-muted-foreground text-center pt-1">
+                          +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
+                        </p>
+                      )}
                     </div>
                   );
                 })()}
@@ -3977,7 +3984,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </div>
               </div>
               
-              {/* Projects this member is working on (only active/renewal) */}
+              {/* Projects this member is working on (only active/renewal) - max 4 shown */}
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-2">Contracts & Roles</p>
                 {(() => {
@@ -3991,9 +3998,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <p className="text-sm text-muted-foreground italic">No active contracts</p>
                     );
                   }
+                  const displayedProjects = memberProjects.slice(0, 4);
+                  const remainingCount = memberProjects.length - 4;
                   return (
                     <div className="space-y-2" data-testid="list-member-projects">
-                      {memberProjects.map(({ project, role }) => (
+                      {displayedProjects.map(({ project, role }) => (
                         <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
                           <span className="text-sm font-medium truncate">{project.name}</span>
                           <Badge variant="secondary" className="text-xs font-medium w-fit max-w-full">
@@ -4001,6 +4010,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </Badge>
                         </div>
                       ))}
+                      {remainingCount > 0 && (
+                        <p className="text-xs text-muted-foreground text-center pt-1">
+                          +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
+                        </p>
+                      )}
                     </div>
                   );
                 })()}
