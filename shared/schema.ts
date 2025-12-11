@@ -31,6 +31,7 @@ export const people = pgTable("people", {
   name: text("name").notNull(),
   email: text("email"),
   roles: text("roles").array().notNull().default(sql`'{}'`),
+  feedback: text("feedback"), // General feedback/notes about this person
 });
 
 export const projects = pgTable("projects", {

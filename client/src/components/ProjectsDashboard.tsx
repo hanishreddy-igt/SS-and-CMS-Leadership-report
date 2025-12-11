@@ -7,11 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -129,6 +130,12 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   // Team Member Detail Modal State
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Person | null>(null);
   const [showMemberDetailModal, setShowMemberDetailModal] = useState(false);
+
+  // Feedback Form State for detail modals
+  const [leadFeedbackValue, setLeadFeedbackValue] = useState('');
+  const [memberFeedbackValue, setMemberFeedbackValue] = useState('');
+  const [isEditingLeadFeedback, setIsEditingLeadFeedback] = useState(false);
+  const [isEditingMemberFeedback, setIsEditingMemberFeedback] = useState(false);
 
   // Team Member Role Filter State
   const [filterMemberRoles, setFilterMemberRoles] = useState<string[]>([]);
@@ -867,6 +874,43 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     },
   });
 
+  // Feedback save mutations
+  const saveLeadFeedbackMutation = useMutation({
+    mutationFn: async ({ id, feedback }: { id: string; feedback: string }) => {
+      return await apiRequest('PATCH', `/api/project-leads/${id}`, { feedback });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      toast({ title: 'Success', description: 'Feedback saved' });
+      setIsEditingLeadFeedback(false);
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to save feedback',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const saveMemberFeedbackMutation = useMutation({
+    mutationFn: async ({ id, feedback }: { id: string; feedback: string }) => {
+      return await apiRequest('PATCH', `/api/team-members/${id}`, { feedback });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      toast({ title: 'Success', description: 'Feedback saved' });
+      setIsEditingMemberFeedback(false);
+    },
+    onError: () => {
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to save feedback',
+        variant: 'destructive'
+      });
+    },
+  });
+
   // Project mutations
   const createProjectMutation = useMutation({
     mutationFn: async (project: InsertProject) => {
@@ -1132,6 +1176,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const handleLeadTileClick = (lead: Person) => {
     if (!selectionModeLeads) {
       setSelectedLeadForDetail(lead);
+      setLeadFeedbackValue(lead.feedback || '');
+      setIsEditingLeadFeedback(false);
       setShowLeadDetailModal(true);
     }
   };
@@ -1139,12 +1185,16 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const closeLeadDetailModal = () => {
     setShowLeadDetailModal(false);
     setSelectedLeadForDetail(null);
+    setLeadFeedbackValue('');
+    setIsEditingLeadFeedback(false);
   };
 
   // Handle team member tile click to show detail popup
   const handleMemberTileClick = (member: Person) => {
     if (!selectionModeMembers) {
       setSelectedMemberForDetail(member);
+      setMemberFeedbackValue(member.feedback || '');
+      setIsEditingMemberFeedback(false);
       setShowMemberDetailModal(true);
     }
   };
@@ -1152,6 +1202,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const closeMemberDetailModal = () => {
     setShowMemberDetailModal(false);
     setSelectedMemberForDetail(null);
+    setMemberFeedbackValue('');
+    setIsEditingMemberFeedback(false);
   };
 
   // Get projects a team member is working on with their roles
@@ -3793,6 +3845,76 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   );
                 })()}
               </div>
+
+              {/* Feedback Section */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    Feedback
+                  </p>
+                  {!isEditingLeadFeedback && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingLeadFeedback(true)}
+                      data-testid="button-edit-lead-feedback"
+                    >
+                      <Edit2 className="h-3.5 w-3.5 mr-1" />
+                      {selectedLeadForDetail.feedback ? 'Edit' : 'Add'}
+                    </Button>
+                  )}
+                </div>
+                {isEditingLeadFeedback ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={leadFeedbackValue}
+                      onChange={(e) => setLeadFeedbackValue(e.target.value)}
+                      placeholder="Enter feedback or notes about this team lead..."
+                      rows={3}
+                      data-testid="textarea-lead-feedback"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setLeadFeedbackValue(selectedLeadForDetail.feedback || '');
+                          setIsEditingLeadFeedback(false);
+                        }}
+                        data-testid="button-cancel-lead-feedback"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          saveLeadFeedbackMutation.mutate({ 
+                            id: selectedLeadForDetail.id, 
+                            feedback: leadFeedbackValue 
+                          });
+                        }}
+                        disabled={saveLeadFeedbackMutation.isPending}
+                        data-testid="button-save-lead-feedback"
+                      >
+                        {saveLeadFeedbackMutation.isPending ? 'Saving...' : 'Save'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-muted/30 rounded-md min-h-[60px]">
+                    {selectedLeadForDetail.feedback ? (
+                      <p className="text-sm whitespace-pre-wrap" data-testid="text-lead-feedback">
+                        {selectedLeadForDetail.feedback}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic" data-testid="text-lead-feedback-empty">
+                        No feedback added yet
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
@@ -3850,6 +3972,76 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </div>
                   );
                 })()}
+              </div>
+
+              {/* Feedback Section */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    Feedback
+                  </p>
+                  {!isEditingMemberFeedback && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingMemberFeedback(true)}
+                      data-testid="button-edit-member-feedback"
+                    >
+                      <Edit2 className="h-3.5 w-3.5 mr-1" />
+                      {selectedMemberForDetail.feedback ? 'Edit' : 'Add'}
+                    </Button>
+                  )}
+                </div>
+                {isEditingMemberFeedback ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={memberFeedbackValue}
+                      onChange={(e) => setMemberFeedbackValue(e.target.value)}
+                      placeholder="Enter feedback or notes about this team member..."
+                      rows={3}
+                      data-testid="textarea-member-feedback"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setMemberFeedbackValue(selectedMemberForDetail.feedback || '');
+                          setIsEditingMemberFeedback(false);
+                        }}
+                        data-testid="button-cancel-member-feedback"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          saveMemberFeedbackMutation.mutate({ 
+                            id: selectedMemberForDetail.id, 
+                            feedback: memberFeedbackValue 
+                          });
+                        }}
+                        disabled={saveMemberFeedbackMutation.isPending}
+                        data-testid="button-save-member-feedback"
+                      >
+                        {saveMemberFeedbackMutation.isPending ? 'Saving...' : 'Save'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-muted/30 rounded-md min-h-[60px]">
+                    {selectedMemberForDetail.feedback ? (
+                      <p className="text-sm whitespace-pre-wrap" data-testid="text-member-feedback">
+                        {selectedMemberForDetail.feedback}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic" data-testid="text-member-feedback-empty">
+                        No feedback added yet
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
