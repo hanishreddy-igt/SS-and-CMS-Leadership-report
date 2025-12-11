@@ -879,6 +879,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/people/feedback'] });
       toast({ title: 'Feedback Submitted', description: 'Your anonymous feedback has been recorded' });
       setLeadFeedbackValue('');
     },
@@ -897,6 +898,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/people/feedback'] });
       toast({ title: 'Feedback Submitted', description: 'Your anonymous feedback has been recorded' });
       setMemberFeedbackValue('');
     },
