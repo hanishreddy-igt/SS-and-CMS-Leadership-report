@@ -3130,7 +3130,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       data-testid={`button-save-member-${member.id}`}
                       size="icon"
                       variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); saveEditMember(member.id); }}
+                      onClick={(e) => { e.stopPropagation(); saveEditMember(); }}
                       disabled={updateMemberMutation.isPending}
                       className="text-green-600 hover:text-green-700"
                     >
@@ -3177,15 +3177,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                             <Edit2 className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          {isMemberEligibleForFeedback(member.id) && (
-                            <DropdownMenuItem 
-                              onClick={(e) => { e.stopPropagation(); openFeedbackDialog(member, 'to_member'); }}
-                              data-testid={`button-feedback-member-${member.id}`}
-                            >
-                              <MessageSquare className="h-4 w-4 mr-2" />
-                              Give Feedback
-                            </DropdownMenuItem>
-                          )}
                           <DropdownMenuItem 
                             onClick={(e) => { e.stopPropagation(); deleteMemberMutation.mutate(member.id); }}
                             disabled={deleteMemberMutation.isPending}
@@ -3417,15 +3408,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <Edit2 className="h-4 w-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
-                      {isLeadEligibleForFeedback(lead.id) && (
-                        <DropdownMenuItem 
-                          onClick={(e) => { e.stopPropagation(); openFeedbackDialog(lead, 'to_lead'); }}
-                          data-testid={`button-feedback-lead-${lead.id}`}
-                        >
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Give Feedback
-                        </DropdownMenuItem>
-                      )}
                       <DropdownMenuItem 
                         onClick={(e) => { e.stopPropagation(); deleteLeadMutation.mutate(lead.id); }}
                         disabled={deleteLeadMutation.isPending}
@@ -3927,6 +3909,23 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   );
                 })()}
               </div>
+
+              {/* Give Feedback Button */}
+              {isLeadEligibleForFeedback(selectedLeadForDetail.id) && (
+                <div className="pt-4 border-t">
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => {
+                      closeLeadDetailModal();
+                      openFeedbackDialog(selectedLeadForDetail, 'to_lead');
+                    }}
+                    data-testid="button-feedback-lead-detail"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Give Anonymous Feedback
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
@@ -3985,6 +3984,23 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   );
                 })()}
               </div>
+
+              {/* Give Feedback Button */}
+              {isMemberEligibleForFeedback(selectedMemberForDetail.id) && (
+                <div className="pt-4 border-t">
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => {
+                      closeMemberDetailModal();
+                      openFeedbackDialog(selectedMemberForDetail, 'to_member');
+                    }}
+                    data-testid="button-feedback-member-detail"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Give Anonymous Feedback
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
