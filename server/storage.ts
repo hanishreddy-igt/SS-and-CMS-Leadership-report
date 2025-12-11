@@ -18,8 +18,11 @@ import type {
   InsertCurrentAiSummary,
   ProjectRole,
   InsertProjectRole,
+  RoleRequest,
+  InsertRoleRequest,
+  UserRole,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -80,6 +83,18 @@ export interface IStorage {
   getPersonById(id: string): Promise<Person | undefined>;
   updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined>;
   clearAllFeedback(): Promise<void>;
+
+  // User role management
+  getAllUsers(): Promise<User[]>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  updateUserRole(userId: string, role: UserRole): Promise<User | undefined>;
+  updateUserProfile(userId: string, updates: { displayName?: string }): Promise<User | undefined>;
+
+  // Role requests
+  getRoleRequests(): Promise<RoleRequest[]>;
+  getPendingRoleRequests(): Promise<RoleRequest[]>;
+  createRoleRequest(request: InsertRoleRequest): Promise<RoleRequest>;
+  updateRoleRequest(id: string, status: 'approved' | 'denied', resolvedBy: string): Promise<RoleRequest | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -100,6 +115,8 @@ export class MemStorage implements IStorage {
     this.currentAiSummaries = new Map();
   }
 
+  private roleRequests: Map<string, RoleRequest> = new Map();
+
   // User operations (required for authentication)
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
@@ -112,12 +129,69 @@ export class MemStorage implements IStorage {
       email: userData.email || null,
       firstName: userData.firstName || null,
       lastName: userData.lastName || null,
+      displayName: userData.displayName || existing?.displayName || null,
       profileImageUrl: userData.profileImageUrl || null,
+      role: existing?.role || (userData.email === 'hanish.reddy@ignitetech.com' ? 'admin' : 'member'),
       createdAt: existing?.createdAt || new Date(),
       updatedAt: new Date(),
     };
     this.users.set(user.id, user);
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.email === email);
+  }
+
+  async updateUserRole(userId: string, role: UserRole): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    const updated = { ...user, role, updatedAt: new Date() };
+    this.users.set(userId, updated);
+    return updated;
+  }
+
+  async updateUserProfile(userId: string, updates: { displayName?: string }): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    const updated = { ...user, ...updates, updatedAt: new Date() };
+    this.users.set(userId, updated);
+    return updated;
+  }
+
+  async getRoleRequests(): Promise<RoleRequest[]> {
+    return Array.from(this.roleRequests.values());
+  }
+
+  async getPendingRoleRequests(): Promise<RoleRequest[]> {
+    return Array.from(this.roleRequests.values()).filter(r => r.status === 'pending');
+  }
+
+  async createRoleRequest(request: InsertRoleRequest): Promise<RoleRequest> {
+    const id = randomUUID();
+    const roleRequest: RoleRequest = {
+      ...request,
+      id,
+      reason: request.reason || null,
+      status: 'pending',
+      createdAt: new Date(),
+      resolvedAt: null,
+      resolvedBy: null,
+    };
+    this.roleRequests.set(id, roleRequest);
+    return roleRequest;
+  }
+
+  async updateRoleRequest(id: string, status: 'approved' | 'denied', resolvedBy: string): Promise<RoleRequest | undefined> {
+    const request = this.roleRequests.get(id);
+    if (!request) return undefined;
+    const updated: RoleRequest = { ...request, status, resolvedBy, resolvedAt: new Date() };
+    this.roleRequests.set(id, updated);
+    return updated;
   }
 
   // Team Members (uses unified people storage)
@@ -131,7 +205,13 @@ export class MemStorage implements IStorage {
 
   async createTeamMember(insertMember: InsertTeamMember): Promise<TeamMember> {
     const id = randomUUID();
-    const member: TeamMember = { ...insertMember, id, roles: ['team-member'], email: insertMember.email ?? null };
+    const member: TeamMember = { 
+      name: insertMember.name,
+      id, 
+      roles: ['team-member'], 
+      email: insertMember.email ?? null,
+      feedback: insertMember.feedback ?? null,
+    };
     this.people.set(id, member);
     return member;
   }
@@ -159,7 +239,13 @@ export class MemStorage implements IStorage {
 
   async createProjectLead(insertLead: InsertProjectLead): Promise<ProjectLead> {
     const id = randomUUID();
-    const lead: ProjectLead = { ...insertLead, id, roles: ['project-lead'], email: insertLead.email ?? null };
+    const lead: ProjectLead = { 
+      name: insertLead.name,
+      id, 
+      roles: ['project-lead'], 
+      email: insertLead.email ?? null,
+      feedback: insertLead.feedback ?? null,
+    };
     this.people.set(id, lead);
     return lead;
   }
@@ -188,7 +274,11 @@ export class MemStorage implements IStorage {
   async createProject(insertProject: InsertProject): Promise<Project> {
     const id = randomUUID();
     const project: Project = { 
-      ...insertProject, 
+      name: insertProject.name,
+      customer: insertProject.customer,
+      customerContactEmail: insertProject.customerContactEmail ?? null,
+      totalContractualHours: insertProject.totalContractualHours ?? null,
+      leadId: insertProject.leadId,
       id,
       leadIds: insertProject.leadIds ?? [],
       teamMembers: insertProject.teamMembers ?? [],
@@ -404,27 +494,45 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Determine default role - admin for specific email, member for everyone else
+    const defaultRole = userData.email === 'hanish.reddy@ignitetech.com' ? 'admin' : 'member';
+    
     // First check if user exists by email (since email has unique constraint)
     if (userData.email) {
       const [existingByEmail] = await db.select().from(users).where(eq(users.email, userData.email));
       if (existingByEmail && existingByEmail.id !== userData.id) {
-        // User exists with this email but different id - update existing user
+        // User exists with this email but different id - update existing user, preserve role
         const [updated] = await db
           .update(users)
-          .set({ ...userData, id: existingByEmail.id, updatedAt: new Date() })
+          .set({ 
+            ...userData, 
+            id: existingByEmail.id, 
+            role: existingByEmail.role, // Preserve existing role
+            displayName: existingByEmail.displayName, // Preserve display name
+            updatedAt: new Date() 
+          })
           .where(eq(users.id, existingByEmail.id))
           .returning();
         return updated;
       }
     }
     
+    // Check if user already exists by id to preserve role
+    const [existingById] = await db.select().from(users).where(eq(users.id, userData.id!));
+    
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values({
+        ...userData,
+        role: existingById?.role || defaultRole, // Preserve existing role or use default
+        displayName: existingById?.displayName || null, // Preserve display name
+      })
       .onConflictDoUpdate({
         target: users.id,
         set: {
           ...userData,
+          role: existingById?.role || defaultRole, // Preserve existing role
+          displayName: existingById?.displayName, // Preserve display name  
           updatedAt: new Date(),
         },
       })
@@ -656,6 +764,54 @@ export class DatabaseStorage implements IStorage {
         // Ignore duplicate key errors
       }
     }
+  }
+
+  // User role management
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async updateUserRole(userId: string, role: UserRole): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async updateUserProfile(userId: string, updates: { displayName?: string }): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Role requests
+  async getRoleRequests(): Promise<RoleRequest[]> {
+    return await db.select().from(roleRequests);
+  }
+
+  async getPendingRoleRequests(): Promise<RoleRequest[]> {
+    return await db.select().from(roleRequests).where(eq(roleRequests.status, 'pending'));
+  }
+
+  async createRoleRequest(request: InsertRoleRequest): Promise<RoleRequest> {
+    const [roleRequest] = await db.insert(roleRequests).values(request).returning();
+    return roleRequest;
+  }
+
+  async updateRoleRequest(id: string, status: 'approved' | 'denied', resolvedBy: string): Promise<RoleRequest | undefined> {
+    const [updated] = await db.update(roleRequests)
+      .set({ status, resolvedBy, resolvedAt: new Date() })
+      .where(eq(roleRequests.id, id))
+      .returning();
+    return updated || undefined;
   }
 }
 

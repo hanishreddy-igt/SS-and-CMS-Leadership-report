@@ -14,15 +14,34 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// User roles for access control
+export type UserRole = 'admin' | 'manager' | 'lead' | 'member';
+
 // User storage table for authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  displayName: varchar("display_name"), // Editable display name
   profileImageUrl: varchar("profile_image_url"),
+  role: varchar("role").notNull().default('member'), // admin, manager, lead, member
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Role upgrade requests
+export const roleRequests = pgTable("role_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  userEmail: varchar("user_email").notNull(),
+  currentRole: varchar("current_role").notNull(),
+  requestedRole: varchar("requested_role").notNull(),
+  reason: text("reason"),
+  status: varchar("status").notNull().default('pending'), // pending, approved, denied
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by"),
 });
 
 // Unified people table - supports both team members and project leads
@@ -102,6 +121,10 @@ export type InsertCurrentAiSummary = z.infer<typeof insertCurrentAiSummarySchema
 export const insertProjectRoleSchema = createInsertSchema(projectRoles).omit({ id: true });
 export type ProjectRole = typeof projectRoles.$inferSelect;
 export type InsertProjectRole = z.infer<typeof insertProjectRoleSchema>;
+
+export const insertRoleRequestSchema = createInsertSchema(roleRequests).omit({ id: true, createdAt: true, resolvedAt: true, resolvedBy: true });
+export type RoleRequest = typeof roleRequests.$inferSelect;
+export type InsertRoleRequest = z.infer<typeof insertRoleRequestSchema>;
 
 export const insertPersonSchema = createInsertSchema(people).omit({ id: true });
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true });
