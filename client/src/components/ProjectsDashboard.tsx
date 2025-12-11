@@ -133,6 +133,15 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Person | null>(null);
   const [showMemberDetailModal, setShowMemberDetailModal] = useState(false);
 
+  // Check if logged-in user is a registered team member or lead (can submit feedback)
+  const isUserRegisteredTeamMember = teamMembers.some(
+    (m) => m.email?.toLowerCase() === user?.email?.toLowerCase()
+  );
+  const isUserRegisteredLead = projectLeads.some(
+    (l) => l.email?.toLowerCase() === user?.email?.toLowerCase()
+  );
+  const canSubmitFeedback = isUserRegisteredTeamMember || isUserRegisteredLead;
+
   // Feedback Form State for detail modals (anonymous submission)
   const [leadFeedbackValue, setLeadFeedbackValue] = useState('');
   const [memberFeedbackValue, setMemberFeedbackValue] = useState('');
@@ -3878,8 +3887,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 })()}
               </div>
 
-              {/* Anonymous Feedback Submission Section - Hidden for self-feedback */}
-              {user?.email?.toLowerCase() === selectedLeadForDetail.email?.toLowerCase() ? (
+              {/* Anonymous Feedback Submission Section - Hidden for non-team members and self-feedback */}
+              {!canSubmitFeedback ? (
+                null
+              ) : user?.email?.toLowerCase() === selectedLeadForDetail.email?.toLowerCase() ? (
                 <div className="border-t pt-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <AlertCircle className="h-4 w-4" />
@@ -3988,8 +3999,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 })()}
               </div>
 
-              {/* Anonymous Feedback Submission Section - Hidden for self-feedback */}
-              {user?.email?.toLowerCase() === selectedMemberForDetail.email?.toLowerCase() ? (
+              {/* Anonymous Feedback Submission Section - Hidden for non-team members and self-feedback */}
+              {!canSubmitFeedback ? (
+                null
+              ) : user?.email?.toLowerCase() === selectedMemberForDetail.email?.toLowerCase() ? (
                 <div className="border-t pt-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <AlertCircle className="h-4 w-4" />
