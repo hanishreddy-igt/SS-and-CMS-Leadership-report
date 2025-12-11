@@ -94,6 +94,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   // Add Team Member Modal State
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [newMember, setNewMember] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [editMemberEmailValue, setEditMemberEmailValue] = useState('');
+  const [showEditMemberDialog, setShowEditMemberDialog] = useState(false);
   const [memberNameError, setMemberNameError] = useState<string | null>(null);
   const [memberNameWarning, setMemberNameWarning] = useState<string | null>(null);
 
@@ -746,13 +749,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   // Team member mutations
   const createMemberMutation = useMutation({
-    mutationFn: async (name: string) => {
-      return await apiRequest('POST', '/api/team-members', { name });
+    mutationFn: async ({ name, email }: { name: string; email?: string }) => {
+      return await apiRequest('POST', '/api/team-members', { name, email });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member added' });
       setNewMember('');
+      setNewMemberEmail('');
       setMemberNameError(null);
       setMemberNameWarning(null);
       setShowAddMemberDialog(false);
@@ -767,13 +771,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   });
 
   const updateMemberMutation = useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      return await apiRequest('PATCH', `/api/team-members/${id}`, { name });
+    mutationFn: async ({ id, name, email }: { id: string; name: string; email?: string }) => {
+      return await apiRequest('PATCH', `/api/team-members/${id}`, { name, email });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member updated' });
       setEditingMemberId(null);
+      setShowEditMemberDialog(false);
     },
     onError: () => {
       toast({ 
@@ -946,6 +951,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const startEditMember = (member: TeamMember) => {
     setEditingMemberId(member.id);
     setEditMemberValue(member.name);
+    setEditMemberEmailValue(member.email || '');
+    setShowEditMemberDialog(true);
   };
 
   const startEditLead = (lead: ProjectLead) => {
@@ -955,10 +962,21 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setShowEditLeadDialog(true);
   };
 
-  const saveEditMember = (id: string) => {
-    if (editMemberValue.trim()) {
-      updateMemberMutation.mutate({ id, name: editMemberValue.trim() });
+  const saveEditMember = () => {
+    if (editingMemberId && editMemberValue.trim()) {
+      updateMemberMutation.mutate({ 
+        id: editingMemberId, 
+        name: editMemberValue.trim(), 
+        email: editMemberEmailValue.trim() || undefined 
+      });
     }
+  };
+
+  const cancelEditMember = () => {
+    setShowEditMemberDialog(false);
+    setEditingMemberId(null);
+    setEditMemberValue('');
+    setEditMemberEmailValue('');
   };
 
   const saveEditLead = () => {
@@ -1060,7 +1078,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const handleAddMember = () => {
     if (newMember.trim() && !memberNameError) {
-      createMemberMutation.mutate(newMember.trim());
+      createMemberMutation.mutate({ name: newMember.trim(), email: newMemberEmail.trim() || undefined });
     }
   };
 
@@ -2903,7 +2921,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       type="text"
                       value={newMember}
                       onChange={(e) => handleMemberNameChange(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && !memberNameError && handleAddMember()}
                       placeholder="Enter team member name"
                       className={memberNameError ? 'border-red-500' : memberNameWarning ? 'border-amber-500' : ''}
                     />
@@ -2914,12 +2931,24 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <p className="text-sm text-amber-600" data-testid="warning-member-similar">{memberNameWarning}</p>
                     )}
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-member-email">Email (Optional)</Label>
+                    <Input
+                      id="new-member-email"
+                      data-testid="input-member-email"
+                      type="email"
+                      value={newMemberEmail}
+                      onChange={(e) => setNewMemberEmail(e.target.value)}
+                      placeholder="Enter email address"
+                    />
+                  </div>
                   <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setShowAddMemberDialog(false);
                         setNewMember('');
+                        setNewMemberEmail('');
                         setMemberNameError(null);
                         setMemberNameWarning(null);
                       }}
@@ -3000,82 +3029,54 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 key={member.id}
                 className={`flex items-center justify-between bg-muted/50 p-3 rounded-md transition-colors cursor-pointer ${selectedMembers.has(member.id) ? 'ring-2 ring-primary bg-primary/5' : ''} ${selectionModeMembers ? 'hover:bg-muted' : 'hover:bg-muted/70'}`}
                 data-testid={`member-item-${member.id}`}
-                onClick={editingMemberId !== member.id ? (selectionModeMembers ? () => toggleMemberSelection(member.id) : () => handleMemberTileClick(member)) : undefined}
+                onClick={selectionModeMembers ? () => toggleMemberSelection(member.id) : () => handleMemberTileClick(member)}
               >
-                {editingMemberId === member.id ? (
-                  <div className="flex-1 flex gap-2">
-                    <Input
-                      data-testid={`input-edit-member-${member.id}`}
-                      type="text"
-                      value={editMemberValue}
-                      onChange={(e) => setEditMemberValue(e.target.value)}
-                      className="flex-1"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Button
-                      data-testid={`button-save-member-${member.id}`}
-                      size="icon"
-                      variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); saveEditMember(member.id); }}
-                      disabled={updateMemberMutation.isPending}
-                      className="text-green-600 hover:text-green-700"
-                    >
-                      <Check className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      data-testid={`button-cancel-member-${member.id}`}
-                      size="icon"
-                      variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); setEditingMemberId(null); }}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2">
-                      {selectionModeMembers && (
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedMembers.has(member.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
-                          {selectedMembers.has(member.id) && <Check className="h-3 w-3 text-primary-foreground" />}
-                        </div>
-                      )}
-                      <span data-testid={`text-member-${member.id}`} className="font-medium">
-                        {member.name}
-                      </span>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {selectionModeMembers && (
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${selectedMembers.has(member.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
+                      {selectedMembers.has(member.id) && <Check className="h-3 w-3 text-primary-foreground" />}
                     </div>
-                    {!selectionModeMembers && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            data-testid={`button-member-menu-${member.id}`}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={() => startEditMember(member)}
-                            data-testid={`button-edit-member-${member.id}`}
-                          >
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => deleteMemberMutation.mutate(member.id)}
-                            disabled={deleteMemberMutation.isPending}
-                            className="text-destructive focus:text-destructive"
-                            data-testid={`button-delete-member-${member.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                  )}
+                  <div className="min-w-0">
+                    <span data-testid={`text-member-${member.id}`} className="font-medium block truncate">
+                      {member.name}
+                    </span>
+                    {member.email && (
+                      <span className="text-xs text-muted-foreground truncate block">{member.email}</span>
                     )}
-                  </>
+                  </div>
+                </div>
+                {!selectionModeMembers && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        data-testid={`button-member-menu-${member.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={() => startEditMember(member)}
+                        data-testid={`button-edit-member-${member.id}`}
+                      >
+                        <Edit2 className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => deleteMemberMutation.mutate(member.id)}
+                        disabled={deleteMemberMutation.isPending}
+                        className="text-destructive focus:text-destructive"
+                        data-testid={`button-delete-member-${member.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
               ))}
@@ -3661,6 +3662,58 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 data-testid="button-save-edit-lead"
               >
                 {updateLeadMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={showEditMemberDialog} onOpenChange={(open) => !open && cancelEditMember()}>
+        <DialogContent data-testid="dialog-edit-member">
+          <DialogHeader>
+            <DialogTitle>Edit Team Member</DialogTitle>
+            <DialogDescription>
+              Update the team member's name and email address.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-member-name">Team Member Name <span className="text-red-500">*</span></Label>
+              <Input
+                id="edit-member-name"
+                data-testid="input-edit-member-name"
+                type="text"
+                value={editMemberValue}
+                onChange={(e) => setEditMemberValue(e.target.value)}
+                placeholder="Enter team member name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-member-email">Email Address (Optional)</Label>
+              <Input
+                id="edit-member-email"
+                data-testid="input-edit-member-email"
+                type="email"
+                value={editMemberEmailValue}
+                onChange={(e) => setEditMemberEmailValue(e.target.value)}
+                placeholder="Enter email address"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={cancelEditMember}
+                data-testid="button-cancel-edit-member"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={saveEditMember}
+                disabled={updateMemberMutation.isPending || !editMemberValue.trim()}
+                data-testid="button-save-edit-member"
+              >
+                {updateMemberMutation.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </div>

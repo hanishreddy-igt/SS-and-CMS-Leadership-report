@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, Info, Users } from 'lucide-react';
-import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
+import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, LeadFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusOptions = [
   { value: 'on-track', label: 'On Track', icon: CheckCircle2, color: 'text-success' },
@@ -81,6 +81,7 @@ export default function SubmitReport() {
   const [challenges, setChallenges] = useState('');
   const [nextWeek, setNextWeek] = useState('');
   const [memberFeedback, setMemberFeedback] = useState<Record<string, string>>({});
+  const [leadFeedback, setLeadFeedback] = useState<Record<string, string>>({});
   const [existingDraftId, setExistingDraftId] = useState<string | null>(null);
   
   const [statusFilterLeads, setStatusFilterLeads] = useState<Set<string>>(new Set());
@@ -95,6 +96,7 @@ export default function SubmitReport() {
   const [modalChallenges, setModalChallenges] = useState('');
   const [modalNextWeek, setModalNextWeek] = useState('');
   const [modalMemberFeedback, setModalMemberFeedback] = useState<Record<string, string>>({});
+  const [modalLeadFeedback, setModalLeadFeedback] = useState<Record<string, string>>({});
   const [modalExistingDraftId, setModalExistingDraftId] = useState<string | null>(null);
   
   // Lock state for preventing simultaneous editing
@@ -200,6 +202,7 @@ export default function SubmitReport() {
         setChallenges('');
         setNextWeek('');
         setMemberFeedback({});
+        setLeadFeedback({});
       }
     }
   }, [selectedProject, weeklyReports]);
@@ -265,6 +268,16 @@ export default function SubmitReport() {
       } else {
         setModalMemberFeedback({});
       }
+      // Load lead feedback from draft
+      if (draft.leadFeedback && Array.isArray(draft.leadFeedback)) {
+        const leadFeedbackMap: Record<string, string> = {};
+        (draft.leadFeedback as LeadFeedback[]).forEach((fb) => {
+          leadFeedbackMap[fb.leadId] = fb.feedback;
+        });
+        setModalLeadFeedback(leadFeedbackMap);
+      } else {
+        setModalLeadFeedback({});
+      }
     } else {
       // Reset form for new submission
       setModalExistingDraftId(null);
@@ -273,6 +286,7 @@ export default function SubmitReport() {
       setModalChallenges('');
       setModalNextWeek('');
       setModalMemberFeedback({});
+      setModalLeadFeedback({});
     }
   };
 
@@ -294,6 +308,7 @@ export default function SubmitReport() {
     setModalChallenges('');
     setModalNextWeek('');
     setModalMemberFeedback({});
+    setModalLeadFeedback({});
     setModalExistingDraftId(null);
     setProjectLockInfo(null);
   };
@@ -424,6 +439,7 @@ export default function SubmitReport() {
       setChallenges('');
       setNextWeek('');
       setMemberFeedback({});
+      setLeadFeedback({});
       setExistingDraftId(null);
     },
     onError: (error: Error) => {
@@ -457,6 +473,7 @@ export default function SubmitReport() {
       setChallenges('');
       setNextWeek('');
       setMemberFeedback({});
+      setLeadFeedback({});
       setExistingDraftId(null);
     },
     onError: (error: Error) => {
@@ -472,9 +489,13 @@ export default function SubmitReport() {
   });
 
   const buildReportData = (status: 'draft' | 'submitted'): InsertWeeklyReport => {
-    const feedback: TeamMemberFeedback[] = Object.entries(memberFeedback)
+    const memberFeedbackList: TeamMemberFeedback[] = Object.entries(memberFeedback)
       .filter(([_, feedback]) => feedback.trim())
       .map(([memberId, feedback]) => ({ memberId, feedback }));
+
+    const leadFeedbackList: LeadFeedback[] = Object.entries(leadFeedback)
+      .filter(([_, feedback]) => feedback.trim())
+      .map(([leadId, feedback]) => ({ leadId, feedback }));
 
     return {
       projectId: selectedProject,
@@ -484,7 +505,8 @@ export default function SubmitReport() {
       progress: progress || null,
       challenges: challenges || null,
       nextWeek: nextWeek || null,
-      teamMemberFeedback: feedback.length > 0 ? feedback : null,
+      teamMemberFeedback: memberFeedbackList.length > 0 ? memberFeedbackList : null,
+      leadFeedback: leadFeedbackList.length > 0 ? leadFeedbackList : null,
       status,
       submittedByLeadId: status === 'submitted' ? selectedLead : null,
     };
@@ -556,9 +578,13 @@ export default function SubmitReport() {
   const buildModalReportData = (status: 'draft' | 'submitted'): InsertWeeklyReport | null => {
     if (!modalProject) return null;
     
-    const feedback: TeamMemberFeedback[] = Object.entries(modalMemberFeedback)
+    const memberFeedbackList: TeamMemberFeedback[] = Object.entries(modalMemberFeedback)
       .filter(([_, feedback]) => feedback.trim())
       .map(([memberId, feedback]) => ({ memberId, feedback }));
+
+    const leadFeedbackList: LeadFeedback[] = Object.entries(modalLeadFeedback)
+      .filter(([_, feedback]) => feedback.trim())
+      .map(([leadId, feedback]) => ({ leadId, feedback }));
 
     // Get the primary lead ID from co-leads array or fallback to legacy leadId
     const projectLeadIds = getProjectLeadIds(modalProject);
@@ -572,7 +598,8 @@ export default function SubmitReport() {
       progress: modalProgress || null,
       challenges: modalChallenges || null,
       nextWeek: modalNextWeek || null,
-      teamMemberFeedback: feedback.length > 0 ? feedback : null,
+      teamMemberFeedback: memberFeedbackList.length > 0 ? memberFeedbackList : null,
+      leadFeedback: leadFeedbackList.length > 0 ? leadFeedbackList : null,
       status,
       // Track who submitted the report (using primary lead for now - could be enhanced with actual logged-in user)
       submittedByLeadId: status === 'submitted' ? primaryLeadId : null,
@@ -1094,30 +1121,66 @@ export default function SubmitReport() {
                     />
                   </div>
 
-                  {getProjectTeamMembers(modalProject).length > 0 && (
-                    <div className="space-y-3">
-                      <Label>Team Member Feedback (Optional)</Label>
-                      <div className="space-y-3 border rounded-md p-3">
-                        {getProjectTeamMembers(modalProject).map((member) => (
-                          <div key={member.id} className="space-y-1">
-                            <Label htmlFor={`modal-feedback-${member.id}`} className="text-sm font-medium">
-                              {member.name}
-                            </Label>
-                            <Textarea
-                              id={`modal-feedback-${member.id}`}
-                              data-testid={`modal-textarea-feedback-${member.id}`}
-                              value={modalMemberFeedback[member.id] || ''}
-                              onChange={(e) =>
-                                setModalMemberFeedback({ ...modalMemberFeedback, [member.id]: e.target.value })
-                              }
-                              placeholder={`Feedback for ${member.name}...`}
-                              rows={2}
-                            />
-                          </div>
-                        ))}
+                  {/* Member Feedback Section */}
+                  <div className="space-y-4">
+                    <Label className="text-base font-semibold">Member Feedback (Optional)</Label>
+                    
+                    {/* Feedback for Team Lead */}
+                    {getProjectLeadIds(modalProject).length > 0 && (
+                      <div className="space-y-3">
+                        <Label className="text-sm text-muted-foreground">Feedback for Team Lead</Label>
+                        <div className="space-y-3 border rounded-md p-3">
+                          {getProjectLeadIds(modalProject).map((leadId) => {
+                            const lead = projectLeads.find(l => l.id === leadId);
+                            if (!lead) return null;
+                            return (
+                              <div key={lead.id} className="space-y-1">
+                                <Label htmlFor={`modal-lead-feedback-${lead.id}`} className="text-sm font-medium">
+                                  {lead.name}
+                                </Label>
+                                <Textarea
+                                  id={`modal-lead-feedback-${lead.id}`}
+                                  data-testid={`modal-textarea-lead-feedback-${lead.id}`}
+                                  value={modalLeadFeedback[lead.id] || ''}
+                                  onChange={(e) =>
+                                    setModalLeadFeedback({ ...modalLeadFeedback, [lead.id]: e.target.value })
+                                  }
+                                  placeholder={`Feedback for ${lead.name}...`}
+                                  rows={2}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+
+                    {/* Feedback for Team Members */}
+                    {getProjectTeamMembers(modalProject).length > 0 && (
+                      <div className="space-y-3">
+                        <Label className="text-sm text-muted-foreground">Feedback for Team Member</Label>
+                        <div className="space-y-3 border rounded-md p-3">
+                          {getProjectTeamMembers(modalProject).map((member) => (
+                            <div key={member.id} className="space-y-1">
+                              <Label htmlFor={`modal-feedback-${member.id}`} className="text-sm font-medium">
+                                {member.name}
+                              </Label>
+                              <Textarea
+                                id={`modal-feedback-${member.id}`}
+                                data-testid={`modal-textarea-feedback-${member.id}`}
+                                value={modalMemberFeedback[member.id] || ''}
+                                onChange={(e) =>
+                                  setModalMemberFeedback({ ...modalMemberFeedback, [member.id]: e.target.value })
+                                }
+                                placeholder={`Feedback for ${member.name}...`}
+                                rows={2}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex flex-col sm:flex-row gap-3 pt-4">
                     <Button 

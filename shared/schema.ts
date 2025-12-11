@@ -59,6 +59,7 @@ export const weeklyReports = pgTable("weekly_reports", {
   challenges: text("challenges"),
   nextWeek: text("next_week"),
   teamMemberFeedback: jsonb("team_member_feedback"),
+  leadFeedback: jsonb("lead_feedback"), // Feedback for team lead(s): { leadId: string, feedback: string }[]
   status: text("status").notNull().default('draft'),
   submittedByLeadId: varchar("submitted_by_lead_id"), // Who actually submitted (for co-lead tracking)
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
@@ -125,6 +126,11 @@ export type InsertProjectLead = InsertPerson;
 
 export type TeamMemberFeedback = {
   memberId: string;
+  feedback: string;
+};
+
+export type LeadFeedback = {
+  leadId: string;
   feedback: string;
 };
 
