@@ -49,6 +49,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper to check user role
+  const getUserRole = async (userId: string): Promise<string> => {
+    const user = await storage.getUser(userId);
+    return user?.role || 'member';
+  };
+
+  // Role hierarchy for permission checking
+  const roleHierarchy: Record<string, number> = {
+    'admin': 4,
+    'manager': 3,
+    'lead': 2,
+    'member': 1
+  };
+
+  const hasMinRole = (userRole: string, requiredRole: string): boolean => {
+    return (roleHierarchy[userRole] || 0) >= (roleHierarchy[requiredRole] || 0);
+  };
+
+  // User profile routes
+  app.patch('/api/users/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { displayName } = req.body;
+      const updated = await storage.updateUserProfile(userId, { displayName });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all users (admin only)
+  app.get('/api/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userRole = await getUserRole(userId);
+      if (userRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update user role (admin only)
+  app.patch('/api/users/:userId/role', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const adminRole = await getUserRole(adminId);
+      if (adminRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const { userId } = req.params;
+      const { role } = req.body;
+      if (!['admin', 'manager', 'lead', 'member'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+      }
+      const updated = await storage.updateUserRole(userId, role);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin role switching (temporary override for testing)
+  // This is stored in session/memory, not in database
+  const adminRoleOverrides = new Map<string, string>(); // userId -> overrideRole
+
+  app.post('/api/users/switch-role', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const actualUser = await storage.getUser(userId);
+      if (actualUser?.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can switch roles' });
+      }
+      const { role } = req.body;
+      if (role === 'admin' || !role) {
+        // Clear override, use actual role
+        adminRoleOverrides.delete(userId);
+      } else if (['manager', 'lead', 'member'].includes(role)) {
+        adminRoleOverrides.set(userId, role);
+      }
+      res.json({ 
+        success: true, 
+        effectiveRole: adminRoleOverrides.get(userId) || actualUser?.role,
+        isOverridden: adminRoleOverrides.has(userId)
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get effective role (actual role or admin override)
+  app.get('/api/users/effective-role', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const overrideRole = adminRoleOverrides.get(userId);
+      res.json({
+        actualRole: user?.role || 'member',
+        effectiveRole: overrideRole || user?.role || 'member',
+        isOverridden: !!overrideRole
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Role request routes
+  app.get('/api/role-requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userRole = await getUserRole(userId);
+      if (userRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const requests = await storage.getRoleRequests();
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/role-requests/pending', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userRole = await getUserRole(userId);
+      if (userRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const requests = await storage.getPendingRoleRequests();
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/role-requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const { requestedRole, reason } = req.body;
+      if (!['manager', 'lead', 'admin'].includes(requestedRole)) {
+        return res.status(400).json({ error: 'Invalid requested role' });
+      }
+      const request = await storage.createRoleRequest({
+        userId,
+        userEmail: user?.email || '',
+        currentRole: user?.role || 'member',
+        requestedRole,
+        reason,
+        status: 'pending'
+      });
+      res.json(request);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch('/api/role-requests/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const adminRole = await getUserRole(adminId);
+      if (adminRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const { id } = req.params;
+      const { status } = req.body;
+      if (!['approved', 'denied'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+      }
+      const admin = await storage.getUser(adminId);
+      const updated = await storage.updateRoleRequest(id, status, admin?.email || 'admin');
+      
+      // If approved, update the user's role
+      if (status === 'approved' && updated) {
+        await storage.updateUserRole(updated.userId, updated.requestedRole as any);
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Project Edit Lock routes (for preventing simultaneous editing)
   // Check if a project is currently being edited by someone
   app.get('/api/project-locks/:projectId', isAuthenticated, async (req: any, res) => {

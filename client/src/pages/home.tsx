@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { FileText, FolderKanban, Eye, LogOut, Shield, BarChart3, TrendingUp, History, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { FileText, FolderKanban, Eye, Shield, BarChart3, TrendingUp, History, CheckCircle2, AlertTriangle } from 'lucide-react';
 import AppDemo from '@/components/AppDemo';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import ProjectsDashboard from '@/components/ProjectsDashboard';
 import SubmitReport from '@/components/SubmitReport';
 import ViewReports from '@/components/ViewReports';
 import HistoricalReports from '@/components/HistoricalReports';
+import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import { useQuery } from '@tanstack/react-query';
 import type { Project, WeeklyReport } from '@shared/schema';
 
@@ -15,10 +15,6 @@ export default function Home() {
   const [healthFilter, setHealthFilter] = useState<string>('all');
   const [shouldScrollToProjects, setShouldScrollToProjects] = useState(false);
   const [shouldClearFilters, setShouldClearFilters] = useState(false);
-  
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
-  };
 
   const handleActiveProjectsClick = () => {
     setActiveTab('teams-projects');
@@ -105,15 +101,7 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-2">
               <AppDemo onTabChange={setActiveTab} />
-              <Button 
-                variant="outline" 
-                onClick={handleLogout} 
-                data-testid="button-logout" 
-                className="shrink-0 glass-card border-white/10 hover:border-primary/50 hover:bg-primary/10 transition-all duration-200"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
+              <UserProfileDropdown />
             </div>
           </div>
 
