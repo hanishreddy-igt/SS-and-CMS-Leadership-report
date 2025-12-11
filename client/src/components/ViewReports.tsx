@@ -148,7 +148,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     attentionNeeded?: string[];
   }
   
-  // Comprehensive Team Member Summary
+  // Comprehensive SS/CMS Team Feedback Summary
   interface TeamHighlightItem {
     memberName: string;
     project: string;
@@ -1020,14 +1020,14 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       currentY = Math.max(currentY, rightY) + 4;
     }
     
-    // Team Member Summary section if available
+    // SS/CMS Team Feedback Summary section if available
     if (teamSummaryParam) {
       doc.setFillColor(...colors.navyLight as [number, number, number]);
       doc.roundedRect(14, currentY, pageWidth - 28, 8, 2, 2, 'F');
       doc.setTextColor(59, 130, 246); // Blue color for team
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Team Member Insights (AI-Powered)', 18, currentY + 5.5);
+      doc.text('SS/CMS Team Feedback Summary (AI-Powered)', 18, currentY + 5.5);
       currentY += 12;
       
       // Team morale indicator
@@ -1198,7 +1198,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       lines.push('');
     }
     
-    // Add Team Summary section if available
+    // Add SS/CMS Team Feedback Summary section if available
     if (teamSummaryParam) {
       const formatTeamItems = (items: unknown[] | undefined) => {
         if (!items) return '';
@@ -1216,11 +1216,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         }).join('; ').replace(/"/g, '""');
       };
       
-      lines.push('=== TEAM MEMBER INSIGHTS (AI-POWERED) ===');
+      lines.push('=== SS/CMS TEAM FEEDBACK SUMMARY (AI-POWERED) ===');
       const moraleLabel = teamSummaryParam.overallTeamMorale === 'positive' ? 'Positive' : 
                           teamSummaryParam.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
       lines.push(`"Team Morale","${moraleLabel}"`);
-      lines.push(`"Team Summary","${teamSummaryParam.teamSummary.replace(/"/g, '""')}"`);
+      lines.push(`"SS/CMS Team Feedback Summary","${teamSummaryParam.teamSummary.replace(/"/g, '""')}"`);
       lines.push(`"Team Highlights","${formatTeamItems(teamSummaryParam.teamHighlights)}"`);
       lines.push(`"Recognition Opportunities","${formatTeamItems(teamSummaryParam.recognitionOpportunities)}"`);
       lines.push(`"Team Concerns","${formatTeamItems(teamSummaryParam.teamConcerns)}"`);
@@ -1555,7 +1555,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       }
     }
 
-    // Comprehensive Team Summary Section (if available)
+    // SS/CMS Team Feedback Summary Section (if available)
     if (teamSummary) {
       // Check if we need a new page
       if (currentY > pageHeight - 50) {
@@ -1569,7 +1569,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       doc.setTextColor(59, 130, 246);
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('Team Member Insights (AI-Powered)', 18, currentY + 7);
+      doc.text('SS/CMS Team Feedback Summary (AI-Powered)', 18, currentY + 7);
       
       // Morale badge
       const moraleColors: Record<string, [number, number, number]> = {
@@ -1589,7 +1589,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       
       currentY += 14;
       
-      // Team Summary text
+      // SS/CMS Team Feedback Summary text
       doc.setTextColor(60, 60, 60);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
@@ -2102,7 +2102,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       doc.setTextColor(59, 130, 246);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('Team Member Insights', 18, currentY + 7);
+      doc.text('SS/CMS Team Feedback Summary', 18, currentY + 7);
       
       // Morale badge
       const moraleColors: Record<string, [number, number, number]> = {
@@ -2122,7 +2122,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       
       currentY += 15;
       
-      // Team Summary text
+      // SS/CMS Team Feedback Summary text
       doc.setTextColor(60, 60, 60);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
@@ -2570,7 +2570,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       doc.setTextColor(59, 130, 246);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('Team Member Insights', 18, currentY + 7);
+      doc.text('SS/CMS Team Feedback Summary', 18, currentY + 7);
       
       // Morale badge
       const moraleColors: Record<string, [number, number, number]> = {
@@ -2590,7 +2590,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       
       currentY += 15;
       
-      // Team Summary text
+      // SS/CMS Team Feedback Summary text
       doc.setTextColor(60, 60, 60);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
@@ -2918,7 +2918,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   <p className="text-xs text-primary mt-2">Click to view full summary</p>
                 </div>
 
-                {/* Team Members Summary Tile */}
+                {/* SS/CMS Team Feedback Summary Tile */}
                 {teamSummary && (
                   <div 
                     className={`p-4 rounded-lg cursor-pointer transition-all hover:border-blue-500/50 ${
@@ -3564,7 +3564,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground mb-4">
-                Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the Team Member Summary.
+                Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the SS/CMS Team Feedback Summary.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {(showAllFeedback ? peopleWithFeedback : peopleWithFeedback.slice(0, 8)).map((person) => (
