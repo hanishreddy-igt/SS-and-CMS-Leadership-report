@@ -195,6 +195,8 @@ export class MemStorage implements IStorage {
       startDate: insertProject.startDate ?? null,
       endDate: insertProject.endDate ?? null,
       projectType: insertProject.projectType ?? null,
+      customerContactEmail: insertProject.customerContactEmail ?? null,
+      totalContractualHours: insertProject.totalContractualHours ?? null,
     };
     this.projects.set(id, project);
     return project;

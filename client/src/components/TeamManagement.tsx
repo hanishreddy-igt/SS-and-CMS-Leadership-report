@@ -1,12 +1,20 @@
 import { useState } from 'react';
-import { Edit2, Trash2, Check, X } from 'lucide-react';
+import { Edit2, Trash2, Check, X, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import type { TeamMember, ProjectLead } from '@shared/schema';
+import type { TeamMember, ProjectLead, FeedbackEntry } from '@shared/schema';
+
+interface EligibleRecipient {
+  id: string;
+  name: string;
+}
 
 export default function TeamManagement() {
   const { toast } = useToast();
@@ -15,6 +23,13 @@ export default function TeamManagement() {
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  
+  // Feedback state
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [feedbackRecipient, setFeedbackRecipient] = useState<{ id: string; name: string; type: 'to_lead' | 'to_member' } | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [viewFeedbackDialogOpen, setViewFeedbackDialogOpen] = useState(false);
+  const [viewingFeedbackFor, setViewingFeedbackFor] = useState<{ id: string; name: string } | null>(null);
 
   const { data: teamMembers = [], isLoading: isLoadingMembers } = useQuery<TeamMember[]>({
     queryKey: ['/api/team-members'],
@@ -22,6 +37,41 @@ export default function TeamManagement() {
 
   const { data: projectLeads = [], isLoading: isLoadingLeads } = useQuery<ProjectLead[]>({
     queryKey: ['/api/project-leads'],
+  });
+
+  // Get eligible recipients for feedback to leads (when current user is a team member)
+  const { data: eligibleLeads } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
+    queryKey: ['/api/feedback/eligible-recipients', 'to_lead'],
+    queryFn: async () => {
+      const res = await fetch('/api/feedback/eligible-recipients?type=to_lead', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch eligible leads');
+      return res.json();
+    },
+  });
+
+  // Get eligible recipients for feedback to members (when current user is a lead)
+  const { data: eligibleMembers } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
+    queryKey: ['/api/feedback/eligible-recipients', 'to_member'],
+    queryFn: async () => {
+      const res = await fetch('/api/feedback/eligible-recipients?type=to_member', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch eligible members');
+      return res.json();
+    },
+  });
+
+  // Get feedback for the person being viewed
+  const { data: viewedFeedback = [] } = useQuery<FeedbackEntry[]>({
+    queryKey: ['/api/feedback', viewingFeedbackFor?.id],
+    queryFn: async () => {
+      if (!viewingFeedbackFor) return [];
+      const res = await fetch(`/api/feedback/${viewingFeedbackFor.id}`, { credentials: 'include' });
+      if (!res.ok) {
+        if (res.status === 403) return []; // Not authorized to view
+        throw new Error('Failed to fetch feedback');
+      }
+      return res.json();
+    },
+    enabled: !!viewingFeedbackFor,
   });
 
   const createMemberMutation = useMutation({
@@ -130,6 +180,25 @@ export default function TeamManagement() {
     },
   });
 
+  const submitFeedbackMutation = useMutation({
+    mutationFn: async (data: { recipientId: string; feedbackType: string; feedbackText: string }) => {
+      return await apiRequest('POST', '/api/feedback', data);
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Feedback submitted anonymously' });
+      setFeedbackDialogOpen(false);
+      setFeedbackRecipient(null);
+      setFeedbackText('');
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to submit feedback',
+        variant: 'destructive'
+      });
+    },
+  });
+
   const handleAddMember = () => {
     if (newMember.trim()) {
       createMemberMutation.mutate(newMember.trim());
@@ -162,6 +231,36 @@ export default function TeamManagement() {
     if (editValue.trim()) {
       updateLeadMutation.mutate({ id, name: editValue.trim() });
     }
+  };
+
+  const openFeedbackDialog = (person: { id: string; name: string }, type: 'to_lead' | 'to_member') => {
+    setFeedbackRecipient({ ...person, type });
+    setFeedbackText('');
+    setFeedbackDialogOpen(true);
+  };
+
+  const handleSubmitFeedback = () => {
+    if (!feedbackRecipient || !feedbackText.trim()) return;
+    submitFeedbackMutation.mutate({
+      recipientId: feedbackRecipient.id,
+      feedbackType: feedbackRecipient.type,
+      feedbackText: feedbackText.trim(),
+    });
+  };
+
+  const openViewFeedback = (person: { id: string; name: string }) => {
+    setViewingFeedbackFor(person);
+    setViewFeedbackDialogOpen(true);
+  };
+
+  // Check if a lead is eligible for feedback (user works with them)
+  const isLeadEligible = (leadId: string) => {
+    return eligibleLeads?.eligibleRecipients?.some(r => r.id === leadId) || false;
+  };
+
+  // Check if a member is eligible for feedback (user works with them)
+  const isMemberEligible = (memberId: string) => {
+    return eligibleMembers?.eligibleRecipients?.some(r => r.id === memberId) || false;
   };
 
   if (isLoadingMembers || isLoadingLeads) {
@@ -230,9 +329,23 @@ export default function TeamManagement() {
                   </div>
                 ) : (
                   <>
-                    <span data-testid={`text-member-${member.id}`} className="font-medium">
-                      {member.name}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span data-testid={`text-member-${member.id}`} className="font-medium">
+                        {member.name}
+                      </span>
+                      {isMemberEligible(member.id) && (
+                        <Button
+                          data-testid={`button-feedback-member-${member.id}`}
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openFeedbackDialog(member, 'to_member')}
+                          className="text-xs h-7 px-2 text-primary"
+                        >
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          Give Feedback
+                        </Button>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         data-testid={`button-edit-member-${member.id}`}
@@ -322,9 +435,23 @@ export default function TeamManagement() {
                   </div>
                 ) : (
                   <>
-                    <span data-testid={`text-lead-${lead.id}`} className="font-medium">
-                      {lead.name}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span data-testid={`text-lead-${lead.id}`} className="font-medium">
+                        {lead.name}
+                      </span>
+                      {isLeadEligible(lead.id) && (
+                        <Button
+                          data-testid={`button-feedback-lead-${lead.id}`}
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openFeedbackDialog(lead, 'to_lead')}
+                          className="text-xs h-7 px-2 text-primary"
+                        >
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          Give Feedback
+                        </Button>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         data-testid={`button-edit-lead-${lead.id}`}
@@ -353,6 +480,90 @@ export default function TeamManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Feedback Submission Dialog */}
+      <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-submit-feedback">
+          <DialogHeader>
+            <DialogTitle>
+              Give Anonymous Feedback
+            </DialogTitle>
+            <DialogDescription>
+              Your feedback will be submitted anonymously. {feedbackRecipient?.name} will not know who provided this feedback.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Feedback for: <span className="font-semibold">{feedbackRecipient?.name}</span></Label>
+              <p className="text-sm text-muted-foreground">
+                {feedbackRecipient?.type === 'to_lead' 
+                  ? 'You are providing feedback to a Team Lead you work with.'
+                  : 'You are providing feedback to a Team Member you work with.'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="feedback-text">Your Feedback</Label>
+              <Textarea
+                id="feedback-text"
+                data-testid="textarea-feedback"
+                placeholder="Share your constructive feedback here..."
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                rows={5}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setFeedbackDialogOpen(false)}
+              data-testid="button-cancel-feedback"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitFeedback}
+              disabled={!feedbackText.trim() || submitFeedbackMutation.isPending}
+              data-testid="button-submit-feedback"
+            >
+              {submitFeedbackMutation.isPending ? 'Submitting...' : 'Submit Anonymously'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Feedback Dialog */}
+      <Dialog open={viewFeedbackDialogOpen} onOpenChange={setViewFeedbackDialogOpen}>
+        <DialogContent className="max-w-lg" data-testid="dialog-view-feedback">
+          <DialogHeader>
+            <DialogTitle>
+              Feedback for {viewingFeedbackFor?.name}
+            </DialogTitle>
+            <DialogDescription>
+              All feedback is anonymous - you cannot see who provided it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-96 overflow-y-auto">
+            {viewedFeedback.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">No feedback received yet.</p>
+            ) : (
+              viewedFeedback.map((feedback) => (
+                <div key={feedback.id} className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <p className="text-sm">{feedback.feedbackText}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(feedback.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewFeedbackDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
