@@ -3878,18 +3878,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </Button>
                   </div>
                 </div>
-                
-                {/* Display existing feedback */}
-                {selectedLeadForDetail.feedback && (
-                  <div className="mt-4">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Previous Feedback</p>
-                    <div className="p-3 bg-muted/20 rounded-md max-h-32 overflow-y-auto">
-                      <p className="text-sm whitespace-pre-wrap" data-testid="text-lead-feedback">
-                        {selectedLeadForDetail.feedback}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -3991,18 +3979,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </Button>
                   </div>
                 </div>
-                
-                {/* Display existing feedback */}
-                {selectedMemberForDetail.feedback && (
-                  <div className="mt-4">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Previous Feedback</p>
-                    <div className="p-3 bg-muted/20 rounded-md max-h-32 overflow-y-auto">
-                      <p className="text-sm whitespace-pre-wrap" data-testid="text-member-feedback">
-                        {selectedMemberForDetail.feedback}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}

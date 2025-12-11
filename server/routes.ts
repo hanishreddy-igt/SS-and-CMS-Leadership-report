@@ -349,13 +349,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Person not found' });
       }
       
-      // Append new feedback with timestamp separator
-      const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      const newFeedbackEntry = `[${timestamp}] ${feedback.trim()}`;
+      // Append new feedback (merge with existing, no timestamp)
       const existingFeedback = person.feedback || '';
       const updatedFeedback = existingFeedback 
-        ? `${existingFeedback}\n\n${newFeedbackEntry}`
-        : newFeedbackEntry;
+        ? `${existingFeedback}\n\n${feedback.trim()}`
+        : feedback.trim();
       
       // Update the person with appended feedback
       const updated = await storage.updatePersonFeedback(req.params.id, updatedFeedback);
