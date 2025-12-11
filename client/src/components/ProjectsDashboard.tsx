@@ -3141,7 +3141,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem 
-                        onClick={() => startEditMember(member)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditMember(member);
+                        }}
                         data-testid={`button-edit-member-${member.id}`}
                       >
                         <Edit2 className="h-4 w-4 mr-2" />
