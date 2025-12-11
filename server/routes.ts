@@ -324,6 +324,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all people with feedback (for Member Feedback section)
+  app.get('/api/people/feedback', isAuthenticated, async (_req, res) => {
+    try {
+      const allPeople = await storage.getAllPeople();
+      const peopleWithFeedback = allPeople.filter(p => p.feedback && p.feedback.trim());
+      res.json(peopleWithFeedback);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Anonymous feedback submission endpoints - appends feedback with timestamp
+  app.post('/api/people/:id/feedback', isAuthenticated, async (req, res) => {
+    try {
+      const { feedback } = req.body;
+      if (!feedback || typeof feedback !== 'string' || !feedback.trim()) {
+        return res.status(400).json({ error: 'Feedback is required' });
+      }
+      
+      // Get current person (could be lead or member)
+      const person = await storage.getPersonById(req.params.id);
+      if (!person) {
+        return res.status(404).json({ error: 'Person not found' });
+      }
+      
+      // Append new feedback with timestamp separator
+      const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const newFeedbackEntry = `[${timestamp}] ${feedback.trim()}`;
+      const existingFeedback = person.feedback || '';
+      const updatedFeedback = existingFeedback 
+        ? `${existingFeedback}\n\n${newFeedbackEntry}`
+        : newFeedbackEntry;
+      
+      // Update the person with appended feedback
+      const updated = await storage.updatePersonFeedback(req.params.id, updatedFeedback);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Project Roles routes (protected)
   app.get('/api/project-roles', isAuthenticated, async (_req, res) => {
     try {
@@ -617,32 +658,35 @@ IMPORTANT:
 - For upcomingFocus, summarize the next week priorities across projects, grouping similar focuses
 - Be specific with project and customer names throughout`;
 
-      // Build context for TEAM MEMBER AI summary - only team member feedback
-      interface TeamMemberFeedbackItem {
-        memberId: string;
-        feedback: string;
-      }
+      // Build context for TEAM MEMBER AI summary - use anonymous feedback from people table
+      // This replaces the per-report feedback with aggregated anonymous feedback
+      const allPeople = await storage.getAllPeople();
+      const peopleWithFeedback = allPeople.filter((p: { feedback: string | null }) => p.feedback && p.feedback.trim());
       
-      const teamFeedbackContext = submittedReports.map(report => {
-        const project = projects.find(p => p.id === report.projectId);
-        const lead = leads.find(l => l.id === report.leadId);
-        const feedback = (report.teamMemberFeedback as TeamMemberFeedbackItem[] | null) || [];
+      // Get projects each person is associated with (either as lead or team member)
+      const teamFeedbackContext = peopleWithFeedback.map((person: { id: string; name: string; roles: string[]; feedback: string | null }) => {
+        // Find projects where this person is a lead
+        const ledProjects = projects.filter(p => 
+          p.leadIds?.includes(person.id) || p.leadId === person.id
+        ).map(p => p.name);
         
-        // Enrich feedback with team member names
-        const enrichedFeedback = feedback.map(f => {
-          const member = teamMembers.find(m => m.id === f.memberId);
-          return {
-            memberName: member?.name || 'Unknown Member',
-            feedback: f.feedback
-          };
-        }).filter(f => f.feedback && f.feedback.trim());
+        // Find projects where this person is a team member
+        const memberProjects = projects.filter(p => {
+          const assignments = (p.teamMembers as { memberId: string; role: string }[]) || [];
+          return assignments.some(a => a.memberId === person.id);
+        }).map(p => p.name);
+        
+        const allProjectsSet = new Set([...ledProjects, ...memberProjects]);
+        const allProjects = Array.from(allProjectsSet);
+        const role = person.roles?.includes('project-lead') ? 'Lead' : 'Team Member';
         
         return {
-          project: project?.name || 'Unknown Project',
-          lead: lead?.name || 'Unknown Lead',
-          teamFeedback: enrichedFeedback
+          personName: person.name,
+          role: role,
+          projects: allProjects.length > 0 ? allProjects : ['Not currently assigned'],
+          feedback: person.feedback
         };
-      }).filter(r => r.teamFeedback.length > 0);
+      });
 
       // Generate leadership summary (increased token limit for comprehensive analysis)
       const leadershipResponse = await openai.chat.completions.create({
@@ -662,12 +706,19 @@ IMPORTANT:
       // Generate team summary only if there's feedback
       let teamSummary = null;
       if (teamFeedbackContext.length > 0) {
-        const teamPrompt = `You are a senior HR analyst synthesizing team member feedback from weekly project reports. Your goal is to provide COMPREHENSIVE insights that help leadership understand team dynamics, recognize achievements, and address concerns proactively.
+        const teamPrompt = `You are a senior HR analyst synthesizing anonymous feedback about team members and leads. This feedback was submitted anonymously by colleagues who worked with these individuals during the week. Your goal is to provide COMPREHENSIVE insights that help leadership understand team dynamics, recognize achievements, and address concerns proactively.
 
-TEAM MEMBER FEEDBACK DATA:
+ANONYMOUS FEEDBACK DATA (feedback ABOUT each person from their colleagues):
 ${JSON.stringify(teamFeedbackContext, null, 2)}
 
+Each entry contains:
+- personName: The person this feedback is about
+- role: Whether they are a Lead or Team Member
+- projects: The projects they work on
+- feedback: Anonymous feedback from colleagues who worked with them this week (may contain multiple dated entries)
+
 INSTRUCTIONS:
+- This is feedback ABOUT each person, not feedback FROM them
 - Be thorough - include ALL significant feedback, not just a sample
 - Name specific team members when recognizing achievements or noting concerns
 - Identify patterns across projects and teams

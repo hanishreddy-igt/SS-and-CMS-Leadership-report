@@ -74,6 +74,11 @@ export interface IStorage {
   createProjectRole(role: InsertProjectRole): Promise<ProjectRole>;
   deleteProjectRole(id: string): Promise<boolean>;
   seedDefaultRoles(): Promise<void>;
+
+  // Person feedback operations
+  getAllPeople(): Promise<Person[]>;
+  getPersonById(id: string): Promise<Person | undefined>;
+  updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -360,6 +365,23 @@ export class MemStorage implements IStorage {
       }
     }
   }
+
+  // Person feedback operations for MemStorage
+  async getAllPeople(): Promise<Person[]> {
+    return Array.from(this.people.values());
+  }
+
+  async getPersonById(id: string): Promise<Person | undefined> {
+    return this.people.get(id);
+  }
+
+  async updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined> {
+    const person = this.people.get(id);
+    if (!person) return undefined;
+    const updated = { ...person, feedback };
+    this.people.set(id, updated);
+    return updated;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -452,6 +474,21 @@ export class DatabaseStorage implements IStorage {
   async deleteProjectLead(id: string): Promise<boolean> {
     const result = await db.delete(people).where(eq(people.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Generic person methods for feedback
+  async getPersonById(id: string): Promise<Person | undefined> {
+    const [person] = await db.select().from(people).where(eq(people.id, id));
+    return person || undefined;
+  }
+
+  async updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined> {
+    const [updated] = await db.update(people).set({ feedback }).where(eq(people.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async getAllPeople(): Promise<Person[]> {
+    return await db.select().from(people);
   }
 
   async getProjects(): Promise<Project[]> {

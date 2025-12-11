@@ -31,10 +31,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2 } from 'lucide-react';
+import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment } from '@shared/schema';
+import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment, Person } from '@shared/schema';
 
 const healthStatusConfig = {
   'on-track': { label: 'On Track', icon: CheckCircle2, color: 'text-success', bgColor: 'bg-success/10' },
@@ -60,6 +60,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
+  const { data: peopleWithFeedback = [] } = useQuery<Person[]>({ queryKey: ['/api/people/feedback'] });
   
   // Get the active reporting week from the API (stays open until archive runs)
   const { data: reportingWeek } = useQuery<ReportingWeekResponse>({ 
@@ -735,10 +736,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     .filter(member => member.name.toLowerCase().includes(memberSearch.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Generate CSV content for export/archive
+  // Generate CSV content for export/archive (includes member feedback section)
   const generateCSVContent = () => {
-    const headers = ['Project', 'Lead(s)', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback', 'Submitted', 'Submitted By'];
-    const rows = sortedReports.map((report) => {
+    // Reports section
+    const reportHeaders = ['Project', 'Lead(s)', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback', 'Submitted', 'Submitted By'];
+    const reportRows = sortedReports.map((report) => {
       const project = projects.find(p => p.id === report.projectId);
       const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
       const feedbackText = feedback && feedback.length > 0
@@ -763,10 +765,33 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       ];
     });
 
-    return [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
-    ].join('\n');
+    // Member Feedback section
+    const feedbackHeaders = ['Person Name', 'Role', 'Feedback'];
+    const feedbackRows = peopleWithFeedback.map((person) => {
+      const role = person.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member';
+      return [
+        person.name,
+        role,
+        (person.feedback || '').replace(/\n/g, ' | '), // Replace newlines with pipes for readability
+      ];
+    });
+
+    // Combine both sections with clear separator
+    const reportSection = [
+      '=== WEEKLY REPORTS ===',
+      reportHeaders.join(','),
+      ...reportRows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ];
+
+    const feedbackSection = [
+      '',
+      '',
+      '=== MEMBER FEEDBACK ===',
+      feedbackHeaders.join(','),
+      ...feedbackRows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ];
+
+    return [...reportSection, ...feedbackSection].join('\n');
   };
 
   const exportToCSV = () => {
@@ -2791,6 +2816,60 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   return (
     <div className="space-y-8">
+      {/* Member Feedback Section */}
+      <Card className="glass-card border-white/10">
+        <CardHeader className="border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <MessageSquare className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="section-label">Anonymous Feedback</p>
+              <CardTitle className="text-2xl">Member Feedback</CardTitle>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {peopleWithFeedback.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium mb-2">No feedback submitted yet</p>
+              <p className="text-sm">Anonymous feedback submitted about team members and leads will appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the Team Member Summary.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {peopleWithFeedback.map((person) => (
+                  <div 
+                    key={person.id}
+                    className="p-4 rounded-lg bg-muted/30 border border-white/5"
+                    data-testid={`feedback-card-${person.id}`}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{person.name}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {person.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
+                      <p className="text-sm whitespace-pre-wrap">{person.feedback}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* AI Summary Section */}
       <Card className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">

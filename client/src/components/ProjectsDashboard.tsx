@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -131,11 +131,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Person | null>(null);
   const [showMemberDetailModal, setShowMemberDetailModal] = useState(false);
 
-  // Feedback Form State for detail modals
+  // Feedback Form State for detail modals (anonymous submission)
   const [leadFeedbackValue, setLeadFeedbackValue] = useState('');
   const [memberFeedbackValue, setMemberFeedbackValue] = useState('');
-  const [isEditingLeadFeedback, setIsEditingLeadFeedback] = useState(false);
-  const [isEditingMemberFeedback, setIsEditingMemberFeedback] = useState(false);
 
   // Team Member Role Filter State
   const [filterMemberRoles, setFilterMemberRoles] = useState<string[]>([]);
@@ -874,38 +872,38 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     },
   });
 
-  // Feedback save mutations
-  const saveLeadFeedbackMutation = useMutation({
+  // Anonymous feedback submission mutations - appends feedback
+  const submitLeadFeedbackMutation = useMutation({
     mutationFn: async ({ id, feedback }: { id: string; feedback: string }) => {
-      return await apiRequest('PATCH', `/api/project-leads/${id}`, { feedback });
+      return await apiRequest('POST', `/api/people/${id}/feedback`, { feedback });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
-      toast({ title: 'Success', description: 'Feedback saved' });
-      setIsEditingLeadFeedback(false);
+      toast({ title: 'Feedback Submitted', description: 'Your anonymous feedback has been recorded' });
+      setLeadFeedbackValue('');
     },
     onError: () => {
       toast({ 
         title: 'Error', 
-        description: 'Failed to save feedback',
+        description: 'Failed to submit feedback',
         variant: 'destructive'
       });
     },
   });
 
-  const saveMemberFeedbackMutation = useMutation({
+  const submitMemberFeedbackMutation = useMutation({
     mutationFn: async ({ id, feedback }: { id: string; feedback: string }) => {
-      return await apiRequest('PATCH', `/api/team-members/${id}`, { feedback });
+      return await apiRequest('POST', `/api/people/${id}/feedback`, { feedback });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
-      toast({ title: 'Success', description: 'Feedback saved' });
-      setIsEditingMemberFeedback(false);
+      toast({ title: 'Feedback Submitted', description: 'Your anonymous feedback has been recorded' });
+      setMemberFeedbackValue('');
     },
     onError: () => {
       toast({ 
         title: 'Error', 
-        description: 'Failed to save feedback',
+        description: 'Failed to submit feedback',
         variant: 'destructive'
       });
     },
@@ -1176,8 +1174,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const handleLeadTileClick = (lead: Person) => {
     if (!selectionModeLeads) {
       setSelectedLeadForDetail(lead);
-      setLeadFeedbackValue(lead.feedback || '');
-      setIsEditingLeadFeedback(false);
+      setLeadFeedbackValue('');
       setShowLeadDetailModal(true);
     }
   };
@@ -1186,15 +1183,13 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setShowLeadDetailModal(false);
     setSelectedLeadForDetail(null);
     setLeadFeedbackValue('');
-    setIsEditingLeadFeedback(false);
   };
 
   // Handle team member tile click to show detail popup
   const handleMemberTileClick = (member: Person) => {
     if (!selectionModeMembers) {
       setSelectedMemberForDetail(member);
-      setMemberFeedbackValue(member.feedback || '');
-      setIsEditingMemberFeedback(false);
+      setMemberFeedbackValue('');
       setShowMemberDetailModal(true);
     }
   };
@@ -1203,7 +1198,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setShowMemberDetailModal(false);
     setSelectedMemberForDetail(null);
     setMemberFeedbackValue('');
-    setIsEditingMemberFeedback(false);
   };
 
   // Get projects a team member is working on with their roles
@@ -3843,72 +3837,57 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 })()}
               </div>
 
-              {/* Feedback Section */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    Feedback
-                  </p>
-                  {!isEditingLeadFeedback && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsEditingLeadFeedback(true)}
-                      data-testid="button-edit-lead-feedback"
-                    >
-                      <Edit2 className="h-3.5 w-3.5 mr-1" />
-                      {selectedLeadForDetail.feedback ? 'Edit' : 'Add'}
-                    </Button>
-                  )}
+              {/* Anonymous Feedback Submission Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-medium">Submit Feedback</p>
                 </div>
-                {isEditingLeadFeedback ? (
-                  <div className="space-y-2">
-                    <Textarea
-                      value={leadFeedbackValue}
-                      onChange={(e) => setLeadFeedbackValue(e.target.value)}
-                      placeholder="Enter feedback or notes about this team lead..."
-                      rows={3}
-                      data-testid="textarea-lead-feedback"
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setLeadFeedbackValue(selectedLeadForDetail.feedback || '');
-                          setIsEditingLeadFeedback(false);
-                        }}
-                        data-testid="button-cancel-lead-feedback"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          saveLeadFeedbackMutation.mutate({ 
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                    <span>Only fill this form if you have worked with this person this week.</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                    <span>Your feedback is anonymous and will not be attributed to you.</span>
+                  </div>
+                  <Textarea
+                    value={leadFeedbackValue}
+                    onChange={(e) => setLeadFeedbackValue(e.target.value)}
+                    placeholder="Share your feedback about working with this person..."
+                    rows={3}
+                    className="mt-2"
+                    data-testid="textarea-lead-feedback"
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (leadFeedbackValue.trim()) {
+                          submitLeadFeedbackMutation.mutate({ 
                             id: selectedLeadForDetail.id, 
                             feedback: leadFeedbackValue 
                           });
-                        }}
-                        disabled={saveLeadFeedbackMutation.isPending}
-                        data-testid="button-save-lead-feedback"
-                      >
-                        {saveLeadFeedbackMutation.isPending ? 'Saving...' : 'Save'}
-                      </Button>
-                    </div>
+                        }
+                      }}
+                      disabled={submitLeadFeedbackMutation.isPending || !leadFeedbackValue.trim()}
+                      data-testid="button-submit-lead-feedback"
+                    >
+                      {submitLeadFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+                    </Button>
                   </div>
-                ) : (
-                  <div className="p-3 bg-muted/30 rounded-md min-h-[60px]">
-                    {selectedLeadForDetail.feedback ? (
+                </div>
+                
+                {/* Display existing feedback */}
+                {selectedLeadForDetail.feedback && (
+                  <div className="mt-4">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Previous Feedback</p>
+                    <div className="p-3 bg-muted/20 rounded-md max-h-32 overflow-y-auto">
                       <p className="text-sm whitespace-pre-wrap" data-testid="text-lead-feedback">
                         {selectedLeadForDetail.feedback}
                       </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic" data-testid="text-lead-feedback-empty">
-                        No feedback added yet
-                      </p>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -3971,72 +3950,57 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 })()}
               </div>
 
-              {/* Feedback Section */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    Feedback
-                  </p>
-                  {!isEditingMemberFeedback && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsEditingMemberFeedback(true)}
-                      data-testid="button-edit-member-feedback"
-                    >
-                      <Edit2 className="h-3.5 w-3.5 mr-1" />
-                      {selectedMemberForDetail.feedback ? 'Edit' : 'Add'}
-                    </Button>
-                  )}
+              {/* Anonymous Feedback Submission Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-medium">Submit Feedback</p>
                 </div>
-                {isEditingMemberFeedback ? (
-                  <div className="space-y-2">
-                    <Textarea
-                      value={memberFeedbackValue}
-                      onChange={(e) => setMemberFeedbackValue(e.target.value)}
-                      placeholder="Enter feedback or notes about this team member..."
-                      rows={3}
-                      data-testid="textarea-member-feedback"
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setMemberFeedbackValue(selectedMemberForDetail.feedback || '');
-                          setIsEditingMemberFeedback(false);
-                        }}
-                        data-testid="button-cancel-member-feedback"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          saveMemberFeedbackMutation.mutate({ 
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                    <span>Only fill this form if you have worked with this person this week.</span>
+                  </div>
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                    <span>Your feedback is anonymous and will not be attributed to you.</span>
+                  </div>
+                  <Textarea
+                    value={memberFeedbackValue}
+                    onChange={(e) => setMemberFeedbackValue(e.target.value)}
+                    placeholder="Share your feedback about working with this person..."
+                    rows={3}
+                    className="mt-2"
+                    data-testid="textarea-member-feedback"
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (memberFeedbackValue.trim()) {
+                          submitMemberFeedbackMutation.mutate({ 
                             id: selectedMemberForDetail.id, 
                             feedback: memberFeedbackValue 
                           });
-                        }}
-                        disabled={saveMemberFeedbackMutation.isPending}
-                        data-testid="button-save-member-feedback"
-                      >
-                        {saveMemberFeedbackMutation.isPending ? 'Saving...' : 'Save'}
-                      </Button>
-                    </div>
+                        }
+                      }}
+                      disabled={submitMemberFeedbackMutation.isPending || !memberFeedbackValue.trim()}
+                      data-testid="button-submit-member-feedback"
+                    >
+                      {submitMemberFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+                    </Button>
                   </div>
-                ) : (
-                  <div className="p-3 bg-muted/30 rounded-md min-h-[60px]">
-                    {selectedMemberForDetail.feedback ? (
+                </div>
+                
+                {/* Display existing feedback */}
+                {selectedMemberForDetail.feedback && (
+                  <div className="mt-4">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Previous Feedback</p>
+                    <div className="p-3 bg-muted/20 rounded-md max-h-32 overflow-y-auto">
                       <p className="text-sm whitespace-pre-wrap" data-testid="text-member-feedback">
                         {selectedMemberForDetail.feedback}
                       </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic" data-testid="text-member-feedback-empty">
-                        No feedback added yet
-                      </p>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
