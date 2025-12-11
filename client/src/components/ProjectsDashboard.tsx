@@ -5,14 +5,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -71,8 +70,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [editMemberValue, setEditMemberValue] = useState('');
-  const [editMemberEmailValue, setEditMemberEmailValue] = useState('');
-  const [showEditMemberDialog, setShowEditMemberDialog] = useState(false);
   const [editLeadValue, setEditLeadValue] = useState('');
   const [editLeadEmailValue, setEditLeadEmailValue] = useState('');
   const [showEditLeadDialog, setShowEditLeadDialog] = useState(false);
@@ -97,7 +94,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   // Add Team Member Modal State
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [newMember, setNewMember] = useState('');
-  const [newMemberEmail, setNewMemberEmail] = useState('');
   const [memberNameError, setMemberNameError] = useState<string | null>(null);
   const [memberNameWarning, setMemberNameWarning] = useState<string | null>(null);
 
@@ -146,83 +142,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   // Email display toggle state - track which leads' emails are visible (supports multiple)
   const [visibleLeadEmails, setVisibleLeadEmails] = useState<Set<string>>(new Set());
-
-  // Feedback state
-  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
-  const [feedbackRecipient, setFeedbackRecipient] = useState<{ id: string; name: string; type: 'to_lead' | 'to_member' } | null>(null);
-  const [feedbackText, setFeedbackText] = useState('');
-
-  // Feedback queries
-  interface EligibleRecipient {
-    id: string;
-    name: string;
-  }
-
-  const { data: eligibleLeads, refetch: refetchEligibleLeads } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
-    queryKey: ['/api/feedback/eligible-recipients', 'to_lead'],
-    queryFn: async () => {
-      const res = await fetch('/api/feedback/eligible-recipients?type=to_lead', { credentials: 'include' });
-      if (!res.ok) return { eligibleRecipients: [] };
-      return res.json();
-    },
-  });
-
-  const { data: eligibleMembers, refetch: refetchEligibleMembers } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
-    queryKey: ['/api/feedback/eligible-recipients', 'to_member'],
-    queryFn: async () => {
-      const res = await fetch('/api/feedback/eligible-recipients?type=to_member', { credentials: 'include' });
-      if (!res.ok) return { eligibleRecipients: [] };
-      return res.json();
-    },
-  });
-
-  // Refetch feedback eligibility when team members, leads, or projects change
-  useEffect(() => {
-    refetchEligibleLeads();
-    refetchEligibleMembers();
-  }, [teamMembers, projectLeads, projects]);
-
-  const submitFeedbackMutation = useMutation({
-    mutationFn: async (data: { recipientId: string; feedbackType: string; feedbackText: string }) => {
-      return await apiRequest('POST', '/api/feedback', data);
-    },
-    onSuccess: () => {
-      toast({ title: 'Success', description: 'Feedback submitted anonymously' });
-      setFeedbackDialogOpen(false);
-      setFeedbackRecipient(null);
-      setFeedbackText('');
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: 'Error', 
-        description: error.message || 'Failed to submit feedback',
-        variant: 'destructive'
-      });
-    },
-  });
-
-  const isLeadEligibleForFeedback = (leadId: string) => {
-    return eligibleLeads?.eligibleRecipients?.some(r => r.id === leadId) || false;
-  };
-
-  const isMemberEligibleForFeedback = (memberId: string) => {
-    return eligibleMembers?.eligibleRecipients?.some(r => r.id === memberId) || false;
-  };
-
-  const openFeedbackDialog = (person: { id: string; name: string }, type: 'to_lead' | 'to_member') => {
-    setFeedbackRecipient({ ...person, type });
-    setFeedbackText('');
-    setFeedbackDialogOpen(true);
-  };
-
-  const handleSubmitFeedback = () => {
-    if (!feedbackRecipient || !feedbackText.trim()) return;
-    submitFeedbackMutation.mutate({
-      recipientId: feedbackRecipient.id,
-      feedbackType: feedbackRecipient.type,
-      feedbackText: feedbackText.trim(),
-    });
-  };
 
   // Effect to clear all filters when triggered from parent (Active Projects tile)
   useEffect(() => {
@@ -827,14 +746,13 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   // Team member mutations
   const createMemberMutation = useMutation({
-    mutationFn: async ({ name, email }: { name: string; email?: string }) => {
-      return await apiRequest('POST', '/api/team-members', { name, email });
+    mutationFn: async (name: string) => {
+      return await apiRequest('POST', '/api/team-members', { name });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member added' });
       setNewMember('');
-      setNewMemberEmail('');
       setMemberNameError(null);
       setMemberNameWarning(null);
       setShowAddMemberDialog(false);
@@ -849,16 +767,13 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   });
 
   const updateMemberMutation = useMutation({
-    mutationFn: async ({ id, name, email }: { id: string; name: string; email?: string }) => {
-      return await apiRequest('PATCH', `/api/team-members/${id}`, { name, email });
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      return await apiRequest('PATCH', `/api/team-members/${id}`, { name });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member updated' });
-      setShowEditMemberDialog(false);
       setEditingMemberId(null);
-      setEditMemberValue('');
-      setEditMemberEmailValue('');
     },
     onError: () => {
       toast({ 
@@ -1031,8 +946,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const startEditMember = (member: TeamMember) => {
     setEditingMemberId(member.id);
     setEditMemberValue(member.name);
-    setEditMemberEmailValue(member.email || '');
-    setShowEditMemberDialog(true);
   };
 
   const startEditLead = (lead: ProjectLead) => {
@@ -1042,21 +955,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setShowEditLeadDialog(true);
   };
 
-  const saveEditMember = () => {
-    if (editingMemberId && editMemberValue.trim()) {
-      updateMemberMutation.mutate({ 
-        id: editingMemberId, 
-        name: editMemberValue.trim(),
-        email: editMemberEmailValue.trim() || undefined
-      });
+  const saveEditMember = (id: string) => {
+    if (editMemberValue.trim()) {
+      updateMemberMutation.mutate({ id, name: editMemberValue.trim() });
     }
-  };
-
-  const cancelEditMember = () => {
-    setShowEditMemberDialog(false);
-    setEditingMemberId(null);
-    setEditMemberValue('');
-    setEditMemberEmailValue('');
   };
 
   const saveEditLead = () => {
@@ -1158,7 +1060,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const handleAddMember = () => {
     if (newMember.trim() && !memberNameError) {
-      createMemberMutation.mutate({ name: newMember.trim(), email: newMemberEmail.trim() || undefined });
+      createMemberMutation.mutate(newMember.trim());
     }
   };
 
@@ -2975,7 +2877,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 setShowAddMemberDialog(open);
                 if (!open) {
                   setNewMember('');
-                  setNewMemberEmail('');
                   setMemberNameError(null);
                   setMemberNameWarning(null);
                 }
@@ -3013,27 +2914,12 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <p className="text-sm text-amber-600" data-testid="warning-member-similar">{memberNameWarning}</p>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-member-email">Email Address</Label>
-                    <Input
-                      id="new-member-email"
-                      data-testid="input-member-email"
-                      type="email"
-                      value={newMemberEmail}
-                      onChange={(e) => setNewMemberEmail(e.target.value)}
-                      placeholder="Enter email address (enables feedback feature)"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Email is required to enable the anonymous feedback feature.
-                    </p>
-                  </div>
                   <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setShowAddMemberDialog(false);
                         setNewMember('');
-                        setNewMemberEmail('');
                         setMemberNameError(null);
                         setMemberNameWarning(null);
                       }}
@@ -3130,7 +3016,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       data-testid={`button-save-member-${member.id}`}
                       size="icon"
                       variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); saveEditMember(); }}
+                      onClick={(e) => { e.stopPropagation(); saveEditMember(member.id); }}
                       disabled={updateMemberMutation.isPending}
                       className="text-green-600 hover:text-green-700"
                     >
@@ -3169,16 +3055,16 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuContent align="end">
                           <DropdownMenuItem 
-                            onClick={(e) => { e.stopPropagation(); startEditMember(member); }}
+                            onClick={() => startEditMember(member)}
                             data-testid={`button-edit-member-${member.id}`}
                           >
                             <Edit2 className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={(e) => { e.stopPropagation(); deleteMemberMutation.mutate(member.id); }}
+                            onClick={() => deleteMemberMutation.mutate(member.id)}
                             disabled={deleteMemberMutation.isPending}
                             className="text-destructive focus:text-destructive"
                             data-testid={`button-delete-member-${member.id}`}
@@ -3400,7 +3286,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuContent align="end">
                       <DropdownMenuItem 
                         onClick={(e) => { e.stopPropagation(); startEditLead(lead); }}
                         data-testid={`button-edit-lead-${lead.id}`}
@@ -3781,61 +3667,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         </DialogContent>
       </Dialog>
 
-      {/* Edit Team Member Dialog */}
-      <Dialog open={showEditMemberDialog} onOpenChange={(open) => !open && cancelEditMember()}>
-        <DialogContent data-testid="dialog-edit-member">
-          <DialogHeader>
-            <DialogTitle>Edit Team Member</DialogTitle>
-            <DialogDescription>
-              Update the team member's name and email address.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-member-name">Team Member Name <span className="text-red-500">*</span></Label>
-              <Input
-                id="edit-member-name"
-                data-testid="input-edit-member-name"
-                type="text"
-                value={editMemberValue}
-                onChange={(e) => setEditMemberValue(e.target.value)}
-                placeholder="Enter team member name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-member-email">Email Address</Label>
-              <Input
-                id="edit-member-email"
-                data-testid="input-edit-member-email"
-                type="email"
-                value={editMemberEmailValue}
-                onChange={(e) => setEditMemberEmailValue(e.target.value)}
-                placeholder="Enter email address (enables feedback feature)"
-              />
-              <p className="text-xs text-muted-foreground">
-                Email is required to enable the anonymous feedback feature.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={cancelEditMember}
-                data-testid="button-cancel-edit-member"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={saveEditMember}
-                disabled={updateMemberMutation.isPending || !editMemberValue.trim()}
-                data-testid="button-save-edit-member"
-              >
-                {updateMemberMutation.isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Lead Detail Modal */}
       <Dialog open={showLeadDetailModal} onOpenChange={(open) => !open && closeLeadDetailModal()}>
         <DialogContent className="sm:max-w-md" data-testid="dialog-lead-detail">
@@ -3909,23 +3740,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   );
                 })()}
               </div>
-
-              {/* Give Feedback Button */}
-              {isLeadEligibleForFeedback(selectedLeadForDetail.id) && (
-                <div className="pt-4 border-t">
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => {
-                      closeLeadDetailModal();
-                      openFeedbackDialog(selectedLeadForDetail, 'to_lead');
-                    }}
-                    data-testid="button-feedback-lead-detail"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    Give Anonymous Feedback
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
@@ -3984,76 +3798,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   );
                 })()}
               </div>
-
-              {/* Give Feedback Button */}
-              {isMemberEligibleForFeedback(selectedMemberForDetail.id) && (
-                <div className="pt-4 border-t">
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => {
-                      closeMemberDetailModal();
-                      openFeedbackDialog(selectedMemberForDetail, 'to_member');
-                    }}
-                    data-testid="button-feedback-member-detail"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    Give Anonymous Feedback
-                  </Button>
-                </div>
-              )}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Feedback Submission Dialog */}
-      <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
-        <DialogContent className="max-w-md" data-testid="dialog-submit-feedback">
-          <DialogHeader>
-            <DialogTitle>
-              Give Anonymous Feedback
-            </DialogTitle>
-            <DialogDescription>
-              Your feedback will be submitted anonymously. {feedbackRecipient?.name} will not know who provided this feedback.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Feedback for: <span className="font-semibold">{feedbackRecipient?.name}</span></Label>
-              <p className="text-sm text-muted-foreground">
-                {feedbackRecipient?.type === 'to_lead' 
-                  ? 'You are providing feedback to a Team Lead you work with.'
-                  : 'You are providing feedback to a Team Member you work with.'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="feedback-text">Your Feedback</Label>
-              <Textarea
-                id="feedback-text"
-                data-testid="textarea-feedback"
-                placeholder="Share your constructive feedback here..."
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-                rows={5}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setFeedbackDialogOpen(false)}
-              data-testid="button-cancel-feedback"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmitFeedback}
-              disabled={!feedbackText.trim() || submitFeedbackMutation.isPending}
-              data-testid="button-submit-feedback"
-            >
-              {submitFeedbackMutation.isPending ? 'Submitting...' : 'Submit Anonymously'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

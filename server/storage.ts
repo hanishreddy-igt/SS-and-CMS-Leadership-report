@@ -18,10 +18,8 @@ import type {
   InsertCurrentAiSummary,
   ProjectRole,
   InsertProjectRole,
-  FeedbackEntry,
-  InsertFeedbackEntry,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, feedbackEntries } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -29,9 +27,6 @@ export interface IStorage {
   // User operations (required for authentication)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-
-  // All People (regardless of role)
-  getAllPeople(): Promise<Person[]>;
 
   // Team Members (using unified people)
   getTeamMembers(): Promise<TeamMember[]>;
@@ -79,10 +74,6 @@ export interface IStorage {
   createProjectRole(role: InsertProjectRole): Promise<ProjectRole>;
   deleteProjectRole(id: string): Promise<boolean>;
   seedDefaultRoles(): Promise<void>;
-
-  // Feedback Entries (anonymous)
-  getFeedbackForRecipient(recipientId: string): Promise<FeedbackEntry[]>;
-  createFeedback(feedback: InsertFeedbackEntry): Promise<FeedbackEntry>;
 }
 
 export class MemStorage implements IStorage {
@@ -106,11 +97,6 @@ export class MemStorage implements IStorage {
   // User operations (required for authentication)
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
-  }
-
-  // Get all people regardless of role
-  async getAllPeople(): Promise<Person[]> {
-    return Array.from(this.people.values());
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -203,8 +189,6 @@ export class MemStorage implements IStorage {
       startDate: insertProject.startDate ?? null,
       endDate: insertProject.endDate ?? null,
       projectType: insertProject.projectType ?? null,
-      customerContactEmail: insertProject.customerContactEmail ?? null,
-      totalContractualHours: insertProject.totalContractualHours ?? null,
     };
     this.projects.set(id, project);
     return project;
@@ -376,28 +360,9 @@ export class MemStorage implements IStorage {
       }
     }
   }
-
-  // Feedback Entries - MemStorage implementation
-  private feedbackEntries: Map<string, FeedbackEntry> = new Map();
-
-  async getFeedbackForRecipient(recipientId: string): Promise<FeedbackEntry[]> {
-    return Array.from(this.feedbackEntries.values()).filter(f => f.recipientId === recipientId);
-  }
-
-  async createFeedback(feedback: InsertFeedbackEntry): Promise<FeedbackEntry> {
-    const id = randomUUID();
-    const newFeedback: FeedbackEntry = { ...feedback, id, createdAt: new Date() };
-    this.feedbackEntries.set(id, newFeedback);
-    return newFeedback;
-  }
 }
 
 export class DatabaseStorage implements IStorage {
-  // Get all people regardless of role
-  async getAllPeople(): Promise<Person[]> {
-    return await db.select().from(people);
-  }
-
   // User operations (required for authentication)
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -638,16 +603,6 @@ export class DatabaseStorage implements IStorage {
         // Ignore duplicate key errors
       }
     }
-  }
-
-  // Feedback Entries - DatabaseStorage implementation
-  async getFeedbackForRecipient(recipientId: string): Promise<FeedbackEntry[]> {
-    return await db.select().from(feedbackEntries).where(eq(feedbackEntries.recipientId, recipientId));
-  }
-
-  async createFeedback(feedback: InsertFeedbackEntry): Promise<FeedbackEntry> {
-    const [newFeedback] = await db.insert(feedbackEntries).values(feedback).returning();
-    return newFeedback;
   }
 }
 
