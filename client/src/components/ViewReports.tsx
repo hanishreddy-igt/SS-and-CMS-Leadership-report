@@ -2816,60 +2816,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   return (
     <div className="space-y-8">
-      {/* Member Feedback Section */}
-      <Card className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <MessageSquare className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="section-label">Anonymous Feedback</p>
-              <CardTitle className="text-2xl">Member Feedback</CardTitle>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {peopleWithFeedback.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p className="text-lg font-medium mb-2">No feedback submitted yet</p>
-              <p className="text-sm">Anonymous feedback submitted about team members and leads will appear here.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground mb-4">
-                Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the Team Member Summary.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {peopleWithFeedback.map((person) => (
-                  <div 
-                    key={person.id}
-                    className="p-4 rounded-lg bg-muted/30 border border-white/5"
-                    data-testid={`feedback-card-${person.id}`}
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{person.name}</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {person.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
-                      <p className="text-sm whitespace-pre-wrap">{person.feedback}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* AI Summary Section */}
       <Card className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
@@ -2880,7 +2826,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               </div>
               <div>
                 <p className="section-label">AI-Powered Insights</p>
-                <CardTitle className="text-2xl">Weekly Summary</CardTitle>
+                <CardTitle className="text-2xl">AI Summary</CardTitle>
               </div>
             </div>
             <Button
@@ -3564,6 +3510,60 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         </DialogContent>
       </Dialog>
 
+      {/* SS/CMS Team Feedbacks Section */}
+      <Card className="glass-card border-white/10">
+        <CardHeader className="border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <MessageSquare className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="section-label">Anonymous Feedback</p>
+              <CardTitle className="text-2xl">SS/CMS Team Feedbacks</CardTitle>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {peopleWithFeedback.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium mb-2">No feedback submitted yet</p>
+              <p className="text-sm">Anonymous feedback submitted about team members and leads will appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the Team Member Summary.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {peopleWithFeedback.map((person) => (
+                  <div 
+                    key={person.id}
+                    className="p-4 rounded-lg bg-muted/30 border border-white/5"
+                    data-testid={`feedback-card-${person.id}`}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{person.name}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {person.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
+                      <p className="text-sm whitespace-pre-wrap">{person.feedback}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card id="weekly-reports-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col gap-4">
@@ -3575,7 +3575,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   onClick={clearAllFilters}
                   data-testid="title-weekly-reports"
                 >
-                  Weekly Reports <span className="text-primary">({filteredReports.length})</span>
+                  Account Reports <span className="text-primary">({filteredReports.length})</span>
                 </CardTitle>
               </div>
               <div className="flex flex-wrap gap-2">
