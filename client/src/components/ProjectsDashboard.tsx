@@ -367,13 +367,16 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     return assignments.some(a => !a.role || a.role.trim() === '');
   };
 
-  // Helper to check if a project has caution (missing end date OR unfilled team member roles)
+  // Helper to check if a project has caution (missing end date OR unfilled team member roles OR missing contractual hours)
   const projectHasCaution = (project: Project): boolean => {
     // Check for missing end date
     if (!project.endDate) return true;
     
     // Check for unfilled team member roles
     if (projectHasUnfilledRoles(project)) return true;
+    
+    // Check for missing contractual hours
+    if (!project.totalContractualHours) return true;
     
     return false;
   };
@@ -2406,7 +2409,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     )}
                     
                     {/* Caution warnings */}
-                    {(!project.endDate || projectHasUnfilledRoles(project)) && (
+                    {(!project.endDate || projectHasUnfilledRoles(project) || !project.totalContractualHours) && (
                       <div className="space-y-1 mt-2">
                         {!project.endDate && (
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-end-date-${project.id}`}>
@@ -2418,6 +2421,12 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-unfilled-roles-${project.id}`}>
                             <AlertTriangle className="h-4 w-4" />
                             <span>Team member roles not filled</span>
+                          </div>
+                        )}
+                        {!project.totalContractualHours && (
+                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-hours-${project.id}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>Total contractual hours missing</span>
                           </div>
                         )}
                       </div>
