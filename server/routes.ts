@@ -891,21 +891,23 @@ IMPORTANT:
       const allPeople = await storage.getAllPeople();
       const allProjects = await storage.getProjects();
       
-      // Find the current user's person record by email
-      const currentPerson = allPeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      // Find ALL person records matching the user's email (user might have both lead and member records)
+      const currentPersonRecords = allPeople.filter(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
       
-      if (!currentPerson) {
+      if (currentPersonRecords.length === 0) {
         return res.json({ eligibleRecipients: [] });
       }
       
+      const currentPersonIds = new Set(currentPersonRecords.map(p => p.id));
       const eligibleRecipientIds = new Set<string>();
       
       if (feedbackType === 'to_lead') {
         // Current user wants to give feedback to leads
-        // Find all projects where current user is a team member
+        // Find all projects where ANY of the user's person records is a team member
         for (const project of allProjects) {
           const teamMemberIds = ((project.teamMembers as TeamMemberAssignment[]) || []).map(tm => tm.memberId);
-          if (teamMemberIds.includes(currentPerson.id)) {
+          const userIsTeamMember = teamMemberIds.some(id => currentPersonIds.has(id));
+          if (userIsTeamMember) {
             // User is a team member on this project - can give feedback to all leads
             const leadIds = project.leadIds?.length ? project.leadIds : [project.leadId];
             leadIds.forEach(id => eligibleRecipientIds.add(id));
@@ -913,10 +915,11 @@ IMPORTANT:
         }
       } else {
         // Current user wants to give feedback to team members
-        // Find all projects where current user is a lead
+        // Find all projects where ANY of the user's person records is a lead
         for (const project of allProjects) {
           const leadIds = project.leadIds?.length ? project.leadIds : [project.leadId];
-          if (leadIds.includes(currentPerson.id)) {
+          const userIsLead = leadIds.some(id => currentPersonIds.has(id));
+          if (userIsLead) {
             // User is a lead on this project - can give feedback to all team members
             const teamMemberIds = ((project.teamMembers as TeamMemberAssignment[]) || []).map(tm => tm.memberId);
             teamMemberIds.forEach(id => eligibleRecipientIds.add(id));
@@ -924,8 +927,8 @@ IMPORTANT:
         }
       }
       
-      // Remove self from eligible recipients (prevent self-feedback)
-      eligibleRecipientIds.delete(currentPerson.id);
+      // Remove all of user's own person records from eligible recipients (prevent self-feedback)
+      currentPersonIds.forEach(id => eligibleRecipientIds.delete(id));
       
       // Get the person details for eligible recipients
       const eligibleRecipients = allPeople
@@ -959,14 +962,17 @@ IMPORTANT:
       const allPeople = await storage.getAllPeople();
       const allProjects = await storage.getProjects();
       
-      const currentPerson = allPeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      // Find ALL person records matching the user's email (user might have both lead and member records)
+      const currentPersonRecords = allPeople.filter(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
       
-      if (!currentPerson) {
+      if (currentPersonRecords.length === 0) {
         return res.status(403).json({ error: 'You must be registered as a team member or lead to give feedback' });
       }
       
+      const currentPersonIds = new Set(currentPersonRecords.map(p => p.id));
+      
       // Prevent self-feedback
-      if (currentPerson.id === recipientId) {
+      if (currentPersonIds.has(recipientId)) {
         return res.status(403).json({ error: 'You cannot give feedback to yourself' });
       }
       
@@ -974,21 +980,23 @@ IMPORTANT:
       let isEligible = false;
       
       if (feedbackType === 'to_lead') {
-        // Check if current user is a team member on any project led by recipientId
+        // Check if any of user's person records is a team member on a project led by recipientId
         for (const project of allProjects) {
           const teamMemberIds = ((project.teamMembers as TeamMemberAssignment[]) || []).map(tm => tm.memberId);
           const leadIds = project.leadIds?.length ? project.leadIds : [project.leadId];
-          if (teamMemberIds.includes(currentPerson.id) && leadIds.includes(recipientId)) {
+          const userIsTeamMember = teamMemberIds.some(id => currentPersonIds.has(id));
+          if (userIsTeamMember && leadIds.includes(recipientId)) {
             isEligible = true;
             break;
           }
         }
       } else {
-        // Check if current user is a lead on any project where recipientId is a team member
+        // Check if any of user's person records is a lead on a project where recipientId is a team member
         for (const project of allProjects) {
           const teamMemberIds = ((project.teamMembers as TeamMemberAssignment[]) || []).map(tm => tm.memberId);
           const leadIds = project.leadIds?.length ? project.leadIds : [project.leadId];
-          if (leadIds.includes(currentPerson.id) && teamMemberIds.includes(recipientId)) {
+          const userIsLead = leadIds.some(id => currentPersonIds.has(id));
+          if (userIsLead && teamMemberIds.includes(recipientId)) {
             isEligible = true;
             break;
           }
@@ -1019,12 +1027,13 @@ IMPORTANT:
       const userEmail = req.user.claims.email;
       const { recipientId } = req.params;
       
-      // Get the user's person record
+      // Get all person records matching the user's email
       const allPeople = await storage.getAllPeople();
-      const currentPerson = allPeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      const currentPersonRecords = allPeople.filter(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      const currentPersonIds = new Set(currentPersonRecords.map(p => p.id));
       
-      // Only allow viewing your own feedback
-      if (!currentPerson || currentPerson.id !== recipientId) {
+      // Only allow viewing feedback for your own person records
+      if (currentPersonIds.size === 0 || !currentPersonIds.has(recipientId)) {
         return res.status(403).json({ error: 'You can only view feedback given to you' });
       }
       
