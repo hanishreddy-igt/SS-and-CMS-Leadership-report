@@ -3145,9 +3145,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenuItem 
-                            onClick={() => startEditMember(member)}
+                            onClick={(e) => { e.stopPropagation(); startEditMember(member); }}
                             data-testid={`button-edit-member-${member.id}`}
                           >
                             <Edit2 className="h-4 w-4 mr-2" />
@@ -3155,7 +3155,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </DropdownMenuItem>
                           {isMemberEligibleForFeedback(member.id) && (
                             <DropdownMenuItem 
-                              onClick={() => openFeedbackDialog(member, 'to_member')}
+                              onClick={(e) => { e.stopPropagation(); openFeedbackDialog(member, 'to_member'); }}
                               data-testid={`button-feedback-member-${member.id}`}
                             >
                               <MessageSquare className="h-4 w-4 mr-2" />
@@ -3163,7 +3163,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem 
-                            onClick={() => deleteMemberMutation.mutate(member.id)}
+                            onClick={(e) => { e.stopPropagation(); deleteMemberMutation.mutate(member.id); }}
                             disabled={deleteMemberMutation.isPending}
                             className="text-destructive focus:text-destructive"
                             data-testid={`button-delete-member-${member.id}`}
@@ -3385,7 +3385,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenuItem 
                         onClick={(e) => { e.stopPropagation(); startEditLead(lead); }}
                         data-testid={`button-edit-lead-${lead.id}`}
