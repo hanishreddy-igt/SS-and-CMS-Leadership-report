@@ -3569,7 +3569,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <p className="section-label">Report Archive</p>
+                <p className="section-label">Weekly Reports</p>
                 <CardTitle 
                   className="text-2xl cursor-pointer hover:text-primary transition-colors"
                   onClick={clearAllFilters}
