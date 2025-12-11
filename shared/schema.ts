@@ -93,9 +93,23 @@ export const projectRoles = pgTable("project_roles", {
   isDefault: text("is_default").default('false'), // Whether it's a system default role
 });
 
+// Anonymous feedback entries - NO giver ID stored to maintain anonymity
+export const feedbackEntries = pgTable("feedback_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  recipientId: varchar("recipient_id").notNull(), // The person receiving feedback
+  feedbackType: text("feedback_type").notNull(), // 'to_lead' or 'to_member'
+  feedbackText: text("feedback_text").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertCurrentAiSummarySchema = createInsertSchema(currentAiSummary).omit({ id: true, generatedAt: true });
 export type CurrentAiSummary = typeof currentAiSummary.$inferSelect;
 export type InsertCurrentAiSummary = z.infer<typeof insertCurrentAiSummarySchema>;
+
+export const insertFeedbackEntrySchema = createInsertSchema(feedbackEntries).omit({ id: true, createdAt: true });
+export type FeedbackEntry = typeof feedbackEntries.$inferSelect;
+export type InsertFeedbackEntry = z.infer<typeof insertFeedbackEntrySchema>;
+export type FeedbackType = 'to_lead' | 'to_member';
 
 export const insertProjectRoleSchema = createInsertSchema(projectRoles).omit({ id: true });
 export type ProjectRole = typeof projectRoles.$inferSelect;

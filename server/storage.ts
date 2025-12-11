@@ -18,8 +18,10 @@ import type {
   InsertCurrentAiSummary,
   ProjectRole,
   InsertProjectRole,
+  FeedbackEntry,
+  InsertFeedbackEntry,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, feedbackEntries } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -74,6 +76,10 @@ export interface IStorage {
   createProjectRole(role: InsertProjectRole): Promise<ProjectRole>;
   deleteProjectRole(id: string): Promise<boolean>;
   seedDefaultRoles(): Promise<void>;
+
+  // Feedback Entries (anonymous)
+  getFeedbackForRecipient(recipientId: string): Promise<FeedbackEntry[]>;
+  createFeedback(feedback: InsertFeedbackEntry): Promise<FeedbackEntry>;
 }
 
 export class MemStorage implements IStorage {
@@ -360,6 +366,20 @@ export class MemStorage implements IStorage {
       }
     }
   }
+
+  // Feedback Entries - MemStorage implementation
+  private feedbackEntries: Map<string, FeedbackEntry> = new Map();
+
+  async getFeedbackForRecipient(recipientId: string): Promise<FeedbackEntry[]> {
+    return Array.from(this.feedbackEntries.values()).filter(f => f.recipientId === recipientId);
+  }
+
+  async createFeedback(feedback: InsertFeedbackEntry): Promise<FeedbackEntry> {
+    const id = randomUUID();
+    const newFeedback: FeedbackEntry = { ...feedback, id, createdAt: new Date() };
+    this.feedbackEntries.set(id, newFeedback);
+    return newFeedback;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -603,6 +623,16 @@ export class DatabaseStorage implements IStorage {
         // Ignore duplicate key errors
       }
     }
+  }
+
+  // Feedback Entries - DatabaseStorage implementation
+  async getFeedbackForRecipient(recipientId: string): Promise<FeedbackEntry[]> {
+    return await db.select().from(feedbackEntries).where(eq(feedbackEntries.recipientId, recipientId));
+  }
+
+  async createFeedback(feedback: InsertFeedbackEntry): Promise<FeedbackEntry> {
+    const [newFeedback] = await db.insert(feedbackEntries).values(feedback).returning();
+    return newFeedback;
   }
 }
 
