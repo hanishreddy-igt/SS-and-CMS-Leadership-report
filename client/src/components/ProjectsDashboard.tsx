@@ -3017,6 +3017,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="new-member-email">Email (Optional)</Label>
+                    <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
                     <Input
                       id="new-member-email"
                       data-testid="input-member-email"
@@ -3257,6 +3258,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="new-lead-email">Email Address</Label>
+                    <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
                     <Input
                       id="new-lead-email"
                       data-testid="input-lead-email"
@@ -3735,6 +3737,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-lead-email">Email Address</Label>
+              <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
               <Input
                 id="edit-lead-email"
                 data-testid="input-edit-lead-email"
@@ -3787,6 +3790,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-member-email">Email Address (Optional)</Label>
+              <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
               <Input
                 id="edit-member-email"
                 data-testid="input-edit-member-email"
