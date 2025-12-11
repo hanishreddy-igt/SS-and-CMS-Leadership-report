@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { JiraService } from "./services/jiraService";
-import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema } from "@shared/schema";
+import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema, insertFeedbackEntrySchema, type TeamMemberAssignment } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
 
@@ -871,6 +871,163 @@ IMPORTANT:
         success: false,
         error: error.message || 'Failed to import from Jira',
       });
+    }
+  });
+
+  // === Anonymous Feedback Routes ===
+  
+  // Get list of people the current user can give feedback to
+  // Based on shared contracts - members can give to leads they work with, leads can give to members they work with
+  app.get('/api/feedback/eligible-recipients', isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user.claims.email;
+      const feedbackType = req.query.type as string; // 'to_lead' or 'to_member'
+      
+      if (!feedbackType || !['to_lead', 'to_member'].includes(feedbackType)) {
+        return res.status(400).json({ error: 'Invalid feedback type. Must be "to_lead" or "to_member"' });
+      }
+      
+      // Get all people and projects
+      const allPeople = [...await storage.getTeamMembers(), ...await storage.getProjectLeads()];
+      const uniquePeople = Array.from(new Map(allPeople.map(p => [p.id, p])).values());
+      const allProjects = await storage.getProjects();
+      
+      // Find the current user's person record by email
+      const currentPerson = uniquePeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      
+      if (!currentPerson) {
+        return res.json({ eligibleRecipients: [] });
+      }
+      
+      const eligibleRecipientIds = new Set<string>();
+      
+      if (feedbackType === 'to_lead') {
+        // Current user wants to give feedback to leads
+        // Find all projects where current user is a team member
+        for (const project of allProjects) {
+          const teamMemberIds = ((project.teamMembers as TeamMemberAssignment[]) || []).map(tm => tm.memberId);
+          if (teamMemberIds.includes(currentPerson.id)) {
+            // User is a team member on this project - can give feedback to all leads
+            const leadIds = project.leadIds?.length ? project.leadIds : [project.leadId];
+            leadIds.forEach(id => eligibleRecipientIds.add(id));
+          }
+        }
+      } else {
+        // Current user wants to give feedback to team members
+        // Find all projects where current user is a lead
+        for (const project of allProjects) {
+          const leadIds = project.leadIds?.length ? project.leadIds : [project.leadId];
+          if (leadIds.includes(currentPerson.id)) {
+            // User is a lead on this project - can give feedback to all team members
+            const teamMemberIds = ((project.teamMembers as TeamMemberAssignment[]) || []).map(tm => tm.memberId);
+            teamMemberIds.forEach(id => eligibleRecipientIds.add(id));
+          }
+        }
+      }
+      
+      // Get the person details for eligible recipients
+      const eligibleRecipients = uniquePeople
+        .filter(p => eligibleRecipientIds.has(p.id))
+        .map(p => ({ id: p.id, name: p.name }));
+      
+      res.json({ eligibleRecipients });
+    } catch (error: any) {
+      console.error('Error getting eligible recipients:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Submit anonymous feedback
+  app.post('/api/feedback', isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user.claims.email;
+      const parsed = insertFeedbackEntrySchema.safeParse(req.body);
+      
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid feedback data', details: parsed.error.errors });
+      }
+      
+      const { recipientId, feedbackType, feedbackText } = parsed.data;
+      
+      if (!['to_lead', 'to_member'].includes(feedbackType)) {
+        return res.status(400).json({ error: 'Invalid feedback type' });
+      }
+      
+      // Verify eligibility - user must work with the recipient
+      const allPeople = [...await storage.getTeamMembers(), ...await storage.getProjectLeads()];
+      const uniquePeople = Array.from(new Map(allPeople.map(p => [p.id, p])).values());
+      const allProjects = await storage.getProjects();
+      
+      const currentPerson = uniquePeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      
+      if (!currentPerson) {
+        return res.status(403).json({ error: 'You must be registered as a team member or lead to give feedback' });
+      }
+      
+      // Check if user works with recipient
+      let isEligible = false;
+      
+      if (feedbackType === 'to_lead') {
+        // Check if current user is a team member on any project led by recipientId
+        for (const project of allProjects) {
+          const teamMemberIds = ((project.teamMembers as TeamMemberAssignment[]) || []).map(tm => tm.memberId);
+          const leadIds = project.leadIds?.length ? project.leadIds : [project.leadId];
+          if (teamMemberIds.includes(currentPerson.id) && leadIds.includes(recipientId)) {
+            isEligible = true;
+            break;
+          }
+        }
+      } else {
+        // Check if current user is a lead on any project where recipientId is a team member
+        for (const project of allProjects) {
+          const teamMemberIds = ((project.teamMembers as TeamMemberAssignment[]) || []).map(tm => tm.memberId);
+          const leadIds = project.leadIds?.length ? project.leadIds : [project.leadId];
+          if (leadIds.includes(currentPerson.id) && teamMemberIds.includes(recipientId)) {
+            isEligible = true;
+            break;
+          }
+        }
+      }
+      
+      if (!isEligible) {
+        return res.status(403).json({ error: 'You can only give feedback to people you work with on a shared contract' });
+      }
+      
+      // Create the feedback (anonymous - no giver ID stored)
+      const feedback = await storage.createFeedback({
+        recipientId,
+        feedbackType,
+        feedbackText,
+      });
+      
+      res.json({ success: true, message: 'Feedback submitted anonymously' });
+    } catch (error: any) {
+      console.error('Error submitting feedback:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get feedback received by a person (only accessible to that person)
+  app.get('/api/feedback/:recipientId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user.claims.email;
+      const { recipientId } = req.params;
+      
+      // Get the user's person record
+      const allPeople = [...await storage.getTeamMembers(), ...await storage.getProjectLeads()];
+      const uniquePeople = Array.from(new Map(allPeople.map(p => [p.id, p])).values());
+      const currentPerson = uniquePeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      
+      // Only allow viewing your own feedback
+      if (!currentPerson || currentPerson.id !== recipientId) {
+        return res.status(403).json({ error: 'You can only view feedback given to you' });
+      }
+      
+      const feedback = await storage.getFeedbackForRecipient(recipientId);
+      res.json(feedback);
+    } catch (error: any) {
+      console.error('Error getting feedback:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 
