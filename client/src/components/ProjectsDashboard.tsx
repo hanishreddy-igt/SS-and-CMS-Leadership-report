@@ -2882,7 +2882,19 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       <Card data-testid="section-team-members">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="text-2xl flex items-center gap-2">
+            <CardTitle 
+              className="text-2xl flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+              onClick={() => {
+                // Clear all filters when clicking "Team Members"
+                setFilterLeads([]);
+                setFilterMembers([]);
+                setFilterProjectName('');
+                setFilterProjectStatus([]);
+                setFilterProjectsWithCaution(false);
+                setFilterMemberRoles([]);
+              }}
+              data-testid="button-team-members"
+            >
               <UsersRound className="h-6 w-6" />
               Team Members ({filterMemberRoles.length > 0 ? `${filteredTeamMembers.length} of ${teamMembers.length}` : teamMembers.length})
             </CardTitle>
@@ -3169,7 +3181,19 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       <Card data-testid="section-project-leads">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="text-2xl flex items-center gap-2">
+            <CardTitle 
+              className="text-2xl flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+              onClick={() => {
+                // Clear all filters when clicking "Team Leads"
+                setFilterLeads([]);
+                setFilterMembers([]);
+                setFilterProjectName('');
+                setFilterProjectStatus([]);
+                setFilterProjectsWithCaution(false);
+                setFilterMemberRoles([]);
+              }}
+              data-testid="button-team-leads"
+            >
               <UserCog className="h-6 w-6" />
               Team Leads ({projectLeads.length})
             </CardTitle>
