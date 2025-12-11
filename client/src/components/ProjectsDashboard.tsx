@@ -5,13 +5,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -142,6 +143,77 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   // Email display toggle state - track which leads' emails are visible (supports multiple)
   const [visibleLeadEmails, setVisibleLeadEmails] = useState<Set<string>>(new Set());
+
+  // Feedback state
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [feedbackRecipient, setFeedbackRecipient] = useState<{ id: string; name: string; type: 'to_lead' | 'to_member' } | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
+
+  // Feedback queries
+  interface EligibleRecipient {
+    id: string;
+    name: string;
+  }
+
+  const { data: eligibleLeads } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
+    queryKey: ['/api/feedback/eligible-recipients', 'to_lead'],
+    queryFn: async () => {
+      const res = await fetch('/api/feedback/eligible-recipients?type=to_lead', { credentials: 'include' });
+      if (!res.ok) return { eligibleRecipients: [] };
+      return res.json();
+    },
+  });
+
+  const { data: eligibleMembers } = useQuery<{ eligibleRecipients: EligibleRecipient[] }>({
+    queryKey: ['/api/feedback/eligible-recipients', 'to_member'],
+    queryFn: async () => {
+      const res = await fetch('/api/feedback/eligible-recipients?type=to_member', { credentials: 'include' });
+      if (!res.ok) return { eligibleRecipients: [] };
+      return res.json();
+    },
+  });
+
+  const submitFeedbackMutation = useMutation({
+    mutationFn: async (data: { recipientId: string; feedbackType: string; feedbackText: string }) => {
+      return await apiRequest('POST', '/api/feedback', data);
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Feedback submitted anonymously' });
+      setFeedbackDialogOpen(false);
+      setFeedbackRecipient(null);
+      setFeedbackText('');
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to submit feedback',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const isLeadEligibleForFeedback = (leadId: string) => {
+    return eligibleLeads?.eligibleRecipients?.some(r => r.id === leadId) || false;
+  };
+
+  const isMemberEligibleForFeedback = (memberId: string) => {
+    return eligibleMembers?.eligibleRecipients?.some(r => r.id === memberId) || false;
+  };
+
+  const openFeedbackDialog = (person: { id: string; name: string }, type: 'to_lead' | 'to_member') => {
+    setFeedbackRecipient({ ...person, type });
+    setFeedbackText('');
+    setFeedbackDialogOpen(true);
+  };
+
+  const handleSubmitFeedback = () => {
+    if (!feedbackRecipient || !feedbackText.trim()) return;
+    submitFeedbackMutation.mutate({
+      recipientId: feedbackRecipient.id,
+      feedbackType: feedbackRecipient.type,
+      feedbackText: feedbackText.trim(),
+    });
+  };
 
   // Effect to clear all filters when triggered from parent (Active Projects tile)
   useEffect(() => {
@@ -3063,6 +3135,15 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                             <Edit2 className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          {isMemberEligibleForFeedback(member.id) && (
+                            <DropdownMenuItem 
+                              onClick={() => openFeedbackDialog(member, 'to_member')}
+                              data-testid={`button-feedback-member-${member.id}`}
+                            >
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Give Feedback
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem 
                             onClick={() => deleteMemberMutation.mutate(member.id)}
                             disabled={deleteMemberMutation.isPending}
@@ -3294,6 +3375,15 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <Edit2 className="h-4 w-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
+                      {isLeadEligibleForFeedback(lead.id) && (
+                        <DropdownMenuItem 
+                          onClick={(e) => { e.stopPropagation(); openFeedbackDialog(lead, 'to_lead'); }}
+                          data-testid={`button-feedback-lead-${lead.id}`}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Give Feedback
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem 
                         onClick={(e) => { e.stopPropagation(); deleteLeadMutation.mutate(lead.id); }}
                         disabled={deleteLeadMutation.isPending}
@@ -3800,6 +3890,57 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Feedback Submission Dialog */}
+      <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-submit-feedback">
+          <DialogHeader>
+            <DialogTitle>
+              Give Anonymous Feedback
+            </DialogTitle>
+            <DialogDescription>
+              Your feedback will be submitted anonymously. {feedbackRecipient?.name} will not know who provided this feedback.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Feedback for: <span className="font-semibold">{feedbackRecipient?.name}</span></Label>
+              <p className="text-sm text-muted-foreground">
+                {feedbackRecipient?.type === 'to_lead' 
+                  ? 'You are providing feedback to a Team Lead you work with.'
+                  : 'You are providing feedback to a Team Member you work with.'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="feedback-text">Your Feedback</Label>
+              <Textarea
+                id="feedback-text"
+                data-testid="textarea-feedback"
+                placeholder="Share your constructive feedback here..."
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                rows={5}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setFeedbackDialogOpen(false)}
+              data-testid="button-cancel-feedback"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitFeedback}
+              disabled={!feedbackText.trim() || submitFeedbackMutation.isPending}
+              data-testid="button-submit-feedback"
+            >
+              {submitFeedbackMutation.isPending ? 'Submitting...' : 'Submit Anonymously'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
