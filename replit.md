@@ -25,10 +25,11 @@ This project provides a tool for leadership to monitor the delivery status of al
 - **Database Schema (PostgreSQL with Drizzle ORM)**:
     - **Users**: Authentication data.
     - **Sessions**: Session storage.
-    - **People**: Unified table for team members and project leads.
-    - **Projects**: Project details including customer, lead, team member assignments with roles, and dates. Team members are stored as JSONB array: `[{memberId: string, role: string}]`.
+    - **People**: Unified table for team members and project leads. Must have email set to enable feedback feature.
+    - **Projects**: Project details including customer, lead, team member assignments with roles, dates, customer contact email (mandatory), and total contractual hours (optional). Team members are stored as JSONB array: `[{memberId: string, role: string}]`.
     - **Weekly Reports**: Stores progress, health status, and team feedback.
     - **Saved Reports**: Archived weekly report snapshots with PDF/CSV data, AI summary, and health counts.
+    - **Feedback Entries**: Anonymous feedback between team members and leads. No giver ID stored to maintain anonymity.
 - **Key Features**:
     - **Teams & Projects Tab**: Unified dashboard for project and team management, including project cards, team member/lead grids, and modal forms for adding new entities. Features project name filtering, lead/member filtering, and sorting by end date.
     - **Submit Report Tab**: Consolidated view with metrics for submitted/pending reports, a weekly report submission form with health status, progress, challenges, next steps, and optional team member feedback. Includes a report status overview by lead with filtering. Draft report functionality allows saving partial reports.
