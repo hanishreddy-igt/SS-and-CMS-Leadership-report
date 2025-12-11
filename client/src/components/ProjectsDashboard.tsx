@@ -367,7 +367,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     return assignments.some(a => !a.role || a.role.trim() === '');
   };
 
-  // Helper to check if a project has caution (missing end date OR unfilled team member roles OR missing contractual hours)
+  // Helper to check if a project has caution (missing end date OR unfilled team member roles OR missing contractual hours OR missing customer email)
   const projectHasCaution = (project: Project): boolean => {
     // Check for missing end date
     if (!project.endDate) return true;
@@ -377,6 +377,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     
     // Check for missing contractual hours
     if (!project.totalContractualHours) return true;
+    
+    // Check for missing customer contact email
+    if (!project.customerContactEmail) return true;
     
     return false;
   };
@@ -2409,7 +2412,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     )}
                     
                     {/* Caution warnings */}
-                    {(!project.endDate || projectHasUnfilledRoles(project) || !project.totalContractualHours) && (
+                    {(!project.endDate || projectHasUnfilledRoles(project) || !project.totalContractualHours || !project.customerContactEmail) && (
                       <div className="space-y-1 mt-2">
                         {!project.endDate && (
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-end-date-${project.id}`}>
@@ -2427,6 +2430,12 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-hours-${project.id}`}>
                             <AlertTriangle className="h-4 w-4" />
                             <span>Total contractual hours missing</span>
+                          </div>
+                        )}
+                        {!project.customerContactEmail && (
+                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-email-${project.id}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>Customer contact email missing</span>
                           </div>
                         )}
                       </div>
