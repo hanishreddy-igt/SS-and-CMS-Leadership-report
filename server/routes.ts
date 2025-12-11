@@ -887,13 +887,12 @@ IMPORTANT:
         return res.status(400).json({ error: 'Invalid feedback type. Must be "to_lead" or "to_member"' });
       }
       
-      // Get all people and projects
-      const allPeople = [...await storage.getTeamMembers(), ...await storage.getProjectLeads()];
-      const uniquePeople = Array.from(new Map(allPeople.map(p => [p.id, p])).values());
+      // Get all people (regardless of role) and projects
+      const allPeople = await storage.getAllPeople();
       const allProjects = await storage.getProjects();
       
       // Find the current user's person record by email
-      const currentPerson = uniquePeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      const currentPerson = allPeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
       
       if (!currentPerson) {
         return res.json({ eligibleRecipients: [] });
@@ -925,8 +924,11 @@ IMPORTANT:
         }
       }
       
+      // Remove self from eligible recipients (prevent self-feedback)
+      eligibleRecipientIds.delete(currentPerson.id);
+      
       // Get the person details for eligible recipients
-      const eligibleRecipients = uniquePeople
+      const eligibleRecipients = allPeople
         .filter(p => eligibleRecipientIds.has(p.id))
         .map(p => ({ id: p.id, name: p.name }));
       
@@ -954,14 +956,18 @@ IMPORTANT:
       }
       
       // Verify eligibility - user must work with the recipient
-      const allPeople = [...await storage.getTeamMembers(), ...await storage.getProjectLeads()];
-      const uniquePeople = Array.from(new Map(allPeople.map(p => [p.id, p])).values());
+      const allPeople = await storage.getAllPeople();
       const allProjects = await storage.getProjects();
       
-      const currentPerson = uniquePeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      const currentPerson = allPeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
       
       if (!currentPerson) {
         return res.status(403).json({ error: 'You must be registered as a team member or lead to give feedback' });
+      }
+      
+      // Prevent self-feedback
+      if (currentPerson.id === recipientId) {
+        return res.status(403).json({ error: 'You cannot give feedback to yourself' });
       }
       
       // Check if user works with recipient
@@ -1014,9 +1020,8 @@ IMPORTANT:
       const { recipientId } = req.params;
       
       // Get the user's person record
-      const allPeople = [...await storage.getTeamMembers(), ...await storage.getProjectLeads()];
-      const uniquePeople = Array.from(new Map(allPeople.map(p => [p.id, p])).values());
-      const currentPerson = uniquePeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
+      const allPeople = await storage.getAllPeople();
+      const currentPerson = allPeople.find(p => p.email?.toLowerCase() === userEmail?.toLowerCase());
       
       // Only allow viewing your own feedback
       if (!currentPerson || currentPerson.id !== recipientId) {

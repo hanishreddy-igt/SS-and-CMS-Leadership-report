@@ -30,6 +30,9 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
 
+  // All People (regardless of role)
+  getAllPeople(): Promise<Person[]>;
+
   // Team Members (using unified people)
   getTeamMembers(): Promise<TeamMember[]>;
   getTeamMember(id: string): Promise<TeamMember | undefined>;
@@ -103,6 +106,11 @@ export class MemStorage implements IStorage {
   // User operations (required for authentication)
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
+  }
+
+  // Get all people regardless of role
+  async getAllPeople(): Promise<Person[]> {
+    return Array.from(this.people.values());
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -385,6 +393,11 @@ export class MemStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Get all people regardless of role
+  async getAllPeople(): Promise<Person[]> {
+    return await db.select().from(people);
+  }
+
   // User operations (required for authentication)
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
