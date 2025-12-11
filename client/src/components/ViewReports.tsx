@@ -2685,6 +2685,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   // Track if Force Archive is in progress
   const [isForceArchiving, setIsForceArchiving] = useState(false);
   const [showAllFeedback, setShowAllFeedback] = useState(false);
+  const [showAllReports, setShowAllReports] = useState(false);
 
   // Save current reports to archive (generates AI summaries, PDF, CSV, archives, then resets)
   const saveToArchive = async () => {
@@ -3829,19 +3830,45 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             {sortedLeadNames.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No reports found matching the filters.</p>
             ) : (
-              sortedLeadNames.map((leadName) => {
-                const leadReports = groupedReportsByLead[leadName];
+              (() => {
+                // Flatten all reports with their lead names and limit to 8 unless showing all
+                const allReportsFlat: { leadName: string; report: WeeklyReport }[] = [];
+                sortedLeadNames.forEach((leadName) => {
+                  const leadReports = groupedReportsByLead[leadName];
+                  leadReports.forEach((report) => {
+                    allReportsFlat.push({ leadName, report });
+                  });
+                });
+                
+                const totalReports = allReportsFlat.length;
+                const displayedReports = showAllReports ? allReportsFlat : allReportsFlat.slice(0, 8);
+                
+                // Re-group the limited reports by lead name
+                const limitedGrouped: Record<string, WeeklyReport[]> = {};
+                displayedReports.forEach(({ leadName, report }) => {
+                  if (!limitedGrouped[leadName]) {
+                    limitedGrouped[leadName] = [];
+                  }
+                  limitedGrouped[leadName].push(report);
+                });
+                
+                const limitedLeadNames = Object.keys(limitedGrouped).sort((a, b) => a.localeCompare(b));
                 
                 return (
-                  <div key={leadName} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">{leadName}</h3>
-                      <Badge variant="default" className="gap-1">
-                        {leadReports.length} {leadReports.length === 1 ? 'report' : 'reports'}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {leadReports.map((report) => {
+                  <>
+                    {limitedLeadNames.map((leadName) => {
+                      const leadReports = limitedGrouped[leadName];
+                      
+                      return (
+                        <div key={leadName} className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold">{leadName}</h3>
+                            <Badge variant="default" className="gap-1">
+                              {leadReports.length} {leadReports.length === 1 ? 'report' : 'reports'}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {leadReports.map((report) => {
                         const healthConfig = healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig];
                         const HealthIcon = healthConfig?.icon || CheckCircle2;
                         const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
@@ -4128,12 +4155,40 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       )}
                     </CardContent>
                   </Card>
-                );
-                      })}
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Show More/Less Button */}
+                  {totalReports > 8 && (
+                    <div className="flex justify-center pt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAllReports(!showAllReports)}
+                        className="gap-2"
+                        data-testid="button-toggle-all-reports"
+                      >
+                        {showAllReports ? (
+                          <>
+                            <ChevronUp className="h-4 w-4" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4" />
+                            Show More ({totalReports - 8} more)
+                          </>
+                        )}
+                      </Button>
                     </div>
-                  </div>
-                );
-              })
+                  )}
+                </>
+              );
+            })()
             )}
           </div>
         </CardContent>
