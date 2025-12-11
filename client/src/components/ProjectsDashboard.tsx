@@ -3093,9 +3093,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     <span data-testid={`text-member-${member.id}`} className="font-medium block truncate">
                       {member.name}
                     </span>
-                    {member.email && (
-                      <span className="text-xs text-muted-foreground truncate block">{member.email}</span>
-                    )}
                   </div>
                 </div>
                 {!selectionModeMembers && (
