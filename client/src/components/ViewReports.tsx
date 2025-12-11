@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare } from 'lucide-react';
+import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, ChevronUp, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment, Person } from '@shared/schema';
@@ -2684,6 +2684,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   // Track if Force Archive is in progress
   const [isForceArchiving, setIsForceArchiving] = useState(false);
+  const [showAllFeedback, setShowAllFeedback] = useState(false);
 
   // Save current reports to archive (generates AI summaries, PDF, CSV, archives, then resets)
   const saveToArchive = async () => {
@@ -3564,8 +3565,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               <p className="text-sm text-muted-foreground mb-4">
                 Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the Team Member Summary.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {peopleWithFeedback.map((person) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {(showAllFeedback ? peopleWithFeedback : peopleWithFeedback.slice(0, 8)).map((person) => (
                   <div 
                     key={person.id}
                     className="p-4 rounded-lg bg-muted/30 border border-white/5"
@@ -3576,7 +3577,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                         <User className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <h4 className="font-medium">{person.name}</h4>
+                        <h4 className="font-medium text-sm">{person.name}</h4>
                         <p className="text-xs text-muted-foreground">
                           {person.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
                         </p>
@@ -3588,6 +3589,29 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </div>
                 ))}
               </div>
+              {peopleWithFeedback.length > 8 && (
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAllFeedback(!showAllFeedback)}
+                    className="gap-2"
+                    data-testid="button-toggle-feedback"
+                  >
+                    {showAllFeedback ? (
+                      <>
+                        <ChevronUp className="h-4 w-4" />
+                        Show Less
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4" />
+                        Show More ({peopleWithFeedback.length - 8} more)
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
