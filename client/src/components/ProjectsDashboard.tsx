@@ -1493,6 +1493,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setFilterLeads([]);
     setFilterMembers([]);
     setFilterProjectName('');
+    setFilterProjectsWithCaution(false);
     
     // Toggle: if already filtered to 'active', clear it; otherwise apply it
     if (filterProjectStatus.includes('active') && filterProjectStatus.length === 1) {
@@ -1514,6 +1515,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setFilterLeads([]);
     setFilterMembers([]);
     setFilterProjectName('');
+    setFilterProjectsWithCaution(false);
     
     // Toggle: if already filtered to 'renewal', clear it; otherwise apply it
     if (filterProjectStatus.includes('renewal') && filterProjectStatus.length === 1) {
@@ -1576,9 +1578,20 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       <Card id="all-projects-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
+            <div 
+              className="cursor-pointer" 
+              onClick={() => {
+                // Clear all filters when clicking "All Contracts"
+                setFilterLeads([]);
+                setFilterMembers([]);
+                setFilterProjectName('');
+                setFilterProjectStatus([]);
+                setFilterProjectsWithCaution(false);
+              }}
+              data-testid="button-all-contracts"
+            >
               <p className="section-label">Contract Portfolio</p>
-              <CardTitle className="text-2xl">All Contracts <span className="text-primary">({allActiveContracts.length} Active)</span></CardTitle>
+              <CardTitle className="text-2xl hover:text-primary transition-colors">All Contracts <span className="text-primary">({allActiveContracts.length} Active)</span></CardTitle>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
               {/* Add New Project Button */}
