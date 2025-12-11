@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,6 +31,7 @@ interface ProjectsDashboardProps {
 export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }: ProjectsDashboardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const permissions = usePermissions();
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
@@ -1607,7 +1609,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               <CardTitle className="text-2xl hover:text-primary transition-colors">All Contracts <span className="text-primary">({allActiveContracts.length} Active)</span></CardTitle>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
-              {/* Add New Project Button */}
+              {/* Add New Project Button - requires canAddContracts permission */}
+              {permissions.canAddContracts && (
               <Dialog open={showAddProjectDialog} onOpenChange={(open) => {
                 setShowAddProjectDialog(open);
                 if (!open) {
@@ -2031,7 +2034,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </form>
                 </DialogContent>
               </Dialog>
+              )}
 
+              {permissions.canAddContracts && (
               <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="gap-2" data-testid="button-import-jira" disabled>
@@ -2083,6 +2088,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </div>
                 </DialogContent>
               </Dialog>
+              )}
 
               {/* Sort & Filter Popover */}
               <Popover>

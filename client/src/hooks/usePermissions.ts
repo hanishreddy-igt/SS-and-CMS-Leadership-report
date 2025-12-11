@@ -1,0 +1,123 @@
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "./useAuth";
+
+export type UserRole = "admin" | "manager" | "lead" | "member";
+
+export interface Permissions {
+  canManageUsers: boolean;
+  canAddContracts: boolean;
+  canEditContracts: boolean;
+  canDeleteContracts: boolean;
+  canViewAllContracts: boolean;
+  canAddPeople: boolean;
+  canEditPeople: boolean;
+  canDeletePeople: boolean;
+  canSubmitReports: boolean;
+  canEditOwnReports: boolean;
+  canViewAllReports: boolean;
+  canViewOwnReports: boolean;
+  canExportReports: boolean;
+  canArchiveReports: boolean;
+  canGenerateAISummary: boolean;
+  canViewAISummary: boolean;
+  canSubmitFeedback: boolean;
+  role: UserRole;
+  isAdmin: boolean;
+}
+
+const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> = {
+  admin: {
+    canManageUsers: true,
+    canAddContracts: true,
+    canEditContracts: true,
+    canDeleteContracts: true,
+    canViewAllContracts: true,
+    canAddPeople: true,
+    canEditPeople: true,
+    canDeletePeople: true,
+    canSubmitReports: true,
+    canEditOwnReports: true,
+    canViewAllReports: true,
+    canViewOwnReports: true,
+    canExportReports: true,
+    canArchiveReports: true,
+    canGenerateAISummary: true,
+    canViewAISummary: true,
+    canSubmitFeedback: true,
+  },
+  manager: {
+    canManageUsers: false,
+    canAddContracts: true,
+    canEditContracts: true,
+    canDeleteContracts: true,
+    canViewAllContracts: true,
+    canAddPeople: true,
+    canEditPeople: true,
+    canDeletePeople: true,
+    canSubmitReports: true,
+    canEditOwnReports: true,
+    canViewAllReports: true,
+    canViewOwnReports: true,
+    canExportReports: true,
+    canArchiveReports: true,
+    canGenerateAISummary: true,
+    canViewAISummary: true,
+    canSubmitFeedback: true,
+  },
+  lead: {
+    canManageUsers: false,
+    canAddContracts: false,
+    canEditContracts: false,
+    canDeleteContracts: false,
+    canViewAllContracts: true,
+    canAddPeople: true,
+    canEditPeople: true,
+    canDeletePeople: false,
+    canSubmitReports: true,
+    canEditOwnReports: true,
+    canViewAllReports: true,
+    canViewOwnReports: true,
+    canExportReports: true,
+    canArchiveReports: true,
+    canGenerateAISummary: true,
+    canViewAISummary: true,
+    canSubmitFeedback: true,
+  },
+  member: {
+    canManageUsers: false,
+    canAddContracts: false,
+    canEditContracts: false,
+    canDeleteContracts: false,
+    canViewAllContracts: true,
+    canAddPeople: false,
+    canEditPeople: false,
+    canDeletePeople: false,
+    canSubmitReports: false,
+    canEditOwnReports: false,
+    canViewAllReports: true,
+    canViewOwnReports: true,
+    canExportReports: false,
+    canArchiveReports: false,
+    canGenerateAISummary: false,
+    canViewAISummary: true,
+    canSubmitFeedback: true,
+  },
+};
+
+export function usePermissions(): Permissions {
+  const { user } = useAuth();
+  
+  const { data: roleData } = useQuery<{ actualRole: UserRole; effectiveRole: UserRole }>({
+    queryKey: ["/api/users/effective-role"],
+    enabled: !!user,
+  });
+
+  const effectiveRole = roleData?.effectiveRole || "member";
+  const permissions = ROLE_PERMISSIONS[effectiveRole];
+
+  return {
+    ...permissions,
+    role: effectiveRole,
+    isAdmin: roleData?.actualRole === "admin",
+  };
+}
