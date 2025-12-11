@@ -71,6 +71,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [editMemberValue, setEditMemberValue] = useState('');
+  const [editMemberEmailValue, setEditMemberEmailValue] = useState('');
+  const [showEditMemberDialog, setShowEditMemberDialog] = useState(false);
   const [editLeadValue, setEditLeadValue] = useState('');
   const [editLeadEmailValue, setEditLeadEmailValue] = useState('');
   const [showEditLeadDialog, setShowEditLeadDialog] = useState(false);
@@ -839,13 +841,16 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   });
 
   const updateMemberMutation = useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      return await apiRequest('PATCH', `/api/team-members/${id}`, { name });
+    mutationFn: async ({ id, name, email }: { id: string; name: string; email?: string }) => {
+      return await apiRequest('PATCH', `/api/team-members/${id}`, { name, email });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member updated' });
+      setShowEditMemberDialog(false);
       setEditingMemberId(null);
+      setEditMemberValue('');
+      setEditMemberEmailValue('');
     },
     onError: () => {
       toast({ 
@@ -1018,6 +1023,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const startEditMember = (member: TeamMember) => {
     setEditingMemberId(member.id);
     setEditMemberValue(member.name);
+    setEditMemberEmailValue(member.email || '');
+    setShowEditMemberDialog(true);
   };
 
   const startEditLead = (lead: ProjectLead) => {
@@ -1027,10 +1034,21 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setShowEditLeadDialog(true);
   };
 
-  const saveEditMember = (id: string) => {
-    if (editMemberValue.trim()) {
-      updateMemberMutation.mutate({ id, name: editMemberValue.trim() });
+  const saveEditMember = () => {
+    if (editingMemberId && editMemberValue.trim()) {
+      updateMemberMutation.mutate({ 
+        id: editingMemberId, 
+        name: editMemberValue.trim(),
+        email: editMemberEmailValue.trim() || undefined
+      });
     }
+  };
+
+  const cancelEditMember = () => {
+    setShowEditMemberDialog(false);
+    setEditingMemberId(null);
+    setEditMemberValue('');
+    setEditMemberEmailValue('');
   };
 
   const saveEditLead = () => {
@@ -3751,6 +3769,61 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 data-testid="button-save-edit-lead"
               >
                 {updateLeadMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Team Member Dialog */}
+      <Dialog open={showEditMemberDialog} onOpenChange={(open) => !open && cancelEditMember()}>
+        <DialogContent data-testid="dialog-edit-member">
+          <DialogHeader>
+            <DialogTitle>Edit Team Member</DialogTitle>
+            <DialogDescription>
+              Update the team member's name and email address.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-member-name">Team Member Name <span className="text-red-500">*</span></Label>
+              <Input
+                id="edit-member-name"
+                data-testid="input-edit-member-name"
+                type="text"
+                value={editMemberValue}
+                onChange={(e) => setEditMemberValue(e.target.value)}
+                placeholder="Enter team member name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-member-email">Email Address</Label>
+              <Input
+                id="edit-member-email"
+                data-testid="input-edit-member-email"
+                type="email"
+                value={editMemberEmailValue}
+                onChange={(e) => setEditMemberEmailValue(e.target.value)}
+                placeholder="Enter email address (enables feedback feature)"
+              />
+              <p className="text-xs text-muted-foreground">
+                Email is required to enable the anonymous feedback feature.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={cancelEditMember}
+                data-testid="button-cancel-edit-member"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={saveEditMember}
+                disabled={updateMemberMutation.isPending || !editMemberValue.trim()}
+                data-testid="button-save-edit-member"
+              >
+                {updateMemberMutation.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </div>
