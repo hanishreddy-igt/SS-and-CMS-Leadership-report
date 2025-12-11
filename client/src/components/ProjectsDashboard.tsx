@@ -97,6 +97,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   // Add Team Member Modal State
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [newMember, setNewMember] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
   const [memberNameError, setMemberNameError] = useState<string | null>(null);
   const [memberNameWarning, setMemberNameWarning] = useState<string | null>(null);
 
@@ -820,13 +821,14 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   // Team member mutations
   const createMemberMutation = useMutation({
-    mutationFn: async (name: string) => {
-      return await apiRequest('POST', '/api/team-members', { name });
+    mutationFn: async ({ name, email }: { name: string; email?: string }) => {
+      return await apiRequest('POST', '/api/team-members', { name, email });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member added' });
       setNewMember('');
+      setNewMemberEmail('');
       setMemberNameError(null);
       setMemberNameWarning(null);
       setShowAddMemberDialog(false);
@@ -1150,7 +1152,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const handleAddMember = () => {
     if (newMember.trim() && !memberNameError) {
-      createMemberMutation.mutate(newMember.trim());
+      createMemberMutation.mutate({ name: newMember.trim(), email: newMemberEmail.trim() || undefined });
     }
   };
 
@@ -2967,6 +2969,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 setShowAddMemberDialog(open);
                 if (!open) {
                   setNewMember('');
+                  setNewMemberEmail('');
                   setMemberNameError(null);
                   setMemberNameWarning(null);
                 }
@@ -3004,12 +3007,27 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <p className="text-sm text-amber-600" data-testid="warning-member-similar">{memberNameWarning}</p>
                     )}
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-member-email">Email Address</Label>
+                    <Input
+                      id="new-member-email"
+                      data-testid="input-member-email"
+                      type="email"
+                      value={newMemberEmail}
+                      onChange={(e) => setNewMemberEmail(e.target.value)}
+                      placeholder="Enter email address (enables feedback feature)"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Email is required to enable the anonymous feedback feature.
+                    </p>
+                  </div>
                   <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setShowAddMemberDialog(false);
                         setNewMember('');
+                        setNewMemberEmail('');
                         setMemberNameError(null);
                         setMemberNameWarning(null);
                       }}
