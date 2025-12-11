@@ -3538,6 +3538,21 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           </div>
         </CardHeader>
         <CardContent className="pt-6">
+          {/* Auto-archive schedule banner */}
+          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
+            <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
+              <p className="text-muted-foreground">
+                Feedbacks are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
+                {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
+              </p>
+            </div>
+          </div>
+
           {peopleWithFeedback.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
