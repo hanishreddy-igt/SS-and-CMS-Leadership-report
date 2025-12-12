@@ -3003,7 +3003,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             </div>
           )}
 
-          {!aiSummary ? (
+          {!aiSummary && !teamSummary ? (
             <div className="text-center py-8 text-muted-foreground">
               <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-30" />
               <p className="text-lg font-medium mb-2">No summary generated yet</p>
@@ -3011,76 +3011,25 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Clickable tiles for summaries */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Leadership Summary Tile */}
-                <div 
-                  className={`p-4 rounded-lg cursor-pointer transition-all hover:border-primary/50 ${getOverallHealthConfig(aiSummary.overallHealth).bgColor} border ${getOverallHealthConfig(aiSummary.overallHealth).borderColor}`}
-                  onClick={() => setShowLeadershipModal(true)}
-                  data-testid="tile-leadership-summary"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Sparkles className="h-4 w-4 text-primary" />
-                      </div>
-                      <h4 className="font-semibold">Leadership Summary</h4>
-                    </div>
-                    <Badge className={`${getOverallHealthConfig(aiSummary.overallHealth).bgColor} ${getOverallHealthConfig(aiSummary.overallHealth).color} border-0`}>
-                      {aiSummary.overallHealth === 'on-track' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
-                      {aiSummary.overallHealth === 'needs-attention' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                      {aiSummary.overallHealth === 'critical' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
-                      {getOverallHealthConfig(aiSummary.overallHealth).label}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{aiSummary.executiveSummary}</p>
-                  <p className="text-xs text-primary mt-2">Click to view full summary</p>
+              {/* Status message when summaries exist */}
+              <div className="text-center py-4">
+                <div className="flex items-center justify-center gap-2 text-success mb-2">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span className="font-medium">AI Summaries Generated</span>
                 </div>
-
-                {/* SS/CMS Team Feedback Summary Tile */}
-                {teamSummary && (
-                  <div 
-                    className={`p-4 rounded-lg cursor-pointer transition-all hover:border-blue-500/50 ${
-                      teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
-                      teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
-                      'bg-destructive/10 border border-destructive/30'
-                    }`}
-                    onClick={() => setShowTeamModal(true)}
-                    data-testid="tile-team-summary"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                          <Users className="h-4 w-4 text-blue-500" />
-                        </div>
-                        <h4 className="font-semibold">SS/CMS Team Feedback Summary</h4>
-                      </div>
-                      <Badge className={`${
-                        teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
-                        teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
-                        'bg-destructive/10 text-destructive'
-                      } border-0`}>
-                        {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
-                        {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                        {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
-                        {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
-                         teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{teamSummary.teamSummary}</p>
-                    <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
-                  </div>
-                )}
+                <p className="text-sm text-muted-foreground">
+                  Leadership Summary is shown in the Account Reports section below.
+                  {teamSummary && ' Team Feedback Summary is shown in the SS/CMS Team Feedbacks section.'}
+                </p>
               </div>
 
               {/* Generated timestamp */}
               {summaryGeneratedAt && (
-                <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-white/10 pt-3">
+                <div className="flex items-center justify-center text-xs text-muted-foreground border-t border-white/10 pt-3">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    Generated: {formatUTC(summaryGeneratedAt)}
+                    Generated: {formatUTC(summaryGeneratedAt)} ({reportsAnalyzed} reports analyzed)
                   </span>
-                  <span>{reportsAnalyzed} reports analyzed</span>
                 </div>
               )}
             </div>
@@ -3659,6 +3608,41 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           </div>
         </CardHeader>
         <CardContent className="pt-6">
+          {/* Team Feedback Summary Tile - Moved from AI Summary section */}
+          {teamSummary && (
+            <div 
+              className={`mb-6 p-4 rounded-lg cursor-pointer transition-all hover:border-blue-500/50 ${
+                teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                'bg-destructive/10 border border-destructive/30'
+              }`}
+              onClick={() => setShowTeamModal(true)}
+              data-testid="tile-team-summary"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <h4 className="font-semibold">Team Feedback AI Summary</h4>
+                </div>
+                <Badge className={`${
+                  teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
+                  teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
+                  'bg-destructive/10 text-destructive'
+                } border-0`}>
+                  {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                  {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                  {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                  Team Morale: {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                   teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground line-clamp-2">{teamSummary.teamSummary}</p>
+              <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
+            </div>
+          )}
+
           {/* Auto-archive schedule banner */}
           <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
             <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
@@ -3937,7 +3921,33 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
+          {/* Leadership Summary Tile - Moved from AI Summary section */}
+          {aiSummary && (
+            <div 
+              className={`mb-6 p-4 rounded-lg cursor-pointer transition-all hover:border-primary/50 ${getOverallHealthConfig(aiSummary.overallHealth).bgColor} border ${getOverallHealthConfig(aiSummary.overallHealth).borderColor}`}
+              onClick={() => setShowLeadershipModal(true)}
+              data-testid="tile-leadership-summary"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <h4 className="font-semibold">Leadership AI Summary</h4>
+                </div>
+                <Badge className={`${getOverallHealthConfig(aiSummary.overallHealth).bgColor} ${getOverallHealthConfig(aiSummary.overallHealth).color} border-0`}>
+                  {aiSummary.overallHealth === 'on-track' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                  {aiSummary.overallHealth === 'needs-attention' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                  {aiSummary.overallHealth === 'critical' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                  {getOverallHealthConfig(aiSummary.overallHealth).label}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground line-clamp-2">{aiSummary.executiveSummary}</p>
+              <p className="text-xs text-primary mt-2">Click to view full summary</p>
+            </div>
+          )}
+
           {/* Auto-archive schedule banner */}
           <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
             <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
