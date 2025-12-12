@@ -738,18 +738,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     .filter(member => member.name.toLowerCase().includes(memberSearch.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Generate CSV content for export/archive (includes member feedback section)
-  const generateCSVContent = () => {
-    // Reports section
-    const reportHeaders = ['Project', 'Lead(s)', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Team Feedback', 'Submitted', 'Submitted By'];
+  // Generate Account Reports CSV content
+  const generateAccountReportsCSV = () => {
+    const reportHeaders = ['Project', 'Lead(s)', 'Week Start', 'Health Status', 'Progress', 'Challenges', 'Next Week', 'Submitted', 'Submitted By'];
     const reportRows = sortedReports.map((report) => {
       const project = projects.find(p => p.id === report.projectId);
-      const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
-      const feedbackText = feedback && feedback.length > 0
-        ? feedback.map((f) => `${getMemberName(f.memberId)}: ${f.feedback}`).join('; ')
-        : 'None';
-
-      // Use co-lead names if available
       const leadNames = project ? getProjectLeadNames(project) : getLeadName(report.leadId);
       const submittedBy = getSubmittedByName(report) || '';
 
@@ -761,48 +754,76 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         (report.progress || '').replace(/\n/g, ' '),
         (report.challenges || '').replace(/\n/g, ' '),
         (report.nextWeek || '').replace(/\n/g, ' '),
-        feedbackText.replace(/\n/g, ' '),
         new Date(report.submittedAt).toLocaleString(),
         submittedBy,
       ];
     });
 
-    // Member Feedback section
+    const lines = [
+      reportHeaders.join(','),
+      ...reportRows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ];
+
+    return lines.join('\n');
+  };
+
+  // Generate Team Feedback CSV content
+  const generateTeamFeedbackCSV = () => {
     const feedbackHeaders = ['Person Name', 'Role', 'Feedback'];
     const feedbackRows = peopleWithFeedback.map((person) => {
       const role = person.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member';
       return [
         person.name,
         role,
-        (person.feedback || '').replace(/\n/g, ' | '), // Replace newlines with pipes for readability
+        (person.feedback || '').replace(/\n/g, ' | '),
       ];
     });
 
-    // Combine both sections with clear separator
-    const reportSection = [
-      '=== WEEKLY REPORTS ===',
-      reportHeaders.join(','),
-      ...reportRows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
-    ];
-
-    const feedbackSection = [
-      '',
-      '',
-      '=== MEMBER FEEDBACK ===',
+    const lines = [
       feedbackHeaders.join(','),
       ...feedbackRows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
     ];
 
-    return [...reportSection, ...feedbackSection].join('\n');
+    return lines.join('\n');
   };
 
-  const exportToCSV = () => {
-    const csvContent = generateCSVContent();
+  // Generate combined CSV content for archive (includes both sections)
+  const generateCSVContent = () => {
+    const accountReportsSection = [
+      '=== WEEKLY ACCOUNT REPORTS ===',
+      generateAccountReportsCSV(),
+    ];
+
+    const teamFeedbackSection = [
+      '',
+      '',
+      '=== SS/CMS TEAM FEEDBACK ===',
+      generateTeamFeedbackCSV(),
+    ];
+
+    return [...accountReportsSection, ...teamFeedbackSection].join('\n');
+  };
+
+  const exportAccountReportsCSV = () => {
+    const csvContent = generateAccountReportsCSV();
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `weekly_reports_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `account_reports_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportTeamFeedbackCSV = () => {
+    const csvContent = generateTeamFeedbackCSV();
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `team_feedback_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -1828,11 +1849,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.save(`cms_ss_leadership_report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // Export AI Summary as standalone PDF
-  const exportAISummaryPDF = () => {
-    if (!aiSummary && !teamSummary) {
+  // Export Leadership Summary as standalone PDF (AI Insights only - no team feedback)
+  const exportLeadershipSummaryPDF = () => {
+    if (!aiSummary) {
       toast({
-        title: 'No AI Summary Available',
+        title: 'No Leadership Summary Available',
         description: 'Generate an AI summary first before downloading',
         variant: 'destructive',
       });
@@ -2090,128 +2111,189 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       currentY += 6;
     }
 
-    // Team Summary Section
-    if (teamSummary) {
-      // Check if we need a new page
-      if (currentY > pageHeight - 80) {
+    // Footer on last page
+    doc.setFillColor(...colors.navy as [number, number, number]);
+    doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
+    doc.setFontSize(7);
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    doc.text('CMS & SS Leadership Summary - AI Generated', 14, pageHeight - 4);
+    doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 4, { align: 'right' });
+
+    doc.save(`leadership_summary_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Export Team Feedback Summary as standalone PDF
+  const exportTeamFeedbackSummaryPDF = () => {
+    if (!teamSummary) {
+      toast({
+        title: 'No Team Feedback Summary Available',
+        description: 'Generate an AI summary first before downloading',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'portrait' });
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    
+    const colors = {
+      navy: [15, 23, 42],
+      navyLight: [30, 41, 59],
+      primary: [99, 102, 241],
+      success: [34, 197, 94],
+      warning: [245, 158, 11],
+      destructive: [239, 68, 68],
+      white: [255, 255, 255],
+      muted: [148, 163, 184],
+      border: [51, 65, 85],
+      purple: [139, 92, 246],
+    };
+
+    // Header
+    doc.setFillColor(...colors.navy as [number, number, number]);
+    doc.rect(0, 0, pageWidth, 30, 'F');
+    doc.setFillColor(59, 130, 246);
+    doc.rect(0, 30, pageWidth, 2, 'F');
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SS/CMS Team Feedback Summary', 14, 15);
+    
+    const tfPdfWeekStart = currentWeekStart || getCurrentWeekDates().weekStart;
+    const tfWeekStartDate = new Date(tfPdfWeekStart + 'T00:00:00Z');
+    const tfWeekEndDate = new Date(tfWeekStartDate);
+    tfWeekEndDate.setUTCDate(tfWeekStartDate.getUTCDate() + 6);
+    const tfWeekEnd = tfWeekEndDate.toISOString().split('T')[0];
+    const weekEndFormatted = new Date(tfWeekEnd + 'T00:00:00').toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    doc.setFontSize(10);
+    doc.setTextColor(...colors.muted as [number, number, number]);
+    doc.text(`Week Ending ${weekEndFormatted}`, 14, 23);
+    
+    doc.setTextColor(...colors.white as [number, number, number]);
+    doc.setFontSize(8);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 14, 15, { align: 'right' });
+
+    let currentY = 40;
+
+    // Section header
+    doc.setFillColor(...colors.navyLight as [number, number, number]);
+    doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
+    doc.setTextColor(59, 130, 246);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Team Feedback Analysis', 18, currentY + 7);
+    
+    // Morale badge
+    const moraleColors: Record<string, [number, number, number]> = {
+      'positive': colors.success as [number, number, number],
+      'mixed': colors.warning as [number, number, number],
+      'concerning': colors.destructive as [number, number, number]
+    };
+    const moraleColor = moraleColors[teamSummary.overallTeamMorale] || colors.muted as [number, number, number];
+    const moraleLabel = teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                        teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
+    
+    doc.setFillColor(...moraleColor);
+    doc.roundedRect(pageWidth - 14 - 40, currentY + 2, 38, 6, 1, 1, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7);
+    doc.text(`Morale: ${moraleLabel}`, pageWidth - 14 - 20, currentY + 6, { align: 'center' });
+    
+    currentY += 15;
+    
+    // Team Summary text
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const teamSummaryLines = doc.splitTextToSize(teamSummary.teamSummary, pageWidth - 28);
+    doc.text(teamSummaryLines, 14, currentY);
+    currentY += teamSummaryLines.length * 4.5 + 6;
+    
+    // Helper for team items
+    const renderTeamItem = (item: string | { memberName?: string; achievement?: string; highlight?: string; project?: string; concern?: string; area?: string; suggestedSupport?: string; observation?: string; opportunity?: string; indicator?: string }) => {
+      if (typeof item === 'string') return item;
+      if (item.memberName && item.achievement) return `${item.memberName}: ${item.achievement}`;
+      if (item.memberName && item.highlight) return `${item.memberName} (${item.project || ''}): ${item.highlight}`;
+      if (item.memberName && item.opportunity) return `${item.memberName}: ${item.opportunity}`;
+      if (item.concern) return `${item.concern} (${item.project || ''})`;
+      if (item.area && item.suggestedSupport) return `${item.area}: ${item.suggestedSupport}`;
+      if (item.observation) return item.observation;
+      if (item.indicator) return item.indicator;
+      return '';
+    };
+    
+    // Team sections
+    const teamSections = [
+      { title: 'Recognition Opportunities', items: teamSummary.recognitionOpportunities, color: colors.success },
+      { title: 'Team Highlights', items: teamSummary.teamHighlights, color: colors.primary },
+      { title: 'Team Concerns', items: teamSummary.teamConcerns, color: colors.warning },
+      { title: 'Support Needed', items: teamSummary.supportNeeded, color: colors.destructive },
+      { title: 'Workload Observations', items: teamSummary.workloadObservations, color: colors.primary },
+      { title: 'Development Opportunities', items: teamSummary.developmentOpportunities, color: colors.purple },
+      { title: 'Retention Risks', items: teamSummary.retentionRisks, color: colors.destructive },
+    ].filter(s => s.items && s.items.length > 0);
+    
+    teamSections.forEach(section => {
+      // Check for page break
+      if (currentY > pageHeight - 30) {
         doc.addPage();
         currentY = 20;
       }
       
-      // Section header
-      doc.setFillColor(...colors.navyLight as [number, number, number]);
-      doc.roundedRect(14, currentY, pageWidth - 28, 10, 2, 2, 'F');
-      doc.setTextColor(59, 130, 246);
-      doc.setFontSize(12);
+      doc.setFillColor(...section.color as [number, number, number]);
+      doc.circle(16, currentY + 1.5, 1.5, 'F');
+      
+      doc.setTextColor(40, 40, 40);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('SS/CMS Team Feedback Summary', 18, currentY + 7);
+      doc.text(section.title, 20, currentY + 2.5);
+      currentY += 6;
       
-      // Morale badge
-      const moraleColors: Record<string, [number, number, number]> = {
-        'positive': colors.success as [number, number, number],
-        'mixed': colors.warning as [number, number, number],
-        'concerning': colors.destructive as [number, number, number]
-      };
-      const moraleColor = moraleColors[teamSummary.overallTeamMorale] || colors.muted as [number, number, number];
-      const moraleLabel = teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
-                          teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning';
-      
-      doc.setFillColor(...moraleColor);
-      doc.roundedRect(pageWidth - 14 - 40, currentY + 2, 38, 6, 1, 1, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(7);
-      doc.text(`Morale: ${moraleLabel}`, pageWidth - 14 - 20, currentY + 6, { align: 'center' });
-      
-      currentY += 15;
-      
-      // SS/CMS Team Feedback Summary text
-      doc.setTextColor(60, 60, 60);
-      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      const teamSummaryLines = doc.splitTextToSize(teamSummary.teamSummary, pageWidth - 28);
-      doc.text(teamSummaryLines, 14, currentY);
-      currentY += teamSummaryLines.length * 4.5 + 6;
-      
-      // Helper for team items
-      const renderTeamItem = (item: string | { memberName?: string; achievement?: string; highlight?: string; project?: string; concern?: string; area?: string; suggestedSupport?: string; observation?: string; opportunity?: string; indicator?: string }) => {
-        if (typeof item === 'string') return item;
-        if (item.memberName && item.achievement) return `${item.memberName}: ${item.achievement}`;
-        if (item.memberName && item.highlight) return `${item.memberName} (${item.project || ''}): ${item.highlight}`;
-        if (item.memberName && item.opportunity) return `${item.memberName}: ${item.opportunity}`;
-        if (item.concern) return `${item.concern} (${item.project || ''})`;
-        if (item.area && item.suggestedSupport) return `${item.area}: ${item.suggestedSupport}`;
-        if (item.observation) return item.observation;
-        if (item.indicator) return item.indicator;
-        return '';
-      };
-      
-      // Team sections
-      const teamSections = [
-        { title: 'Recognition Opportunities', items: teamSummary.recognitionOpportunities, color: colors.success },
-        { title: 'Team Highlights', items: teamSummary.teamHighlights, color: colors.primary },
-        { title: 'Team Concerns', items: teamSummary.teamConcerns, color: colors.warning },
-        { title: 'Support Needed', items: teamSummary.supportNeeded, color: colors.destructive },
-        { title: 'Workload Observations', items: teamSummary.workloadObservations, color: colors.primary },
-        { title: 'Development Opportunities', items: teamSummary.developmentOpportunities, color: colors.purple },
-        { title: 'Retention Risks', items: teamSummary.retentionRisks, color: colors.destructive },
-      ].filter(s => s.items && s.items.length > 0);
-      
-      teamSections.forEach(section => {
-        // Check for page break
-        if (currentY > pageHeight - 30) {
-          doc.addPage();
-          currentY = 20;
-        }
-        
-        doc.setFillColor(...section.color as [number, number, number]);
-        doc.circle(16, currentY + 1.5, 1.5, 'F');
-        
-        doc.setTextColor(40, 40, 40);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.text(section.title, 20, currentY + 2.5);
-        currentY += 6;
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(80, 80, 80);
-        doc.setFontSize(8);
-        (section.items || []).slice(0, 5).forEach((item) => {
-          const itemText = renderTeamItem(item);
-          const lines = doc.splitTextToSize(`• ${itemText}`, pageWidth - 36);
-          doc.text(lines, 20, currentY);
-          currentY += lines.length * 3.5;
-        });
-        currentY += 3;
+      doc.setTextColor(80, 80, 80);
+      doc.setFontSize(8);
+      (section.items || []).slice(0, 5).forEach((item) => {
+        const itemText = renderTeamItem(item);
+        const lines = doc.splitTextToSize(`• ${itemText}`, pageWidth - 36);
+        doc.text(lines, 20, currentY);
+        currentY += lines.length * 3.5;
       });
+      currentY += 3;
+    });
 
-      // Recommended HR Actions (comprehensive format)
-      if (teamSummary.recommendedHRActions && teamSummary.recommendedHRActions.length > 0) {
-        if (currentY > pageHeight - 30) {
-          doc.addPage();
-          currentY = 20;
-        }
-        
-        doc.setFillColor(...colors.primary as [number, number, number]);
-        doc.circle(16, currentY + 1.5, 1.5, 'F');
-        doc.setTextColor(40, 40, 40);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Recommended HR Actions', 20, currentY + 2.5);
-        currentY += 6;
-        
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        teamSummary.recommendedHRActions.forEach((item) => {
-          const priorityColor = item.priority === 'high' ? colors.destructive : 
-                               item.priority === 'medium' ? colors.warning : colors.muted;
-          doc.setTextColor(...priorityColor as [number, number, number]);
-          doc.text(`[${item.priority.toUpperCase()}]`, 20, currentY);
-          doc.setTextColor(80, 80, 80);
-          const lines = doc.splitTextToSize(item.action, pageWidth - 55);
-          doc.text(lines, 42, currentY);
-          currentY += lines.length * 3.5 + 1;
-        });
+    // Recommended HR Actions
+    if (teamSummary.recommendedHRActions && teamSummary.recommendedHRActions.length > 0) {
+      if (currentY > pageHeight - 30) {
+        doc.addPage();
+        currentY = 20;
       }
+      
+      doc.setFillColor(...colors.primary as [number, number, number]);
+      doc.circle(16, currentY + 1.5, 1.5, 'F');
+      doc.setTextColor(40, 40, 40);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Recommended HR Actions', 20, currentY + 2.5);
+      currentY += 6;
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      teamSummary.recommendedHRActions.forEach((item) => {
+        const priorityColor = item.priority === 'high' ? colors.destructive : 
+                             item.priority === 'medium' ? colors.warning : colors.muted;
+        doc.setTextColor(...priorityColor as [number, number, number]);
+        doc.text(`[${item.priority.toUpperCase()}]`, 20, currentY);
+        doc.setTextColor(80, 80, 80);
+        const lines = doc.splitTextToSize(item.action, pageWidth - 55);
+        doc.text(lines, 42, currentY);
+        currentY += lines.length * 3.5 + 1;
+      });
     }
 
     // Footer on last page
@@ -2219,10 +2301,10 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
     doc.setFontSize(7);
     doc.setTextColor(...colors.muted as [number, number, number]);
-    doc.text('CMS & SS Executive Summary - AI Generated', 14, pageHeight - 4);
+    doc.text('SS/CMS Team Feedback Summary - AI Generated', 14, pageHeight - 4);
     doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 4, { align: 'right' });
 
-    doc.save(`ai_executive_summary_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`team_feedback_summary_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   // Generate AI Summary PDF as base64 for archiving (comprehensive - all AI insight components)
@@ -3788,13 +3870,21 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={exportAISummaryPDF} data-testid="menu-export-ai-summary-pdf" disabled={!aiSummary && !teamSummary}>
+                    <DropdownMenuItem onClick={exportLeadershipSummaryPDF} data-testid="menu-export-leadership-pdf" disabled={!aiSummary}>
                       <Sparkles className="h-4 w-4 mr-2" />
-                      AI Summary (PDF)
+                      Leadership Summary (PDF)
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={exportToCSV} data-testid="menu-export-csv">
+                    <DropdownMenuItem onClick={exportTeamFeedbackSummaryPDF} data-testid="menu-export-team-feedback-pdf" disabled={!teamSummary}>
+                      <Users className="h-4 w-4 mr-2" />
+                      Team Feedback Summary (PDF)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportAccountReportsCSV} data-testid="menu-export-account-csv">
                       <FileDown className="h-4 w-4 mr-2" />
-                      All Reports (CSV)
+                      Account Reports (CSV)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportTeamFeedbackCSV} data-testid="menu-export-team-feedback-csv" disabled={peopleWithFeedback.length === 0}>
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Team Feedback (CSV)
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
