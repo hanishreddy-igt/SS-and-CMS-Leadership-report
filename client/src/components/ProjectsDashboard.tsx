@@ -3149,6 +3149,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {permissions.canEditTeamMembers && (
                       <DropdownMenuItem 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -3159,6 +3160,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <Edit2 className="h-4 w-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
+                      )}
+                      {permissions.canDeletePeople && (
                       <DropdownMenuItem 
                         onClick={() => deleteMemberMutation.mutate(member.id)}
                         disabled={deleteMemberMutation.isPending}
@@ -3168,6 +3171,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -3396,6 +3400,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {permissions.canEditProjectLeads && (
                       <DropdownMenuItem 
                         onClick={(e) => { e.stopPropagation(); startEditLead(lead); }}
                         data-testid={`button-edit-lead-${lead.id}`}
@@ -3403,6 +3408,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <Edit2 className="h-4 w-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
+                      )}
+                      {permissions.canDeletePeople && (
                       <DropdownMenuItem 
                         onClick={(e) => { e.stopPropagation(); deleteLeadMutation.mutate(lead.id); }}
                         disabled={deleteLeadMutation.isPending}
@@ -3412,6 +3419,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
