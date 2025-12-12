@@ -2443,7 +2443,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           )}
                         </div>
                       </div>
-                      {!selectionModeProjects && (
+                      {!selectionModeProjects && (permissions.canEditContracts || permissions.canDeleteContracts) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -3140,7 +3140,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </span>
                   </div>
                 </div>
-                {!selectionModeMembers && (
+                {!selectionModeMembers && (permissions.canEditTeamMembers || permissions.canDeletePeople) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -3391,7 +3391,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     {lead.name}
                   </span>
                 </div>
-                {!selectionModeLeads && (
+                {!selectionModeLeads && (permissions.canEditProjectLeads || permissions.canDeletePeople) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
