@@ -474,6 +474,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all people (for resolving person names in feedback entries)
+  app.get('/api/people', isAuthenticated, async (_req, res) => {
+    try {
+      const allPeople = await storage.getAllPeople();
+      res.json(allPeople);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Team Members routes (protected)
   app.get('/api/team-members', isAuthenticated, async (_req, res) => {
     try {
@@ -564,7 +574,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all people with feedback (for Member Feedback section)
+  // Get all feedback entries - returns all for admins/managers, only own submissions for leads/members
+  app.get('/api/feedback-entries', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+      
+      // Admins and managers can view all feedback; leads/members only see their own submissions
+      const canViewAll = user.role === 'admin' || user.role === 'manager';
+      
+      if (canViewAll) {
+        const entries = await storage.getAllFeedbackEntries();
+        res.json(entries);
+      } else {
+        // Leads and members can only see feedback they submitted
+        const entries = await storage.getFeedbackEntriesBySubmitter(user.email || '');
+        res.json(entries);
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all people with feedback (for Member Feedback section) - legacy endpoint for compatibility
   app.get('/api/people/feedback', isAuthenticated, async (_req, res) => {
     try {
       const allPeople = await storage.getAllPeople();
@@ -575,8 +610,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Anonymous feedback submission endpoints - appends feedback with timestamp
-  app.post('/api/people/:id/feedback', isAuthenticated, requirePermission('canSubmitFeedback'), async (req, res) => {
+  // Anonymous feedback submission - creates feedback entry with submitter tracking
+  app.post('/api/people/:id/feedback', isAuthenticated, requirePermission('canSubmitFeedback'), async (req: any, res) => {
     try {
       const { feedback } = req.body;
       if (!feedback || typeof feedback !== 'string' || !feedback.trim()) {
@@ -589,13 +624,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Person not found' });
       }
       
-      // Append new feedback (merge with existing, no timestamp)
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Create a feedback entry with submitter tracking
+      await storage.createFeedbackEntry({
+        aboutPersonId: req.params.id,
+        submitterEmail: user?.email || '',
+        feedback: feedback.trim(),
+      });
+      
+      // Also update the person's aggregated feedback field (for backward compatibility with AI summary)
       const existingFeedback = person.feedback || '';
       const updatedFeedback = existingFeedback 
         ? `${existingFeedback}\n\n${feedback.trim()}`
         : feedback.trim();
       
-      // Update the person with appended feedback
       const updated = await storage.updatePersonFeedback(req.params.id, updatedFeedback);
       res.json(updated);
     } catch (error: any) {
@@ -607,6 +651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/people/feedback', isAuthenticated, requirePermission('canArchiveReports'), async (_req, res) => {
     try {
       await storage.clearAllFeedback();
+      await storage.clearAllFeedbackEntries(); // Also clear feedback entries
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

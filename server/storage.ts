@@ -22,8 +22,10 @@ import type {
   RoleRequest,
   InsertRoleRequest,
   UserRole,
+  FeedbackEntry,
+  InsertFeedbackEntry,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -86,6 +88,13 @@ export interface IStorage {
   getPersonById(id: string): Promise<Person | undefined>;
   updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined>;
   clearAllFeedback(): Promise<void>;
+
+  // Feedback entries (with submitter tracking)
+  getAllFeedbackEntries(): Promise<FeedbackEntry[]>;
+  getFeedbackEntriesBySubmitter(email: string): Promise<FeedbackEntry[]>;
+  getFeedbackEntriesAboutPerson(personId: string): Promise<FeedbackEntry[]>;
+  createFeedbackEntry(entry: InsertFeedbackEntry): Promise<FeedbackEntry>;
+  clearAllFeedbackEntries(): Promise<void>;
 
   // User role management
   getAllUsers(): Promise<User[]>;
@@ -500,6 +509,38 @@ export class MemStorage implements IStorage {
       }
     }
   }
+
+  // Feedback entries for MemStorage
+  private feedbackEntriesStore: Map<string, FeedbackEntry> = new Map();
+
+  async getAllFeedbackEntries(): Promise<FeedbackEntry[]> {
+    return Array.from(this.feedbackEntriesStore.values());
+  }
+
+  async getFeedbackEntriesBySubmitter(email: string): Promise<FeedbackEntry[]> {
+    return Array.from(this.feedbackEntriesStore.values()).filter(e => e.submitterEmail === email);
+  }
+
+  async getFeedbackEntriesAboutPerson(personId: string): Promise<FeedbackEntry[]> {
+    return Array.from(this.feedbackEntriesStore.values()).filter(e => e.aboutPersonId === personId);
+  }
+
+  async createFeedbackEntry(entry: InsertFeedbackEntry): Promise<FeedbackEntry> {
+    const id = randomUUID();
+    const newEntry: FeedbackEntry = {
+      id,
+      aboutPersonId: entry.aboutPersonId,
+      submitterEmail: entry.submitterEmail,
+      feedback: entry.feedback,
+      submittedAt: new Date(),
+    };
+    this.feedbackEntriesStore.set(id, newEntry);
+    return newEntry;
+  }
+
+  async clearAllFeedbackEntries(): Promise<void> {
+    this.feedbackEntriesStore.clear();
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -629,6 +670,28 @@ export class DatabaseStorage implements IStorage {
 
   async clearAllFeedback(): Promise<void> {
     await db.update(people).set({ feedback: null });
+  }
+
+  // Feedback entries (with submitter tracking) - DatabaseStorage
+  async getAllFeedbackEntries(): Promise<FeedbackEntry[]> {
+    return await db.select().from(feedbackEntries);
+  }
+
+  async getFeedbackEntriesBySubmitter(email: string): Promise<FeedbackEntry[]> {
+    return await db.select().from(feedbackEntries).where(eq(feedbackEntries.submitterEmail, email));
+  }
+
+  async getFeedbackEntriesAboutPerson(personId: string): Promise<FeedbackEntry[]> {
+    return await db.select().from(feedbackEntries).where(eq(feedbackEntries.aboutPersonId, personId));
+  }
+
+  async createFeedbackEntry(entry: InsertFeedbackEntry): Promise<FeedbackEntry> {
+    const [newEntry] = await db.insert(feedbackEntries).values(entry).returning();
+    return newEntry;
+  }
+
+  async clearAllFeedbackEntries(): Promise<void> {
+    await db.delete(feedbackEntries);
   }
 
   async getProjects(): Promise<Project[]> {

@@ -36,7 +36,7 @@ import {
 import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, ChevronUp, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment, Person } from '@shared/schema';
+import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment, Person, FeedbackEntry } from '@shared/schema';
 
 const healthStatusConfig = {
   'on-track': { label: 'On Track', icon: CheckCircle2, color: 'text-success', bgColor: 'bg-success/10' },
@@ -65,6 +65,9 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
   const { data: peopleWithFeedback = [] } = useQuery<Person[]>({ queryKey: ['/api/people/feedback'] });
+  // Feedback entries with submitter tracking - filtered by backend based on user role
+  const { data: feedbackEntries = [] } = useQuery<FeedbackEntry[]>({ queryKey: ['/api/feedback-entries'] });
+  const { data: allPeople = [] } = useQuery<Person[]>({ queryKey: ['/api/people'] });
   
   // Get the active reporting week from the API (stays open until archive runs)
   const { data: reportingWeek } = useQuery<ReportingWeekResponse>({ 
@@ -3618,79 +3621,137 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           )}
 
           {(() => {
-            // Filter feedback based on permissions - leads/members only see their own feedback
-            const filteredFeedback = permissions.canViewAllFeedback 
-              ? peopleWithFeedback 
-              : peopleWithFeedback.filter(person => person.email === user?.email);
+            // For admins/managers: show all feedback grouped by person (existing peopleWithFeedback)
+            // For leads/members: show their submitted feedback entries from feedbackEntries API
             
-            return filteredFeedback.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                <p className="text-lg font-medium mb-2">
-                  {permissions.canViewAllFeedback ? 'No feedback submitted yet' : 'No feedback about you yet'}
-                </p>
-                <p className="text-sm">
-                  {permissions.canViewAllFeedback 
-                    ? 'Anonymous feedback submitted about team members and leads will appear here.'
-                    : 'Anonymous feedback submitted about you by colleagues will appear here.'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  {permissions.canViewAllFeedback 
-                    ? 'Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the SS/CMS Team Feedback Summary.'
-                    : 'Anonymous feedback submitted about you by colleagues.'}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {(showAllFeedback ? filteredFeedback : filteredFeedback.slice(0, 8)).map((person) => (
-                  <div 
-                    key={person.id}
-                    className="p-4 rounded-lg bg-muted/30 border border-white/5"
-                    data-testid={`feedback-card-${person.id}`}
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-sm">{person.name}</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {person.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
-                      <p className="text-sm whitespace-pre-wrap">{person.feedback}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {filteredFeedback.length > 8 && (
-                <div className="flex justify-center pt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllFeedback(!showAllFeedback)}
-                    className="gap-2"
-                    data-testid="button-toggle-feedback"
-                  >
-                    {showAllFeedback ? (
-                      <>
-                        <ChevronUp className="h-4 w-4" />
-                        Show Less
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-4 w-4" />
-                        Show More ({filteredFeedback.length - 8} more)
-                      </>
-                    )}
-                  </Button>
+            if (permissions.canViewAllFeedback) {
+              // Admins and managers see all feedback grouped by person
+              return peopleWithFeedback.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-medium mb-2">No feedback submitted yet</p>
+                  <p className="text-sm">Anonymous feedback submitted about team members and leads will appear here.</p>
                 </div>
-              )}
-            </div>
-            );
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the SS/CMS Team Feedback Summary.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {(showAllFeedback ? peopleWithFeedback : peopleWithFeedback.slice(0, 8)).map((person) => (
+                      <div 
+                        key={person.id}
+                        className="p-4 rounded-lg bg-muted/30 border border-white/5"
+                        data-testid={`feedback-card-${person.id}`}
+                      >
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-sm">{person.name}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {person.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
+                          <p className="text-sm whitespace-pre-wrap">{person.feedback}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {peopleWithFeedback.length > 8 && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllFeedback(!showAllFeedback)}
+                        className="gap-2"
+                        data-testid="button-toggle-feedback"
+                      >
+                        {showAllFeedback ? (
+                          <>
+                            <ChevronUp className="h-4 w-4" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4" />
+                            Show More ({peopleWithFeedback.length - 8} more)
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            } else {
+              // Leads and members see only their own submitted feedback entries
+              return feedbackEntries.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-medium mb-2">No feedback submitted by you yet</p>
+                  <p className="text-sm">Feedback you submit about team members and leads will appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Feedback you have submitted about team members and leads. Your submissions are tracked here for your reference.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {(showAllFeedback ? feedbackEntries : feedbackEntries.slice(0, 8)).map((entry) => {
+                      const aboutPerson = allPeople.find(p => p.id === entry.aboutPersonId);
+                      return (
+                        <div 
+                          key={entry.id}
+                          className="p-4 rounded-lg bg-muted/30 border border-white/5"
+                          data-testid={`feedback-entry-${entry.id}`}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-sm">{aboutPerson?.name || 'Unknown'}</h4>
+                              <p className="text-xs text-muted-foreground">
+                                {aboutPerson?.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
+                            <p className="text-sm whitespace-pre-wrap">{entry.feedback}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {feedbackEntries.length > 8 && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllFeedback(!showAllFeedback)}
+                        className="gap-2"
+                        data-testid="button-toggle-feedback"
+                      >
+                        {showAllFeedback ? (
+                          <>
+                            <ChevronUp className="h-4 w-4" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4" />
+                            Show More ({feedbackEntries.length - 8} more)
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            }
           })()}
         </CardContent>
       </Card>

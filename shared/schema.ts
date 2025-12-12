@@ -118,6 +118,16 @@ export const projectRoles = pgTable("project_roles", {
   isDefault: text("is_default").default('false'), // Whether it's a system default role
 });
 
+// Feedback entries table - stores individual feedback with submitter tracking
+// Feedback is displayed anonymously (submitter hidden from others) but tracked for filtering
+export const feedbackEntries = pgTable("feedback_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  aboutPersonId: varchar("about_person_id").notNull(), // Who the feedback is about
+  submitterEmail: text("submitter_email").notNull(), // Email of who submitted the feedback
+  feedback: text("feedback").notNull(), // The feedback content
+  submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+});
+
 export const insertCurrentAiSummarySchema = createInsertSchema(currentAiSummary).omit({ id: true, generatedAt: true });
 export type CurrentAiSummary = typeof currentAiSummary.$inferSelect;
 export type InsertCurrentAiSummary = z.infer<typeof insertCurrentAiSummarySchema>;
@@ -125,6 +135,10 @@ export type InsertCurrentAiSummary = z.infer<typeof insertCurrentAiSummarySchema
 export const insertProjectRoleSchema = createInsertSchema(projectRoles).omit({ id: true });
 export type ProjectRole = typeof projectRoles.$inferSelect;
 export type InsertProjectRole = z.infer<typeof insertProjectRoleSchema>;
+
+export const insertFeedbackEntrySchema = createInsertSchema(feedbackEntries).omit({ id: true, submittedAt: true });
+export type FeedbackEntry = typeof feedbackEntries.$inferSelect;
+export type InsertFeedbackEntry = z.infer<typeof insertFeedbackEntrySchema>;
 
 export const insertRoleRequestSchema = createInsertSchema(roleRequests).omit({ id: true, createdAt: true, resolvedAt: true, resolvedBy: true });
 export type RoleRequest = typeof roleRequests.$inferSelect;
