@@ -2456,6 +2456,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {permissions.canEditContracts && (
                             <DropdownMenuItem 
                               onClick={(e) => { e.stopPropagation(); startEdit(project); }}
                               data-testid={`button-edit-project-${project.id}`}
@@ -2463,6 +2464,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                               <Edit2 className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
+                            )}
+                            {permissions.canDeleteContracts && (
                             <DropdownMenuItem 
                               onClick={(e) => { e.stopPropagation(); setDeletingProjectId(project.id); }}
                               className="text-destructive focus:text-destructive"
@@ -2471,6 +2474,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
