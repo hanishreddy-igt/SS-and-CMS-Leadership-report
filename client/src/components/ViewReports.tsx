@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -58,6 +59,7 @@ interface ReportingWeekResponse {
 export default function ViewReports({ externalHealthFilter, onClearExternalFilter }: ViewReportsProps) {
   const { toast } = useToast();
   const permissions = usePermissions();
+  const { user } = useAuth();
   const { data: weeklyReports = [] } = useQuery<WeeklyReport[]>({ queryKey: ['/api/weekly-reports'] });
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
@@ -3520,8 +3522,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          {/* Warning banner when reports modified after summary generation */}
-          {reportsModifiedAfterSummary && teamSummary && (
+          {/* Warning banner when reports modified after summary generation - only for those who can see team summary */}
+          {permissions.canViewTeamFeedbackSummary && reportsModifiedAfterSummary && teamSummary && (
             <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
               <p className="text-sm text-warning">
@@ -3530,100 +3532,118 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             </div>
           )}
 
-          {/* Team Feedback Summary Tile - Moved from AI Summary section */}
-          {teamSummary ? (
-            <div 
-              className={`mb-6 p-4 rounded-lg cursor-pointer transition-all hover:border-blue-500/50 ${
-                teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
-                teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
-                'bg-destructive/10 border border-destructive/30'
-              }`}
-              onClick={() => setShowTeamModal(true)}
-              data-testid="tile-team-summary"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
+          {/* Team Feedback Summary Tile - Only visible to managers and admins */}
+          {permissions.canViewTeamFeedbackSummary && (
+            teamSummary ? (
+              <div 
+                className={`mb-6 p-4 rounded-lg cursor-pointer transition-all hover:border-blue-500/50 ${
+                  teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                  teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                  'bg-destructive/10 border border-destructive/30'
+                }`}
+                onClick={() => setShowTeamModal(true)}
+                data-testid="tile-team-summary"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Users className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <h4 className="font-semibold">Team Feedback AI Summary</h4>
+                  </div>
+                  <Badge className={`${
+                    teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
+                    teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
+                    'bg-destructive/10 text-destructive'
+                  } border-0`}>
+                    {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                    {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                    {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                    Team Morale: {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                     teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">{teamSummary.teamSummary}</p>
+                <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
+              </div>
+            ) : permissions.canGenerateAISummary && (
+              <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
                     <Users className="h-4 w-4 text-blue-500" />
                   </div>
-                  <h4 className="font-semibold">Team Feedback AI Summary</h4>
+                  <div>
+                    <h4 className="font-semibold text-sm">Team Feedback AI Summary</h4>
+                    <p className="text-xs text-muted-foreground">Generate AI insights from team feedback</p>
+                  </div>
                 </div>
-                <Badge className={`${
-                  teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
-                  teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
-                  'bg-destructive/10 text-destructive'
-                } border-0`}>
-                  {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
-                  {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                  {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
-                  Team Morale: {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
-                   teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
-                </Badge>
+                <Button
+                  onClick={() => generateSummaryMutation.mutate()}
+                  disabled={generateSummaryMutation.isPending}
+                  size="sm"
+                  className="gap-2"
+                  data-testid="button-generate-summary-team"
+                >
+                  {generateSummaryMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Generate
+                    </>
+                  )}
+                </Button>
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-2">{teamSummary.teamSummary}</p>
-              <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
-            </div>
-          ) : permissions.canGenerateAISummary && (
-            <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-blue-500" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm">Team Feedback AI Summary</h4>
-                  <p className="text-xs text-muted-foreground">Generate AI insights from team feedback</p>
-                </div>
+            )
+          )}
+
+          {/* Auto-archive schedule banner - only for managers and admins */}
+          {permissions.canViewAllFeedback && (
+            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
+              <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
+                <p className="text-muted-foreground">
+                  Feedbacks are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
+                  {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
+                </p>
               </div>
-              <Button
-                onClick={() => generateSummaryMutation.mutate()}
-                disabled={generateSummaryMutation.isPending}
-                size="sm"
-                className="gap-2"
-                data-testid="button-generate-summary-team"
-              >
-                {generateSummaryMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Generate
-                  </>
-                )}
-              </Button>
             </div>
           )}
 
-          {/* Auto-archive schedule banner */}
-          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
-            <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
-              <p className="text-muted-foreground">
-                Feedbacks are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
-                {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
-              </p>
-            </div>
-          </div>
-
-          {peopleWithFeedback.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p className="text-lg font-medium mb-2">No feedback submitted yet</p>
-              <p className="text-sm">Anonymous feedback submitted about team members and leads will appear here.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground mb-4">
-                Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the SS/CMS Team Feedback Summary.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {(showAllFeedback ? peopleWithFeedback : peopleWithFeedback.slice(0, 8)).map((person) => (
+          {(() => {
+            // Filter feedback based on permissions - leads/members only see their own feedback
+            const filteredFeedback = permissions.canViewAllFeedback 
+              ? peopleWithFeedback 
+              : peopleWithFeedback.filter(person => person.email === user?.email);
+            
+            return filteredFeedback.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                <p className="text-lg font-medium mb-2">
+                  {permissions.canViewAllFeedback ? 'No feedback submitted yet' : 'No feedback about you yet'}
+                </p>
+                <p className="text-sm">
+                  {permissions.canViewAllFeedback 
+                    ? 'Anonymous feedback submitted about team members and leads will appear here.'
+                    : 'Anonymous feedback submitted about you by colleagues will appear here.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  {permissions.canViewAllFeedback 
+                    ? 'Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the SS/CMS Team Feedback Summary.'
+                    : 'Anonymous feedback submitted about you by colleagues.'}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {(showAllFeedback ? filteredFeedback : filteredFeedback.slice(0, 8)).map((person) => (
                   <div 
                     key={person.id}
                     className="p-4 rounded-lg bg-muted/30 border border-white/5"
@@ -3646,7 +3666,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </div>
                 ))}
               </div>
-              {peopleWithFeedback.length > 8 && (
+              {filteredFeedback.length > 8 && (
                 <div className="flex justify-center pt-2">
                   <Button
                     variant="ghost"
@@ -3663,14 +3683,15 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                     ) : (
                       <>
                         <ChevronDown className="h-4 w-4" />
-                        Show More ({peopleWithFeedback.length - 8} more)
+                        Show More ({filteredFeedback.length - 8} more)
                       </>
                     )}
                   </Button>
                 </div>
               )}
             </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
 

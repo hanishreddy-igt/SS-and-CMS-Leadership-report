@@ -23,6 +23,8 @@ export interface Permissions {
   canGenerateAISummary: boolean;
   canViewAISummary: boolean;
   canSubmitFeedback: boolean;
+  canViewAllFeedback: boolean;
+  canViewTeamFeedbackSummary: boolean;
   role: UserRole;
   isAdmin: boolean;
 }
@@ -48,6 +50,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canGenerateAISummary: true,
     canViewAISummary: true,
     canSubmitFeedback: true,
+    canViewAllFeedback: true,
+    canViewTeamFeedbackSummary: true,
   },
   manager: {
     canManageUsers: false,
@@ -69,6 +73,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canGenerateAISummary: true,
     canViewAISummary: true,
     canSubmitFeedback: true,
+    canViewAllFeedback: true,
+    canViewTeamFeedbackSummary: true,
   },
   lead: {
     canManageUsers: false,
@@ -90,6 +96,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canGenerateAISummary: true,
     canViewAISummary: true,
     canSubmitFeedback: true,
+    canViewAllFeedback: false,
+    canViewTeamFeedbackSummary: false,
   },
   member: {
     canManageUsers: false,
@@ -111,6 +119,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canGenerateAISummary: false,
     canViewAISummary: true,
     canSubmitFeedback: true,
+    canViewAllFeedback: false,
+    canViewTeamFeedbackSummary: false,
   },
 };
 
