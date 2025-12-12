@@ -23,7 +23,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
+import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft, LayoutGrid, Check, X } from "lucide-react";
 
 interface User {
   id: string;
@@ -61,6 +61,106 @@ const roleLabels: Record<UserRole, string> = {
   lead: "Team Lead",
   member: "Member",
 };
+
+// Feature permissions matrix - matches usePermissions.ts
+const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; roles: Record<UserRole, boolean> }> = {
+  canManageUsers: {
+    label: "Manage Users",
+    description: "Add, edit, and manage user roles and role requests",
+    roles: { admin: true, manager: false, lead: false, member: false },
+  },
+  canAddContracts: {
+    label: "Add Contracts",
+    description: "Create new contracts/projects in the system",
+    roles: { admin: true, manager: true, lead: false, member: false },
+  },
+  canEditContracts: {
+    label: "Edit Contracts",
+    description: "Modify existing contract details and assignments",
+    roles: { admin: true, manager: true, lead: false, member: false },
+  },
+  canDeleteContracts: {
+    label: "Delete Contracts",
+    description: "Remove contracts from the system",
+    roles: { admin: true, manager: true, lead: false, member: false },
+  },
+  canViewAllContracts: {
+    label: "View All Contracts",
+    description: "Access and view all contracts in the system",
+    roles: { admin: true, manager: true, lead: true, member: true },
+  },
+  canAddPeople: {
+    label: "Add People",
+    description: "Add new team members or project leads",
+    roles: { admin: true, manager: true, lead: true, member: false },
+  },
+  canEditPeople: {
+    label: "Edit People",
+    description: "Modify team member or project lead information",
+    roles: { admin: true, manager: true, lead: true, member: false },
+  },
+  canDeletePeople: {
+    label: "Delete People",
+    description: "Remove team members or project leads from the system",
+    roles: { admin: true, manager: true, lead: false, member: false },
+  },
+  canSubmitReports: {
+    label: "Submit Reports",
+    description: "Submit weekly status reports for projects",
+    roles: { admin: true, manager: true, lead: true, member: false },
+  },
+  canEditOwnReports: {
+    label: "Edit Own Reports",
+    description: "Modify previously submitted reports",
+    roles: { admin: true, manager: true, lead: true, member: false },
+  },
+  canViewAllReports: {
+    label: "View All Reports",
+    description: "Access and view all submitted reports",
+    roles: { admin: true, manager: true, lead: true, member: true },
+  },
+  canViewOwnReports: {
+    label: "View Own Reports",
+    description: "View reports submitted by self",
+    roles: { admin: true, manager: true, lead: true, member: true },
+  },
+  canExportReports: {
+    label: "Export Reports",
+    description: "Export reports to PDF or CSV format",
+    roles: { admin: true, manager: true, lead: true, member: false },
+  },
+  canArchiveReports: {
+    label: "Archive Reports",
+    description: "Archive weekly reports for historical reference",
+    roles: { admin: true, manager: true, lead: true, member: false },
+  },
+  canGenerateAISummary: {
+    label: "Generate AI Summary",
+    description: "Generate AI-powered summaries of reports",
+    roles: { admin: true, manager: true, lead: true, member: false },
+  },
+  canViewAISummary: {
+    label: "View AI Summary",
+    description: "View generated AI summaries",
+    roles: { admin: true, manager: true, lead: true, member: true },
+  },
+  canSubmitFeedback: {
+    label: "Submit Feedback",
+    description: "Submit feedback for team members",
+    roles: { admin: true, manager: true, lead: true, member: true },
+  },
+};
+
+const featureCategories = [
+  { name: "User Management", features: ["canManageUsers"] },
+  { name: "Contract Operations", features: ["canAddContracts", "canEditContracts", "canDeleteContracts", "canViewAllContracts"] },
+  { name: "People Management", features: ["canAddPeople", "canEditPeople", "canDeletePeople"] },
+  { name: "Report Submission", features: ["canSubmitReports", "canEditOwnReports"] },
+  { name: "Report Viewing", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports"] },
+  { name: "AI & Feedback", features: ["canGenerateAISummary", "canViewAISummary", "canSubmitFeedback"] },
+];
+
+const roles: UserRole[] = ["admin", "manager", "lead", "member"];
 
 export default function AdminPanel() {
   const { isAdmin } = useAuth();
@@ -165,6 +265,10 @@ export default function AdminPanel() {
                 {pendingRequests.length}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="features" className="gap-2" data-testid="tab-features">
+            <LayoutGrid className="h-4 w-4" />
+            Feature Panel
           </TabsTrigger>
         </TabsList>
 
@@ -368,6 +472,93 @@ export default function AdminPanel() {
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="features">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5" />
+                Feature Permissions Matrix
+              </CardTitle>
+              <CardDescription>
+                Overview of all features and which roles have access to each feature.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {featureCategories.map((category) => (
+                  <div key={category.name} className="space-y-3">
+                    <h3 className="font-semibold text-lg border-b pb-2">{category.name}</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[250px]">Feature</TableHead>
+                          <TableHead className="w-[300px]">Description</TableHead>
+                          {roles.map((role) => (
+                            <TableHead key={role} className="text-center w-[100px]">
+                              <Badge className={roleColors[role]}>{roleLabels[role]}</Badge>
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {category.features.map((featureKey) => {
+                          const feature = FEATURE_PERMISSIONS[featureKey];
+                          return (
+                            <TableRow key={featureKey} data-testid={`row-feature-${featureKey}`}>
+                              <TableCell className="font-medium">{feature.label}</TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {feature.description}
+                              </TableCell>
+                              {roles.map((role) => (
+                                <TableCell key={role} className="text-center">
+                                  {feature.roles[role] ? (
+                                    <div className="flex justify-center">
+                                      <div className="bg-success/20 text-success rounded-full p-1">
+                                        <Check className="h-4 w-4" />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex justify-center">
+                                      <div className="bg-destructive/20 text-destructive rounded-full p-1">
+                                        <X className="h-4 w-4" />
+                                      </div>
+                                    </div>
+                                  )}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ))}
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-4 gap-4 pt-4 border-t">
+                  {roles.map((role) => {
+                    const permissionCount = Object.values(FEATURE_PERMISSIONS).filter(
+                      (f) => f.roles[role]
+                    ).length;
+                    const totalCount = Object.keys(FEATURE_PERMISSIONS).length;
+                    return (
+                      <Card key={role} className="text-center">
+                        <CardContent className="pt-4">
+                          <Badge className={`${roleColors[role]} mb-2`}>{roleLabels[role]}</Badge>
+                          <p className="text-2xl font-bold">
+                            {permissionCount}/{totalCount}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Features Enabled</p>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
