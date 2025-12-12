@@ -626,130 +626,202 @@ export default function HistoricalReports() {
                 Archive weekly reports from the "View Current Report" tab to access them here for future reference.
               </p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {savedReports.map((report) => {
-                const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
-                const reportType = (report as any).reportType || 'account';
-                const isTeamReport = reportType === 'team';
-                
-                // For account reports, parse leadership summary
-                // For team reports, parse team summary
-                const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(report.aiSummary, reportType);
-                const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
-                
-                return (
-                  <Card 
-                    key={report.id} 
-                    className={`glass-card border-white/10 hover:border-primary/30 transition-all cursor-pointer group ${isTeamReport ? 'border-l-2 border-l-blue-500/50' : 'border-l-2 border-l-primary/50'}`}
-                    onClick={() => handleTileClick(report)}
-                    data-testid={`historical-report-${report.id}`}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          {isTeamReport ? (
-                            <Users className="h-5 w-5 text-blue-500" />
-                          ) : (
-                            <Calendar className="h-5 w-5 text-primary" />
-                          )}
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
-                              <Badge variant={isTeamReport ? 'secondary' : 'default'} className={`text-xs ${isTeamReport ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/20 text-primary'}`}>
-                                {isTeamReport ? 'Team' : 'Account'}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground">Started {formatWeekEnding(report.weekStart)}</p>
-                          </div>
-                        </div>
-                        <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                      
-                      <div className="flex flex-wrap items-center gap-2 mb-4">
-                        <Badge variant="secondary" className="gap-1">
-                          <FileText className="h-3 w-3" />
-                          {report.reportCount} {isTeamReport ? 'Feedbacks' : 'Reports'}
-                        </Badge>
-                        {!isTeamReport && reportAiSummary && (
-                          <Badge variant="outline" className="gap-1 border-primary/30">
-                            <Sparkles className="h-3 w-3 text-primary" />
-                            Leadership Summary
-                          </Badge>
-                        )}
-                        {isTeamReport && reportTeamSummary && (
-                          <Badge variant="outline" className="gap-1 border-blue-500/30">
-                            <Users className="h-3 w-3 text-blue-500" />
-                            Team Summary
-                          </Badge>
-                        )}
-                      </div>
+          ) : (() => {
+            const accountReports = savedReports.filter(r => ((r as any).reportType || 'account') === 'account');
+            const teamReports = savedReports.filter(r => (r as any).reportType === 'team');
+            
+            return (
+              <div className="space-y-8">
+                {/* Historical Account Reports Section */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Historical Account Reports</h3>
+                    </div>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                      {accountReports.length} {accountReports.length === 1 ? 'Report' : 'Reports'}
+                    </Badge>
+                  </div>
+                  
+                  {accountReports.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border border-white/5">
+                      <Calendar className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm">No account reports archived yet</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {accountReports.map((report) => {
+                        const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
+                        const { leadership: reportAiSummary } = parseSavedSummary(report.aiSummary, 'account');
+                        const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
+                        
+                        return (
+                          <Card 
+                            key={report.id} 
+                            className="glass-card border-white/10 hover:border-primary/30 transition-all cursor-pointer group border-l-2 border-l-primary/50"
+                            onClick={() => handleTileClick(report)}
+                            data-testid={`historical-account-report-${report.id}`}
+                          >
+                            <CardContent className="p-6">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-5 w-5 text-primary" />
+                                  <div>
+                                    <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
+                                    <p className="text-xs text-muted-foreground">Started {formatWeekEnding(report.weekStart)}</p>
+                                  </div>
+                                </div>
+                                <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              
+                              <div className="flex flex-wrap items-center gap-2 mb-4">
+                                <Badge variant="secondary" className="gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  {report.reportCount} Reports
+                                </Badge>
+                                {reportAiSummary && (
+                                  <Badge variant="outline" className="gap-1 border-primary/30">
+                                    <Sparkles className="h-3 w-3 text-primary" />
+                                    AI Summary
+                                  </Badge>
+                                )}
+                              </div>
 
-                      {!isTeamReport && healthCounts && (
-                        <div className="grid grid-cols-3 gap-2 mb-4">
-                          <div className="text-center p-2 rounded-lg bg-success/10 border border-success/20">
-                            <CheckCircle2 className="h-4 w-4 text-success mx-auto mb-1" />
-                            <p className="text-lg font-bold text-success">{healthCounts.onTrack || 0}</p>
-                            <p className="text-xs text-muted-foreground">On Track</p>
-                          </div>
-                          <div className="text-center p-2 rounded-lg bg-warning/10 border border-warning/20">
-                            <AlertTriangle className="h-4 w-4 text-warning mx-auto mb-1" />
-                            <p className="text-lg font-bold text-warning">{healthCounts.needsAttention || 0}</p>
-                            <p className="text-xs text-muted-foreground">Attention</p>
-                          </div>
-                          <div className="text-center p-2 rounded-lg bg-destructive/10 border border-destructive/20">
-                            <AlertCircle className="h-4 w-4 text-destructive mx-auto mb-1" />
-                            <p className="text-lg font-bold text-destructive">{healthCounts.critical || 0}</p>
-                            <p className="text-xs text-muted-foreground">Critical</p>
-                          </div>
-                        </div>
-                      )}
+                              {healthCounts && (
+                                <div className="grid grid-cols-3 gap-2 mb-4">
+                                  <div className="text-center p-2 rounded-lg bg-success/10 border border-success/20">
+                                    <CheckCircle2 className="h-4 w-4 text-success mx-auto mb-1" />
+                                    <p className="text-lg font-bold text-success">{healthCounts.onTrack || 0}</p>
+                                    <p className="text-xs text-muted-foreground">On Track</p>
+                                  </div>
+                                  <div className="text-center p-2 rounded-lg bg-warning/10 border border-warning/20">
+                                    <AlertTriangle className="h-4 w-4 text-warning mx-auto mb-1" />
+                                    <p className="text-lg font-bold text-warning">{healthCounts.needsAttention || 0}</p>
+                                    <p className="text-xs text-muted-foreground">Attention</p>
+                                  </div>
+                                  <div className="text-center p-2 rounded-lg bg-destructive/10 border border-destructive/20">
+                                    <AlertCircle className="h-4 w-4 text-destructive mx-auto mb-1" />
+                                    <p className="text-lg font-bold text-destructive">{healthCounts.critical || 0}</p>
+                                    <p className="text-xs text-muted-foreground">Critical</p>
+                                  </div>
+                                </div>
+                              )}
 
-                      {isTeamReport && reportTeamSummary && (
-                        <div className={`p-3 rounded-lg ${
-                          reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
-                          reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
-                          'bg-destructive/10 border border-destructive/30'
-                        } mb-3`}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Users className="h-4 w-4 text-blue-400" />
-                            <span className={`text-sm font-medium ${
-                              reportTeamSummary.overallTeamMorale === 'positive' ? 'text-success' :
-                              reportTeamSummary.overallTeamMorale === 'mixed' ? 'text-warning' : 'text-destructive'
-                            }`}>
-                              Team Morale: {reportTeamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
-                                           reportTeamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground line-clamp-3">
-                            {reportTeamSummary.teamSummary}
-                          </p>
-                        </div>
-                      )}
+                              {reportAiSummary && healthConfig && (
+                                <div className={`p-3 rounded-lg ${healthConfig.bgColor} border ${healthConfig.borderColor} mb-3`}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <healthConfig.Icon className={`h-4 w-4 ${healthConfig.color}`} />
+                                    <span className={`text-sm font-medium ${healthConfig.color}`}>
+                                      Overall: {healthConfig.label}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground line-clamp-3">
+                                    {reportAiSummary.executiveSummary}
+                                  </p>
+                                </div>
+                              )}
 
-                      {!isTeamReport && reportAiSummary && healthConfig && (
-                        <div className={`p-3 rounded-lg ${healthConfig.bgColor} border ${healthConfig.borderColor} mb-3`}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <healthConfig.Icon className={`h-4 w-4 ${healthConfig.color}`} />
-                            <span className={`text-sm font-medium ${healthConfig.color}`}>
-                              Overall: {healthConfig.label}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground line-clamp-3">
-                            {reportAiSummary.executiveSummary}
-                          </p>
-                        </div>
-                      )}
+                              <p className="text-xs text-muted-foreground">
+                                Saved: {new Date(report.savedAt).toLocaleDateString()}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                      <p className="text-xs text-muted-foreground">
-                        Saved: {new Date(report.savedAt).toLocaleDateString()}
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+                {/* Historical Team Feedback Reports Section */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-blue-500" />
+                      <h3 className="text-lg font-semibold">Historical Team Feedback Reports</h3>
+                    </div>
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
+                      {teamReports.length} {teamReports.length === 1 ? 'Report' : 'Reports'}
+                    </Badge>
+                  </div>
+                  
+                  {teamReports.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border border-white/5">
+                      <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm">No team feedback reports archived yet</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {teamReports.map((report) => {
+                        const { team: reportTeamSummary } = parseSavedSummary(report.aiSummary, 'team');
+                        
+                        return (
+                          <Card 
+                            key={report.id} 
+                            className="glass-card border-white/10 hover:border-blue-500/30 transition-all cursor-pointer group border-l-2 border-l-blue-500/50"
+                            onClick={() => handleTileClick(report)}
+                            data-testid={`historical-team-report-${report.id}`}
+                          >
+                            <CardContent className="p-6">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                  <Users className="h-5 w-5 text-blue-500" />
+                                  <div>
+                                    <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
+                                    <p className="text-xs text-muted-foreground">Started {formatWeekEnding(report.weekStart)}</p>
+                                  </div>
+                                </div>
+                                <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              
+                              <div className="flex flex-wrap items-center gap-2 mb-4">
+                                <Badge variant="secondary" className="gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  {report.reportCount} Feedbacks
+                                </Badge>
+                                {reportTeamSummary && (
+                                  <Badge variant="outline" className="gap-1 border-blue-500/30">
+                                    <Sparkles className="h-3 w-3 text-blue-500" />
+                                    AI Summary
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {reportTeamSummary && (
+                                <div className={`p-3 rounded-lg ${
+                                  reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                                  reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                                  'bg-destructive/10 border border-destructive/30'
+                                } mb-3`}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Users className="h-4 w-4 text-blue-400" />
+                                    <span className={`text-sm font-medium ${
+                                      reportTeamSummary.overallTeamMorale === 'positive' ? 'text-success' :
+                                      reportTeamSummary.overallTeamMorale === 'mixed' ? 'text-warning' : 'text-destructive'
+                                    }`}>
+                                      Team Morale: {reportTeamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                                                   reportTeamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground line-clamp-3">
+                                    {reportTeamSummary.teamSummary}
+                                  </p>
+                                </div>
+                              )}
+
+                              <p className="text-xs text-muted-foreground">
+                                Saved: {new Date(report.savedAt).toLocaleDateString()}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
