@@ -89,15 +89,25 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "Access and view all contracts in the system",
     roles: { admin: true, manager: true, lead: true, member: true },
   },
-  canAddPeople: {
-    label: "Add People",
-    description: "Add new team members or project leads",
+  canAddTeamMembers: {
+    label: "Add Team Members",
+    description: "Add new team members to the system",
     roles: { admin: true, manager: true, lead: true, member: true },
   },
-  canEditPeople: {
-    label: "Edit People",
-    description: "Modify team member or project lead information",
+  canEditTeamMembers: {
+    label: "Edit Team Members",
+    description: "Modify team member information",
     roles: { admin: true, manager: true, lead: true, member: true },
+  },
+  canAddProjectLeads: {
+    label: "Add Project Leads",
+    description: "Add new project leads to the system",
+    roles: { admin: true, manager: true, lead: true, member: false },
+  },
+  canEditProjectLeads: {
+    label: "Edit Project Leads",
+    description: "Modify project lead information",
+    roles: { admin: true, manager: true, lead: true, member: false },
   },
   canDeletePeople: {
     label: "Delete People",
@@ -154,7 +164,7 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
 const featureCategories = [
   { name: "User Management", features: ["canManageUsers"] },
   { name: "Contract Operations", features: ["canAddContracts", "canEditContracts", "canDeleteContracts", "canViewAllContracts"] },
-  { name: "People Management", features: ["canAddPeople", "canEditPeople", "canDeletePeople"] },
+  { name: "People Management", features: ["canAddTeamMembers", "canEditTeamMembers", "canAddProjectLeads", "canEditProjectLeads", "canDeletePeople"] },
   { name: "Report Submission", features: ["canSubmitReports", "canEditOwnReports"] },
   { name: "Report Viewing", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports"] },
   { name: "AI & Feedback", features: ["canGenerateAISummary", "canViewAISummary", "canSubmitFeedback"] },

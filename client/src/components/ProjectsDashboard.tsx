@@ -2981,7 +2981,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   </div>
                 </PopoverContent>
               </Popover>
-              {permissions.canAddPeople && (
+              {permissions.canAddTeamMembers && (
               <Dialog open={showAddMemberDialog} onOpenChange={(open) => {
                 setShowAddMemberDialog(open);
                 if (!open) {
@@ -3066,7 +3066,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         <CardContent>
           {teamMembers.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-members">
-              No team members added yet. {permissions.canAddPeople ? 'Click "Add Team Member" to add one.' : ''}
+              No team members added yet. {permissions.canAddTeamMembers ? 'Click "Add Team Member" to add one.' : ''}
             </p>
           ) : (
             <>
@@ -3223,7 +3223,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               Team Leads ({projectLeads.length})
             </CardTitle>
             <div className="flex gap-2">
-              {permissions.canAddPeople && (
+              {permissions.canAddProjectLeads && (
               <Dialog open={showAddLeadDialog} onOpenChange={(open) => {
                 setShowAddLeadDialog(open);
                 if (!open) {
@@ -3309,7 +3309,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         <CardContent>
           {projectLeads.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8" data-testid="text-no-leads">
-              No team leads added yet. {permissions.canAddPeople ? 'Click "Add Team Lead" to add one.' : ''}
+              No team leads added yet. {permissions.canAddProjectLeads ? 'Click "Add Team Lead" to add one.' : ''}
             </p>
           ) : (
             <>

@@ -9,8 +9,10 @@ export interface Permissions {
   canEditContracts: boolean;
   canDeleteContracts: boolean;
   canViewAllContracts: boolean;
-  canAddPeople: boolean;
-  canEditPeople: boolean;
+  canAddTeamMembers: boolean;
+  canEditTeamMembers: boolean;
+  canAddProjectLeads: boolean;
+  canEditProjectLeads: boolean;
   canDeletePeople: boolean;
   canSubmitReports: boolean;
   canEditOwnReports: boolean;
@@ -32,8 +34,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canEditContracts: true,
     canDeleteContracts: true,
     canViewAllContracts: true,
-    canAddPeople: true,
-    canEditPeople: true,
+    canAddTeamMembers: true,
+    canEditTeamMembers: true,
+    canAddProjectLeads: true,
+    canEditProjectLeads: true,
     canDeletePeople: true,
     canSubmitReports: true,
     canEditOwnReports: true,
@@ -51,8 +55,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canEditContracts: true,
     canDeleteContracts: true,
     canViewAllContracts: true,
-    canAddPeople: true,
-    canEditPeople: true,
+    canAddTeamMembers: true,
+    canEditTeamMembers: true,
+    canAddProjectLeads: true,
+    canEditProjectLeads: true,
     canDeletePeople: true,
     canSubmitReports: true,
     canEditOwnReports: true,
@@ -70,8 +76,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canEditContracts: true,
     canDeleteContracts: false,
     canViewAllContracts: true,
-    canAddPeople: true,
-    canEditPeople: true,
+    canAddTeamMembers: true,
+    canEditTeamMembers: true,
+    canAddProjectLeads: true,
+    canEditProjectLeads: true,
     canDeletePeople: false,
     canSubmitReports: true,
     canEditOwnReports: true,
@@ -89,8 +97,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canEditContracts: false,
     canDeleteContracts: false,
     canViewAllContracts: true,
-    canAddPeople: true,
-    canEditPeople: true,
+    canAddTeamMembers: true,
+    canEditTeamMembers: true,
+    canAddProjectLeads: false,
+    canEditProjectLeads: false,
     canDeletePeople: false,
     canSubmitReports: false,
     canEditOwnReports: false,

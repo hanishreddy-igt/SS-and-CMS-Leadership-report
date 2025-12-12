@@ -71,25 +71,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const ROLE_PERMISSIONS: Record<string, string[]> = {
     admin: [
       'canManageUsers', 'canViewAllReports', 'canSubmitReports', 'canEditReports', 
-      'canDeleteReports', 'canAddPeople', 'canEditPeople', 'canDeletePeople',
+      'canDeleteReports', 'canAddTeamMembers', 'canEditTeamMembers', 'canAddProjectLeads', 
+      'canEditProjectLeads', 'canDeletePeople',
       'canAddContracts', 'canEditContracts', 'canDeleteContracts', 'canGenerateAISummary',
       'canViewAISummary', 'canExportReports', 'canArchiveReports', 'canViewFeedback', 'canSubmitFeedback'
     ],
     manager: [
       'canViewAllReports', 'canSubmitReports', 'canEditReports', 'canDeleteReports',
-      'canAddPeople', 'canEditPeople', 'canDeletePeople', 'canAddContracts', 
+      'canAddTeamMembers', 'canEditTeamMembers', 'canAddProjectLeads', 'canEditProjectLeads', 
+      'canDeletePeople', 'canAddContracts', 
       'canEditContracts', 'canDeleteContracts', 'canGenerateAISummary', 'canViewAISummary',
       'canExportReports', 'canArchiveReports', 'canViewFeedback', 'canSubmitFeedback'
     ],
     lead: [
-      'canViewAllReports', 'canSubmitReports', 'canEditReports', 'canAddPeople', 'canEditPeople',
+      'canViewAllReports', 'canSubmitReports', 'canEditReports',
+      'canAddTeamMembers', 'canEditTeamMembers', 'canAddProjectLeads', 'canEditProjectLeads',
       'canAddContracts', 'canEditContracts',
       'canViewAISummary', 'canExportReports', 'canArchiveReports', 'canGenerateAISummary',
       'canViewFeedback', 'canSubmitFeedback'
     ],
     member: [
       'canViewAllReports', 'canViewAISummary', 'canViewFeedback', 'canSubmitFeedback',
-      'canAddPeople', 'canEditPeople'
+      'canAddTeamMembers', 'canEditTeamMembers'
     ]
   };
 
@@ -481,7 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/team-members', isAuthenticated, requirePermission('canAddPeople'), async (req, res) => {
+  app.post('/api/team-members', isAuthenticated, requirePermission('canAddTeamMembers'), async (req, res) => {
     try {
       const data = insertPersonSchema.parse(req.body);
       const member = await storage.createTeamMember(data);
@@ -491,7 +494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/team-members/:id', isAuthenticated, requirePermission('canEditPeople'), async (req, res) => {
+  app.patch('/api/team-members/:id', isAuthenticated, requirePermission('canEditTeamMembers'), async (req, res) => {
     try {
       const data = insertPersonSchema.partial().parse(req.body);
       const member = await storage.updateTeamMember(req.params.id, data);
@@ -526,7 +529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/project-leads', isAuthenticated, requirePermission('canAddPeople'), async (req, res) => {
+  app.post('/api/project-leads', isAuthenticated, requirePermission('canAddProjectLeads'), async (req, res) => {
     try {
       const data = insertPersonSchema.parse(req.body);
       const lead = await storage.createProjectLead(data);
@@ -536,7 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/project-leads/:id', isAuthenticated, requirePermission('canEditPeople'), async (req, res) => {
+  app.patch('/api/project-leads/:id', isAuthenticated, requirePermission('canEditProjectLeads'), async (req, res) => {
     try {
       const data = insertPersonSchema.partial().parse(req.body);
       const lead = await storage.updateProjectLead(req.params.id, data);
