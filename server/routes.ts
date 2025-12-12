@@ -1091,6 +1091,7 @@ IMPORTANT:
       const bodySize = JSON.stringify(req.body).length;
       console.log(`[Archive] Saving report - Body size: ${(bodySize / 1024 / 1024).toFixed(2)} MB`);
       console.log(`[Archive] Week: ${req.body.weekStart} to ${req.body.weekEnd}`);
+      console.log(`[Archive] Report type: ${req.body.reportType || 'account'}`);
       console.log(`[Archive] Report count: ${req.body.reportCount}`);
       console.log(`[Archive] PDF data length: ${req.body.pdfData?.length || 0} chars`);
       console.log(`[Archive] CSV data length: ${req.body.csvData?.length || 0} chars`);
@@ -1098,12 +1099,22 @@ IMPORTANT:
       
       const data = insertSavedReportSchema.parse(req.body);
       const report = await storage.upsertSavedReport(data);
-      console.log(`[Archive] Successfully saved report for week ${report.weekStart}`);
+      console.log(`[Archive] Successfully saved ${report.reportType} report for week ${report.weekStart}`);
       res.json(report);
     } catch (error: any) {
       console.error('[Archive] Error saving report:', error);
       console.error('[Archive] Error stack:', error.stack);
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get reports by week (returns both account and team reports for a week)
+  app.get('/api/saved-reports/week/:weekStart', isAuthenticated, async (req, res) => {
+    try {
+      const reports = await storage.getSavedReportsByWeek(req.params.weekStart);
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
