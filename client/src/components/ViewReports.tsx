@@ -3520,6 +3520,16 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           </div>
         </CardHeader>
         <CardContent className="pt-6">
+          {/* Warning banner when reports modified after summary generation */}
+          {reportsModifiedAfterSummary && teamSummary && (
+            <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+              <p className="text-sm text-warning">
+                Reports have been edited after the AI summary was generated. Consider regenerating the summary.
+              </p>
+            </div>
+          )}
+
           {/* Team Feedback Summary Tile - Moved from AI Summary section */}
           {teamSummary ? (
             <div 
