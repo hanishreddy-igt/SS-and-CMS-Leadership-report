@@ -336,46 +336,67 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             }
           }
           
-          // Combine summaries for archiving (new format)
-          const combinedSummaryToArchive = leadershipSummaryToArchive ? {
-            leadership: leadershipSummaryToArchive,
-            team: teamSummaryToArchive
-          } : null;
-          
-          // Generate AI Summary PDF and Reports CSV for auto-archive
-          // PDF = AI Summary only (smaller file)
-          // CSV = Reports data only (no AI summary in CSV)
-          console.log('Auto-archive: Generating AI Summary PDF and Reports CSV...');
+          // Generate separate data for Account Reports and Team Reports
+          console.log('Auto-archive: Generating separate PDFs and CSVs...');
           const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
-          const pdfBase64 = leadershipSummaryToArchive 
-            ? generateAISummaryPDFBase64(weekEnd, leadershipSummaryToArchive, teamSummaryToArchive)
-            : '';
-          const csvContent = generateCSVContent(); // Reports only, no AI summary
           
-          console.log(`[Auto-Archive] PDF size: ${(pdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
-          console.log(`[Auto-Archive] CSV size: ${(csvContent.length / 1024).toFixed(2)} KB`);
-          
-          // Calculate health counts from submitted reports only (same as Force Archive)
+          // Calculate health counts from submitted reports only
           const healthCounts = {
             onTrack: submittedReports.filter(r => r.healthStatus === 'on-track').length,
             needsAttention: submittedReports.filter(r => r.healthStatus === 'at-risk').length,
             critical: submittedReports.filter(r => r.healthStatus === 'critical').length,
           };
           
-          // Archive via API with full PDF and CSV data (using combined summary format)
-          const archiveResponse = await apiRequest('POST', '/api/saved-reports', {
+          // Account Report: Leadership summary PDF + Account reports CSV
+          const accountPdfBase64 = leadershipSummaryToArchive 
+            ? generateAISummaryPDFBase64(weekEnd, leadershipSummaryToArchive, null)
+            : '';
+          const accountCsvContent = generateAccountReportsCSV();
+          
+          // Team Report: Team feedback summary PDF + Team feedback CSV
+          const teamPdfBase64 = teamSummaryToArchive 
+            ? generateAISummaryPDFBase64(weekEnd, null, teamSummaryToArchive)
+            : '';
+          const teamCsvContent = generateTeamFeedbackCSV();
+          
+          console.log(`[Auto-Archive] Account PDF size: ${(accountPdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
+          console.log(`[Auto-Archive] Account CSV size: ${(accountCsvContent.length / 1024).toFixed(2)} KB`);
+          console.log(`[Auto-Archive] Team PDF size: ${(teamPdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
+          console.log(`[Auto-Archive] Team CSV size: ${(teamCsvContent.length / 1024).toFixed(2)} KB`);
+          
+          // Archive via API - Save 2 separate reports (Account + Team)
+          // Save Account Report (type: 'account')
+          const accountArchiveResponse = await apiRequest('POST', '/api/saved-reports', {
             weekStart: reportWeekStart,
             weekEnd: weekEnd,
+            reportType: 'account',
             reportCount: String(submittedReports.length),
             healthCounts,
-            aiSummary: combinedSummaryToArchive,
-            pdfData: pdfBase64,
-            csvData: csvContent,
+            aiSummary: leadershipSummaryToArchive,
+            pdfData: accountPdfBase64,
+            csvData: accountCsvContent,
           });
           
-          if (!archiveResponse.ok) {
-            const errorData = await archiveResponse.json().catch(() => ({}));
-            throw new Error(errorData.error || `Archive save failed with status ${archiveResponse.status}`);
+          if (!accountArchiveResponse.ok) {
+            const errorData = await accountArchiveResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Account archive save failed with status ${accountArchiveResponse.status}`);
+          }
+          
+          // Save Team Report (type: 'team')
+          const teamArchiveResponse = await apiRequest('POST', '/api/saved-reports', {
+            weekStart: reportWeekStart,
+            weekEnd: weekEnd,
+            reportType: 'team',
+            reportCount: String(peopleWithFeedback.length),
+            healthCounts: null,
+            aiSummary: teamSummaryToArchive,
+            pdfData: teamPdfBase64,
+            csvData: teamCsvContent,
+          });
+          
+          if (!teamArchiveResponse.ok) {
+            const errorData = await teamArchiveResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Team archive save failed with status ${teamArchiveResponse.status}`);
           }
           
           // Delete all current reports
@@ -401,7 +422,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           const summaryNote = leadershipSummaryToArchive ? (teamSummaryToArchive ? ' with AI summaries' : ' with leadership summary') : '';
           toast({
             title: 'Auto-Archive Complete',
-            description: `Previous week's ${weeklyReports.length} reports have been archived${summaryNote} and reset for the new week.`,
+            description: `Previous week's ${weeklyReports.length} reports have been archived${summaryNote} as 2 separate reports (Account + Team).`,
           });
         } catch (error: any) {
           console.error('Auto-archive failed:', error);
@@ -2772,6 +2793,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [showAllReports, setShowAllReports] = useState(false);
 
   // Save current reports to archive (generates AI summaries, PDF, CSV, archives, then resets)
+  // Now saves 2 separate reports: one for Account Reports (leadership summary + account CSV)
+  // and one for Team Reports (team feedback summary + team feedback CSV)
   const saveToArchive = async () => {
     if (sortedReports.length === 0) {
       toast({
@@ -2817,57 +2840,67 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         }
       }
 
-      // Combine summaries for archiving (new format)
-      const combinedSummaryToArchive = leadershipSummaryToArchive ? {
-        leadership: leadershipSummaryToArchive,
-        team: teamSummaryToArchive
-      } : null;
-
-      // Step 3: Generate AI Summary PDF and Reports CSV separately
-      // PDF = AI Summary only (smaller file)
-      // CSV = Reports data only (no AI summary in CSV)
       const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
-      const pdfBase64 = leadershipSummaryToArchive 
-        ? generateAISummaryPDFBase64(weekEnd, leadershipSummaryToArchive, teamSummaryToArchive)
-        : '';
-      const csvContent = generateCSVContent(); // Reports only, no AI summary
 
-      // Step 4: Calculate health counts
+      // Step 3: Calculate health counts
       const healthCounts = {
         onTrack: submittedReports.filter(r => r.healthStatus === 'on-track').length,
         needsAttention: submittedReports.filter(r => r.healthStatus === 'at-risk').length,
         critical: submittedReports.filter(r => r.healthStatus === 'critical').length,
       };
 
-      // Step 4.5: Prepare team feedback for archiving
-      const teamFeedbackToArchive = peopleWithFeedback.length > 0 
-        ? peopleWithFeedback.map(p => ({
-            id: p.id,
-            name: p.name,
-            roles: p.roles,
-            feedback: p.feedback
-          }))
-        : null;
+      // Step 4: Generate separate data for Account Reports and Team Reports
+      // Account Report: Leadership summary PDF + Account reports CSV
+      const accountPdfBase64 = leadershipSummaryToArchive 
+        ? generateAISummaryPDFBase64(weekEnd, leadershipSummaryToArchive, null) // Leadership only
+        : '';
+      const accountCsvContent = generateAccountReportsCSV();
 
-      // Step 5: Archive via API (using combined summary format)
+      // Team Report: Team feedback summary PDF + Team feedback CSV
+      const teamPdfBase64 = teamSummaryToArchive 
+        ? generateAISummaryPDFBase64(weekEnd, null, teamSummaryToArchive) // Team only
+        : '';
+      const teamCsvContent = generateTeamFeedbackCSV();
+
+      // Step 5: Archive via API - Save 2 separate reports
       console.log(`[Archive] Archiving ${submittedReports.length} reports for week ${reportWeekStart} to ${weekEnd}`);
-      console.log(`[Archive] PDF size: ${(pdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
-      console.log(`[Archive] CSV size: ${(csvContent.length / 1024).toFixed(2)} KB`);
+      console.log(`[Archive] Account PDF size: ${(accountPdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
+      console.log(`[Archive] Account CSV size: ${(accountCsvContent.length / 1024).toFixed(2)} KB`);
+      console.log(`[Archive] Team PDF size: ${(teamPdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
+      console.log(`[Archive] Team CSV size: ${(teamCsvContent.length / 1024).toFixed(2)} KB`);
       
-      const archiveResponse = await apiRequest('POST', '/api/saved-reports', {
+      // Save Account Report (type: 'account')
+      const accountArchiveResponse = await apiRequest('POST', '/api/saved-reports', {
         weekStart: reportWeekStart,
         weekEnd: weekEnd,
+        reportType: 'account',
         reportCount: String(submittedReports.length),
         healthCounts,
-        aiSummary: combinedSummaryToArchive,
-        teamFeedback: teamFeedbackToArchive,
-        pdfData: pdfBase64,
-        csvData: csvContent,
+        aiSummary: leadershipSummaryToArchive,
+        pdfData: accountPdfBase64,
+        csvData: accountCsvContent,
       });
       
-      if (!archiveResponse.ok) {
-        const errorData = await archiveResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || `Archive save failed with status ${archiveResponse.status}`);
+      if (!accountArchiveResponse.ok) {
+        const errorData = await accountArchiveResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Account archive save failed with status ${accountArchiveResponse.status}`);
+      }
+
+      // Save Team Report (type: 'team')
+      const teamArchiveResponse = await apiRequest('POST', '/api/saved-reports', {
+        weekStart: reportWeekStart,
+        weekEnd: weekEnd,
+        reportType: 'team',
+        reportCount: String(peopleWithFeedback.length),
+        healthCounts: null,
+        aiSummary: teamSummaryToArchive,
+        pdfData: teamPdfBase64,
+        csvData: teamCsvContent,
+      });
+      
+      if (!teamArchiveResponse.ok) {
+        const errorData = await teamArchiveResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Team archive save failed with status ${teamArchiveResponse.status}`);
       }
 
       // Step 6: Reset - Delete all current reports, AI summary, and team feedback
@@ -2893,7 +2926,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       const summaryNote = leadershipSummaryToArchive ? (teamSummaryToArchive ? ' with AI summaries' : ' with leadership summary') : '';
       toast({
         title: 'Archive Complete',
-        description: `Week ending ${weekEnd} has been archived${summaryNote} and reports have been reset.`,
+        description: `Week ending ${weekEnd} has been archived${summaryNote} as 2 separate reports (Account + Team).`,
       });
     } catch (error: any) {
       console.error('Force archive failed:', error);
