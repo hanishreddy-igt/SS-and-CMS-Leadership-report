@@ -14,6 +14,7 @@ import type {
   UpsertUser,
   SavedReport,
   InsertSavedReport,
+  SavedReportType,
   CurrentAiSummary,
   InsertCurrentAiSummary,
   ProjectRole,
@@ -24,7 +25,7 @@ import type {
 } from "@shared/schema";
 import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for authentication)
@@ -59,12 +60,14 @@ export interface IStorage {
   updateWeeklyReport(id: string, report: Partial<InsertWeeklyReport>): Promise<WeeklyReport | undefined>;
   deleteWeeklyReport(id: string): Promise<boolean>;
 
-  // Saved Reports (archived weekly snapshots)
+  // Saved Reports (archived weekly snapshots - 2 per week: account + team)
   getSavedReports(): Promise<SavedReport[]>;
   getSavedReport(id: string): Promise<SavedReport | undefined>;
-  getSavedReportByWeek(weekStart: string): Promise<SavedReport | undefined>;
+  getSavedReportByWeek(weekStart: string, reportType: SavedReportType): Promise<SavedReport | undefined>;
+  getSavedReportsByWeek(weekStart: string): Promise<SavedReport[]>;
   upsertSavedReport(report: InsertSavedReport): Promise<SavedReport>;
   deleteSavedReport(id: string): Promise<boolean>;
+  deleteSavedReportsByWeek(weekStart: string): Promise<boolean>;
 
   // Current AI Summary (persisted current week's summary)
   getCurrentAiSummary(weekStart: string): Promise<CurrentAiSummary | undefined>;
@@ -341,7 +344,7 @@ export class MemStorage implements IStorage {
     return this.weeklyReports.delete(id);
   }
 
-  // Saved Reports (archived weekly snapshots)
+  // Saved Reports (archived weekly snapshots - 2 per week: account + team)
   async getSavedReports(): Promise<SavedReport[]> {
     return Array.from(this.savedReports.values());
   }
@@ -350,19 +353,26 @@ export class MemStorage implements IStorage {
     return this.savedReports.get(id);
   }
 
-  async getSavedReportByWeek(weekStart: string): Promise<SavedReport | undefined> {
-    return Array.from(this.savedReports.values()).find(r => r.weekStart === weekStart);
+  async getSavedReportByWeek(weekStart: string, reportType: SavedReportType): Promise<SavedReport | undefined> {
+    return Array.from(this.savedReports.values()).find(r => r.weekStart === weekStart && r.reportType === reportType);
+  }
+
+  async getSavedReportsByWeek(weekStart: string): Promise<SavedReport[]> {
+    return Array.from(this.savedReports.values()).filter(r => r.weekStart === weekStart);
   }
 
   async upsertSavedReport(insertReport: InsertSavedReport): Promise<SavedReport> {
-    const existing = Array.from(this.savedReports.values()).find(r => r.weekStart === insertReport.weekStart);
+    const reportType = insertReport.reportType || 'account';
+    const existing = Array.from(this.savedReports.values()).find(
+      r => r.weekStart === insertReport.weekStart && r.reportType === reportType
+    );
     if (existing) {
       const updated: SavedReport = { 
         ...existing, 
         ...insertReport, 
+        reportType,
         csvData: insertReport.csvData ?? null,
         aiSummary: insertReport.aiSummary ?? null,
-        teamFeedback: insertReport.teamFeedback ?? null,
         healthCounts: insertReport.healthCounts ?? null,
         savedAt: new Date() 
       };
@@ -373,9 +383,9 @@ export class MemStorage implements IStorage {
     const report: SavedReport = { 
       ...insertReport, 
       id, 
+      reportType,
       csvData: insertReport.csvData ?? null,
       aiSummary: insertReport.aiSummary ?? null,
-      teamFeedback: insertReport.teamFeedback ?? null,
       healthCounts: insertReport.healthCounts ?? null,
       savedAt: new Date() 
     };
@@ -385,6 +395,12 @@ export class MemStorage implements IStorage {
 
   async deleteSavedReport(id: string): Promise<boolean> {
     return this.savedReports.delete(id);
+  }
+
+  async deleteSavedReportsByWeek(weekStart: string): Promise<boolean> {
+    const reportsToDelete = Array.from(this.savedReports.values()).filter(r => r.weekStart === weekStart);
+    reportsToDelete.forEach(r => this.savedReports.delete(r.id));
+    return reportsToDelete.length > 0;
   }
 
   // Current AI Summary
@@ -663,7 +679,7 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
-  // Saved Reports (archived weekly snapshots)
+  // Saved Reports (archived weekly snapshots - 2 per week: account + team)
   async getSavedReports(): Promise<SavedReport[]> {
     return await db.select().from(savedReports);
   }
@@ -673,28 +689,47 @@ export class DatabaseStorage implements IStorage {
     return report || undefined;
   }
 
-  async getSavedReportByWeek(weekStart: string): Promise<SavedReport | undefined> {
-    const [report] = await db.select().from(savedReports).where(eq(savedReports.weekStart, weekStart));
+  async getSavedReportByWeek(weekStart: string, reportType: SavedReportType): Promise<SavedReport | undefined> {
+    const [report] = await db.select().from(savedReports).where(
+      and(eq(savedReports.weekStart, weekStart), eq(savedReports.reportType, reportType))
+    );
     return report || undefined;
   }
 
+  async getSavedReportsByWeek(weekStart: string): Promise<SavedReport[]> {
+    return await db.select().from(savedReports).where(eq(savedReports.weekStart, weekStart));
+  }
+
   async upsertSavedReport(insertReport: InsertSavedReport): Promise<SavedReport> {
+    const reportType = insertReport.reportType || 'account';
+    // Check if exists first, then insert or update
+    const existing = await this.getSavedReportByWeek(insertReport.weekStart, reportType as SavedReportType);
+    if (existing) {
+      const [updated] = await db
+        .update(savedReports)
+        .set({
+          ...insertReport,
+          reportType,
+          savedAt: new Date(),
+        })
+        .where(eq(savedReports.id, existing.id))
+        .returning();
+      return updated;
+    }
     const [report] = await db
       .insert(savedReports)
-      .values(insertReport)
-      .onConflictDoUpdate({
-        target: savedReports.weekStart,
-        set: {
-          ...insertReport,
-          savedAt: new Date(),
-        },
-      })
+      .values({ ...insertReport, reportType })
       .returning();
     return report;
   }
 
   async deleteSavedReport(id: string): Promise<boolean> {
     const result = await db.delete(savedReports).where(eq(savedReports.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async deleteSavedReportsByWeek(weekStart: string): Promise<boolean> {
+    const result = await db.delete(savedReports).where(eq(savedReports.weekStart, weekStart));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 

@@ -84,17 +84,21 @@ export const weeklyReports = pgTable("weekly_reports", {
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
 
+// Report type enum for saved reports
+export type SavedReportType = 'account' | 'team';
+
 // Archived weekly report snapshots - stores PDF/CSV for each week
+// Now split into 2 reports per week: 'account' (Leadership Summary + Account Reports) and 'team' (Team Feedback Summary + Team Feedback)
 export const savedReports = pgTable("saved_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  weekStart: text("week_start").notNull().unique(), // Week identifier - only one per week
+  weekStart: text("week_start").notNull(),
   weekEnd: text("week_end").notNull(),
-  pdfData: text("pdf_data").notNull(), // Base64 encoded PDF
-  csvData: text("csv_data"), // CSV content
-  aiSummary: jsonb("ai_summary"), // AI summary if generated
-  teamFeedback: jsonb("team_feedback"), // Archived team member/lead feedback
-  reportCount: text("report_count").notNull(), // Number of reports included
-  healthCounts: jsonb("health_counts"), // { onTrack: n, needsAttention: n, critical: n }
+  reportType: text("report_type").notNull().default('account'), // 'account' or 'team'
+  pdfData: text("pdf_data").notNull(), // Base64 encoded PDF (Leadership Summary for account, Team Feedback Summary for team)
+  csvData: text("csv_data"), // CSV content (Account Reports for account, Team Feedback for team)
+  aiSummary: jsonb("ai_summary"), // AI summary (Leadership for account, Team for team)
+  reportCount: text("report_count").notNull(), // Number of reports/feedbacks included
+  healthCounts: jsonb("health_counts"), // { onTrack: n, needsAttention: n, critical: n } - only for account type
   savedAt: timestamp("saved_at").notNull().defaultNow(),
 });
 
