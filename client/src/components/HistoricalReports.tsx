@@ -278,102 +278,124 @@ export default function HistoricalReports() {
   const { toast } = useToast();
   const [selectedReport, setSelectedReport] = useState<SavedReport | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
-  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  
+  // Separate state for Account Reports section
+  const [accountCalendarOpen, setAccountCalendarOpen] = useState(false);
+  const [accountExpandedYears, setAccountExpandedYears] = useState<Set<string>>(new Set());
+  const [accountExpandedMonths, setAccountExpandedMonths] = useState<Set<string>>(new Set());
+  
+  // Separate state for Team Reports section
+  const [teamCalendarOpen, setTeamCalendarOpen] = useState(false);
+  const [teamExpandedYears, setTeamExpandedYears] = useState<Set<string>>(new Set());
+  const [teamExpandedMonths, setTeamExpandedMonths] = useState<Set<string>>(new Set());
 
   const { data: savedReports = [], isLoading } = useQuery<SavedReport[]>({ 
     queryKey: ['/api/saved-reports'] 
   });
 
-  // Group reports by week (to show account + team reports together)
-  const weekGroups = useMemo(() => {
-    const groups = new Map<string, WeekGroup>();
-    
-    savedReports.forEach(report => {
-      const key = report.weekStart;
-      if (!groups.has(key)) {
-        groups.set(key, {
-          weekStart: report.weekStart,
-          weekEnd: report.weekEnd,
-          accountReport: null,
-          teamReport: null,
-        });
-      }
-      const group = groups.get(key)!;
-      const reportType = (report as any).reportType || 'account';
-      if (reportType === 'team') {
-        group.teamReport = report;
-      } else {
-        group.accountReport = report;
-      }
-    });
-    
-    return Array.from(groups.values()).sort((a, b) => 
-      new Date(b.weekEnd).getTime() - new Date(a.weekEnd).getTime()
-    );
+  // Split reports by type
+  const accountReports = useMemo(() => {
+    return savedReports
+      .filter(r => ((r as any).reportType || 'account') === 'account')
+      .sort((a, b) => new Date(b.weekEnd).getTime() - new Date(a.weekEnd).getTime());
   }, [savedReports]);
 
-  // Group reports by year and month based on weekEnd date
-  const groupedReports = useMemo(() => {
+  const teamReports = useMemo(() => {
+    return savedReports
+      .filter(r => (r as any).reportType === 'team')
+      .sort((a, b) => new Date(b.weekEnd).getTime() - new Date(a.weekEnd).getTime());
+  }, [savedReports]);
+
+  // Group account reports by year and month
+  const accountGroupedReports = useMemo(() => {
     const grouped: GroupedReports = {};
-    
-    savedReports.forEach(report => {
+    accountReports.forEach(report => {
       const endDate = new Date(report.weekEnd);
       const year = endDate.getFullYear().toString();
       const month = MONTH_NAMES[endDate.getMonth()];
-      
-      if (!grouped[year]) {
-        grouped[year] = {};
-      }
-      if (!grouped[year][month]) {
-        grouped[year][month] = [];
-      }
+      if (!grouped[year]) grouped[year] = {};
+      if (!grouped[year][month]) grouped[year][month] = [];
       grouped[year][month].push(report);
     });
-
-    // Sort reports within each month by weekEnd date (most recent first)
-    Object.keys(grouped).forEach(year => {
-      Object.keys(grouped[year]).forEach(month => {
-        grouped[year][month].sort((a, b) => 
-          new Date(b.weekEnd).getTime() - new Date(a.weekEnd).getTime()
-        );
-      });
-    });
-
     return grouped;
-  }, [savedReports]);
+  }, [accountReports]);
 
-  // Get sorted years (most recent first)
-  const sortedYears = useMemo(() => {
-    return Object.keys(groupedReports).sort((a, b) => parseInt(b) - parseInt(a));
-  }, [groupedReports]);
+  // Group team reports by year and month
+  const teamGroupedReports = useMemo(() => {
+    const grouped: GroupedReports = {};
+    teamReports.forEach(report => {
+      const endDate = new Date(report.weekEnd);
+      const year = endDate.getFullYear().toString();
+      const month = MONTH_NAMES[endDate.getMonth()];
+      if (!grouped[year]) grouped[year] = {};
+      if (!grouped[year][month]) grouped[year][month] = [];
+      grouped[year][month].push(report);
+    });
+    return grouped;
+  }, [teamReports]);
 
-  // Auto-expand the most recent year when data loads
+  // Sorted years for each section
+  const accountSortedYears = useMemo(() => {
+    return Object.keys(accountGroupedReports).sort((a, b) => parseInt(b) - parseInt(a));
+  }, [accountGroupedReports]);
+
+  const teamSortedYears = useMemo(() => {
+    return Object.keys(teamGroupedReports).sort((a, b) => parseInt(b) - parseInt(a));
+  }, [teamGroupedReports]);
+
+  // Auto-expand the most recent year for each section
   useMemo(() => {
-    if (sortedYears.length > 0 && expandedYears.size === 0) {
-      setExpandedYears(new Set([sortedYears[0]]));
+    if (accountSortedYears.length > 0 && accountExpandedYears.size === 0) {
+      setAccountExpandedYears(new Set([accountSortedYears[0]]));
     }
-  }, [sortedYears]);
+  }, [accountSortedYears]);
 
-  const toggleYear = (year: string) => {
-    const newExpanded = new Set(expandedYears);
+  useMemo(() => {
+    if (teamSortedYears.length > 0 && teamExpandedYears.size === 0) {
+      setTeamExpandedYears(new Set([teamSortedYears[0]]));
+    }
+  }, [teamSortedYears]);
+
+  // Toggle functions for Account section
+  const toggleAccountYear = (year: string) => {
+    const newExpanded = new Set(accountExpandedYears);
     if (newExpanded.has(year)) {
       newExpanded.delete(year);
     } else {
       newExpanded.add(year);
     }
-    setExpandedYears(newExpanded);
+    setAccountExpandedYears(newExpanded);
   };
 
-  const toggleMonth = (yearMonth: string) => {
-    const newExpanded = new Set(expandedMonths);
+  const toggleAccountMonth = (yearMonth: string) => {
+    const newExpanded = new Set(accountExpandedMonths);
     if (newExpanded.has(yearMonth)) {
       newExpanded.delete(yearMonth);
     } else {
       newExpanded.add(yearMonth);
     }
-    setExpandedMonths(newExpanded);
+    setAccountExpandedMonths(newExpanded);
+  };
+
+  // Toggle functions for Team section
+  const toggleTeamYear = (year: string) => {
+    const newExpanded = new Set(teamExpandedYears);
+    if (newExpanded.has(year)) {
+      newExpanded.delete(year);
+    } else {
+      newExpanded.add(year);
+    }
+    setTeamExpandedYears(newExpanded);
+  };
+
+  const toggleTeamMonth = (yearMonth: string) => {
+    const newExpanded = new Set(teamExpandedMonths);
+    if (newExpanded.has(yearMonth)) {
+      newExpanded.delete(yearMonth);
+    } else {
+      newExpanded.add(yearMonth);
+    }
+    setTeamExpandedMonths(newExpanded);
   };
 
   const deleteArchivedReportMutation = useMutation({
@@ -435,10 +457,16 @@ export default function HistoricalReports() {
     setShowPdfModal(true);
   };
 
-  const handleCalendarSelect = (report: SavedReport) => {
+  const handleAccountCalendarSelect = (report: SavedReport) => {
     setSelectedReport(report);
     setShowPdfModal(true);
-    setCalendarOpen(false);
+    setAccountCalendarOpen(false);
+  };
+
+  const handleTeamCalendarSelect = (report: SavedReport) => {
+    setSelectedReport(report);
+    setShowPdfModal(true);
+    setTeamCalendarOpen(false);
   };
 
   const formatWeekEnding = (dateStr: string) => {
@@ -479,26 +507,27 @@ export default function HistoricalReports() {
 
   return (
     <div className="space-y-6">
+      {/* Section 1: Historical Account Reports */}
       <Card className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <CardTitle className="flex items-center gap-2 text-xl">
-                <History className="h-5 w-5 text-primary" />
-                Historical Reports
+                <Calendar className="h-5 w-5 text-primary" />
+                Historical Account Reports
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                View and download previously archived weekly reports
+                Leadership summaries and account reports from previous weeks
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {savedReports.length > 0 && (
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              {accountReports.length > 0 && (
+                <Popover open={accountCalendarOpen} onOpenChange={setAccountCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
                       className="gap-2"
-                      data-testid="button-calendar-dropdown"
+                      data-testid="button-account-calendar-dropdown"
                     >
                       <CalendarDays className="h-4 w-4" />
                       Select Week
@@ -509,22 +538,22 @@ export default function HistoricalReports() {
                     <div className="p-3 border-b border-white/10">
                       <h4 className="font-semibold text-sm flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-primary" />
-                        Browse by Week Ending
+                        Browse Account Reports
                       </h4>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Select a week to view its report
+                        Select a week to view its account report
                       </p>
                     </div>
                     <ScrollArea className="h-[350px]">
                       <div className="p-2">
-                        {sortedYears.map(year => (
+                        {accountSortedYears.map(year => (
                           <div key={year} className="mb-1">
                             <button
-                              onClick={() => toggleYear(year)}
+                              onClick={() => toggleAccountYear(year)}
                               className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate text-left font-medium"
-                              data-testid={`calendar-year-${year}`}
+                              data-testid={`account-calendar-year-${year}`}
                             >
-                              {expandedYears.has(year) ? (
+                              {accountExpandedYears.has(year) ? (
                                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               ) : (
                                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -532,24 +561,24 @@ export default function HistoricalReports() {
                               <Calendar className="h-4 w-4 text-primary" />
                               {year}
                               <Badge variant="secondary" className="ml-auto text-xs">
-                                {Object.values(groupedReports[year]).flat().length}
+                                {Object.values(accountGroupedReports[year]).flat().length}
                               </Badge>
                             </button>
                             
-                            {expandedYears.has(year) && (
+                            {accountExpandedYears.has(year) && (
                               <div className="ml-4 mt-1 space-y-1">
-                                {MONTH_NAMES.filter(month => groupedReports[year][month]).map(month => {
+                                {MONTH_NAMES.filter(month => accountGroupedReports[year][month]).map(month => {
                                   const yearMonth = `${year}-${month}`;
-                                  const monthReports = groupedReports[year][month];
+                                  const monthReports = accountGroupedReports[year][month];
                                   
                                   return (
                                     <div key={yearMonth}>
                                       <button
-                                        onClick={() => toggleMonth(yearMonth)}
+                                        onClick={() => toggleAccountMonth(yearMonth)}
                                         className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md hover-elevate text-left text-sm"
-                                        data-testid={`calendar-month-${yearMonth}`}
+                                        data-testid={`account-calendar-month-${yearMonth}`}
                                       >
-                                        {expandedMonths.has(yearMonth) ? (
+                                        {accountExpandedMonths.has(yearMonth) ? (
                                           <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                         ) : (
                                           <ChevronRight className="h-3 w-3 text-muted-foreground" />
@@ -560,17 +589,17 @@ export default function HistoricalReports() {
                                         </Badge>
                                       </button>
                                       
-                                      {expandedMonths.has(yearMonth) && (
+                                      {accountExpandedMonths.has(yearMonth) && (
                                         <div className="ml-6 mt-1 space-y-1">
-                                          {monthReports.map(report => {
+                                          {monthReports.map((report: SavedReport) => {
                                             const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
                                             
                                             return (
                                               <button
                                                 key={report.id}
-                                                onClick={() => handleCalendarSelect(report)}
+                                                onClick={() => handleAccountCalendarSelect(report)}
                                                 className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate active-elevate-2 text-left text-sm bg-muted/30 border border-white/5"
-                                                data-testid={`calendar-week-${report.id}`}
+                                                data-testid={`account-calendar-week-${report.id}`}
                                               >
                                                 <div className="flex-1">
                                                   <div className="font-medium text-xs">
@@ -611,217 +640,315 @@ export default function HistoricalReports() {
                   </PopoverContent>
                 </Popover>
               )}
-              <Badge variant="outline" className="gap-1">
-                {savedReports.length} {savedReports.length === 1 ? 'Report' : 'Reports'} Archived
+              <Badge variant="outline" className="gap-1 bg-primary/10 text-primary border-primary/30">
+                {accountReports.length} {accountReports.length === 1 ? 'Report' : 'Reports'}
               </Badge>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          {savedReports.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <History className="h-20 w-20 mx-auto mb-6 opacity-20" />
-              <p className="text-xl font-medium mb-2">No archived reports yet</p>
+          {accountReports.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Calendar className="h-16 w-16 mx-auto mb-4 opacity-20" />
+              <p className="text-lg font-medium mb-2">No account reports archived yet</p>
               <p className="text-sm max-w-md mx-auto">
-                Archive weekly reports from the "View Current Report" tab to access them here for future reference.
+                Archive weekly reports from the "View Current Report" tab to access them here.
               </p>
             </div>
-          ) : (() => {
-            const accountReports = savedReports.filter(r => ((r as any).reportType || 'account') === 'account');
-            const teamReports = savedReports.filter(r => (r as any).reportType === 'team');
-            
-            return (
-              <div className="space-y-8">
-                {/* Historical Account Reports Section */}
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      <h3 className="text-lg font-semibold">Historical Account Reports</h3>
-                    </div>
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                      {accountReports.length} {accountReports.length === 1 ? 'Report' : 'Reports'}
-                    </Badge>
-                  </div>
-                  
-                  {accountReports.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border border-white/5">
-                      <Calendar className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                      <p className="text-sm">No account reports archived yet</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {accountReports.map((report) => {
-                        const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
-                        const { leadership: reportAiSummary } = parseSavedSummary(report.aiSummary, 'account');
-                        const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
-                        
-                        return (
-                          <Card 
-                            key={report.id} 
-                            className="glass-card border-white/10 hover:border-primary/30 transition-all cursor-pointer group border-l-2 border-l-primary/50"
-                            onClick={() => handleTileClick(report)}
-                            data-testid={`historical-account-report-${report.id}`}
-                          >
-                            <CardContent className="p-6">
-                              <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-5 w-5 text-primary" />
-                                  <div>
-                                    <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
-                                    <p className="text-xs text-muted-foreground">Started {formatWeekEnding(report.weekStart)}</p>
-                                  </div>
-                                </div>
-                                <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                              
-                              <div className="flex flex-wrap items-center gap-2 mb-4">
-                                <Badge variant="secondary" className="gap-1">
-                                  <FileText className="h-3 w-3" />
-                                  {report.reportCount} Reports
-                                </Badge>
-                                {reportAiSummary && (
-                                  <Badge variant="outline" className="gap-1 border-primary/30">
-                                    <Sparkles className="h-3 w-3 text-primary" />
-                                    AI Summary
-                                  </Badge>
-                                )}
-                              </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {accountReports.map((report) => {
+                const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
+                const { leadership: reportAiSummary } = parseSavedSummary(report.aiSummary, 'account');
+                const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
+                
+                return (
+                  <Card 
+                    key={report.id} 
+                    className="glass-card border-white/10 hover:border-primary/30 transition-all cursor-pointer group border-l-2 border-l-primary/50"
+                    onClick={() => handleTileClick(report)}
+                    data-testid={`historical-account-report-${report.id}`}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5 text-primary" />
+                          <div>
+                            <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
+                            <p className="text-xs text-muted-foreground">Started {formatWeekEnding(report.weekStart)}</p>
+                          </div>
+                        </div>
+                        <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-2 mb-4">
+                        <Badge variant="secondary" className="gap-1">
+                          <FileText className="h-3 w-3" />
+                          {report.reportCount} Reports
+                        </Badge>
+                        {reportAiSummary && (
+                          <Badge variant="outline" className="gap-1 border-primary/30">
+                            <Sparkles className="h-3 w-3 text-primary" />
+                            AI Summary
+                          </Badge>
+                        )}
+                      </div>
 
-                              {healthCounts && (
-                                <div className="grid grid-cols-3 gap-2 mb-4">
-                                  <div className="text-center p-2 rounded-lg bg-success/10 border border-success/20">
-                                    <CheckCircle2 className="h-4 w-4 text-success mx-auto mb-1" />
-                                    <p className="text-lg font-bold text-success">{healthCounts.onTrack || 0}</p>
-                                    <p className="text-xs text-muted-foreground">On Track</p>
-                                  </div>
-                                  <div className="text-center p-2 rounded-lg bg-warning/10 border border-warning/20">
-                                    <AlertTriangle className="h-4 w-4 text-warning mx-auto mb-1" />
-                                    <p className="text-lg font-bold text-warning">{healthCounts.needsAttention || 0}</p>
-                                    <p className="text-xs text-muted-foreground">Attention</p>
-                                  </div>
-                                  <div className="text-center p-2 rounded-lg bg-destructive/10 border border-destructive/20">
-                                    <AlertCircle className="h-4 w-4 text-destructive mx-auto mb-1" />
-                                    <p className="text-lg font-bold text-destructive">{healthCounts.critical || 0}</p>
-                                    <p className="text-xs text-muted-foreground">Critical</p>
-                                  </div>
-                                </div>
+                      {healthCounts && (
+                        <div className="grid grid-cols-3 gap-2 mb-4">
+                          <div className="text-center p-2 rounded-lg bg-success/10 border border-success/20">
+                            <CheckCircle2 className="h-4 w-4 text-success mx-auto mb-1" />
+                            <p className="text-lg font-bold text-success">{healthCounts.onTrack || 0}</p>
+                            <p className="text-xs text-muted-foreground">On Track</p>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-warning/10 border border-warning/20">
+                            <AlertTriangle className="h-4 w-4 text-warning mx-auto mb-1" />
+                            <p className="text-lg font-bold text-warning">{healthCounts.needsAttention || 0}</p>
+                            <p className="text-xs text-muted-foreground">Attention</p>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-destructive/10 border border-destructive/20">
+                            <AlertCircle className="h-4 w-4 text-destructive mx-auto mb-1" />
+                            <p className="text-lg font-bold text-destructive">{healthCounts.critical || 0}</p>
+                            <p className="text-xs text-muted-foreground">Critical</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {reportAiSummary && healthConfig && (
+                        <div className={`p-3 rounded-lg ${healthConfig.bgColor} border ${healthConfig.borderColor} mb-3`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <healthConfig.Icon className={`h-4 w-4 ${healthConfig.color}`} />
+                            <span className={`text-sm font-medium ${healthConfig.color}`}>
+                              Overall: {healthConfig.label}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-3">
+                            {reportAiSummary.executiveSummary}
+                          </p>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-muted-foreground">
+                        Saved: {new Date(report.savedAt).toLocaleDateString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 2: Historical Team Feedback Reports */}
+      <Card className="glass-card border-white/10">
+        <CardHeader className="border-b border-white/5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Users className="h-5 w-5 text-blue-500" />
+                Historical Team Feedback Reports
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Team feedback summaries and morale reports from previous weeks
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {teamReports.length > 0 && (
+                <Popover open={teamCalendarOpen} onOpenChange={setTeamCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="gap-2"
+                      data-testid="button-team-calendar-dropdown"
+                    >
+                      <CalendarDays className="h-4 w-4" />
+                      Select Week
+                      <ChevronDown className="h-4 w-4 ml-1" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="end">
+                    <div className="p-3 border-b border-white/10">
+                      <h4 className="font-semibold text-sm flex items-center gap-2">
+                        <Users className="h-4 w-4 text-blue-500" />
+                        Browse Team Reports
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Select a week to view its team feedback report
+                      </p>
+                    </div>
+                    <ScrollArea className="h-[350px]">
+                      <div className="p-2">
+                        {teamSortedYears.map(year => (
+                          <div key={year} className="mb-1">
+                            <button
+                              onClick={() => toggleTeamYear(year)}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate text-left font-medium"
+                              data-testid={`team-calendar-year-${year}`}
+                            >
+                              {teamExpandedYears.has(year) ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
                               )}
-
-                              {reportAiSummary && healthConfig && (
-                                <div className={`p-3 rounded-lg ${healthConfig.bgColor} border ${healthConfig.borderColor} mb-3`}>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <healthConfig.Icon className={`h-4 w-4 ${healthConfig.color}`} />
-                                    <span className={`text-sm font-medium ${healthConfig.color}`}>
-                                      Overall: {healthConfig.label}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground line-clamp-3">
-                                    {reportAiSummary.executiveSummary}
-                                  </p>
-                                </div>
-                              )}
-
-                              <p className="text-xs text-muted-foreground">
-                                Saved: {new Date(report.savedAt).toLocaleDateString()}
-                              </p>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Historical Team Feedback Reports Section */}
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-blue-500" />
-                      <h3 className="text-lg font-semibold">Historical Team Feedback Reports</h3>
-                    </div>
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
-                      {teamReports.length} {teamReports.length === 1 ? 'Report' : 'Reports'}
-                    </Badge>
-                  </div>
-                  
-                  {teamReports.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border border-white/5">
-                      <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                      <p className="text-sm">No team feedback reports archived yet</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {teamReports.map((report) => {
-                        const { team: reportTeamSummary } = parseSavedSummary(report.aiSummary, 'team');
-                        
-                        return (
-                          <Card 
-                            key={report.id} 
-                            className="glass-card border-white/10 hover:border-blue-500/30 transition-all cursor-pointer group border-l-2 border-l-blue-500/50"
-                            onClick={() => handleTileClick(report)}
-                            data-testid={`historical-team-report-${report.id}`}
-                          >
-                            <CardContent className="p-6">
-                              <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                  <Users className="h-5 w-5 text-blue-500" />
-                                  <div>
-                                    <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
-                                    <p className="text-xs text-muted-foreground">Started {formatWeekEnding(report.weekStart)}</p>
-                                  </div>
-                                </div>
-                                <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <Users className="h-4 w-4 text-blue-500" />
+                              {year}
+                              <Badge variant="secondary" className="ml-auto text-xs">
+                                {Object.values(teamGroupedReports[year]).flat().length}
+                              </Badge>
+                            </button>
+                            
+                            {teamExpandedYears.has(year) && (
+                              <div className="ml-4 mt-1 space-y-1">
+                                {MONTH_NAMES.filter(month => teamGroupedReports[year][month]).map(month => {
+                                  const yearMonth = `${year}-${month}`;
+                                  const monthReports = teamGroupedReports[year][month];
+                                  
+                                  return (
+                                    <div key={yearMonth}>
+                                      <button
+                                        onClick={() => toggleTeamMonth(yearMonth)}
+                                        className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md hover-elevate text-left text-sm"
+                                        data-testid={`team-calendar-month-${yearMonth}`}
+                                      >
+                                        {teamExpandedMonths.has(yearMonth) ? (
+                                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                        ) : (
+                                          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                                        )}
+                                        {month}
+                                        <Badge variant="outline" className="ml-auto text-xs">
+                                          {monthReports.length}
+                                        </Badge>
+                                      </button>
+                                      
+                                      {teamExpandedMonths.has(yearMonth) && (
+                                        <div className="ml-6 mt-1 space-y-1">
+                                          {monthReports.map((report: SavedReport) => {
+                                            const { team: reportTeamSummary } = parseSavedSummary(report.aiSummary, 'team');
+                                            
+                                            return (
+                                              <button
+                                                key={report.id}
+                                                onClick={() => handleTeamCalendarSelect(report)}
+                                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate active-elevate-2 text-left text-sm bg-muted/30 border border-white/5"
+                                                data-testid={`team-calendar-week-${report.id}`}
+                                              >
+                                                <div className="flex-1">
+                                                  <div className="font-medium text-xs">
+                                                    Week {getWeekNumber(report.weekEnd)}
+                                                  </div>
+                                                  <div className="text-xs text-muted-foreground">
+                                                    Ending {formatWeekEnding(report.weekEnd)}
+                                                  </div>
+                                                </div>
+                                                {reportTeamSummary && (
+                                                  <div className={`h-2 w-2 rounded-full ${
+                                                    reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success' :
+                                                    reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning' : 'bg-destructive'
+                                                  }`} title={`Morale: ${reportTeamSummary.overallTeamMorale}`} />
+                                                )}
+                                                <Eye className="h-3 w-3 text-muted-foreground" />
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
-                              
-                              <div className="flex flex-wrap items-center gap-2 mb-4">
-                                <Badge variant="secondary" className="gap-1">
-                                  <FileText className="h-3 w-3" />
-                                  {report.reportCount} Feedbacks
-                                </Badge>
-                                {reportTeamSummary && (
-                                  <Badge variant="outline" className="gap-1 border-blue-500/30">
-                                    <Sparkles className="h-3 w-3 text-blue-500" />
-                                    AI Summary
-                                  </Badge>
-                                )}
-                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
+              )}
+              <Badge variant="outline" className="gap-1 bg-blue-500/10 text-blue-400 border-blue-500/30">
+                {teamReports.length} {teamReports.length === 1 ? 'Report' : 'Reports'}
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {teamReports.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="h-16 w-16 mx-auto mb-4 opacity-20" />
+              <p className="text-lg font-medium mb-2">No team feedback reports archived yet</p>
+              <p className="text-sm max-w-md mx-auto">
+                Archive weekly reports from the "View Current Report" tab to access them here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {teamReports.map((report) => {
+                const { team: reportTeamSummary } = parseSavedSummary(report.aiSummary, 'team');
+                
+                return (
+                  <Card 
+                    key={report.id} 
+                    className="glass-card border-white/10 hover:border-blue-500/30 transition-all cursor-pointer group border-l-2 border-l-blue-500/50"
+                    onClick={() => handleTileClick(report)}
+                    data-testid={`historical-team-report-${report.id}`}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-5 w-5 text-blue-500" />
+                          <div>
+                            <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
+                            <p className="text-xs text-muted-foreground">Started {formatWeekEnding(report.weekStart)}</p>
+                          </div>
+                        </div>
+                        <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-2 mb-4">
+                        <Badge variant="secondary" className="gap-1">
+                          <FileText className="h-3 w-3" />
+                          {report.reportCount} Feedbacks
+                        </Badge>
+                        {reportTeamSummary && (
+                          <Badge variant="outline" className="gap-1 border-blue-500/30">
+                            <Sparkles className="h-3 w-3 text-blue-500" />
+                            AI Summary
+                          </Badge>
+                        )}
+                      </div>
 
-                              {reportTeamSummary && (
-                                <div className={`p-3 rounded-lg ${
-                                  reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
-                                  reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
-                                  'bg-destructive/10 border border-destructive/30'
-                                } mb-3`}>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <Users className="h-4 w-4 text-blue-400" />
-                                    <span className={`text-sm font-medium ${
-                                      reportTeamSummary.overallTeamMorale === 'positive' ? 'text-success' :
-                                      reportTeamSummary.overallTeamMorale === 'mixed' ? 'text-warning' : 'text-destructive'
-                                    }`}>
-                                      Team Morale: {reportTeamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
-                                                   reportTeamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground line-clamp-3">
-                                    {reportTeamSummary.teamSummary}
-                                  </p>
-                                </div>
-                              )}
+                      {reportTeamSummary && (
+                        <div className={`p-3 rounded-lg ${
+                          reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                          reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                          'bg-destructive/10 border border-destructive/30'
+                        } mb-3`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Users className="h-4 w-4 text-blue-400" />
+                            <span className={`text-sm font-medium ${
+                              reportTeamSummary.overallTeamMorale === 'positive' ? 'text-success' :
+                              reportTeamSummary.overallTeamMorale === 'mixed' ? 'text-warning' : 'text-destructive'
+                            }`}>
+                              Team Morale: {reportTeamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                                           reportTeamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-3">
+                            {reportTeamSummary.teamSummary}
+                          </p>
+                        </div>
+                      )}
 
-                              <p className="text-xs text-muted-foreground">
-                                Saved: {new Date(report.savedAt).toLocaleDateString()}
-                              </p>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
+                      <p className="text-xs text-muted-foreground">
+                        Saved: {new Date(report.savedAt).toLocaleDateString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
