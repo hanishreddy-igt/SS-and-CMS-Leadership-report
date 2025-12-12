@@ -2036,7 +2036,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               </Dialog>
               )}
 
-              {permissions.canAddContracts && (
+              {permissions.canDeleteContracts && (
               <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="gap-2" data-testid="button-import-jira" disabled>
