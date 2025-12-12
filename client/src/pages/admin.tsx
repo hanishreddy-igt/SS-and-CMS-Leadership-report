@@ -72,12 +72,12 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
   canAddContracts: {
     label: "Add Contracts",
     description: "Create new contracts/projects in the system",
-    roles: { admin: true, manager: true, lead: false, member: false },
+    roles: { admin: true, manager: true, lead: true, member: false },
   },
   canEditContracts: {
     label: "Edit Contracts",
     description: "Modify existing contract details and assignments",
-    roles: { admin: true, manager: true, lead: false, member: false },
+    roles: { admin: true, manager: true, lead: true, member: false },
   },
   canDeleteContracts: {
     label: "Delete Contracts",
@@ -92,12 +92,12 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
   canAddPeople: {
     label: "Add People",
     description: "Add new team members or project leads",
-    roles: { admin: true, manager: true, lead: true, member: false },
+    roles: { admin: true, manager: true, lead: true, member: true },
   },
   canEditPeople: {
     label: "Edit People",
     description: "Modify team member or project lead information",
-    roles: { admin: true, manager: true, lead: true, member: false },
+    roles: { admin: true, manager: true, lead: true, member: true },
   },
   canDeletePeople: {
     label: "Delete People",

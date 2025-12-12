@@ -83,11 +83,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ],
     lead: [
       'canViewAllReports', 'canSubmitReports', 'canEditReports', 'canAddPeople', 'canEditPeople',
+      'canAddContracts', 'canEditContracts',
       'canViewAISummary', 'canExportReports', 'canArchiveReports', 'canGenerateAISummary',
       'canViewFeedback', 'canSubmitFeedback'
     ],
     member: [
-      'canViewAllReports', 'canViewAISummary', 'canViewFeedback', 'canSubmitFeedback'
+      'canViewAllReports', 'canViewAISummary', 'canViewFeedback', 'canSubmitFeedback',
+      'canAddPeople', 'canEditPeople'
     ]
   };
 
