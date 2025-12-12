@@ -1105,34 +1105,26 @@ export default function SubmitReport() {
                     >
                       Cancel
                     </Button>
-                    {canModalSubmit && permissions.canSubmitReports ? (
+                    {/* Save as Draft button - available to everyone */}
+                    <Button 
+                      data-testid="modal-button-save-draft" 
+                      type="button"
+                      variant="outline"
+                      disabled={!canModalSaveDraft || modalSaveDraftMutation.isPending}
+                      onClick={handleModalSaveDraft}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {modalSaveDraftMutation.isPending ? 'Saving...' : modalExistingDraftId ? 'Update Draft' : 'Save as Draft'}
+                    </Button>
+                    {/* Submit button - only for users with canSubmitReports permission */}
+                    {permissions.canSubmitReports && (
                       <Button 
                         data-testid="modal-button-submit-report" 
                         type="submit" 
                         className="flex-1"
-                        disabled={modalSubmitReportMutation.isPending}
+                        disabled={!canModalSubmit || modalSubmitReportMutation.isPending}
                       >
                         {modalSubmitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
-                      </Button>
-                    ) : permissions.canSubmitReports ? (
-                      <Button 
-                        data-testid="modal-button-save-draft" 
-                        type="button"
-                        className="flex-1"
-                        disabled={!canModalSaveDraft || modalSaveDraftMutation.isPending}
-                        onClick={handleModalSaveDraft}
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        {modalSaveDraftMutation.isPending ? 'Saving...' : modalExistingDraftId ? 'Update Draft' : 'Save as Draft'}
-                      </Button>
-                    ) : (
-                      <Button 
-                        data-testid="modal-button-no-permission" 
-                        type="button"
-                        className="flex-1"
-                        disabled
-                      >
-                        No Permission to Submit
                       </Button>
                     )}
                   </div>
