@@ -2949,94 +2949,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   return (
     <div className="space-y-8">
-      {/* AI Summary Section */}
-      <Card className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="section-label">AI-Powered Insights</p>
-                <CardTitle className="text-2xl">AI Summary</CardTitle>
-              </div>
-            </div>
-            {permissions.canGenerateAISummary && (
-            <Button
-              onClick={() => generateSummaryMutation.mutate()}
-              disabled={generateSummaryMutation.isPending}
-              className="gap-2"
-              data-testid="button-generate-summary"
-            >
-              {generateSummaryMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Analyzing Reports...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  Generate AI Summary
-                </>
-              )}
-            </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {/* Constant informational banner about AI summary costs */}
-          <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-start gap-2">
-            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              Generate the AI summary only after all reports are submitted to avoid extra costs on GPT calls.
-            </p>
-          </div>
-
-          {/* Warning banner when reports modified after summary generation */}
-          {reportsModifiedAfterSummary && aiSummary && (
-            <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-              <p className="text-sm text-warning">
-                There are edits to the weekly reports after this summary was generated.
-              </p>
-            </div>
-          )}
-
-          {!aiSummary && !teamSummary ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p className="text-lg font-medium mb-2">No summary generated yet</p>
-              <p className="text-sm">Click "Generate AI Summary" to analyze all submitted reports and get comprehensive insights for the week.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Status message when summaries exist */}
-              <div className="text-center py-4">
-                <div className="flex items-center justify-center gap-2 text-success mb-2">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="font-medium">AI Summaries Generated</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Leadership Summary is shown in the Account Reports section below.
-                  {teamSummary && ' Team Feedback Summary is shown in the SS/CMS Team Feedbacks section.'}
-                </p>
-              </div>
-
-              {/* Generated timestamp */}
-              {summaryGeneratedAt && (
-                <div className="flex items-center justify-center text-xs text-muted-foreground border-t border-white/10 pt-3">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Generated: {formatUTC(summaryGeneratedAt)} ({reportsAnalyzed} reports analyzed)
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Leadership Summary Modal */}
       <Dialog open={showLeadershipModal} onOpenChange={setShowLeadershipModal}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
@@ -3609,7 +3521,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         </CardHeader>
         <CardContent className="pt-6">
           {/* Team Feedback Summary Tile - Moved from AI Summary section */}
-          {teamSummary && (
+          {teamSummary ? (
             <div 
               className={`mb-6 p-4 rounded-lg cursor-pointer transition-all hover:border-blue-500/50 ${
                 teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
@@ -3640,6 +3552,37 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2">{teamSummary.teamSummary}</p>
               <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
+            </div>
+          ) : permissions.canGenerateAISummary && (
+            <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm">Team Feedback AI Summary</h4>
+                  <p className="text-xs text-muted-foreground">Generate AI insights from team feedback</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => generateSummaryMutation.mutate()}
+                disabled={generateSummaryMutation.isPending}
+                size="sm"
+                className="gap-2"
+                data-testid="button-generate-summary-team"
+              >
+                {generateSummaryMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Generate
+                  </>
+                )}
+              </Button>
             </div>
           )}
 
@@ -3923,7 +3866,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         </CardHeader>
         <CardContent className="pt-6">
           {/* Leadership Summary Tile - Moved from AI Summary section */}
-          {aiSummary && (
+          {aiSummary ? (
             <div 
               className={`mb-6 p-4 rounded-lg cursor-pointer transition-all hover:border-primary/50 ${getOverallHealthConfig(aiSummary.overallHealth).bgColor} border ${getOverallHealthConfig(aiSummary.overallHealth).borderColor}`}
               onClick={() => setShowLeadershipModal(true)}
@@ -3945,6 +3888,37 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2">{aiSummary.executiveSummary}</p>
               <p className="text-xs text-primary mt-2">Click to view full summary</p>
+            </div>
+          ) : permissions.canGenerateAISummary && (
+            <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm">Leadership AI Summary</h4>
+                  <p className="text-xs text-muted-foreground">Generate AI insights from account reports</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => generateSummaryMutation.mutate()}
+                disabled={generateSummaryMutation.isPending}
+                size="sm"
+                className="gap-2"
+                data-testid="button-generate-summary-account"
+              >
+                {generateSummaryMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Generate
+                  </>
+                )}
+              </Button>
             </div>
           )}
 
