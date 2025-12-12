@@ -168,20 +168,46 @@ interface DualSummary {
   team: TeamSummary | null;
 }
 
-// Helper to parse saved report AI summary (handles both legacy and new dual-summary format)
-function parseSavedSummary(aiSummaryData: unknown): { leadership: AISummary | null; team: TeamSummary | null } {
+// Helper to parse saved report AI summary
+// Now handles: 
+// - New separate format: account reports have leadership summary, team reports have team summary
+// - Legacy dual-summary format: { leadership: ..., team: ... }
+// - Legacy single format: just leadership summary
+// Also handles JSON strings that need parsing
+function parseSavedSummary(aiSummaryData: unknown, reportType?: string): { leadership: AISummary | null; team: TeamSummary | null } {
   if (!aiSummaryData) return { leadership: null, team: null };
   
-  // Check if it's the new dual-summary format
-  const data = aiSummaryData as { leadership?: AISummary; team?: TeamSummary | null; overallHealth?: string };
+  // Handle JSON strings - parse them first
+  let data: any;
+  if (typeof aiSummaryData === 'string') {
+    try {
+      data = JSON.parse(aiSummaryData);
+    } catch {
+      return { leadership: null, team: null };
+    }
+  } else {
+    data = aiSummaryData;
+  }
+  
+  if (!data) return { leadership: null, team: null };
+  
+  // Check if it's the new dual-summary format (legacy combined)
   if (data.leadership && data.leadership.overallHealth) {
     return {
-      leadership: data.leadership,
+      leadership: data.leadership as AISummary,
       team: data.team || null
     };
   }
   
-  // Legacy format - single summary object
+  // New separate format: for team reports, aiSummary is the team summary directly
+  if (reportType === 'team' && data.overallTeamMorale) {
+    return {
+      leadership: null,
+      team: data as TeamSummary
+    };
+  }
+  
+  // For account reports or legacy format - single leadership summary object
   if (data.overallHealth) {
     return {
       leadership: data as AISummary,
@@ -196,6 +222,14 @@ interface GroupedReports {
   [year: string]: {
     [month: string]: SavedReport[];
   };
+}
+
+// Group reports by week for display (account + team reports together)
+interface WeekGroup {
+  weekStart: string;
+  weekEnd: string;
+  accountReport: SavedReport | null;
+  teamReport: SavedReport | null;
 }
 
 const getOverallHealthConfig = (health: string) => {
@@ -251,6 +285,34 @@ export default function HistoricalReports() {
   const { data: savedReports = [], isLoading } = useQuery<SavedReport[]>({ 
     queryKey: ['/api/saved-reports'] 
   });
+
+  // Group reports by week (to show account + team reports together)
+  const weekGroups = useMemo(() => {
+    const groups = new Map<string, WeekGroup>();
+    
+    savedReports.forEach(report => {
+      const key = report.weekStart;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          weekStart: report.weekStart,
+          weekEnd: report.weekEnd,
+          accountReport: null,
+          teamReport: null,
+        });
+      }
+      const group = groups.get(key)!;
+      const reportType = (report as any).reportType || 'account';
+      if (reportType === 'team') {
+        group.teamReport = report;
+      } else {
+        group.accountReport = report;
+      }
+    });
+    
+    return Array.from(groups.values()).sort((a, b) => 
+      new Date(b.weekEnd).getTime() - new Date(a.weekEnd).getTime()
+    );
+  }, [savedReports]);
 
   // Group reports by year and month based on weekEnd date
   const groupedReports = useMemo(() => {
@@ -337,9 +399,11 @@ export default function HistoricalReports() {
   });
 
   const downloadPDF = (report: SavedReport) => {
+    const reportType = (report as any).reportType || 'account';
+    const typeLabel = reportType === 'team' ? 'team_feedback' : 'leadership';
     const link = document.createElement('a');
     link.href = `data:application/pdf;base64,${report.pdfData}`;
-    link.download = `weekly_report_ending_${report.weekEnd}.pdf`;
+    link.download = `${typeLabel}_summary_${report.weekEnd}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -354,11 +418,13 @@ export default function HistoricalReports() {
       });
       return;
     }
+    const reportType = (report as any).reportType || 'account';
+    const typeLabel = reportType === 'team' ? 'team_feedback' : 'account_reports';
     const blob = new Blob([report.csvData], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `weekly_report_ending_${report.weekEnd}.csv`);
+    link.setAttribute('download', `${typeLabel}_${report.weekEnd}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -564,22 +630,36 @@ export default function HistoricalReports() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {savedReports.map((report) => {
                 const healthCounts = report.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
-                const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(report.aiSummary);
+                const reportType = (report as any).reportType || 'account';
+                const isTeamReport = reportType === 'team';
+                
+                // For account reports, parse leadership summary
+                // For team reports, parse team summary
+                const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(report.aiSummary, reportType);
                 const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
                 
                 return (
                   <Card 
                     key={report.id} 
-                    className="glass-card border-white/10 hover:border-primary/30 transition-all cursor-pointer group"
+                    className={`glass-card border-white/10 hover:border-primary/30 transition-all cursor-pointer group ${isTeamReport ? 'border-l-2 border-l-blue-500/50' : 'border-l-2 border-l-primary/50'}`}
                     onClick={() => handleTileClick(report)}
                     data-testid={`historical-report-${report.id}`}
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-5 w-5 text-primary" />
+                          {isTeamReport ? (
+                            <Users className="h-5 w-5 text-blue-500" />
+                          ) : (
+                            <Calendar className="h-5 w-5 text-primary" />
+                          )}
                           <div>
-                            <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-lg">Week Ending {formatWeekEnding(report.weekEnd)}</h3>
+                              <Badge variant={isTeamReport ? 'secondary' : 'default'} className={`text-xs ${isTeamReport ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/20 text-primary'}`}>
+                                {isTeamReport ? 'Team' : 'Account'}
+                              </Badge>
+                            </div>
                             <p className="text-xs text-muted-foreground">Started {formatWeekEnding(report.weekStart)}</p>
                           </div>
                         </div>
@@ -589,23 +669,23 @@ export default function HistoricalReports() {
                       <div className="flex flex-wrap items-center gap-2 mb-4">
                         <Badge variant="secondary" className="gap-1">
                           <FileText className="h-3 w-3" />
-                          {report.reportCount} Reports
+                          {report.reportCount} {isTeamReport ? 'Feedbacks' : 'Reports'}
                         </Badge>
-                        {reportAiSummary && (
+                        {!isTeamReport && reportAiSummary && (
                           <Badge variant="outline" className="gap-1 border-primary/30">
                             <Sparkles className="h-3 w-3 text-primary" />
-                            Leadership
+                            Leadership Summary
                           </Badge>
                         )}
-                        {reportTeamSummary && (
+                        {isTeamReport && reportTeamSummary && (
                           <Badge variant="outline" className="gap-1 border-blue-500/30">
                             <Users className="h-3 w-3 text-blue-500" />
-                            Team
+                            Team Summary
                           </Badge>
                         )}
                       </div>
 
-                      {healthCounts && (
+                      {!isTeamReport && healthCounts && (
                         <div className="grid grid-cols-3 gap-2 mb-4">
                           <div className="text-center p-2 rounded-lg bg-success/10 border border-success/20">
                             <CheckCircle2 className="h-4 w-4 text-success mx-auto mb-1" />
@@ -625,7 +705,29 @@ export default function HistoricalReports() {
                         </div>
                       )}
 
-                      {reportAiSummary && healthConfig && (
+                      {isTeamReport && reportTeamSummary && (
+                        <div className={`p-3 rounded-lg ${
+                          reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                          reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                          'bg-destructive/10 border border-destructive/30'
+                        } mb-3`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Users className="h-4 w-4 text-blue-400" />
+                            <span className={`text-sm font-medium ${
+                              reportTeamSummary.overallTeamMorale === 'positive' ? 'text-success' :
+                              reportTeamSummary.overallTeamMorale === 'mixed' ? 'text-warning' : 'text-destructive'
+                            }`}>
+                              Team Morale: {reportTeamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                                           reportTeamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-3">
+                            {reportTeamSummary.teamSummary}
+                          </p>
+                        </div>
+                      )}
+
+                      {!isTeamReport && reportAiSummary && healthConfig && (
                         <div className={`p-3 rounded-lg ${healthConfig.bgColor} border ${healthConfig.borderColor} mb-3`}>
                           <div className="flex items-center gap-2 mb-2">
                             <healthConfig.Icon className={`h-4 w-4 ${healthConfig.color}`} />
@@ -667,18 +769,23 @@ export default function HistoricalReports() {
           
           {selectedReport && (() => {
             const healthCounts = selectedReport.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
-            const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(selectedReport.aiSummary);
+            const selectedReportType = (selectedReport as any).reportType || 'account';
+            const isSelectedTeamReport = selectedReportType === 'team';
+            const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(selectedReport.aiSummary, selectedReportType);
             const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
 
             return (
               <>
                 <div className="flex items-center justify-between gap-4 py-4 border-b border-white/10">
                   <div className="flex items-center gap-4">
-                    <Badge variant="secondary" className="gap-1">
-                      <BarChart3 className="h-3 w-3" />
-                      {selectedReport.reportCount} Reports
+                    <Badge variant={isSelectedTeamReport ? 'secondary' : 'default'} className={`gap-1 ${isSelectedTeamReport ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/20 text-primary'}`}>
+                      {isSelectedTeamReport ? <Users className="h-3 w-3" /> : <BarChart3 className="h-3 w-3" />}
+                      {selectedReport.reportCount} {isSelectedTeamReport ? 'Feedbacks' : 'Reports'}
                     </Badge>
-                    {healthCounts && (
+                    <Badge variant="outline" className={isSelectedTeamReport ? 'border-blue-500/30 text-blue-400' : 'border-primary/30 text-primary'}>
+                      {isSelectedTeamReport ? 'Team Report' : 'Account Report'}
+                    </Badge>
+                    {!isSelectedTeamReport && healthCounts && (
                       <div className="flex items-center gap-3 text-sm">
                         <span className="flex items-center gap-1">
                           <div className="h-2 w-2 rounded-full bg-success" />
@@ -705,7 +812,7 @@ export default function HistoricalReports() {
                         data-testid="button-download-pdf-modal"
                       >
                         <Sparkles className="h-4 w-4" />
-                        AI Summary (PDF)
+                        {isSelectedTeamReport ? 'Team Summary (PDF)' : 'Leadership Summary (PDF)'}
                       </Button>
                     )}
                     {selectedReport.csvData && (
@@ -717,7 +824,7 @@ export default function HistoricalReports() {
                         data-testid="button-download-csv-modal"
                       >
                         <FileDown className="h-4 w-4" />
-                        Reports (CSV)
+                        {isSelectedTeamReport ? 'Team Feedback (CSV)' : 'Account Reports (CSV)'}
                       </Button>
                     )}
                     <AlertDialog>
