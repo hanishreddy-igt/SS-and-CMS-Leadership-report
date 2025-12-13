@@ -165,12 +165,17 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     roles: { admin: true, manager: true, lead: true, member: true },
   },
   canSubmitFeedback: {
-    label: "Submit Feedback",
-    description: "Submit feedback for team members",
+    label: "Submit Co-worker Feedback",
+    description: "Submit feedback on any working professional of SS/CMS Team",
     roles: { admin: true, manager: true, lead: true, member: true },
   },
+  canViewOwnSubmittedFeedback: {
+    label: "View Submitted Member Feedback",
+    description: "View only feedbacks submitted by the user to keep track",
+    roles: { admin: false, manager: false, lead: true, member: true },
+  },
   canViewAllFeedback: {
-    label: "View All Feedback",
+    label: "View All SS/CMS Team Feedback",
     description: "View all feedback submitted by anyone (anonymous view)",
     roles: { admin: true, manager: true, lead: false, member: false },
   },
@@ -186,9 +191,9 @@ const featureCategories = [
   { name: "Contract Operations", features: ["canAddContracts", "canEditContracts", "canDeleteContracts", "canViewAllContracts"] },
   { name: "People Management", features: ["canAddTeamMembers", "canEditTeamMembers", "canAddProjectLeads", "canEditProjectLeads", "canDeletePeople"] },
   { name: "Report Submission", features: ["canSubmitReports", "canSaveDraft", "canEditOwnReports", "canDeleteReports"] },
-  { name: "Report Viewing & Archive", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports"] },
+  { name: "Account Reports & Archive", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports"] },
   { name: "AI Summaries", features: ["canGenerateAISummary", "canViewAISummary"] },
-  { name: "Team Feedback", features: ["canSubmitFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary"] },
+  { name: "Team Feedback", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary"] },
 ];
 
 const roles: UserRole[] = ["admin", "manager", "lead", "member"];
