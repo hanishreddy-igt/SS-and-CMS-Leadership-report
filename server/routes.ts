@@ -168,6 +168,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete user (admin only)
+  app.delete('/api/users/:userId', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const adminRole = await getUserRole(adminId);
+      if (adminRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const { userId } = req.params;
+      const success = await storage.deleteUser(userId);
+      if (!success) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      res.json({ message: 'User deleted successfully' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Admin role switching (temporary override for testing)
   // This is stored in session/memory, not in database
   const adminRoleOverrides = new Map<string, string>(); // userId -> overrideRole

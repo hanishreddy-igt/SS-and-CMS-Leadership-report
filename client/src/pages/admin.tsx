@@ -4,6 +4,17 @@ import { useAuth, usePermissions, UserRole } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -23,7 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft, LayoutGrid, Check, X } from "lucide-react";
+import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft, LayoutGrid, Check, X, Trash2 } from "lucide-react";
 
 interface User {
   id: string;
@@ -58,8 +69,8 @@ const roleColors: Record<UserRole, string> = {
 const roleLabels: Record<UserRole, string> = {
   admin: "Admin",
   manager: "Manager",
-  lead: "Team Lead",
-  member: "Member",
+  lead: "SS/CMS Lead",
+  member: "SS/CMS Team Member",
 };
 
 // Feature permissions matrix - matches usePermissions.ts
@@ -241,6 +252,19 @@ export default function AdminPanel() {
     },
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return apiRequest("DELETE", `/api/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: "User Deleted", description: "User has been removed from the system." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete user.", variant: "destructive" });
+    },
+  });
+
   const resolveRequestMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "approved" | "denied" }) => {
       return apiRequest("PATCH", `/api/role-requests/${id}`, { status });
@@ -261,19 +285,8 @@ export default function AdminPanel() {
     },
   });
 
-  if (!canManageUsers) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Shield className="h-16 w-16 text-muted-foreground" />
-        <h1 className="text-2xl font-semibold">Access Denied</h1>
-        <p className="text-muted-foreground">You don't have permission to access this page.</p>
-        <Button onClick={() => setLocation("/")} variant="outline">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Go Back
-        </Button>
-      </div>
-    );
-  }
+  // Feature Panel is accessible to everyone, but User Management tabs require canManageUsers
+  const showUserManagementTabs = canManageUsers;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -285,9 +298,11 @@ export default function AdminPanel() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Shield className="h-6 w-6" />
-              Admin Panel
+              {showUserManagementTabs ? "Admin Panel" : "Feature Panel"}
             </h1>
-            <p className="text-muted-foreground">Manage users and role requests</p>
+            <p className="text-muted-foreground">
+              {showUserManagementTabs ? "Manage users and role requests" : "View feature permissions by role"}
+            </p>
           </div>
         </div>
         {pendingRequests.length > 0 && (
@@ -297,21 +312,25 @@ export default function AdminPanel() {
         )}
       </div>
 
-      <Tabs defaultValue="users" className="space-y-4">
+      <Tabs defaultValue={showUserManagementTabs ? "users" : "features"} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="users" className="gap-2" data-testid="tab-users">
-            <Users className="h-4 w-4" />
-            Users ({users.length})
-          </TabsTrigger>
-          <TabsTrigger value="requests" className="gap-2" data-testid="tab-requests">
-            <Clock className="h-4 w-4" />
-            Role Requests
-            {pendingRequests.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {pendingRequests.length}
-              </Badge>
-            )}
-          </TabsTrigger>
+          {showUserManagementTabs && (
+            <>
+              <TabsTrigger value="users" className="gap-2" data-testid="tab-users">
+                <Users className="h-4 w-4" />
+                Users ({users.length})
+              </TabsTrigger>
+              <TabsTrigger value="requests" className="gap-2" data-testid="tab-requests">
+                <Clock className="h-4 w-4" />
+                Role Requests
+                {pendingRequests.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {pendingRequests.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="features" className="gap-2" data-testid="tab-features">
             <LayoutGrid className="h-4 w-4" />
             Feature Panel
@@ -366,10 +385,34 @@ export default function AdminPanel() {
                             <SelectContent>
                               <SelectItem value="admin">Admin</SelectItem>
                               <SelectItem value="manager">Manager</SelectItem>
-                              <SelectItem value="lead">Team Lead</SelectItem>
-                              <SelectItem value="member">Member</SelectItem>
+                              <SelectItem value="lead">SS/CMS Lead</SelectItem>
+                              <SelectItem value="member">SS/CMS Team Member</SelectItem>
                             </SelectContent>
                           </Select>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" data-testid={`button-delete-user-${user.id}`}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete {user.displayName || user.email}? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteUserMutation.mutate(user.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </TableCell>
                       </TableRow>
                     ))}

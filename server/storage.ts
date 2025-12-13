@@ -101,6 +101,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   updateUserRole(userId: string, role: UserRole): Promise<User | undefined>;
   updateUserProfile(userId: string, updates: { displayName?: string }): Promise<User | undefined>;
+  deleteUser(userId: string): Promise<boolean>;
 
   // Role requests
   getRoleRequests(): Promise<RoleRequest[]>;
@@ -173,6 +174,10 @@ export class MemStorage implements IStorage {
     const updated = { ...user, ...updates, updatedAt: new Date() };
     this.users.set(userId, updated);
     return updated;
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    return this.users.delete(userId);
   }
 
   async getRoleRequests(): Promise<RoleRequest[]> {
@@ -888,6 +893,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return updated || undefined;
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, userId));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   // Role requests
