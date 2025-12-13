@@ -3948,6 +3948,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                       <span>Your feedback is anonymous and will not be attributed to you.</span>
                     </div>
+                    <div className="flex items-start gap-2 text-xs text-warning">
+                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <span>This feedback cannot be edited after submission. Please re-check and be careful before submitting.</span>
+                    </div>
                     <Textarea
                       value={leadFeedbackValue}
                       onChange={(e) => setLeadFeedbackValue(e.target.value)}
@@ -4066,6 +4070,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     <div className="flex items-start gap-2 text-xs text-muted-foreground">
                       <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                       <span>Your feedback is anonymous and will not be attributed to you.</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-warning">
+                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <span>This feedback cannot be edited after submission. Please re-check and be careful before submitting.</span>
                     </div>
                     <Textarea
                       value={memberFeedbackValue}
