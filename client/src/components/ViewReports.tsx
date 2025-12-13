@@ -734,21 +734,19 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     (a, b) => new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
   );
 
-  // Group reports by lead - co-lead project reports appear under each assigned lead
+  // Group reports by combined lead names - co-lead projects show as "Primary & Co-Lead"
+  // This avoids duplicate display of reports (same pattern as SubmitReport.tsx)
   const groupedReportsByLead = sortedReports.reduce((acc, report) => {
     const project = projects.find(p => p.id === report.projectId);
-    const projectLeadIds = project ? getProjectLeadIds(project) : (report.leadId ? [report.leadId] : []);
+    const combinedLeadName = project ? getProjectLeadNames(project) : getLeadName(report.leadId);
     
-    projectLeadIds.forEach(leadId => {
-      const leadName = getLeadName(leadId);
-      if (!acc[leadName]) {
-        acc[leadName] = [];
-      }
-      // Avoid duplicates if report was already added for this lead
-      if (!acc[leadName].some(r => r.id === report.id)) {
-        acc[leadName].push(report);
-      }
-    });
+    if (!acc[combinedLeadName]) {
+      acc[combinedLeadName] = [];
+    }
+    // Avoid duplicates
+    if (!acc[combinedLeadName].some(r => r.id === report.id)) {
+      acc[combinedLeadName].push(report);
+    }
     
     return acc;
   }, {} as Record<string, WeeklyReport[]>);
