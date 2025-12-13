@@ -3514,14 +3514,44 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       {/* SS/CMS Team Feedbacks Section */}
       <Card className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <MessageSquare className="h-5 w-5 text-primary" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="section-label">Anonymous Feedback</p>
+                <CardTitle className="text-2xl">SS/CMS Team Feedbacks</CardTitle>
+              </div>
             </div>
-            <div>
-              <p className="section-label">Anonymous Feedback</p>
-              <CardTitle className="text-2xl">SS/CMS Team Feedbacks</CardTitle>
-            </div>
+            {/* Download options for Team Feedback section */}
+            {permissions.canViewTeamFeedbackSummary && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    disabled={peopleWithFeedback.length === 0 && !teamSummary}
+                    data-testid="button-download-team-feedback"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={exportTeamFeedbackSummaryPDF} data-testid="menu-export-team-feedback-pdf" disabled={!teamSummary}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Team Feedback Summary (PDF)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportTeamFeedbackCSV} data-testid="menu-export-team-feedback-csv" disabled={peopleWithFeedback.length === 0}>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Team Feedback (CSV)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </CardHeader>
         <CardContent className="pt-6">
@@ -3926,17 +3956,9 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       <Sparkles className="h-4 w-4 mr-2" />
                       Leadership Summary (PDF)
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={exportTeamFeedbackSummaryPDF} data-testid="menu-export-team-feedback-pdf" disabled={!teamSummary}>
-                      <Users className="h-4 w-4 mr-2" />
-                      Team Feedback Summary (PDF)
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={exportAccountReportsCSV} data-testid="menu-export-account-csv">
                       <FileDown className="h-4 w-4 mr-2" />
                       Account Reports (CSV)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={exportTeamFeedbackCSV} data-testid="menu-export-team-feedback-csv" disabled={peopleWithFeedback.length === 0}>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Team Feedback (CSV)
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
