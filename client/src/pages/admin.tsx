@@ -119,6 +119,11 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "Submit weekly status reports for projects",
     roles: { admin: true, manager: true, lead: true, member: false },
   },
+  canSaveDraft: {
+    label: "Save Draft Reports",
+    description: "Save report progress as draft before submitting",
+    roles: { admin: true, manager: true, lead: true, member: false },
+  },
   canEditOwnReports: {
     label: "Edit Own Reports",
     description: "Modify previously submitted reports",
@@ -175,7 +180,7 @@ const featureCategories = [
   { name: "User Management", features: ["canManageUsers"] },
   { name: "Contract Operations", features: ["canAddContracts", "canEditContracts", "canDeleteContracts", "canViewAllContracts"] },
   { name: "People Management", features: ["canAddTeamMembers", "canEditTeamMembers", "canAddProjectLeads", "canEditProjectLeads", "canDeletePeople"] },
-  { name: "Report Submission", features: ["canSubmitReports", "canEditOwnReports"] },
+  { name: "Report Submission", features: ["canSubmitReports", "canSaveDraft", "canEditOwnReports"] },
   { name: "Report Viewing & Archive", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports"] },
   { name: "AI Summaries", features: ["canGenerateAISummary", "canViewAISummary"] },
   { name: "Team Feedback", features: ["canSubmitFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary"] },
