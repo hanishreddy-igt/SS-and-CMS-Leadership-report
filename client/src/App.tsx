@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import Landing from "@/pages/landing";
 import AdminPanel from "@/pages/admin";
+import FeaturePanel from "@/pages/features";
 import NotFound from "@/pages/not-found";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -20,6 +21,7 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/admin" component={AdminPanel} />
+          <Route path="/features" component={FeaturePanel} />
         </>
       )}
       <Route component={NotFound} />

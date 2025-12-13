@@ -154,7 +154,7 @@ export function UserProfileDropdown() {
           )}
 
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setLocation("/admin")} data-testid="menu-feature-panel">
+          <DropdownMenuItem onClick={() => setLocation("/features")} data-testid="menu-feature-panel">
             <LayoutGrid className="mr-2 h-4 w-4" />
             Feature Panel
           </DropdownMenuItem>

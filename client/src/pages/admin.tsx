@@ -285,8 +285,24 @@ export default function AdminPanel() {
     },
   });
 
-  // Feature Panel is accessible to everyone, but User Management tabs require canManageUsers
-  const showUserManagementTabs = canManageUsers;
+  if (!canManageUsers) {
+    return (
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => setLocation("/")} data-testid="button-back">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Shield className="h-6 w-6" />
+              Access Denied
+            </h1>
+            <p className="text-muted-foreground">You don't have permission to access the Admin Panel.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -298,11 +314,9 @@ export default function AdminPanel() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Shield className="h-6 w-6" />
-              {showUserManagementTabs ? "Admin Panel" : "Feature Panel"}
+              Admin Panel
             </h1>
-            <p className="text-muted-foreground">
-              {showUserManagementTabs ? "Manage users and role requests" : "View feature permissions by role"}
-            </p>
+            <p className="text-muted-foreground">Manage users and role requests</p>
           </div>
         </div>
         {pendingRequests.length > 0 && (
@@ -312,28 +326,20 @@ export default function AdminPanel() {
         )}
       </div>
 
-      <Tabs defaultValue={showUserManagementTabs ? "users" : "features"} className="space-y-4">
+      <Tabs defaultValue="users" className="space-y-4">
         <TabsList>
-          {showUserManagementTabs && (
-            <>
-              <TabsTrigger value="users" className="gap-2" data-testid="tab-users">
-                <Users className="h-4 w-4" />
-                Users ({users.length})
-              </TabsTrigger>
-              <TabsTrigger value="requests" className="gap-2" data-testid="tab-requests">
-                <Clock className="h-4 w-4" />
-                Role Requests
-                {pendingRequests.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {pendingRequests.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </>
-          )}
-          <TabsTrigger value="features" className="gap-2" data-testid="tab-features">
-            <LayoutGrid className="h-4 w-4" />
-            Feature Panel
+          <TabsTrigger value="users" className="gap-2" data-testid="tab-users">
+            <Users className="h-4 w-4" />
+            Users ({users.length})
+          </TabsTrigger>
+          <TabsTrigger value="requests" className="gap-2" data-testid="tab-requests">
+            <Clock className="h-4 w-4" />
+            Role Requests
+            {pendingRequests.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {pendingRequests.length}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -562,93 +568,6 @@ export default function AdminPanel() {
               </Card>
             )}
           </div>
-        </TabsContent>
-
-        <TabsContent value="features">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LayoutGrid className="h-5 w-5" />
-                Feature Permissions Matrix
-              </CardTitle>
-              <CardDescription>
-                Overview of all features and which roles have access to each feature.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {featureCategories.map((category) => (
-                  <div key={category.name} className="space-y-3">
-                    <h3 className="font-semibold text-lg border-b pb-2">{category.name}</h3>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[250px]">Feature</TableHead>
-                          <TableHead className="w-[300px]">Description</TableHead>
-                          {roles.map((role) => (
-                            <TableHead key={role} className="text-center w-[100px]">
-                              <Badge className={roleColors[role]}>{roleLabels[role]}</Badge>
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {category.features.map((featureKey) => {
-                          const feature = FEATURE_PERMISSIONS[featureKey];
-                          return (
-                            <TableRow key={featureKey} data-testid={`row-feature-${featureKey}`}>
-                              <TableCell className="font-medium">{feature.label}</TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                {feature.description}
-                              </TableCell>
-                              {roles.map((role) => (
-                                <TableCell key={role} className="text-center">
-                                  {feature.roles[role] ? (
-                                    <div className="flex justify-center">
-                                      <div className="bg-success/20 text-success rounded-full p-1">
-                                        <Check className="h-4 w-4" />
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="flex justify-center">
-                                      <div className="bg-destructive/20 text-destructive rounded-full p-1">
-                                        <X className="h-4 w-4" />
-                                      </div>
-                                    </div>
-                                  )}
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ))}
-
-                {/* Summary Stats */}
-                <div className="grid grid-cols-4 gap-4 pt-4 border-t">
-                  {roles.map((role) => {
-                    const permissionCount = Object.values(FEATURE_PERMISSIONS).filter(
-                      (f) => f.roles[role]
-                    ).length;
-                    const totalCount = Object.keys(FEATURE_PERMISSIONS).length;
-                    return (
-                      <Card key={role} className="text-center">
-                        <CardContent className="pt-4">
-                          <Badge className={`${roleColors[role]} mb-2`}>{roleLabels[role]}</Badge>
-                          <p className="text-2xl font-bold">
-                            {permissionCount}/{totalCount}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Features Enabled</p>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>
