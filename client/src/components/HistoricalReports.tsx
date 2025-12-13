@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -276,6 +277,7 @@ const MONTH_NAMES = [
 
 export default function HistoricalReports() {
   const { toast } = useToast();
+  const permissions = usePermissions();
   const [selectedReport, setSelectedReport] = useState<SavedReport | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   
@@ -740,7 +742,8 @@ export default function HistoricalReports() {
         </CardContent>
       </Card>
 
-      {/* Section 2: Historical Team Feedback Reports */}
+      {/* Section 2: Historical Team Feedback Reports - Only visible to Admin and Manager */}
+      {permissions.canViewTeamFeedbackSummary && (
       <Card className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -951,6 +954,7 @@ export default function HistoricalReports() {
           )}
         </CardContent>
       </Card>
+      )}
 
       <Dialog open={showPdfModal} onOpenChange={setShowPdfModal}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col">
