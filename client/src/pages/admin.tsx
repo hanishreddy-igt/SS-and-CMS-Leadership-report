@@ -122,7 +122,7 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
   canSaveDraft: {
     label: "Save Draft Reports",
     description: "Save report progress as draft before submitting",
-    roles: { admin: true, manager: true, lead: true, member: false },
+    roles: { admin: true, manager: true, lead: true, member: true },
   },
   canEditOwnReports: {
     label: "Edit Own Reports",
