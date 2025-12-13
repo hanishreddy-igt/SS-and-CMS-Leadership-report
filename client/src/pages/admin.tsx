@@ -154,6 +154,11 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "Archive weekly reports for historical reference",
     roles: { admin: true, manager: true, lead: false, member: false },
   },
+  canViewHistoricalReports: {
+    label: "View Historical Reports",
+    description: "Access archived historical reports (Account & Team)",
+    roles: { admin: true, manager: true, lead: true, member: true },
+  },
   canGenerateAISummary: {
     label: "Generate AI Summary",
     description: "Generate AI-powered summaries of reports",
@@ -191,7 +196,7 @@ const featureCategories = [
   { name: "Contract Operations", features: ["canAddContracts", "canEditContracts", "canDeleteContracts", "canViewAllContracts"] },
   { name: "People Management", features: ["canAddTeamMembers", "canEditTeamMembers", "canAddProjectLeads", "canEditProjectLeads", "canDeletePeople"] },
   { name: "Report Submission", features: ["canSubmitReports", "canSaveDraft", "canEditOwnReports", "canDeleteReports"] },
-  { name: "Account Reports & Archive", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports"] },
+  { name: "Account Reports & Archive", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports", "canViewHistoricalReports"] },
   { name: "AI Summaries", features: ["canGenerateAISummary", "canViewAISummary"] },
   { name: "Team Feedback", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary"] },
 ];
