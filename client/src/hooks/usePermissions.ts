@@ -16,6 +16,7 @@ export interface Permissions {
   canDeletePeople: boolean;
   canSubmitReports: boolean;
   canEditOwnReports: boolean;
+  canDeleteReports: boolean;
   canViewAllReports: boolean;
   canViewOwnReports: boolean;
   canExportReports: boolean;
@@ -43,6 +44,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canDeletePeople: true,
     canSubmitReports: true,
     canEditOwnReports: true,
+    canDeleteReports: true,
     canViewAllReports: true,
     canViewOwnReports: true,
     canExportReports: true,
@@ -66,6 +68,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canDeletePeople: true,
     canSubmitReports: true,
     canEditOwnReports: true,
+    canDeleteReports: true,
     canViewAllReports: true,
     canViewOwnReports: true,
     canExportReports: true,
@@ -89,6 +92,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canDeletePeople: false,
     canSubmitReports: true,
     canEditOwnReports: true,
+    canDeleteReports: false,
     canViewAllReports: true,
     canViewOwnReports: true,
     canExportReports: true,
@@ -111,7 +115,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canEditProjectLeads: false,
     canDeletePeople: false,
     canSubmitReports: false,
-    canEditOwnReports: false,
+    canEditOwnReports: true,
+    canDeleteReports: false,
     canViewAllReports: true,
     canViewOwnReports: true,
     canExportReports: false,

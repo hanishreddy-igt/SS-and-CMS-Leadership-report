@@ -125,9 +125,14 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     roles: { admin: true, manager: true, lead: true, member: true },
   },
   canEditOwnReports: {
-    label: "Edit Own Reports",
+    label: "Edit Reports",
     description: "Modify previously submitted reports",
-    roles: { admin: true, manager: true, lead: true, member: false },
+    roles: { admin: true, manager: true, lead: true, member: true },
+  },
+  canDeleteReports: {
+    label: "Delete Reports",
+    description: "Delete submitted or draft reports",
+    roles: { admin: true, manager: true, lead: false, member: false },
   },
   canViewAllReports: {
     label: "View All Reports",
@@ -180,7 +185,7 @@ const featureCategories = [
   { name: "User Management", features: ["canManageUsers"] },
   { name: "Contract Operations", features: ["canAddContracts", "canEditContracts", "canDeleteContracts", "canViewAllContracts"] },
   { name: "People Management", features: ["canAddTeamMembers", "canEditTeamMembers", "canAddProjectLeads", "canEditProjectLeads", "canDeletePeople"] },
-  { name: "Report Submission", features: ["canSubmitReports", "canSaveDraft", "canEditOwnReports"] },
+  { name: "Report Submission", features: ["canSubmitReports", "canSaveDraft", "canEditOwnReports", "canDeleteReports"] },
   { name: "Report Viewing & Archive", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports"] },
   { name: "AI Summaries", features: ["canGenerateAISummary", "canViewAISummary"] },
   { name: "Team Feedback", features: ["canSubmitFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary"] },

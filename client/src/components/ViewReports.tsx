@@ -4158,42 +4158,44 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                                     >
                                       <Edit2 className="h-4 w-4" />
                                     </Button>
-                                    <AlertDialog open={deletingReportId === report.id} onOpenChange={(open) => !open && setDeletingReportId(null)}>
-                                      <AlertDialogTrigger asChild>
-                                        <Button
-                                          data-testid={`button-delete-report-${report.id}`}
-                                          size="icon"
-                                          variant="ghost"
-                                          className="text-destructive hover:text-destructive"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDeletingReportId(report.id);
-                                          }}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Delete Report</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to delete this report for <strong>{getProjectName(report.projectId)}</strong>? 
-                                            The project will return to pending status and you'll need to submit a new report.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel data-testid="button-cancel-delete-report">Cancel</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            data-testid="button-confirm-delete-report"
-                                            className="bg-destructive hover:bg-destructive/90"
-                                            onClick={() => deleteReportMutation.mutate(report.id)}
-                                            disabled={deleteReportMutation.isPending}
+                                    {permissions.canDeleteReports && (
+                                      <AlertDialog open={deletingReportId === report.id} onOpenChange={(open) => !open && setDeletingReportId(null)}>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            data-testid={`button-delete-report-${report.id}`}
+                                            size="icon"
+                                            variant="ghost"
+                                            className="text-destructive hover:text-destructive"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDeletingReportId(report.id);
+                                            }}
                                           >
-                                            {deleteReportMutation.isPending ? 'Deleting...' : 'Delete Report'}
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to delete this report for <strong>{getProjectName(report.projectId)}</strong>? 
+                                              The project will return to pending status and you'll need to submit a new report.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel data-testid="button-cancel-delete-report">Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              data-testid="button-confirm-delete-report"
+                                              className="bg-destructive hover:bg-destructive/90"
+                                              onClick={() => deleteReportMutation.mutate(report.id)}
+                                              disabled={deleteReportMutation.isPending}
+                                            >
+                                              {deleteReportMutation.isPending ? 'Deleting...' : 'Delete Report'}
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    )}
                                   </div>
                                 )}
                               </div>
