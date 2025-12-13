@@ -61,7 +61,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     name: '',
     customer: '',
     customerContactEmail: '',
-    totalContractualHours: '',
+    contractualHours: '',
+    contractualMinutes: '',
     leadIds: [] as string[],
     teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
@@ -86,7 +87,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     name: '',
     customer: '',
     customerContactEmail: '',
-    totalContractualHours: '',
+    contractualHours: '',
+    contractualMinutes: '',
     leadIds: [] as string[],
     teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
@@ -382,6 +384,58 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     return null;
   };
 
+  // Helper to convert stored value to hours and minutes
+  // Legacy data was stored as hours (e.g., "40" = 40 hours)
+  // New data is stored as total minutes (e.g., "2400" = 40 hours)
+  // Heuristic: values < 1000 are likely legacy hours, >= 1000 are total minutes
+  const parseContractualTime = (storedValue: string | null | undefined): { hours: string; minutes: string } => {
+    if (!storedValue) return { hours: '', minutes: '' };
+    const value = parseInt(storedValue, 10);
+    if (isNaN(value)) return { hours: '', minutes: '' };
+    
+    // Legacy detection: if value < 1000, it's likely stored as hours (not minutes)
+    // 1000 minutes = ~16.6 hours, so values under 1000 are ambiguous
+    // Most contracts are 10-500 hours, so legacy values would be in that range
+    if (value < 1000) {
+      // Treat as legacy hours - return as hours with no minutes
+      return { hours: value.toString(), minutes: '' };
+    }
+    
+    // New format: total minutes
+    const hours = Math.floor(value / 60);
+    const minutes = value % 60;
+    return { hours: hours.toString(), minutes: minutes > 0 ? minutes.toString() : '' };
+  };
+
+  // Helper to convert hours and minutes to total minutes string
+  const toTotalMinutes = (hours: string, minutes: string): string => {
+    const h = parseInt(hours, 10) || 0;
+    const m = parseInt(minutes, 10) || 0;
+    if (h === 0 && m === 0) return '';
+    return (h * 60 + m).toString();
+  };
+
+  // Helper to format stored value for display as "X hours Y minutes"
+  // Uses same legacy detection as parseContractualTime
+  const formatContractualTime = (storedValue: string | null | undefined): string => {
+    if (!storedValue) return '';
+    const value = parseInt(storedValue, 10);
+    if (isNaN(value)) return storedValue; // fallback for non-numeric data
+    
+    // Legacy detection: values < 1000 are likely stored as hours
+    if (value < 1000) {
+      return `${value} hour${value !== 1 ? 's' : ''}`;
+    }
+    
+    // New format: total minutes
+    const hours = Math.floor(value / 60);
+    const mins = value % 60;
+    if (hours > 0 && mins > 0) return `${hours} hour${hours !== 1 ? 's' : ''} ${mins} minute${mins !== 1 ? 's' : ''}`;
+    if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    if (mins > 0) return `${mins} minute${mins !== 1 ? 's' : ''}`;
+    return '';
+  };
+
   // Helper to check if a project has unfilled team member roles
   const projectHasUnfilledRoles = (project: Project): boolean => {
     const assignments = (project.teamMembers as TeamMemberAssignment[]) || [];
@@ -571,11 +625,13 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     const leadIdsArray = project.leadIds && project.leadIds.length > 0 
       ? project.leadIds 
       : [project.leadId];
+    const { hours, minutes } = parseContractualTime(project.totalContractualHours);
     setEditFormData({
       name: project.name,
       customer: project.customer,
       customerContactEmail: project.customerContactEmail || '',
-      totalContractualHours: project.totalContractualHours || '',
+      contractualHours: hours,
+      contractualMinutes: minutes,
       leadIds: leadIdsArray,
       teamMembers: (project.teamMembers as TeamMemberAssignment[]) || [],
       startDate: project.startDate || '',
@@ -687,13 +743,18 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       
       const startDateParsed = parseInputDate(editStartDateInput);
       const endDateParsed = parseInputDate(editEndDateInput);
+      const totalMinutes = toTotalMinutes(editFormData.contractualHours, editFormData.contractualMinutes);
       
       editProjectMutation.mutate({ 
         id: editingProject.id, 
         updates: {
-          ...editFormData,
+          name: editFormData.name,
+          customer: editFormData.customer,
+          customerContactEmail: editFormData.customerContactEmail,
+          totalContractualHours: totalMinutes || null,
           leadId: editFormData.leadIds[0], // Primary lead is first in the array
           leadIds: editFormData.leadIds,
+          teamMembers: editFormData.teamMembers,
           startDate: startDateParsed || '2025-08-30',
           endDate: endDateParsed || null,
           projectType: editFormData.projectType || null,
@@ -939,7 +1000,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         name: '',
         customer: '',
         customerContactEmail: '',
-        totalContractualHours: '',
+        contractualHours: '',
+        contractualMinutes: '',
         leadIds: [],
         teamMembers: [],
         startDate: '',
@@ -1342,11 +1404,16 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (Object.keys(errors).length === 0) {
       const startDateParsed = parseInputDate(projectStartDateInput);
       const endDateParsed = parseInputDate(projectEndDateInput);
+      const totalMinutes = toTotalMinutes(projectFormData.contractualHours, projectFormData.contractualMinutes);
       
       createProjectMutation.mutate({
-        ...projectFormData,
+        name: projectFormData.name,
+        customer: projectFormData.customer,
+        customerContactEmail: projectFormData.customerContactEmail,
+        totalContractualHours: totalMinutes || null,
         leadId: projectFormData.leadIds[0], // Primary lead is first in the array
         leadIds: projectFormData.leadIds,
+        teamMembers: projectFormData.teamMembers,
         startDate: startDateParsed || '2025-08-30',
         endDate: endDateParsed || null,
         projectType: projectFormData.projectType || null,
@@ -1618,7 +1685,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     name: '',
                     customer: '',
                     customerContactEmail: '',
-                    totalContractualHours: '',
+                    contractualHours: '',
+                    contractualMinutes: '',
                     leadIds: [],
                     teamMembers: [],
                     startDate: '',
@@ -1721,18 +1789,40 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="new-contractual-hours">Total Contractual Hours</Label>
-                      <Input
-                        id="new-contractual-hours"
-                        data-testid="input-contractual-hours"
-                        type="text"
-                        value={projectFormData.totalContractualHours}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9]/g, '');
-                          setProjectFormData({ ...projectFormData, totalContractualHours: value });
-                        }}
-                        placeholder="Enter total contractual hours (optional)"
-                      />
+                      <Label>Total Contractual Time</Label>
+                      <div className="flex gap-2 items-center">
+                        <div className="flex-1">
+                          <Input
+                            id="new-contractual-hours"
+                            data-testid="input-contractual-hours"
+                            type="text"
+                            value={projectFormData.contractualHours}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9]/g, '');
+                              setProjectFormData({ ...projectFormData, contractualHours: value });
+                            }}
+                            placeholder="Hours"
+                          />
+                        </div>
+                        <span className="text-muted-foreground text-sm">hrs</span>
+                        <div className="flex-1">
+                          <Input
+                            id="new-contractual-minutes"
+                            data-testid="input-contractual-minutes"
+                            type="text"
+                            value={projectFormData.contractualMinutes}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9]/g, '');
+                              const numVal = parseInt(value, 10);
+                              if (value === '' || (numVal >= 0 && numVal <= 59)) {
+                                setProjectFormData({ ...projectFormData, contractualMinutes: value });
+                              }
+                            }}
+                            placeholder="Minutes"
+                          />
+                        </div>
+                        <span className="text-muted-foreground text-sm">min</span>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -2529,7 +2619,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                         {!project.totalContractualHours && (
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-hours-${project.id}`}>
                             <AlertTriangle className="h-4 w-4" />
-                            <span>Total contractual hours missing</span>
+                            <span>Total contractual time missing</span>
                           </div>
                         )}
                         {!project.customerContactEmail && (
@@ -2609,18 +2699,40 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-contractual-hours">Total Contractual Hours</Label>
-              <Input
-                id="edit-contractual-hours"
-                data-testid="input-edit-contractual-hours"
-                type="text"
-                value={editFormData.totalContractualHours}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9]/g, '');
-                  setEditFormData({ ...editFormData, totalContractualHours: value });
-                }}
-                placeholder="Enter total contractual hours (optional)"
-              />
+              <Label>Total Contractual Time</Label>
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <Input
+                    id="edit-contractual-hours"
+                    data-testid="input-edit-contractual-hours"
+                    type="text"
+                    value={editFormData.contractualHours}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      setEditFormData({ ...editFormData, contractualHours: value });
+                    }}
+                    placeholder="Hours"
+                  />
+                </div>
+                <span className="text-muted-foreground text-sm">hrs</span>
+                <div className="flex-1">
+                  <Input
+                    id="edit-contractual-minutes"
+                    data-testid="input-edit-contractual-minutes"
+                    type="text"
+                    value={editFormData.contractualMinutes}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      const numVal = parseInt(value, 10);
+                      if (value === '' || (numVal >= 0 && numVal <= 59)) {
+                        setEditFormData({ ...editFormData, contractualMinutes: value });
+                      }
+                    }}
+                    placeholder="Minutes"
+                  />
+                </div>
+                <span className="text-muted-foreground text-sm">min</span>
+              </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -3589,15 +3701,15 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                 </div>
               </div>
 
-              {/* Contractual Hours Section */}
+              {/* Contractual Time Section */}
               {selectedProject.totalContractualHours && (
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-lg bg-muted">
                     <Clock className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Contractual Hours</p>
-                    <p className="text-lg font-semibold" data-testid="text-project-detail-hours">{selectedProject.totalContractualHours} hours</p>
+                    <p className="text-sm font-medium text-muted-foreground">Total Contractual Time</p>
+                    <p className="text-lg font-semibold" data-testid="text-project-detail-hours">{formatContractualTime(selectedProject.totalContractualHours)}</p>
                   </div>
                 </div>
               )}
