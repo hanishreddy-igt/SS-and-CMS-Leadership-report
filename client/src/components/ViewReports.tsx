@@ -3963,17 +3963,19 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
-                  onClick={saveToArchive}
-                  disabled={sortedReports.length === 0 || isForceArchiving}
-                  data-testid="button-archive"
-                >
-                  <Archive className="h-4 w-4" />
-                  {isForceArchiving ? 'Archiving...' : 'Force Archive'}
-                </Button>
+                {permissions.canArchiveReports && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 border-orange-500/50 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
+                    onClick={saveToArchive}
+                    disabled={sortedReports.length === 0 || isForceArchiving}
+                    data-testid="button-archive"
+                  >
+                    <Archive className="h-4 w-4" />
+                    {isForceArchiving ? 'Archiving...' : 'Force Archive'}
+                  </Button>
+                )}
               </div>
             </div>
           </div>

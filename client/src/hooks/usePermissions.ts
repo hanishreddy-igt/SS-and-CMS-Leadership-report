@@ -92,7 +92,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canViewAllReports: true,
     canViewOwnReports: true,
     canExportReports: true,
-    canArchiveReports: true,
+    canArchiveReports: false,
     canGenerateAISummary: true,
     canViewAISummary: true,
     canSubmitFeedback: true,
