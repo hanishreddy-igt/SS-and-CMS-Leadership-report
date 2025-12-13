@@ -403,10 +403,11 @@ export default function AdminPanel() {
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel data-testid={`button-cancel-delete-${user.id}`}>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => deleteUserMutation.mutate(user.id)}
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  data-testid={`button-confirm-delete-${user.id}`}
                                 >
                                   Delete
                                 </AlertDialogAction>
