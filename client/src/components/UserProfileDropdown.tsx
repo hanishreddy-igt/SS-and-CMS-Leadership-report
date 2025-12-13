@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Settings, Shield, ArrowRightLeft, LogOut, Send } from "lucide-react";
+import { User, Settings, Shield, ArrowRightLeft, LogOut, Send, LayoutGrid } from "lucide-react";
 import { useLocation } from "wouter";
 
 const roleColors: Record<UserRole, string> = {
@@ -43,8 +43,8 @@ const roleColors: Record<UserRole, string> = {
 const roleLabels: Record<UserRole, string> = {
   admin: "Admin",
   manager: "Manager",
-  lead: "Team Lead",
-  member: "Member",
+  lead: "SS/CMS Lead",
+  member: "SS/CMS Team Member",
 };
 
 export function UserProfileDropdown() {
@@ -153,14 +153,17 @@ export function UserProfileDropdown() {
             </DropdownMenuItem>
           )}
 
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setLocation("/admin")} data-testid="menu-feature-panel">
+            <LayoutGrid className="mr-2 h-4 w-4" />
+            Feature Panel
+          </DropdownMenuItem>
+
           {canManageUsers && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setLocation("/admin")} data-testid="menu-admin-panel">
-                <Shield className="mr-2 h-4 w-4" />
-                Admin Panel
-              </DropdownMenuItem>
-            </>
+            <DropdownMenuItem onClick={() => setLocation("/admin")} data-testid="menu-admin-panel">
+              <Shield className="mr-2 h-4 w-4" />
+              Admin Panel
+            </DropdownMenuItem>
           )}
 
           {isAdmin && (
