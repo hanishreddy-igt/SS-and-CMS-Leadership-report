@@ -1622,15 +1622,29 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   return (
     <div className="space-y-8">
-      {/* Caution banner for users not registered in Team Members or Team Leads */}
-      {user && !isUserRegisteredTeamMember && !isUserRegisteredLead && (
-        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-start gap-3" data-testid="banner-unregistered-user">
+      {/* Caution banner for users not registered as Team Member */}
+      {user && !isUserRegisteredTeamMember && (
+        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-start gap-3" data-testid="banner-unregistered-member">
           <AlertTriangle className="h-6 w-6 text-warning flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="font-semibold text-warning">Action Required: Register Your Email</p>
+            <p className="font-semibold text-warning">SS/CMS Team Member: Register Your Email</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Your email (<span className="font-medium">{user.email}</span>) is not linked to any SS/CMS Team Member or SS/CMS Lead profile. 
-              Please find your name in the <span className="font-medium">Team Members</span> or <span className="font-medium">Team Leads</span> section below and add your email to your profile.
+              Your email (<span className="font-medium">{user.email}</span>) is not linked to any SS/CMS Team Member profile. 
+              If you are a team member, please find your name in the <span className="font-medium">Team Members</span> section below and add your email to your profile.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Caution banner for users not registered as Lead */}
+      {user && !isUserRegisteredLead && (
+        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-start gap-3" data-testid="banner-unregistered-lead">
+          <AlertTriangle className="h-6 w-6 text-warning flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-warning">SS/CMS Lead: Register Your Email</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Your email (<span className="font-medium">{user.email}</span>) is not linked to any SS/CMS Lead profile. 
+              If you are a lead, please find your name in the <span className="font-medium">Team Leads</span> section below and add your email to your profile.
             </p>
           </div>
         </div>
