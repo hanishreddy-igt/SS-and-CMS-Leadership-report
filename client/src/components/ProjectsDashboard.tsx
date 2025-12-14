@@ -137,6 +137,10 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Person | null>(null);
   const [showMemberDetailModal, setShowMemberDetailModal] = useState(false);
 
+  // Expanded contracts state for detail modals
+  const [showAllLeadContracts, setShowAllLeadContracts] = useState(false);
+  const [showAllMemberContracts, setShowAllMemberContracts] = useState(false);
+
   // Check if logged-in user is a registered team member or lead (can submit feedback)
   const isUserRegisteredTeamMember = teamMembers.some(
     (m) => m.email?.toLowerCase() === user?.email?.toLowerCase()
@@ -1260,6 +1264,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setShowLeadDetailModal(false);
     setSelectedLeadForDetail(null);
     setLeadFeedbackValue('');
+    setShowAllLeadContracts(false);
   };
 
   // Handle team member tile click to show detail popup
@@ -1275,6 +1280,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setShowMemberDetailModal(false);
     setSelectedMemberForDetail(null);
     setMemberFeedbackValue('');
+    setShowAllMemberContracts(false);
   };
 
   // Get projects a team member is working on with their roles
@@ -3999,7 +4005,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <p className="text-sm text-muted-foreground italic">No contracts assigned</p>
                     );
                   }
-                  const displayedProjects = ledProjects.slice(0, 4);
+                  const displayedProjects = showAllLeadContracts ? ledProjects : ledProjects.slice(0, 4);
                   const remainingCount = ledProjects.length - 4;
                   return (
                     <div className="space-y-2" data-testid="list-lead-projects">
@@ -4025,10 +4031,25 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           })()}
                         </div>
                       ))}
-                      {remainingCount > 0 && (
-                        <p className="text-xs text-muted-foreground text-center pt-1">
+                      {remainingCount > 0 && !showAllLeadContracts && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllLeadContracts(true)}
+                          className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer"
+                          data-testid="button-show-more-lead-contracts"
+                        >
                           +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
-                        </p>
+                        </button>
+                      )}
+                      {showAllLeadContracts && ledProjects.length > 4 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllLeadContracts(false)}
+                          className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer"
+                          data-testid="button-show-less-lead-contracts"
+                        >
+                          Show less
+                        </button>
                       )}
                     </div>
                   );
@@ -4136,7 +4157,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       <p className="text-sm text-muted-foreground italic">No active contracts</p>
                     );
                   }
-                  const displayedProjects = memberProjects.slice(0, 4);
+                  const displayedProjects = showAllMemberContracts ? memberProjects : memberProjects.slice(0, 4);
                   const remainingCount = memberProjects.length - 4;
                   return (
                     <div className="space-y-2" data-testid="list-member-projects">
@@ -4148,10 +4169,25 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </Badge>
                         </div>
                       ))}
-                      {remainingCount > 0 && (
-                        <p className="text-xs text-muted-foreground text-center pt-1">
+                      {remainingCount > 0 && !showAllMemberContracts && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllMemberContracts(true)}
+                          className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer"
+                          data-testid="button-show-more-member-contracts"
+                        >
                           +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
-                        </p>
+                        </button>
+                      )}
+                      {showAllMemberContracts && memberProjects.length > 4 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllMemberContracts(false)}
+                          className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer"
+                          data-testid="button-show-less-member-contracts"
+                        >
+                          Show less
+                        </button>
                       )}
                     </div>
                   );
