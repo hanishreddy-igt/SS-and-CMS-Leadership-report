@@ -34,14 +34,9 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "Add, edit, and manage user roles and role requests",
     roles: { admin: true, manager: false, lead: false, member: false },
   },
-  canAddContracts: {
-    label: "Add Contracts",
-    description: "Create new contracts/projects in the system",
-    roles: { admin: true, manager: true, lead: true, member: false },
-  },
-  canEditContracts: {
-    label: "Edit Contracts",
-    description: "Modify existing contract details and assignments",
+  canAddEditContracts: {
+    label: "Add/Edit Contracts",
+    description: "Create new contracts and modify existing contract details",
     roles: { admin: true, manager: true, lead: true, member: false },
   },
   canDeleteContracts: {
@@ -54,24 +49,14 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "Access and view all contracts in the system",
     roles: { admin: true, manager: true, lead: true, member: true },
   },
-  canAddTeamMembers: {
-    label: "Add Team Members",
-    description: "Add new team members to the system",
+  canAddEditTeamMembers: {
+    label: "Add/Edit Team Members",
+    description: "Add new team members and modify their information",
     roles: { admin: true, manager: true, lead: true, member: true },
   },
-  canEditTeamMembers: {
-    label: "Edit Team Members",
-    description: "Modify team member information",
-    roles: { admin: true, manager: true, lead: true, member: true },
-  },
-  canAddProjectLeads: {
-    label: "Add Project Leads",
-    description: "Add new project leads to the system",
-    roles: { admin: true, manager: true, lead: true, member: false },
-  },
-  canEditProjectLeads: {
-    label: "Edit Project Leads",
-    description: "Modify project lead information",
+  canAddEditProjectLeads: {
+    label: "Add/Edit Project Leads",
+    description: "Add new project leads and modify their information",
     roles: { admin: true, manager: true, lead: true, member: false },
   },
   canDeletePeople: {
@@ -100,17 +85,12 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     roles: { admin: true, manager: true, lead: false, member: false },
   },
   canViewAllReports: {
-    label: "View All Reports",
+    label: "View All Account Reports",
     description: "Access and view all submitted reports",
     roles: { admin: true, manager: true, lead: true, member: true },
   },
-  canViewOwnReports: {
-    label: "View Own Reports",
-    description: "View reports submitted by self",
-    roles: { admin: true, manager: true, lead: true, member: true },
-  },
   canExportReports: {
-    label: "Export Reports",
+    label: "Export All Account Reports",
     description: "Export reports to PDF or CSV format",
     roles: { admin: true, manager: true, lead: true, member: false },
   },
@@ -163,12 +143,12 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
 
 const featureCategories = [
   { name: "User Management", features: ["canManageUsers"] },
-  { name: "Contract Operations", features: ["canAddContracts", "canEditContracts", "canDeleteContracts", "canViewAllContracts"] },
-  { name: "People Management", features: ["canAddTeamMembers", "canEditTeamMembers", "canAddProjectLeads", "canEditProjectLeads", "canDeletePeople"] },
+  { name: "Contract Operations", features: ["canAddEditContracts", "canDeleteContracts", "canViewAllContracts"] },
+  { name: "People Management", features: ["canAddEditTeamMembers", "canAddEditProjectLeads", "canDeletePeople"] },
   { name: "Report Submission", features: ["canSubmitReports", "canSaveDraft", "canEditOwnReports", "canDeleteReports"] },
-  { name: "Account Reports & Archive", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports", "canViewHistoricalAccountReports", "canViewHistoricalTeamReports"] },
+  { name: "Account Reports & Archive", features: ["canViewAllReports", "canExportReports", "canArchiveReports", "canViewHistoricalAccountReports"] },
   { name: "AI Summaries", features: ["canGenerateAISummary", "canViewAISummary"] },
-  { name: "Team Feedback", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary"] },
+  { name: "Team Feedback Reports & Archive", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary", "canViewHistoricalTeamReports"] },
 ];
 
 const roles: UserRole[] = ["admin", "manager", "lead", "member"];

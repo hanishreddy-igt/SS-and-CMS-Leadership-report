@@ -443,10 +443,6 @@ export default function AdminPanel() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="permissions" className="gap-2" data-testid="tab-permissions">
-            <LayoutGrid className="h-4 w-4" />
-            Feature Permissions
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -858,65 +854,6 @@ export default function AdminPanel() {
           </div>
         </TabsContent>
 
-        <TabsContent value="permissions">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LayoutGrid className="h-5 w-5" />
-                Feature Permissions Matrix
-              </CardTitle>
-              <CardDescription>
-                Overview of feature access permissions for each role in the system.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {featureCategories.map((category) => (
-                  <div key={category.name} className="space-y-3">
-                    <h3 className="text-lg font-semibold border-b pb-2">{category.name}</h3>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-1/3">Feature</TableHead>
-                          {roles.map((role) => (
-                            <TableHead key={role} className="text-center">
-                              <Badge className={roleColors[role]}>{roleLabels[role]}</Badge>
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {category.features.map((featureKey) => {
-                          const feature = FEATURE_PERMISSIONS[featureKey];
-                          if (!feature) return null;
-                          return (
-                            <TableRow key={featureKey}>
-                              <TableCell>
-                                <div>
-                                  <p className="font-medium">{feature.label}</p>
-                                  <p className="text-xs text-muted-foreground">{feature.description}</p>
-                                </div>
-                              </TableCell>
-                              {roles.map((role) => (
-                                <TableCell key={role} className="text-center">
-                                  {feature.roles[role] ? (
-                                    <Check className="h-5 w-5 text-success mx-auto" />
-                                  ) : (
-                                    <X className="h-5 w-5 text-muted-foreground/40 mx-auto" />
-                                  )}
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
