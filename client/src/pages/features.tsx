@@ -44,11 +44,6 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "Remove contracts from the system",
     roles: { admin: true, manager: true, lead: false, member: false },
   },
-  canViewAllContracts: {
-    label: "View All Contracts",
-    description: "Access and view all contracts in the system",
-    roles: { admin: true, manager: true, lead: true, member: true },
-  },
   canAddEditTeamMembers: {
     label: "Add/Edit Team Members",
     description: "Add new team members and modify their information",
@@ -84,11 +79,6 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "Delete submitted or draft reports",
     roles: { admin: true, manager: true, lead: false, member: false },
   },
-  canViewAllReports: {
-    label: "View All Account Reports",
-    description: "Access and view all submitted reports",
-    roles: { admin: true, manager: true, lead: true, member: true },
-  },
   canExportReports: {
     label: "Export All Account Reports",
     description: "Export reports to PDF or CSV format",
@@ -115,9 +105,14 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     roles: { admin: true, manager: true, lead: true, member: false },
   },
   canViewAISummary: {
-    label: "View AI Summary",
-    description: "View generated AI summaries",
+    label: "View AI Summary for Account Reports",
+    description: "View generated AI summaries for account reports",
     roles: { admin: true, manager: true, lead: true, member: true },
+  },
+  canViewTeamFeedbackAISummary: {
+    label: "View AI Summary for Team Feedback",
+    description: "View AI-generated team feedback summary and download team reports",
+    roles: { admin: true, manager: true, lead: false, member: false },
   },
   canSubmitFeedback: {
     label: "Submit Co-worker Feedback",
@@ -127,28 +122,23 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
   canViewOwnSubmittedFeedback: {
     label: "View Submitted Member Feedback",
     description: "View only feedbacks submitted by the user to keep track",
-    roles: { admin: false, manager: false, lead: true, member: true },
+    roles: { admin: true, manager: true, lead: true, member: true },
   },
   canViewAllFeedback: {
     label: "View All SS/CMS Team Feedback",
     description: "View all feedback submitted by anyone (anonymous view)",
     roles: { admin: true, manager: true, lead: false, member: false },
   },
-  canViewTeamFeedbackSummary: {
-    label: "View Team Feedback Summary",
-    description: "View AI-generated team feedback summary and download team reports",
-    roles: { admin: true, manager: true, lead: false, member: false },
-  },
 };
 
 const featureCategories = [
   { name: "User Management", features: ["canManageUsers"] },
-  { name: "Contract Operations", features: ["canAddEditContracts", "canDeleteContracts", "canViewAllContracts"] },
+  { name: "Contract Operations", features: ["canAddEditContracts", "canDeleteContracts"] },
   { name: "People Management", features: ["canAddEditTeamMembers", "canAddEditProjectLeads", "canDeletePeople"] },
-  { name: "Report Submission", features: ["canSubmitReports", "canSaveDraft", "canEditOwnReports", "canDeleteReports"] },
-  { name: "Account Reports & Archive", features: ["canViewAllReports", "canExportReports", "canArchiveReports", "canViewHistoricalAccountReports"] },
-  { name: "AI Summaries", features: ["canGenerateAISummary", "canViewAISummary"] },
-  { name: "Team Feedback Reports & Archive", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary", "canViewHistoricalTeamReports"] },
+  { name: "Report Submission", features: ["canSaveDraft", "canEditOwnReports", "canSubmitReports", "canDeleteReports"] },
+  { name: "Account Reports & Archive", features: ["canExportReports", "canArchiveReports", "canViewHistoricalAccountReports"] },
+  { name: "AI Summaries", features: ["canGenerateAISummary", "canViewAISummary", "canViewTeamFeedbackAISummary"] },
+  { name: "Team Feedback Reports & Archive", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewHistoricalTeamReports"] },
 ];
 
 const roles: UserRole[] = ["admin", "manager", "lead", "member"];
