@@ -140,13 +140,29 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     rationale: string;
   }
   
+  interface WeekOverWeekChanges {
+    improved: string[];
+    worsened: string[];
+    newRisks: string[];
+    resolved: string[];
+  }
+
+  interface DependencyItem {
+    project: string;
+    dependency: string;
+    impact: string;
+    requiredSupport: string;
+  }
+
   interface AISummary {
     overallHealth: 'on-track' | 'needs-attention' | 'critical';
     executiveSummary: string;
+    weekOverWeekChanges?: WeekOverWeekChanges;
     portfolioHealthBreakdown?: PortfolioHealthBreakdown;
     immediateAttentionRequired?: AttentionItem[];
     keyAchievements?: AchievementItem[] | string[];
     crossProjectPatterns?: CrossProjectPatterns;
+    dependenciesAndCrossTeamNeeds?: DependencyItem[];
     upcomingFocus?: UpcomingFocusItem[] | string[];
     recommendedLeadershipActions?: LeadershipAction[];
     weekHighlights?: string[];
@@ -2984,6 +3000,82 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 <p className="text-foreground leading-relaxed">{aiSummary.executiveSummary}</p>
               </div>
 
+              {/* Week-over-Week Changes */}
+              {aiSummary.weekOverWeekChanges && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <h4 className="font-semibold">Week-over-Week Changes</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {aiSummary.weekOverWeekChanges.improved?.length > 0 && (
+                      <div className="p-3 rounded-lg bg-success/5 border border-success/20">
+                        <h5 className="text-sm font-medium text-success mb-2 flex items-center gap-1">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Improved
+                        </h5>
+                        <ul className="space-y-1">
+                          {aiSummary.weekOverWeekChanges.improved.map((item, i) => (
+                            <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {aiSummary.weekOverWeekChanges.worsened?.length > 0 && (
+                      <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                        <h5 className="text-sm font-medium text-destructive mb-2 flex items-center gap-1">
+                          <AlertCircle className="h-3.5 w-3.5" />
+                          Worsened
+                        </h5>
+                        <ul className="space-y-1">
+                          {aiSummary.weekOverWeekChanges.worsened.map((item, i) => (
+                            <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {aiSummary.weekOverWeekChanges.newRisks?.length > 0 && (
+                      <div className="p-3 rounded-lg bg-warning/5 border border-warning/20">
+                        <h5 className="text-sm font-medium text-warning mb-2 flex items-center gap-1">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          New Risks
+                        </h5>
+                        <ul className="space-y-1">
+                          {aiSummary.weekOverWeekChanges.newRisks.map((item, i) => (
+                            <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {aiSummary.weekOverWeekChanges.resolved?.length > 0 && (
+                      <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                        <h5 className="text-sm font-medium text-blue-500 mb-2 flex items-center gap-1">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Resolved
+                        </h5>
+                        <ul className="space-y-1">
+                          {aiSummary.weekOverWeekChanges.resolved.map((item, i) => (
+                            <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Portfolio Health Breakdown */}
               {aiSummary.portfolioHealthBreakdown && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -3125,6 +3217,35 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                         </ul>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Dependencies and Cross-Team Needs */}
+              {aiSummary.dependenciesAndCrossTeamNeeds && aiSummary.dependenciesAndCrossTeamNeeds.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    <h4 className="font-semibold">Dependencies & Cross-Team Needs</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {aiSummary.dependenciesAndCrossTeamNeeds.map((item, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">{item.project}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          <span className="font-medium">Dependency:</span> {item.dependency}
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          <span className="font-medium">Impact:</span> {item.impact}
+                        </p>
+                        <div className="flex items-start gap-2 text-sm">
+                          <Target className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                          <span className="text-blue-500">{item.requiredSupport}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

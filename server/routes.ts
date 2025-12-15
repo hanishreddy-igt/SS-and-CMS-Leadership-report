@@ -1005,6 +1005,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the current week start from the reports
       const currentWeekStart = submittedReports[0]?.weekStart || '';
 
+      // Fetch previous week's archived report for week-over-week comparison
+      const savedReports = await storage.getSavedReports();
+      // Find the most recent account-type archived report before current week
+      const previousWeekReport = savedReports
+        .filter(r => r.reportType === 'account' && r.weekStart < currentWeekStart)
+        .sort((a, b) => b.weekStart.localeCompare(a.weekStart))[0];
+      
+      // Build previous week context if available
+      let lastWeekContext = null;
+      if (previousWeekReport && previousWeekReport.aiSummary) {
+        const lastWeekSummary = previousWeekReport.aiSummary as any;
+        lastWeekContext = {
+          weekStart: previousWeekReport.weekStart,
+          weekEnd: previousWeekReport.weekEnd,
+          overallHealth: lastWeekSummary.overallHealth || 'unknown',
+          portfolioHealthBreakdown: lastWeekSummary.portfolioHealthBreakdown || null,
+          executiveSummary: lastWeekSummary.executiveSummary || null,
+          keyAchievements: lastWeekSummary.keyAchievements || [],
+          crossProjectPatterns: lastWeekSummary.crossProjectPatterns || null
+        };
+      }
+
       // Build context for LEADERSHIP AI summary - only health status, progress, challenges, next week
       const leadershipContext = submittedReports.map(report => {
         const project = projects.find(p => p.id === report.projectId);
@@ -1020,58 +1042,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      const leadershipPrompt = `You are a senior executive assistant synthesizing weekly project reports for C-level leadership. You are analyzing ${submittedReports.length} project reports across the portfolio. Your goal is to provide a COMPREHENSIVE summary that eliminates the need for leadership to read individual reports.
+      // Build the last week data section for the prompt
+      const lastWeekSection = lastWeekContext 
+        ? `
+LAST WEEK'S DATA (for week-over-week comparison):
+${JSON.stringify(lastWeekContext, null, 2)}
+`
+        : `
+LAST WEEK'S DATA: Not available (this is the first week or no prior archive exists).
+`;
+
+      const leadershipPrompt = `You are a senior executive assistant synthesizing weekly project reports for C-level leadership.
+You are analyzing ${submittedReports.length} project reports across the portfolio.
+Your goal is to provide a COMPREHENSIVE, DECISION-READY executive summary that eliminates the need for leadership to read individual reports.
 
 REPORT DATA TO ANALYZE:
 ${JSON.stringify(leadershipContext, null, 2)}
+${lastWeekSection}
 
 INSTRUCTIONS:
-- Be thorough and specific - name projects, customers, and leads where relevant
-- Do NOT limit insights arbitrarily - include ALL significant items
-- Focus on actionable intelligence that helps leadership make decisions
-- Group related insights together for clarity
 
-Generate a comprehensive executive summary in JSON format:
+General Requirements:
+- Be thorough and explicit — name projects, customers, and leads throughout.
+- Do not omit or downplay significant details — include ALL meaningful insights.
+- Do not infer or invent missing information. If something is not in the reports, state "not provided".
+- Prioritize insights by business impact, not by project order.
+- Group related insights for readability and portfolio-level clarity.
+- Return valid JSON ONLY, with no commentary before or after the JSON.
+
+Project Health Classification Rules (use these definitions strictly):
+- on-track → Progressing as planned, no major risks or blockers, milestones on schedule.
+- needs-attention → Emerging risks, moderate delays, resource constraints, or minor blockers that require monitoring.
+- critical → Major blockers, severe delays, missed milestones, customer escalations, or high probability of failure without intervention.
+- All projects must be assigned to exactly one category.
+
+Week-over-Week Change Analysis:
+For each project, consider and highlight:
+- What improved this week
+- What worsened or escalated
+- Any new risks identified
+- Any issues resolved
+- If prior-week data is unavailable, state "change data not provided".
+
+Conciseness Requirements:
+- Each project entry should be 1–2 sentences maximum unless critical.
+- Cross-project patterns should include 3–5 bullets max.
+- Executive summary should be 4–5 sentences.
+
+Naming and Formatting Consistency:
+Use consistent formatting for lists: "Project Name (Customer) – Lead Name: reason or insight"
+
+JSON STRUCTURE TO GENERATE:
 {
   "overallHealth": "on-track" | "needs-attention" | "critical",
-  "executiveSummary": "A comprehensive 4-5 sentence synthesis of the week: overall portfolio health, major themes, critical concerns, and outlook. Be specific about numbers and trends.",
-  
+
+  "executiveSummary": "A comprehensive 4–5 sentence synthesis of overall portfolio health, major themes, critical concerns, positive trends, and week-over-week shifts. Explicitly reference notable numbers, trends, and emerging risks.",
+
+  "weekOverWeekChanges": {
+    "improved": ["High-level improvements across projects with context"],
+    "worsened": ["Issues that escalated or worsened compared to last week"],
+    "newRisks": ["Newly identified risks or concerns"],
+    "resolved": ["Issues closed or mitigated this week"]
+  },
+
   "portfolioHealthBreakdown": {
-    "onTrack": { "count": number, "projects": ["Project A (Customer) - Lead Name", ...] },
-    "needsAttention": { "count": number, "projects": ["Project B (Customer) - Lead Name: brief reason", ...] },
-    "critical": { "count": number, "projects": ["Project C (Customer) - Lead Name: brief reason", ...] }
+    "onTrack": { "count": number, "projects": ["Project A (Customer) – Lead Name"] },
+    "needsAttention": { "count": number, "projects": ["Project B (Customer) – Lead Name: brief reason"] },
+    "critical": { "count": number, "projects": ["Project C (Customer) – Lead Name: brief reason"] }
   },
-  
+
   "immediateAttentionRequired": [
-    { "project": "Project Name", "customer": "Customer Name", "lead": "Lead Name", "issue": "Specific issue requiring leadership attention", "recommendedAction": "What leadership should do" }
+    { "project": "Project Name", "customer": "Customer Name", "lead": "Lead Name", "issue": "Specific blocker or risk requiring leadership involvement", "recommendedAction": "Clear, actionable recommendation for leadership" }
   ],
-  
+
   "keyAchievements": [
-    { "project": "Project Name", "achievement": "Specific achievement or milestone", "impact": "Business impact or significance" }
+    { "project": "Project Name", "achievement": "Specific milestone or success", "impact": "Business impact or significance" }
   ],
-  
+
   "crossProjectPatterns": {
-    "commonChallenges": ["Pattern 1 affecting multiple projects", "Pattern 2", ...],
-    "resourceConstraints": ["Any bandwidth, staffing, or capacity issues observed"],
-    "processIssues": ["Any recurring process or workflow problems"]
+    "commonChallenges": ["Challenge 1 affecting multiple projects", "Challenge 2"],
+    "resourceConstraints": ["Staffing or capacity issues observed across teams"],
+    "processIssues": ["Recurring workflow or process problems across projects"]
   },
-  
+
+  "dependenciesAndCrossTeamNeeds": [
+    { "project": "Project Name", "dependency": "Upstream/downstream dependency", "impact": "How it affects timeline or risk", "requiredSupport": "Specific support needed from other teams or leadership" }
+  ],
+
   "upcomingFocus": [
     { "project": "Project Name", "focus": "What the team will focus on next week", "priority": "high" | "medium" | "low" }
   ],
-  
+
   "recommendedLeadershipActions": [
-    { "action": "Specific action leadership should take", "priority": "high" | "medium", "rationale": "Why this matters" }
+    { "action": "Specific action leadership should take", "priority": "high" | "medium", "rationale": "Why this matters and the expected impact" }
   ],
-  
-  "weekHighlights": ["Key highlight 1 with context", "Key highlight 2", ...]
+
+  "weekHighlights": ["Key highlight 1 with context", "Key highlight 2 with context"]
 }
 
-IMPORTANT: 
-- Include ALL projects in portfolioHealthBreakdown, not just a sample
-- For immediateAttentionRequired, include any project that is critical or has significant blockers
-- For upcomingFocus, summarize the next week priorities across projects, grouping similar focuses
-- Be specific with project and customer names throughout`;
+FINAL REMINDERS:
+- Include ALL PROJECTS in the portfolioHealthBreakdown.
+- Include every project with critical status OR major blockers in immediateAttentionRequired.
+- Do not invent data — explicitly write "not provided" where needed.
+- Output valid JSON only.`;
 
       // Build context for TEAM MEMBER AI summary - use anonymous feedback from people table
       // This replaces the per-report feedback with aggregated anonymous feedback
