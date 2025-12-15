@@ -2033,6 +2033,79 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         currentY += criticalLines.length * 3.5 + 4;
       }
 
+      // Week-over-Week Changes section
+      if (aiSummary.weekOverWeekChanges) {
+        const wowc = aiSummary.weekOverWeekChanges;
+        const hasChanges = (wowc.improved?.length > 0) || (wowc.worsened?.length > 0) || 
+                          (wowc.newRisks?.length > 0) || (wowc.resolved?.length > 0);
+        
+        if (hasChanges) {
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(40, 40, 40);
+          doc.text('Week-over-Week Changes:', 14, currentY);
+          currentY += 6;
+          
+          const maxWidth = pageWidth - 36;
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          
+          if (wowc.improved && wowc.improved.length > 0) {
+            doc.setTextColor(...colors.success as [number, number, number]);
+            doc.text('Improved:', 18, currentY);
+            currentY += 3.5;
+            doc.setTextColor(80, 80, 80);
+            wowc.improved.slice(0, 3).forEach((item: string) => {
+              const lines = doc.splitTextToSize(`• ${item}`, maxWidth);
+              doc.text(lines, 22, currentY);
+              currentY += lines.length * 3.5;
+            });
+            currentY += 1.5;
+          }
+          
+          if (wowc.worsened && wowc.worsened.length > 0) {
+            doc.setTextColor(...colors.destructive as [number, number, number]);
+            doc.text('Worsened:', 18, currentY);
+            currentY += 3.5;
+            doc.setTextColor(80, 80, 80);
+            wowc.worsened.slice(0, 3).forEach((item: string) => {
+              const lines = doc.splitTextToSize(`• ${item}`, maxWidth);
+              doc.text(lines, 22, currentY);
+              currentY += lines.length * 3.5;
+            });
+            currentY += 1.5;
+          }
+          
+          if (wowc.newRisks && wowc.newRisks.length > 0) {
+            doc.setTextColor(...colors.warning as [number, number, number]);
+            doc.text('New Risks:', 18, currentY);
+            currentY += 3.5;
+            doc.setTextColor(80, 80, 80);
+            wowc.newRisks.slice(0, 3).forEach((item: string) => {
+              const lines = doc.splitTextToSize(`• ${item}`, maxWidth);
+              doc.text(lines, 22, currentY);
+              currentY += lines.length * 3.5;
+            });
+            currentY += 1.5;
+          }
+          
+          if (wowc.resolved && wowc.resolved.length > 0) {
+            doc.setTextColor(...colors.primary as [number, number, number]);
+            doc.text('Resolved:', 18, currentY);
+            currentY += 3.5;
+            doc.setTextColor(80, 80, 80);
+            wowc.resolved.slice(0, 3).forEach((item: string) => {
+              const lines = doc.splitTextToSize(`• ${item}`, maxWidth);
+              doc.text(lines, 22, currentY);
+              currentY += lines.length * 3.5;
+            });
+            currentY += 1.5;
+          }
+          
+          currentY += 3;
+        }
+      }
+
       // Immediate Attention Required (comprehensive format)
       if (aiSummary.immediateAttentionRequired && aiSummary.immediateAttentionRequired.length > 0) {
         const attentionItems = aiSummary.immediateAttentionRequired.slice(0, 5);
@@ -2121,6 +2194,28 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           });
           currentY += 3;
         }
+      }
+
+      // Dependencies & Cross-Team Needs
+      if (aiSummary.dependenciesAndCrossTeamNeeds && aiSummary.dependenciesAndCrossTeamNeeds.length > 0) {
+        doc.setFillColor(...colors.purple as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Dependencies & Cross-Team Needs', 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(8);
+        aiSummary.dependenciesAndCrossTeamNeeds.slice(0, 5).forEach((dep) => {
+          const depText = `• ${dep.project}: ${dep.dependency} (Impact: ${dep.impact})`;
+          const lines = doc.splitTextToSize(depText, pageWidth - 36);
+          doc.text(lines, 20, currentY);
+          currentY += lines.length * 3.5;
+        });
+        currentY += 3;
       }
 
       // Recommended Leadership Actions (comprehensive format)
@@ -2484,6 +2579,84 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         currentY += criticalLines.length * 3.5 + 4;
       }
 
+      // Week-over-Week Changes section
+      if (leadershipSummary.weekOverWeekChanges) {
+        const wowc = leadershipSummary.weekOverWeekChanges;
+        const hasChanges = (wowc.improved?.length > 0) || (wowc.worsened?.length > 0) || 
+                          (wowc.newRisks?.length > 0) || (wowc.resolved?.length > 0);
+        
+        if (hasChanges) {
+          if (currentY > pageHeight - 40) {
+            doc.addPage();
+            currentY = 20;
+          }
+          
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(40, 40, 40);
+          doc.text('Week-over-Week Changes:', 14, currentY);
+          currentY += 6;
+          
+          const maxWidth = pageWidth - 36;
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          
+          if (wowc.improved && wowc.improved.length > 0) {
+            doc.setTextColor(...colors.success as [number, number, number]);
+            doc.text('Improved:', 18, currentY);
+            currentY += 3.5;
+            doc.setTextColor(80, 80, 80);
+            wowc.improved.slice(0, 3).forEach((item: string) => {
+              const lines = doc.splitTextToSize(`• ${item}`, maxWidth);
+              doc.text(lines, 22, currentY);
+              currentY += lines.length * 3.5;
+            });
+            currentY += 1.5;
+          }
+          
+          if (wowc.worsened && wowc.worsened.length > 0) {
+            doc.setTextColor(...colors.destructive as [number, number, number]);
+            doc.text('Worsened:', 18, currentY);
+            currentY += 3.5;
+            doc.setTextColor(80, 80, 80);
+            wowc.worsened.slice(0, 3).forEach((item: string) => {
+              const lines = doc.splitTextToSize(`• ${item}`, maxWidth);
+              doc.text(lines, 22, currentY);
+              currentY += lines.length * 3.5;
+            });
+            currentY += 1.5;
+          }
+          
+          if (wowc.newRisks && wowc.newRisks.length > 0) {
+            doc.setTextColor(...colors.warning as [number, number, number]);
+            doc.text('New Risks:', 18, currentY);
+            currentY += 3.5;
+            doc.setTextColor(80, 80, 80);
+            wowc.newRisks.slice(0, 3).forEach((item: string) => {
+              const lines = doc.splitTextToSize(`• ${item}`, maxWidth);
+              doc.text(lines, 22, currentY);
+              currentY += lines.length * 3.5;
+            });
+            currentY += 1.5;
+          }
+          
+          if (wowc.resolved && wowc.resolved.length > 0) {
+            doc.setTextColor(...colors.primary as [number, number, number]);
+            doc.text('Resolved:', 18, currentY);
+            currentY += 3.5;
+            doc.setTextColor(80, 80, 80);
+            wowc.resolved.slice(0, 3).forEach((item: string) => {
+              const lines = doc.splitTextToSize(`• ${item}`, maxWidth);
+              doc.text(lines, 22, currentY);
+              currentY += lines.length * 3.5;
+            });
+            currentY += 1.5;
+          }
+          
+          currentY += 3;
+        }
+      }
+
       // Immediate Attention Required (comprehensive format)
       if (leadershipSummary.immediateAttentionRequired && leadershipSummary.immediateAttentionRequired.length > 0) {
         if (currentY > pageHeight - 50) {
@@ -2641,6 +2814,33 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           });
           currentY += 3;
         }
+      }
+
+      // Dependencies & Cross-Team Needs
+      if (leadershipSummary.dependenciesAndCrossTeamNeeds && leadershipSummary.dependenciesAndCrossTeamNeeds.length > 0) {
+        if (currentY > pageHeight - 30) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFillColor(...colors.purple as [number, number, number]);
+        doc.circle(16, currentY + 1.5, 1.5, 'F');
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Dependencies & Cross-Team Needs', 20, currentY + 2.5);
+        currentY += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(8);
+        leadershipSummary.dependenciesAndCrossTeamNeeds.slice(0, 5).forEach((dep) => {
+          const depText = `• ${dep.project}: ${dep.dependency} (Impact: ${dep.impact})`;
+          const lines = doc.splitTextToSize(depText, pageWidth - 36);
+          doc.text(lines, 20, currentY);
+          currentY += lines.length * 3.5;
+        });
+        currentY += 3;
       }
 
       // Recommended Leadership Actions (comprehensive format)
