@@ -148,6 +148,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create user (admin only) - for pre-configuring leads before they log in
+  app.post('/api/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const adminRole = await getUserRole(adminId);
+      if (adminRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      const { email, firstName, lastName, role } = req.body;
+      
+      // Validate email
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+      
+      // Validate email domain
+      if (!email.endsWith('@ignitetech.com')) {
+        return res.status(400).json({ error: 'Email must be from @ignitetech.com domain' });
+      }
+      
+      // Validate role
+      if (!['admin', 'manager', 'lead', 'member'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ error: 'User with this email already exists' });
+      }
+      
+      const user = await storage.createUser({ email, firstName, lastName, role });
+      res.status(201).json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Update user role (admin only)
   app.patch('/api/users/:userId/role', isAuthenticated, async (req: any, res) => {
     try {
