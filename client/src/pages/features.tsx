@@ -137,7 +137,7 @@ const featureCategories = [
   { name: "People Management", features: ["canAddEditTeamMembers", "canAddEditProjectLeads", "canDeletePeople"] },
   { name: "Report Submission", features: ["canSaveDraft", "canEditOwnReports", "canSubmitReports", "canDeleteReports"] },
   { name: "Account Reports & Archive", features: ["canExportReports", "canArchiveReports", "canViewHistoricalAccountReports"] },
-  { name: "AI Summaries", features: ["canGenerateAISummary", "canViewAISummary", "canViewTeamFeedbackAISummary"] },
+  { name: "AI Summaries", features: ["canViewAISummary", "canGenerateAISummary", "canViewTeamFeedbackAISummary"] },
   { name: "Team Feedback Reports & Archive", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewHistoricalTeamReports"] },
 ];
 
