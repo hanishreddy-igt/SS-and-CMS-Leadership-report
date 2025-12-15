@@ -1074,23 +1074,28 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const startEditMember = (member: TeamMember) => {
     setEditingMemberId(member.id);
     setEditMemberValue(member.name);
-    setEditMemberEmailValue(member.email || '');
+    // Strip the domain when loading for editing
+    const emailUsername = member.email ? member.email.replace(/@ignitetech\.com$/, '') : '';
+    setEditMemberEmailValue(emailUsername);
     setShowEditMemberDialog(true);
   };
 
   const startEditLead = (lead: ProjectLead) => {
     setEditingLeadId(lead.id);
     setEditLeadValue(lead.name);
-    setEditLeadEmailValue(lead.email || '');
+    // Strip the domain when loading for editing
+    const emailUsername = lead.email ? lead.email.replace(/@ignitetech\.com$/, '') : '';
+    setEditLeadEmailValue(emailUsername);
     setShowEditLeadDialog(true);
   };
 
   const saveEditMember = () => {
     if (editingMemberId && editMemberValue.trim()) {
+      const email = editMemberEmailValue.trim() ? `${editMemberEmailValue.trim()}@ignitetech.com` : undefined;
       updateMemberMutation.mutate({ 
         id: editingMemberId, 
         name: editMemberValue.trim(), 
-        email: editMemberEmailValue.trim() || undefined 
+        email
       });
     }
   };
@@ -1104,10 +1109,11 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const saveEditLead = () => {
     if (editingLeadId && editLeadValue.trim()) {
+      const email = editLeadEmailValue.trim() ? `${editLeadEmailValue.trim()}@ignitetech.com` : undefined;
       updateLeadMutation.mutate({ 
         id: editingLeadId, 
         name: editLeadValue.trim(),
-        email: editLeadEmailValue.trim() || undefined
+        email
       });
     }
   };
@@ -1201,13 +1207,15 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   const handleAddMember = () => {
     if (newMember.trim() && !memberNameError) {
-      createMemberMutation.mutate({ name: newMember.trim(), email: newMemberEmail.trim() || undefined });
+      const email = newMemberEmail.trim() ? `${newMemberEmail.trim()}@ignitetech.com` : undefined;
+      createMemberMutation.mutate({ name: newMember.trim(), email });
     }
   };
 
   const handleAddLead = () => {
     if (newLead.trim() && !leadNameError) {
-      createLeadMutation.mutate({ name: newLead.trim(), email: newLeadEmail.trim() || undefined });
+      const email = newLeadEmail.trim() ? `${newLeadEmail.trim()}@ignitetech.com` : undefined;
+      createLeadMutation.mutate({ name: newLead.trim(), email });
     }
   };
 
@@ -3175,14 +3183,20 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   <div className="space-y-2">
                     <Label htmlFor="new-member-email">Email (Optional)</Label>
                     <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
-                    <Input
-                      id="new-member-email"
-                      data-testid="input-member-email"
-                      type="email"
-                      value={newMemberEmail}
-                      onChange={(e) => setNewMemberEmail(e.target.value)}
-                      placeholder="Enter email address"
-                    />
+                    <div className="flex">
+                      <Input
+                        id="new-member-email"
+                        data-testid="input-member-email"
+                        type="text"
+                        value={newMemberEmail}
+                        onChange={(e) => setNewMemberEmail(e.target.value.replace(/@.*$/, ''))}
+                        placeholder="username"
+                        className="rounded-r-none"
+                      />
+                      <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
+                        @ignitetech.com
+                      </span>
+                    </div>
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button
@@ -3422,14 +3436,20 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                   <div className="space-y-2">
                     <Label htmlFor="new-lead-email">Email Address</Label>
                     <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
-                    <Input
-                      id="new-lead-email"
-                      data-testid="input-lead-email"
-                      type="email"
-                      value={newLeadEmail}
-                      onChange={(e) => setNewLeadEmail(e.target.value)}
-                      placeholder="Enter email address (optional)"
-                    />
+                    <div className="flex">
+                      <Input
+                        id="new-lead-email"
+                        data-testid="input-lead-email"
+                        type="text"
+                        value={newLeadEmail}
+                        onChange={(e) => setNewLeadEmail(e.target.value.replace(/@.*$/, ''))}
+                        placeholder="username (optional)"
+                        className="rounded-r-none"
+                      />
+                      <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
+                        @ignitetech.com
+                      </span>
+                    </div>
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button
@@ -3906,14 +3926,20 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
             <div className="space-y-2">
               <Label htmlFor="edit-lead-email">Email Address</Label>
               <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
-              <Input
-                id="edit-lead-email"
-                data-testid="input-edit-lead-email"
-                type="email"
-                value={editLeadEmailValue}
-                onChange={(e) => setEditLeadEmailValue(e.target.value)}
-                placeholder="Enter email address (optional)"
-              />
+              <div className="flex">
+                <Input
+                  id="edit-lead-email"
+                  data-testid="input-edit-lead-email"
+                  type="text"
+                  value={editLeadEmailValue}
+                  onChange={(e) => setEditLeadEmailValue(e.target.value.replace(/@.*$/, ''))}
+                  placeholder="username (optional)"
+                  className="rounded-r-none"
+                />
+                <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
+                  @ignitetech.com
+                </span>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button
@@ -3959,14 +3985,20 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
             <div className="space-y-2">
               <Label htmlFor="edit-member-email">Email Address (Optional)</Label>
               <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
-              <Input
-                id="edit-member-email"
-                data-testid="input-edit-member-email"
-                type="email"
-                value={editMemberEmailValue}
-                onChange={(e) => setEditMemberEmailValue(e.target.value)}
-                placeholder="Enter email address"
-              />
+              <div className="flex">
+                <Input
+                  id="edit-member-email"
+                  data-testid="input-edit-member-email"
+                  type="text"
+                  value={editMemberEmailValue}
+                  onChange={(e) => setEditMemberEmailValue(e.target.value.replace(/@.*$/, ''))}
+                  placeholder="username"
+                  className="rounded-r-none"
+                />
+                <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
+                  @ignitetech.com
+                </span>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button

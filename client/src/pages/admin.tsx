@@ -325,15 +325,12 @@ export default function AdminPanel() {
 
   const handleAddUser = () => {
     if (!newUserEmail.trim()) {
-      toast({ title: "Error", description: "Email is required.", variant: "destructive" });
+      toast({ title: "Error", description: "Username is required.", variant: "destructive" });
       return;
     }
-    if (!newUserEmail.endsWith("@ignitetech.com")) {
-      toast({ title: "Error", description: "Email must be from @ignitetech.com domain.", variant: "destructive" });
-      return;
-    }
+    const fullEmail = `${newUserEmail.trim()}@ignitetech.com`;
     createUserMutation.mutate({
-      email: newUserEmail.trim(),
+      email: fullEmail,
       firstName: newUserFirstName.trim() || undefined,
       lastName: newUserLastName.trim() || undefined,
       role: newUserRole,
@@ -492,14 +489,20 @@ export default function AdminPanel() {
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="user@ignitetech.com"
-                        value={newUserEmail}
-                        onChange={(e) => setNewUserEmail(e.target.value)}
-                        data-testid="input-new-user-email"
-                      />
+                      <div className="flex">
+                        <Input
+                          id="email"
+                          type="text"
+                          placeholder="username"
+                          value={newUserEmail}
+                          onChange={(e) => setNewUserEmail(e.target.value.replace(/@.*$/, ''))}
+                          className="rounded-r-none"
+                          data-testid="input-new-user-email"
+                        />
+                        <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
+                          @ignitetech.com
+                        </span>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
