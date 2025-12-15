@@ -189,10 +189,9 @@ export default function FeaturePanel() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[250px]">Feature</TableHead>
-                      <TableHead className="w-[300px]">Description</TableHead>
+                      <TableHead className="w-1/3">Feature</TableHead>
                       {roles.map((role) => (
-                        <TableHead key={role} className="text-center w-[100px]">
+                        <TableHead key={role} className="text-center">
                           <Badge className={roleColors[role]}>{roleLabels[role]}</Badge>
                         </TableHead>
                       ))}
@@ -201,26 +200,21 @@ export default function FeaturePanel() {
                   <TableBody>
                     {category.features.map((featureKey) => {
                       const feature = FEATURE_PERMISSIONS[featureKey];
+                      if (!feature) return null;
                       return (
                         <TableRow key={featureKey} data-testid={`row-feature-${featureKey}`}>
-                          <TableCell className="font-medium">{feature.label}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {feature.description}
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{feature.label}</p>
+                              <p className="text-xs text-muted-foreground">{feature.description}</p>
+                            </div>
                           </TableCell>
                           {roles.map((role) => (
                             <TableCell key={role} className="text-center">
                               {feature.roles[role] ? (
-                                <div className="flex justify-center">
-                                  <div className="bg-success/20 text-success rounded-full p-1">
-                                    <Check className="h-4 w-4" />
-                                  </div>
-                                </div>
+                                <Check className="h-5 w-5 text-success mx-auto" />
                               ) : (
-                                <div className="flex justify-center">
-                                  <div className="bg-destructive/20 text-destructive rounded-full p-1">
-                                    <X className="h-4 w-4" />
-                                  </div>
-                                </div>
+                                <X className="h-5 w-5 text-muted-foreground/40 mx-auto" />
                               )}
                             </TableCell>
                           ))}
