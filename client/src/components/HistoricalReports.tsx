@@ -1206,6 +1206,82 @@ export default function HistoricalReports() {
                         </>
                       )}
 
+                      {/* Week-over-Week Changes */}
+                      {reportAiSummary.weekOverWeekChanges && (
+                        <div className="col-span-2">
+                          <p className="text-xs font-medium text-primary mb-2">Week-over-Week Changes</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {reportAiSummary.weekOverWeekChanges.improved?.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-medium text-success mb-1">Improved</p>
+                                <ul className="text-xs text-muted-foreground space-y-0.5">
+                                  {reportAiSummary.weekOverWeekChanges.improved.slice(0, 3).map((item: string, i: number) => (
+                                    <li key={i} className="flex items-start gap-1">
+                                      <div className="h-1 w-1 rounded-full bg-success mt-1.5 shrink-0" />
+                                      <span className="text-[10px]">{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {reportAiSummary.weekOverWeekChanges.worsened?.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-medium text-destructive mb-1">Worsened</p>
+                                <ul className="text-xs text-muted-foreground space-y-0.5">
+                                  {reportAiSummary.weekOverWeekChanges.worsened.slice(0, 3).map((item: string, i: number) => (
+                                    <li key={i} className="flex items-start gap-1">
+                                      <div className="h-1 w-1 rounded-full bg-destructive mt-1.5 shrink-0" />
+                                      <span className="text-[10px]">{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {reportAiSummary.weekOverWeekChanges.newRisks?.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-medium text-warning mb-1">New Risks</p>
+                                <ul className="text-xs text-muted-foreground space-y-0.5">
+                                  {reportAiSummary.weekOverWeekChanges.newRisks.slice(0, 3).map((item: string, i: number) => (
+                                    <li key={i} className="flex items-start gap-1">
+                                      <div className="h-1 w-1 rounded-full bg-warning mt-1.5 shrink-0" />
+                                      <span className="text-[10px]">{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {reportAiSummary.weekOverWeekChanges.resolved?.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-medium text-blue-400 mb-1">Resolved</p>
+                                <ul className="text-xs text-muted-foreground space-y-0.5">
+                                  {reportAiSummary.weekOverWeekChanges.resolved.slice(0, 3).map((item: string, i: number) => (
+                                    <li key={i} className="flex items-start gap-1">
+                                      <div className="h-1 w-1 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                      <span className="text-[10px]">{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Dependencies & Cross-Team Needs */}
+                      {reportAiSummary.dependenciesAndCrossTeamNeeds && reportAiSummary.dependenciesAndCrossTeamNeeds.length > 0 && (
+                        <div className="col-span-2">
+                          <p className="text-xs font-medium text-purple-400 mb-2">Dependencies & Cross-Team Needs</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {reportAiSummary.dependenciesAndCrossTeamNeeds.slice(0, 5).map((dep: any, i: number) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-purple-400 mt-1.5 shrink-0" />
+                                <span><strong>{dep.project}:</strong> {dep.dependency} <span className="text-muted-foreground/70">(Impact: {dep.impact})</span></span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       {/* Recommended Leadership Actions (new comprehensive format) */}
                       {reportAiSummary.recommendedLeadershipActions && reportAiSummary.recommendedLeadershipActions.length > 0 && (
                         <div className="col-span-2">
