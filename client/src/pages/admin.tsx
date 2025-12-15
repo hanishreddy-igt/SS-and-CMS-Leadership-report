@@ -373,38 +373,32 @@ export default function AdminPanel() {
   // Bulk role update
   const bulkUpdateRoleMutation = useMutation({
     mutationFn: async ({ userIds, role }: { userIds: string[]; role: UserRole }) => {
-      const results = await Promise.all(
-        userIds.map((userId) => apiRequest("PATCH", `/api/users/${userId}/role`, { role }))
-      );
-      return results;
+      return apiRequest("PATCH", "/api/users/bulk-role", { userIds, role });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "Roles Updated", description: `Updated ${selectedUsers.size} user(s) to ${roleLabels[bulkRole]}.` });
+      toast({ title: "Roles Updated", description: data.message || `Updated ${selectedUsers.size} user(s) to ${roleLabels[bulkRole]}.` });
       setShowBulkRoleDialog(false);
       clearSelection();
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to update some user roles.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update user roles.", variant: "destructive" });
     },
   });
 
   // Bulk delete
   const bulkDeleteMutation = useMutation({
     mutationFn: async (userIds: string[]) => {
-      const results = await Promise.all(
-        userIds.map((userId) => apiRequest("DELETE", `/api/users/${userId}`))
-      );
-      return results;
+      return apiRequest("DELETE", "/api/users/bulk", { userIds });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "Users Deleted", description: `Deleted ${selectedUsers.size} user(s).` });
+      toast({ title: "Users Deleted", description: data.message || `Deleted ${selectedUsers.size} user(s).` });
       setShowBulkDeleteDialog(false);
       clearSelection();
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to delete some users.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to delete users.", variant: "destructive" });
     },
   });
 

@@ -229,6 +229,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk update user roles (admin only)
+  app.patch('/api/users/bulk-role', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const adminRole = await getUserRole(adminId);
+      if (adminRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const { userIds, role } = req.body;
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ error: 'userIds must be a non-empty array' });
+      }
+      if (!['admin', 'manager', 'lead', 'member'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+      }
+      const results = await Promise.all(
+        userIds.map(async (userId: string) => {
+          try {
+            await storage.updateUserRole(userId, role);
+            return { userId, success: true };
+          } catch (err) {
+            return { userId, success: false, error: (err as Error).message };
+          }
+        })
+      );
+      const successCount = results.filter(r => r.success).length;
+      res.json({ message: `Updated ${successCount} of ${userIds.length} users`, results });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Bulk delete users (admin only)
+  app.delete('/api/users/bulk', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const adminRole = await getUserRole(adminId);
+      if (adminRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const { userIds } = req.body;
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ error: 'userIds must be a non-empty array' });
+      }
+      const results = await Promise.all(
+        userIds.map(async (userId: string) => {
+          try {
+            const success = await storage.deleteUser(userId);
+            return { userId, success };
+          } catch (err) {
+            return { userId, success: false, error: (err as Error).message };
+          }
+        })
+      );
+      const successCount = results.filter(r => r.success).length;
+      res.json({ message: `Deleted ${successCount} of ${userIds.length} users`, results });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Admin role switching (temporary override for testing)
   // This is stored in session/memory, not in database
   const adminRoleOverrides = new Map<string, string>(); // userId -> overrideRole
