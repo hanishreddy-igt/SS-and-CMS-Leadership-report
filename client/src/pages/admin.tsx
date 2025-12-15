@@ -34,7 +34,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft, LayoutGrid, Check, X, Trash2 } from "lucide-react";
+import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft, LayoutGrid, Check, X, Trash2, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface User {
   id: string;
@@ -285,6 +296,49 @@ export default function AdminPanel() {
     },
   });
 
+  // Add User dialog state
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserFirstName, setNewUserFirstName] = useState("");
+  const [newUserLastName, setNewUserLastName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<UserRole>("member");
+
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: { email: string; firstName?: string; lastName?: string; role: UserRole }) => {
+      return apiRequest("POST", "/api/users", userData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: "User Created", description: "User has been added successfully." });
+      setShowAddUserDialog(false);
+      setNewUserEmail("");
+      setNewUserFirstName("");
+      setNewUserLastName("");
+      setNewUserRole("member");
+    },
+    onError: (error: any) => {
+      const message = error?.message || "Failed to create user.";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    },
+  });
+
+  const handleAddUser = () => {
+    if (!newUserEmail.trim()) {
+      toast({ title: "Error", description: "Email is required.", variant: "destructive" });
+      return;
+    }
+    if (!newUserEmail.endsWith("@ignitetech.com")) {
+      toast({ title: "Error", description: "Email must be from @ignitetech.com domain.", variant: "destructive" });
+      return;
+    }
+    createUserMutation.mutate({
+      email: newUserEmail.trim(),
+      firstName: newUserFirstName.trim() || undefined,
+      lastName: newUserLastName.trim() || undefined,
+      role: newUserRole,
+    });
+  };
+
   if (!canManageUsers) {
     return (
       <div className="container mx-auto py-6 space-y-6">
@@ -345,9 +399,84 @@ export default function AdminPanel() {
 
         <TabsContent value="users">
           <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>View and manage user roles in the system.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>View and manage user roles in the system.</CardDescription>
+              </div>
+              <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-add-user">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogDescription>
+                      Pre-configure a user before they log in. Email must be from @ignitetech.com domain.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="user@ignitetech.com"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                        data-testid="input-new-user-email"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input
+                          id="firstName"
+                          placeholder="John"
+                          value={newUserFirstName}
+                          onChange={(e) => setNewUserFirstName(e.target.value)}
+                          data-testid="input-new-user-firstname"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input
+                          id="lastName"
+                          placeholder="Doe"
+                          value={newUserLastName}
+                          onChange={(e) => setNewUserLastName(e.target.value)}
+                          data-testid="input-new-user-lastname"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Role</Label>
+                      <Select value={newUserRole} onValueChange={(value) => setNewUserRole(value as UserRole)}>
+                        <SelectTrigger data-testid="select-new-user-role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="lead">SS/CMS Lead</SelectItem>
+                          <SelectItem value="member">SS/CMS Team Member</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowAddUserDialog(false)} data-testid="button-cancel-add-user">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAddUser} disabled={createUserMutation.isPending} data-testid="button-confirm-add-user">
+                      {createUserMutation.isPending ? "Adding..." : "Add User"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {usersLoading ? (

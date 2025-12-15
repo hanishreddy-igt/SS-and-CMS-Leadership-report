@@ -157,12 +157,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Admin access required' });
       }
       
-      const { email, firstName, lastName, role } = req.body;
+      const { email: rawEmail, firstName, lastName, role } = req.body;
       
       // Validate email
-      if (!email || typeof email !== 'string') {
+      if (!rawEmail || typeof rawEmail !== 'string') {
         return res.status(400).json({ error: 'Email is required' });
       }
+      
+      // Normalize email to lowercase for consistent comparison
+      const email = rawEmail.trim().toLowerCase();
       
       // Validate email domain
       if (!email.endsWith('@ignitetech.com')) {
