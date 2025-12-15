@@ -3010,6 +3010,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [isForceArchiving, setIsForceArchiving] = useState(false);
   const [showAllFeedback, setShowAllFeedback] = useState(false);
   const [showAllReports, setShowAllReports] = useState(false);
+  // Track which lead sections are expanded (show more than 2 reports)
+  const [expandedLeadSections, setExpandedLeadSections] = useState<Set<string>>(new Set());
 
   // Save current reports to archive (generates AI summaries, PDF, CSV, archives, then resets)
   // Now saves 2 separate reports: one for Account Reports (leadership summary + account CSV)
@@ -4387,44 +4389,47 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               <p className="text-muted-foreground text-center py-4">No reports found matching the filters.</p>
             ) : (
               (() => {
-                // Flatten all reports with their lead names and limit to 8 unless showing all
-                const allReportsFlat: { leadName: string; report: WeeklyReport }[] = [];
-                sortedLeadNames.forEach((leadName) => {
-                  const leadReports = groupedReportsByLead[leadName];
-                  leadReports.forEach((report) => {
-                    allReportsFlat.push({ leadName, report });
-                  });
-                });
+                // Calculate total reports for stats
+                const totalReports = sortedLeadNames.reduce((sum, leadName) => 
+                  sum + groupedReportsByLead[leadName].length, 0);
                 
-                const totalReports = allReportsFlat.length;
-                const displayedReports = showAllReports ? allReportsFlat : allReportsFlat.slice(0, 8);
-                
-                // Re-group the limited reports by lead name
-                const limitedGrouped: Record<string, WeeklyReport[]> = {};
-                displayedReports.forEach(({ leadName, report }) => {
-                  if (!limitedGrouped[leadName]) {
-                    limitedGrouped[leadName] = [];
-                  }
-                  limitedGrouped[leadName].push(report);
-                });
-                
-                const limitedLeadNames = Object.keys(limitedGrouped).sort((a, b) => a.localeCompare(b));
+                // Count how many leads have more than 2 reports (can be expanded)
+                const leadsWithMoreThan2 = sortedLeadNames.filter(leadName => 
+                  groupedReportsByLead[leadName].length > 2).length;
                 
                 return (
                   <>
-                    {limitedLeadNames.map((leadName) => {
-                      const leadReports = limitedGrouped[leadName];
+                    {sortedLeadNames.map((leadName) => {
+                      // Get the FULL list of reports for this lead (not pre-truncated)
+                      const leadReports = groupedReportsByLead[leadName];
+                      const totalLeadReports = leadReports.length;
+                      const isLeadSectionExpanded = expandedLeadSections.has(leadName) || showAllReports;
+                      const displayedLeadReports = isLeadSectionExpanded ? leadReports : leadReports.slice(0, 2);
+                      const hasMoreReports = totalLeadReports > 2;
+                      
+                      const toggleLeadSection = (e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        setExpandedLeadSections(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(leadName)) {
+                            newSet.delete(leadName);
+                          } else {
+                            newSet.add(leadName);
+                          }
+                          return newSet;
+                        });
+                      };
                       
                       return (
                         <div key={leadName} className="space-y-3">
                           <div className="flex items-center justify-between">
                             <h3 className="text-lg font-semibold">{leadName}</h3>
                             <Badge variant="default" className="gap-1">
-                              {leadReports.length} {leadReports.length === 1 ? 'report' : 'reports'}
+                              {totalLeadReports} {totalLeadReports === 1 ? 'report' : 'reports'}
                             </Badge>
                           </div>
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {leadReports.map((report) => {
+                            {displayedLeadReports.map((report) => {
                         const healthConfig = healthStatusConfig[report.healthStatus as keyof typeof healthStatusConfig];
                         const HealthIcon = healthConfig?.icon || CheckCircle2;
                         const feedback = report.teamMemberFeedback as TeamMemberFeedback[] | null;
@@ -4666,13 +4671,37 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </Card>
                             );
                           })}
+                          </div>
+                          {/* Show More/Less for this lead section */}
+                          {hasMoreReports && (
+                            <div className="flex justify-center pt-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={toggleLeadSection}
+                                className="gap-2 text-muted-foreground hover:text-foreground"
+                                data-testid={`button-toggle-lead-${leadName.replace(/\s+/g, '-').toLowerCase()}`}
+                              >
+                                {isLeadSectionExpanded ? (
+                                  <>
+                                    <ChevronUp className="h-4 w-4" />
+                                    Show Less
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-4 w-4" />
+                                    Show More ({totalLeadReports - 2} more)
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      </div>
                     );
                   })}
                   
-                  {/* Show More/Less Button */}
-                  {totalReports > 8 && (
+                  {/* Expand All / Collapse All Button - shown when there are leads with more than 2 reports */}
+                  {leadsWithMoreThan2 > 1 && (
                     <div className="flex justify-center pt-4">
                       <Button
                         variant="outline"
@@ -4684,12 +4713,12 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                         {showAllReports ? (
                           <>
                             <ChevronUp className="h-4 w-4" />
-                            Show Less
+                            Collapse All Sections
                           </>
                         ) : (
                           <>
                             <ChevronDown className="h-4 w-4" />
-                            Show More ({totalReports - 8} more)
+                            Expand All Sections
                           </>
                         )}
                       </Button>
