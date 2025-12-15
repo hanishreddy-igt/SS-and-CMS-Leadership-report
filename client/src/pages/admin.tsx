@@ -158,17 +158,12 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     roles: { admin: true, manager: true, lead: false, member: false },
   },
   canViewAllReports: {
-    label: "View All Reports",
+    label: "View All Account Reports",
     description: "Access and view all submitted reports",
     roles: { admin: true, manager: true, lead: true, member: true },
   },
-  canViewOwnReports: {
-    label: "View Own Reports",
-    description: "View reports submitted by self",
-    roles: { admin: true, manager: true, lead: true, member: true },
-  },
   canExportReports: {
-    label: "Export Reports",
+    label: "Export All Account Reports",
     description: "Export reports to PDF or CSV format",
     roles: { admin: true, manager: true, lead: true, member: false },
   },
@@ -224,9 +219,9 @@ const featureCategories = [
   { name: "Contract Operations", features: ["canAddContracts", "canEditContracts", "canDeleteContracts", "canViewAllContracts"] },
   { name: "People Management", features: ["canAddTeamMembers", "canEditTeamMembers", "canAddProjectLeads", "canEditProjectLeads", "canDeletePeople"] },
   { name: "Report Submission", features: ["canSubmitReports", "canSaveDraft", "canEditOwnReports", "canDeleteReports"] },
-  { name: "Account Reports & Archive", features: ["canViewAllReports", "canViewOwnReports", "canExportReports", "canArchiveReports", "canViewHistoricalAccountReports", "canViewHistoricalTeamReports"] },
+  { name: "Account Reports & Archive", features: ["canViewAllReports", "canExportReports", "canArchiveReports", "canViewHistoricalAccountReports"] },
   { name: "AI Summaries", features: ["canGenerateAISummary", "canViewAISummary"] },
-  { name: "Team Feedback", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary"] },
+  { name: "Team Feedback Reports & Archive", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewTeamFeedbackSummary", "canViewHistoricalTeamReports"] },
 ];
 
 const roles: UserRole[] = ["admin", "manager", "lead", "member"];
