@@ -99,6 +99,7 @@ export interface IStorage {
   // User role management
   getAllUsers(): Promise<User[]>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(userData: { email: string; firstName?: string; lastName?: string; role: UserRole }): Promise<User>;
   updateUserRole(userId: string, role: UserRole): Promise<User | undefined>;
   updateUserProfile(userId: string, updates: { displayName?: string }): Promise<User | undefined>;
   deleteUser(userId: string): Promise<boolean>;
@@ -158,6 +159,23 @@ export class MemStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(u => u.email === email);
+  }
+
+  async createUser(userData: { email: string; firstName?: string; lastName?: string; role: UserRole }): Promise<User> {
+    const id = randomUUID();
+    const user: User = {
+      id,
+      email: userData.email,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      displayName: null,
+      profileImageUrl: null,
+      role: userData.role,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(id, user);
+    return user;
   }
 
   async updateUserRole(userId: string, role: UserRole): Promise<User | undefined> {
@@ -877,6 +895,16 @@ export class DatabaseStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
+  }
+
+  async createUser(userData: { email: string; firstName?: string; lastName?: string; role: UserRole }): Promise<User> {
+    const [user] = await db.insert(users).values({
+      email: userData.email,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      role: userData.role,
+    }).returning();
+    return user;
   }
 
   async updateUserRole(userId: string, role: UserRole): Promise<User | undefined> {
