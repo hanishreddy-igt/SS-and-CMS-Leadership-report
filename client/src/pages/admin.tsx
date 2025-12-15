@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface User {
   id: string;
@@ -339,6 +340,82 @@ export default function AdminPanel() {
     });
   };
 
+  // Bulk selection state
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [showBulkRoleDialog, setShowBulkRoleDialog] = useState(false);
+  const [bulkRole, setBulkRole] = useState<UserRole>("member");
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUsers.size === users.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(users.map((u) => u.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedUsers(new Set());
+  };
+
+  // Bulk role update
+  const bulkUpdateRoleMutation = useMutation({
+    mutationFn: async ({ userIds, role }: { userIds: string[]; role: UserRole }) => {
+      const results = await Promise.all(
+        userIds.map((userId) => apiRequest("PATCH", `/api/users/${userId}/role`, { role }))
+      );
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: "Roles Updated", description: `Updated ${selectedUsers.size} user(s) to ${roleLabels[bulkRole]}.` });
+      setShowBulkRoleDialog(false);
+      clearSelection();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update some user roles.", variant: "destructive" });
+    },
+  });
+
+  // Bulk delete
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      const results = await Promise.all(
+        userIds.map((userId) => apiRequest("DELETE", `/api/users/${userId}`))
+      );
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: "Users Deleted", description: `Deleted ${selectedUsers.size} user(s).` });
+      setShowBulkDeleteDialog(false);
+      clearSelection();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete some users.", variant: "destructive" });
+    },
+  });
+
+  const handleBulkRoleUpdate = () => {
+    bulkUpdateRoleMutation.mutate({ userIds: Array.from(selectedUsers), role: bulkRole });
+  };
+
+  const handleBulkDelete = () => {
+    bulkDeleteMutation.mutate(Array.from(selectedUsers));
+  };
+
   if (!canManageUsers) {
     return (
       <div className="container mx-auto py-6 space-y-6">
@@ -478,6 +555,50 @@ export default function AdminPanel() {
                 </DialogContent>
               </Dialog>
             </CardHeader>
+            {selectedUsers.size > 0 && (
+              <div className="flex items-center justify-between gap-4 px-6 py-3 bg-muted/50 border-b">
+                <span className="text-sm text-muted-foreground">
+                  {selectedUsers.size} user{selectedUsers.size > 1 ? "s" : ""} selected
+                </span>
+                <div className="flex items-center gap-2">
+                  <Select value={bulkRole} onValueChange={(value) => setBulkRole(value as UserRole)}>
+                    <SelectTrigger className="w-40" data-testid="select-bulk-role">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="lead">SS/CMS Lead</SelectItem>
+                      <SelectItem value="member">SS/CMS Team Member</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowBulkRoleDialog(true)}
+                    data-testid="button-bulk-change-role"
+                  >
+                    Change Role
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => setShowBulkDeleteDialog(true)}
+                    data-testid="button-bulk-delete"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={clearSelection}
+                    data-testid="button-clear-selection"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            )}
             <CardContent>
               {usersLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading users...</div>
@@ -487,6 +608,14 @@ export default function AdminPanel() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedUsers.size === users.length && users.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Select all users"
+                          data-testid="checkbox-select-all"
+                        />
+                      </TableHead>
                       <TableHead>User</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Current Role</TableHead>
@@ -497,6 +626,14 @@ export default function AdminPanel() {
                   <TableBody>
                     {users.map((user) => (
                       <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedUsers.has(user.id)}
+                            onCheckedChange={() => toggleUserSelection(user.id)}
+                            aria-label={`Select ${user.displayName || user.email}`}
+                            data-testid={`checkbox-user-${user.id}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           {user.displayName || user.firstName || user.email?.split("@")[0] || "Unknown"}
                         </TableCell>
@@ -556,6 +693,47 @@ export default function AdminPanel() {
                 </Table>
               )}
             </CardContent>
+
+            <Dialog open={showBulkRoleDialog} onOpenChange={setShowBulkRoleDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Change Role for {selectedUsers.size} User{selectedUsers.size > 1 ? "s" : ""}</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to change the role for the selected users to {roleLabels[bulkRole]}?
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowBulkRoleDialog(false)} data-testid="button-cancel-bulk-role">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleBulkRoleUpdate} disabled={bulkUpdateRoleMutation.isPending} data-testid="button-confirm-bulk-role">
+                    {bulkUpdateRoleMutation.isPending ? "Updating..." : "Change Role"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {selectedUsers.size} User{selectedUsers.size > 1 ? "s" : ""}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete the selected users? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-testid="button-cancel-bulk-delete">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleBulkDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={bulkDeleteMutation.isPending}
+                    data-testid="button-confirm-bulk-delete"
+                  >
+                    {bulkDeleteMutation.isPending ? "Deleting..." : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </Card>
         </TabsContent>
 
