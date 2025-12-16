@@ -2322,6 +2322,22 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               </Dialog>
               )}
 
+              {/* Export CSV Button */}
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={exportContractsToCSV}
+                data-testid="button-export-contracts"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+                {getActiveFilterCount() > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {sortedProjects.length}
+                  </Badge>
+                )}
+              </Button>
+
               {/* Sort & Filter Popover */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -2602,31 +2618,15 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               {/* Selection Mode Controls for Projects */}
               <div className="flex items-center gap-4 mb-4 pb-4 border-b">
                 {!selectionModeProjects ? (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectionModeProjects(true)}
-                      data-testid="button-enter-selection-projects"
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Select
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={exportContractsToCSV}
-                      data-testid="button-export-contracts"
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      Export CSV
-                      {getActiveFilterCount() > 0 && (
-                        <Badge variant="secondary" className="ml-1 text-xs">
-                          {sortedProjects.length}
-                        </Badge>
-                      )}
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectionModeProjects(true)}
+                    data-testid="button-enter-selection-projects"
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Select
+                  </Button>
                 ) : (
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button
