@@ -804,9 +804,34 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   });
 
   const handleSaveEdit = () => {
+    // Validate required fields first with clear feedback
+    if (!editFormData.name) {
+      toast({
+        title: 'Missing Field',
+        description: 'Account name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!editFormData.customer) {
+      toast({
+        title: 'Missing Field',
+        description: 'Customer name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!editFormData.customerContactEmail) {
+      toast({
+        title: 'Missing Field',
+        description: 'Customer contact email is required',
+        variant: 'destructive',
+      });
+      return;
+    }
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (editFormData.customerContactEmail && !emailRegex.test(editFormData.customerContactEmail.trim())) {
+    if (!emailRegex.test(editFormData.customerContactEmail.trim())) {
       toast({
         title: 'Invalid Email',
         description: 'Please enter a valid customer contact email address',
@@ -814,9 +839,32 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
       });
       return;
     }
+    if (editFormData.leadIds.length === 0) {
+      toast({
+        title: 'Missing Field',
+        description: 'At least one project lead is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (editFormData.teamMembers.length === 0) {
+      toast({
+        title: 'Missing Field',
+        description: 'At least one team member is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!editFormData.projectType) {
+      toast({
+        title: 'Missing Field',
+        description: 'Project type (CMS or SS) is required',
+        variant: 'destructive',
+      });
+      return;
+    }
     
-    if (editingProject && editFormData.name && editFormData.customer && editFormData.customerContactEmail && 
-        editFormData.leadIds.length > 0 && editFormData.teamMembers.length > 0 && editFormData.projectType) {
+    if (editingProject) {
       
       // Validate date formats
       if (editStartDateInput && !isValidDateFormat(editStartDateInput)) {
