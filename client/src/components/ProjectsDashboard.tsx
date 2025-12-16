@@ -43,6 +43,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
   const [filterLeadSearch, setFilterLeadSearch] = useState<string>('');
   const [filterProjectStatus, setFilterProjectStatus] = useState<string[]>([]);
   const [filterProjectsWithCaution, setFilterProjectsWithCaution] = useState(false);
+  const [filterEndDateAfter, setFilterEndDateAfter] = useState<string>(''); // Filter for end date > selected date
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [sortField, setSortField] = useState<SortField>('endDate');
   
@@ -475,6 +476,16 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (filterProjectStatus.length > 0 && !filterProjectStatus.includes(getProjectStatus(project.endDate))) return false;
     // Filter by projects with caution (missing end date OR unfilled roles)
     if (filterProjectsWithCaution && !projectHasCaution(project)) return false;
+    // Filter by end date after selected date (include projects with no end date)
+    if (filterEndDateAfter) {
+      const filterDate = new Date(filterEndDateAfter);
+      // Include if no end date (N/A) OR end date is after the filter date
+      if (project.endDate) {
+        const projectEndDate = new Date(project.endDate);
+        if (projectEndDate <= filterDate) return false;
+      }
+      // Projects with no end date are included (they pass the filter)
+    }
     return true;
   });
 
@@ -1574,6 +1585,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     if (filterMembers.length > 0) count += filterMembers.length;
     if (filterProjectStatus.length > 0) count += filterProjectStatus.length;
     if (filterProjectsWithCaution) count++;
+    if (filterEndDateAfter) count++;
     return count;
   };
 
@@ -1585,6 +1597,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     setFilterLeadSearch('');
     setFilterProjectStatus([]);
     setFilterProjectsWithCaution(false);
+    setFilterEndDateAfter('');
   };
   
   // Exit selection mode and clear selections
@@ -2601,6 +2614,34 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </p>
                         )}
                       </div>
+                    </div>
+
+                    {/* Filter by End Date After */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">End Date After</Label>
+                        {filterEndDateAfter && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setFilterEndDateAfter('')}
+                            className="h-auto py-1 px-2 text-xs"
+                            data-testid="button-clear-end-date-filter"
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <Input
+                        type="date"
+                        value={filterEndDateAfter}
+                        onChange={(e) => setFilterEndDateAfter(e.target.value)}
+                        className="w-full"
+                        data-testid="input-filter-end-date-after"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shows contracts ending after this date (includes N/A)
+                      </p>
                     </div>
                   </div>
                 </PopoverContent>
