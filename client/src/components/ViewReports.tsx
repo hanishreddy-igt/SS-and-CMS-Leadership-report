@@ -4409,15 +4409,26 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       
                       const toggleLeadSection = (e: React.MouseEvent) => {
                         e.stopPropagation();
-                        setExpandedLeadSections(prev => {
-                          const newSet = new Set(prev);
-                          if (newSet.has(leadName)) {
-                            newSet.delete(leadName);
-                          } else {
-                            newSet.add(leadName);
-                          }
-                          return newSet;
-                        });
+                        // If global "Expand All" is active and user clicks "Show Less", 
+                        // turn off global expand and expand all sections EXCEPT this one
+                        if (showAllReports && isLeadSectionExpanded) {
+                          setShowAllReports(false);
+                          // Expand all leads except this one
+                          const allLeadsExceptThis = sortedLeadNames.filter(name => 
+                            name !== leadName && groupedReportsByLead[name].length > 2
+                          );
+                          setExpandedLeadSections(new Set(allLeadsExceptThis));
+                        } else {
+                          setExpandedLeadSections(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(leadName)) {
+                              newSet.delete(leadName);
+                            } else {
+                              newSet.add(leadName);
+                            }
+                            return newSet;
+                          });
+                        }
                       };
                       
                       return (
