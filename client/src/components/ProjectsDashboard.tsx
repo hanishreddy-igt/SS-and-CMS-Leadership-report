@@ -422,7 +422,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     return (h * 60 + m).toString();
   };
 
-  // Helper to format stored value for display as "X hours Y minutes"
+  // Helper to format stored value for display as decimal hours (e.g., "20.2 hrs")
   // Uses same legacy detection as parseContractualTime
   const formatContractualTime = (storedValue: string | null | undefined): string => {
     if (!storedValue) return '';
@@ -431,16 +431,16 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     
     // Legacy detection: values < 1000 are likely stored as hours
     if (value < 1000) {
-      return `${value} hour${value !== 1 ? 's' : ''}`;
+      return `${value} hrs`;
     }
     
-    // New format: total minutes
-    const hours = Math.floor(value / 60);
-    const mins = value % 60;
-    if (hours > 0 && mins > 0) return `${hours} hour${hours !== 1 ? 's' : ''} ${mins} minute${mins !== 1 ? 's' : ''}`;
-    if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''}`;
-    if (mins > 0) return `${mins} minute${mins !== 1 ? 's' : ''}`;
-    return '';
+    // New format: total minutes - convert to decimal hours
+    const decimalHours = value / 60;
+    // Round to 1 decimal place, remove trailing .0 if whole number
+    const formatted = decimalHours % 1 === 0 
+      ? decimalHours.toFixed(0) 
+      : decimalHours.toFixed(1);
+    return `${formatted} hrs`;
   };
 
   // Helper to check if a project has unfilled team member roles
