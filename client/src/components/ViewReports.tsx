@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, ChevronUp, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare } from 'lucide-react';
+import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, ChevronUp, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare, RefreshCw } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment, Person, FeedbackEntry } from '@shared/schema';
@@ -3905,17 +3905,39 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                     </div>
                     <h4 className="font-semibold">Team Feedback AI Summary</h4>
                   </div>
-                  <Badge className={`${
-                    teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
-                    teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
-                    'bg-destructive/10 text-destructive'
-                  } border-0`}>
-                    {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
-                    {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                    {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
-                    Team Morale: {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
-                     teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {permissions.canGenerateAISummary && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateSummaryMutation.mutate();
+                        }}
+                        disabled={generateSummaryMutation.isPending}
+                        className="gap-1 h-7 px-2"
+                        data-testid="button-regenerate-team-summary"
+                      >
+                        {generateSummaryMutation.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
+                        <span className="text-xs">Regenerate</span>
+                      </Button>
+                    )}
+                    <Badge className={`${
+                      teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
+                      teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
+                      'bg-destructive/10 text-destructive'
+                    } border-0`}>
+                      {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                      {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                      {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                      Team Morale: {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                       teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                    </Badge>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2">{teamSummary.teamSummary}</p>
                 <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
@@ -4326,15 +4348,40 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </div>
                   <h4 className="font-semibold">Leadership AI Summary</h4>
                 </div>
-                <Badge className={`${getOverallHealthConfig(aiSummary.overallHealth).bgColor} ${getOverallHealthConfig(aiSummary.overallHealth).color} border-0`}>
-                  {aiSummary.overallHealth === 'on-track' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
-                  {aiSummary.overallHealth === 'needs-attention' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                  {aiSummary.overallHealth === 'critical' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
-                  {getOverallHealthConfig(aiSummary.overallHealth).label}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {permissions.canGenerateAISummary && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        generateSummaryMutation.mutate();
+                      }}
+                      disabled={generateSummaryMutation.isPending}
+                      className="gap-1 h-7 px-2"
+                      data-testid="button-regenerate-summary"
+                    >
+                      {generateSummaryMutation.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}
+                      <span className="text-xs">Regenerate</span>
+                    </Button>
+                  )}
+                  <Badge className={`${getOverallHealthConfig(aiSummary.overallHealth).bgColor} ${getOverallHealthConfig(aiSummary.overallHealth).color} border-0`}>
+                    {aiSummary.overallHealth === 'on-track' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                    {aiSummary.overallHealth === 'needs-attention' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                    {aiSummary.overallHealth === 'critical' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                    {getOverallHealthConfig(aiSummary.overallHealth).label}
+                  </Badge>
+                </div>
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2">{aiSummary.executiveSummary}</p>
-              <p className="text-xs text-primary mt-2">Click to view full summary</p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-primary">Click to view full summary</p>
+                <p className="text-xs text-muted-foreground">Analyzed {reportsAnalyzed} reports</p>
+              </div>
             </div>
           ) : permissions.canGenerateAISummary && (
             <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-white/10 flex items-center justify-between">
