@@ -14,7 +14,9 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield } from 'lucide-react';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { format, parse } from 'date-fns';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -2487,13 +2489,34 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </Button>
                         )}
                       </div>
-                      <Input
-                        type="date"
-                        value={filterEndDateAfter}
-                        onChange={(e) => setFilterEndDateAfter(e.target.value)}
-                        className="w-full"
-                        data-testid="input-filter-end-date-after"
-                      />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                            data-testid="button-filter-end-date-after"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {filterEndDateAfter ? (
+                              format(new Date(filterEndDateAfter + 'T00:00:00'), 'MM/dd/yyyy')
+                            ) : (
+                              <span className="text-muted-foreground">Select date...</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={filterEndDateAfter ? new Date(filterEndDateAfter + 'T00:00:00') : undefined}
+                            onSelect={(date) => {
+                              if (date) {
+                                setFilterEndDateAfter(format(date, 'yyyy-MM-dd'));
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <p className="text-xs text-muted-foreground">
                         Shows contracts ending after this date (includes N/A)
                       </p>
