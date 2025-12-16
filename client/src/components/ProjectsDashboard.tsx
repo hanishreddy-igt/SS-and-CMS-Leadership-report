@@ -2471,14 +2471,42 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                       </p>
                     </div>
 
-                    {/* Filter by Name */}
+                    {/* Filter by End Date After */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Filter by Name</Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">End Date After</Label>
+                        {filterEndDateAfter && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setFilterEndDateAfter('')}
+                            className="h-auto py-1 px-2 text-xs"
+                            data-testid="button-clear-end-date-filter"
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <Input
+                        type="date"
+                        value={filterEndDateAfter}
+                        onChange={(e) => setFilterEndDateAfter(e.target.value)}
+                        className="w-full"
+                        data-testid="input-filter-end-date-after"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shows contracts ending after this date (includes N/A)
+                      </p>
+                    </div>
+
+                    {/* Filter by Account Name */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Filter by Account Name</Label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           type="text"
-                          placeholder="Search projects..."
+                          placeholder="Search accounts..."
                           value={filterProjectName}
                           onChange={(e) => setFilterProjectName(e.target.value)}
                           className="pl-9 pr-9"
@@ -2614,34 +2642,6 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           </p>
                         )}
                       </div>
-                    </div>
-
-                    {/* Filter by End Date After */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">End Date After</Label>
-                        {filterEndDateAfter && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setFilterEndDateAfter('')}
-                            className="h-auto py-1 px-2 text-xs"
-                            data-testid="button-clear-end-date-filter"
-                          >
-                            Clear
-                          </Button>
-                        )}
-                      </div>
-                      <Input
-                        type="date"
-                        value={filterEndDateAfter}
-                        onChange={(e) => setFilterEndDateAfter(e.target.value)}
-                        className="w-full"
-                        data-testid="input-filter-end-date-after"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Shows contracts ending after this date (includes N/A)
-                      </p>
                     </div>
                   </div>
                 </PopoverContent>
