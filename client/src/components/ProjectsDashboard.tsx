@@ -542,6 +542,106 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
     );
   };
 
+  // Export filtered contracts to CSV
+  const exportContractsToCSV = () => {
+    const headers = [
+      'Contract Name',
+      'Customer',
+      'Customer Contact Email',
+      'Project Type',
+      'Lead(s)',
+      'Team Members',
+      'Contractual Hours/Week',
+      'Start Date',
+      'End Date',
+      'Status'
+    ];
+    
+    const rows = sortedProjects.map(project => {
+      // Get lead names
+      const projectLeadIds = project.leadIds && project.leadIds.length > 0 
+        ? project.leadIds 
+        : [project.leadId];
+      const leadNames = projectLeadIds
+        .map(leadId => projectLeads.find(l => l.id === leadId)?.name || 'Unknown')
+        .join('; ');
+      
+      // Get team member names with roles
+      const teamMembersList = (project.teamMembers as TeamMemberAssignment[] || [])
+        .map(tm => {
+          const member = teamMembers.find(m => m.id === tm.memberId);
+          return member ? `${member.name} (${tm.role || 'No role'})` : '';
+        })
+        .filter(Boolean)
+        .join('; ');
+      
+      // Get status
+      const status = getProjectStatus(project.endDate);
+      const statusLabel = status === 'active' ? 'Active' : status === 'renewal' ? 'Renewal Soon' : 'Ended';
+      
+      return [
+        project.name,
+        project.customer,
+        project.customerContactEmail || '',
+        project.projectType || '',
+        leadNames,
+        teamMembersList,
+        project.totalContractualHours || '',
+        project.startDate || '',
+        project.endDate || '',
+        statusLabel
+      ];
+    });
+    
+    // Create CSV content with proper escaping
+    const escapeCSV = (value: string) => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+    
+    const csvContent = [
+      headers.map(escapeCSV).join(','),
+      ...rows.map(row => row.map(escapeCSV).join(','))
+    ].join('\n');
+    
+    // Create and trigger download with robust mechanism
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    // Generate filename with filter info
+    const filterCount = getActiveFilterCount();
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = filterCount > 0 
+      ? `contracts_filtered_${dateStr}.csv`
+      : `contracts_all_${dateStr}.csv`;
+    
+    // Create anchor element and trigger download
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    link.style.position = 'absolute';
+    link.style.left = '-9999px';
+    document.body.appendChild(link);
+    
+    // Use setTimeout to ensure the DOM has updated before clicking
+    setTimeout(() => {
+      link.click();
+      // Clean up after a delay to ensure download starts
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    }, 0);
+    
+    toast({
+      title: "Export Complete",
+      description: `Exported ${sortedProjects.length} contract${sortedProjects.length !== 1 ? 's' : ''} to CSV`,
+    });
+  };
+
   const EndDateIndicator = ({ endDate }: { endDate: string | null | undefined }) => {
     const status = getProjectStatus(endDate);
     const isMissing = !endDate;
@@ -2502,15 +2602,31 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
               {/* Selection Mode Controls for Projects */}
               <div className="flex items-center gap-4 mb-4 pb-4 border-b">
                 {!selectionModeProjects ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectionModeProjects(true)}
-                    data-testid="button-enter-selection-projects"
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Select
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectionModeProjects(true)}
+                      data-testid="button-enter-selection-projects"
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Select
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={exportContractsToCSV}
+                      data-testid="button-export-contracts"
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      Export CSV
+                      {getActiveFilterCount() > 0 && (
+                        <Badge variant="secondary" className="ml-1 text-xs">
+                          {sortedProjects.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button
