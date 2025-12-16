@@ -2750,7 +2750,7 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
                           {project.totalContractualHours && (
                             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1" data-testid={`text-hours-${project.id}`}>
                               <Clock className="h-3 w-3" />
-                              {project.totalContractualHours} hrs/week
+                              {formatContractualTime(project.totalContractualHours)}/week
                             </p>
                           )}
                         </div>
