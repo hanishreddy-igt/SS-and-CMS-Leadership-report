@@ -24,10 +24,8 @@ import type {
   UserRole,
   FeedbackEntry,
   InsertFeedbackEntry,
-  EmailReminder,
-  InsertEmailReminder,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries, emailReminders } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -111,11 +109,6 @@ export interface IStorage {
   getPendingRoleRequests(): Promise<RoleRequest[]>;
   createRoleRequest(request: InsertRoleRequest): Promise<RoleRequest>;
   updateRoleRequest(id: string, status: 'approved' | 'denied', resolvedBy: string): Promise<RoleRequest | undefined>;
-
-  // Email reminders
-  getEmailReminders(weekStart: string): Promise<EmailReminder[]>;
-  hasReminderBeenSent(leadId: string, weekStart: string, reminderSlot: string): Promise<boolean>;
-  createEmailReminder(reminder: InsertEmailReminder): Promise<EmailReminder>;
 }
 
 export class MemStorage implements IStorage {
@@ -571,36 +564,6 @@ export class MemStorage implements IStorage {
   async clearAllFeedbackEntries(): Promise<void> {
     this.feedbackEntriesStore.clear();
   }
-
-  // Email reminders (stub for MemStorage - not used in production)
-  private emailRemindersStore: Map<string, EmailReminder> = new Map();
-
-  async getEmailReminders(_weekStart: string): Promise<EmailReminder[]> {
-    return Array.from(this.emailRemindersStore.values()).filter(r => r.weekStart === _weekStart);
-  }
-
-  async hasReminderBeenSent(leadId: string, weekStart: string, reminderSlot: string): Promise<boolean> {
-    return Array.from(this.emailRemindersStore.values()).some(
-      r => r.leadId === leadId && r.weekStart === weekStart && r.reminderSlot === reminderSlot && r.success === 'true'
-    );
-  }
-
-  async createEmailReminder(reminder: InsertEmailReminder): Promise<EmailReminder> {
-    const id = randomUUID();
-    const newReminder: EmailReminder = {
-      id,
-      leadId: reminder.leadId,
-      leadEmail: reminder.leadEmail,
-      weekStart: reminder.weekStart,
-      reminderSlot: reminder.reminderSlot,
-      projectNames: reminder.projectNames,
-      sentAt: new Date(),
-      success: reminder.success || 'true',
-      errorMessage: reminder.errorMessage || null,
-    };
-    this.emailRemindersStore.set(id, newReminder);
-    return newReminder;
-  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -985,28 +948,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(roleRequests.id, id))
       .returning();
     return updated || undefined;
-  }
-
-  // Email reminders
-  async getEmailReminders(weekStart: string): Promise<EmailReminder[]> {
-    return await db.select().from(emailReminders).where(eq(emailReminders.weekStart, weekStart));
-  }
-
-  async hasReminderBeenSent(leadId: string, weekStart: string, reminderSlot: string): Promise<boolean> {
-    const [existing] = await db.select()
-      .from(emailReminders)
-      .where(and(
-        eq(emailReminders.leadId, leadId),
-        eq(emailReminders.weekStart, weekStart),
-        eq(emailReminders.reminderSlot, reminderSlot),
-        eq(emailReminders.success, 'true')
-      ));
-    return !!existing;
-  }
-
-  async createEmailReminder(reminder: InsertEmailReminder): Promise<EmailReminder> {
-    const [created] = await db.insert(emailReminders).values(reminder).returning();
-    return created;
   }
 }
 

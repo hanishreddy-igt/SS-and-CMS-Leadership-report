@@ -179,20 +179,3 @@ export type TeamMemberAssignment = {
 
 export type HealthStatus = 'on-track' | 'at-risk' | 'critical';
 export type ReportStatus = 'draft' | 'submitted';
-
-// Email reminders table - tracks sent reminder emails to avoid duplicates
-export const emailReminders = pgTable("email_reminders", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  leadId: varchar("lead_id").notNull(), // Lead who received the reminder
-  leadEmail: text("lead_email").notNull(), // Email address reminder was sent to
-  weekStart: text("week_start").notNull(), // Which week's reports the reminder is for
-  reminderSlot: text("reminder_slot").notNull(), // 'monday_midnight' | 'monday_noon' | 'tuesday_midnight'
-  projectNames: text("project_names").array().notNull(), // List of project names with pending reports
-  sentAt: timestamp("sent_at").notNull().defaultNow(),
-  success: text("success").notNull().default('true'), // Whether email was sent successfully
-  errorMessage: text("error_message"), // Error message if failed
-});
-
-export const insertEmailReminderSchema = createInsertSchema(emailReminders).omit({ id: true, sentAt: true });
-export type EmailReminder = typeof emailReminders.$inferSelect;
-export type InsertEmailReminder = z.infer<typeof insertEmailReminderSchema>;

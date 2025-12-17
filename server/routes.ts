@@ -5,8 +5,6 @@ import { JiraService } from "./services/jiraService";
 import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
-import cron from "node-cron";
-import { sendRemindersForSlot, getRemindersStatus, type ReminderSlot } from "./services/reminderService";
 
 // Initialize OpenAI client using Replit AI Integrations
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -1425,79 +1423,6 @@ IMPORTANT:
       });
     }
   });
-
-  // Email reminder routes (admin only)
-  app.get('/api/email-reminders/status', isAuthenticated, requirePermission('canManageUsers'), async (_req, res) => {
-    try {
-      const status = await getRemindersStatus();
-      res.json(status);
-    } catch (error: any) {
-      console.error('Error getting reminder status:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post('/api/email-reminders/send', isAuthenticated, requirePermission('canManageUsers'), async (req, res) => {
-    try {
-      const { slot } = req.body as { slot?: ReminderSlot };
-      if (!slot || !['monday_midnight', 'monday_noon', 'tuesday_midnight'].includes(slot)) {
-        return res.status(400).json({ error: 'Invalid reminder slot' });
-      }
-
-      const result = await sendRemindersForSlot(slot);
-      res.json(result);
-    } catch (error: any) {
-      console.error('Error sending reminders:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post('/api/email-reminders/test', isAuthenticated, requirePermission('canManageUsers'), async (req, res) => {
-    try {
-      const hasApiKey = !!process.env.RESEND_API_KEY;
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-      res.json({ 
-        configured: hasApiKey, 
-        fromEmail,
-        message: hasApiKey ? 'Resend API is configured' : 'RESEND_API_KEY is not set'
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Set up cron jobs for email reminders
-  // Monday 00:00 UTC
-  cron.schedule('0 0 * * 1', async () => {
-    console.log('[Cron] Running Monday midnight reminder job');
-    try {
-      await sendRemindersForSlot('monday_midnight');
-    } catch (error) {
-      console.error('[Cron] Monday midnight reminder failed:', error);
-    }
-  }, { timezone: 'UTC' });
-
-  // Monday 12:00 UTC
-  cron.schedule('0 12 * * 1', async () => {
-    console.log('[Cron] Running Monday noon reminder job');
-    try {
-      await sendRemindersForSlot('monday_noon');
-    } catch (error) {
-      console.error('[Cron] Monday noon reminder failed:', error);
-    }
-  }, { timezone: 'UTC' });
-
-  // Tuesday 00:00 UTC
-  cron.schedule('0 0 * * 2', async () => {
-    console.log('[Cron] Running Tuesday midnight reminder job');
-    try {
-      await sendRemindersForSlot('tuesday_midnight');
-    } catch (error) {
-      console.error('[Cron] Tuesday midnight reminder failed:', error);
-    }
-  }, { timezone: 'UTC' });
-
-  console.log('[Cron] Email reminder jobs scheduled: Monday 00:00 UTC, Monday 12:00 UTC, Tuesday 00:00 UTC');
 
   const httpServer = createServer(app);
 
