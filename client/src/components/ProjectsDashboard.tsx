@@ -393,54 +393,54 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   // Helper to convert stored value to hours and minutes
   // Legacy data was stored as hours (e.g., "40" = 40 hours)
-  // New data is stored as total minutes (e.g., "2400" = 40 hours)
-  // Heuristic: values < 1000 are likely legacy hours, >= 1000 are total minutes
+  // New data is stored with "m:" prefix as total minutes (e.g., "m:390" = 6.5 hours)
   const parseContractualTime = (storedValue: string | null | undefined): { hours: string; minutes: string } => {
     if (!storedValue) return { hours: '', minutes: '' };
-    const value = parseInt(storedValue, 10);
-    if (isNaN(value)) return { hours: '', minutes: '' };
     
-    // Legacy detection: if value < 1000, it's likely stored as hours (not minutes)
-    // 1000 minutes = ~16.6 hours, so values under 1000 are ambiguous
-    // Most contracts are 10-500 hours, so legacy values would be in that range
-    if (value < 1000) {
-      // Treat as legacy hours - return as hours with no minutes
-      return { hours: value.toString(), minutes: '' };
+    // Check for new "m:" prefix format (minutes)
+    if (storedValue.startsWith('m:')) {
+      const value = parseInt(storedValue.substring(2), 10);
+      if (isNaN(value)) return { hours: '', minutes: '' };
+      const hours = Math.floor(value / 60);
+      const minutes = value % 60;
+      return { hours: hours.toString(), minutes: minutes > 0 ? minutes.toString() : '' };
     }
     
-    // New format: total minutes
-    const hours = Math.floor(value / 60);
-    const minutes = value % 60;
-    return { hours: hours.toString(), minutes: minutes > 0 ? minutes.toString() : '' };
+    // Legacy format: plain number is hours
+    const value = parseInt(storedValue, 10);
+    if (isNaN(value)) return { hours: '', minutes: '' };
+    return { hours: value.toString(), minutes: '' };
   };
 
   // Helper to convert hours and minutes to total minutes string
+  // Uses "m:" prefix to mark as minutes format (distinguishes from legacy hours)
   const toTotalMinutes = (hours: string, minutes: string): string => {
     const h = parseInt(hours, 10) || 0;
     const m = parseInt(minutes, 10) || 0;
     if (h === 0 && m === 0) return '';
-    return (h * 60 + m).toString();
+    return `m:${h * 60 + m}`;
   };
 
-  // Helper to format stored value for display as decimal hours (e.g., "20.2 hrs")
-  // Uses same legacy detection as parseContractualTime
+  // Helper to format stored value for display as decimal hours (e.g., "6.5 hrs")
+  // New format uses "m:" prefix for minutes, legacy is plain hours
   const formatContractualTime = (storedValue: string | null | undefined): string => {
     if (!storedValue) return '';
-    const value = parseInt(storedValue, 10);
-    if (isNaN(value)) return storedValue; // fallback for non-numeric data
     
-    // Legacy detection: values < 1000 are likely stored as hours
-    if (value < 1000) {
-      return `${value} hrs`;
+    // Check for new "m:" prefix format (minutes)
+    if (storedValue.startsWith('m:')) {
+      const value = parseInt(storedValue.substring(2), 10);
+      if (isNaN(value)) return storedValue;
+      const decimalHours = value / 60;
+      const formatted = decimalHours % 1 === 0 
+        ? decimalHours.toFixed(0) 
+        : decimalHours.toFixed(1);
+      return `${formatted} hrs`;
     }
     
-    // New format: total minutes - convert to decimal hours
-    const decimalHours = value / 60;
-    // Round to 1 decimal place, remove trailing .0 if whole number
-    const formatted = decimalHours % 1 === 0 
-      ? decimalHours.toFixed(0) 
-      : decimalHours.toFixed(1);
-    return `${formatted} hrs`;
+    // Legacy format: plain number is hours
+    const value = parseInt(storedValue, 10);
+    if (isNaN(value)) return storedValue;
+    return `${value} hrs`;
   };
 
   // Helper to check if a project has unfilled team member roles
