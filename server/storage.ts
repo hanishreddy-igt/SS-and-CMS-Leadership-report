@@ -571,6 +571,36 @@ export class MemStorage implements IStorage {
   async clearAllFeedbackEntries(): Promise<void> {
     this.feedbackEntriesStore.clear();
   }
+
+  // Email reminders (stub for MemStorage - not used in production)
+  private emailRemindersStore: Map<string, EmailReminder> = new Map();
+
+  async getEmailReminders(_weekStart: string): Promise<EmailReminder[]> {
+    return Array.from(this.emailRemindersStore.values()).filter(r => r.weekStart === _weekStart);
+  }
+
+  async hasReminderBeenSent(leadId: string, weekStart: string, reminderSlot: string): Promise<boolean> {
+    return Array.from(this.emailRemindersStore.values()).some(
+      r => r.leadId === leadId && r.weekStart === weekStart && r.reminderSlot === reminderSlot && r.success === 'true'
+    );
+  }
+
+  async createEmailReminder(reminder: InsertEmailReminder): Promise<EmailReminder> {
+    const id = randomUUID();
+    const newReminder: EmailReminder = {
+      id,
+      leadId: reminder.leadId,
+      leadEmail: reminder.leadEmail,
+      weekStart: reminder.weekStart,
+      reminderSlot: reminder.reminderSlot,
+      projectNames: reminder.projectNames,
+      sentAt: new Date(),
+      success: reminder.success || 'true',
+      errorMessage: reminder.errorMessage || null,
+    };
+    this.emailRemindersStore.set(id, newReminder);
+    return newReminder;
+  }
 }
 
 export class DatabaseStorage implements IStorage {

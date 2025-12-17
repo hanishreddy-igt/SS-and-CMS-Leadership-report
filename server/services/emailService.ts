@@ -1,6 +1,16 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+
+function getResendClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 export type ReminderEmailData = {
   leadName: string;
@@ -81,13 +91,14 @@ const getEmailHtml = (data: ReminderEmailData): string => {
 };
 
 export async function sendReminderEmail(data: ReminderEmailData): Promise<{ success: boolean; error?: string }> {
-  if (!process.env.RESEND_API_KEY) {
+  const client = getResendClient();
+  if (!client) {
     console.log('[Email] RESEND_API_KEY not configured, skipping email');
     return { success: false, error: 'RESEND_API_KEY not configured' };
   }
 
   try {
-    const { data: result, error } = await resend.emails.send({
+    const { data: result, error } = await client.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'CMS & SS Reports <onboarding@resend.dev>',
       to: [data.leadEmail],
       subject: getReminderSubject(data.reminderNumber, data.pendingProjects.length),
@@ -108,13 +119,14 @@ export async function sendReminderEmail(data: ReminderEmailData): Promise<{ succ
 }
 
 export async function testEmailConnection(): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) {
+  const client = getResendClient();
+  if (!client) {
     console.log('[Email] RESEND_API_KEY not configured');
     return false;
   }
   
   try {
-    const domains = await resend.domains.list();
+    const domains = await client.domains.list();
     console.log('[Email] Resend connection successful');
     return true;
   } catch (err) {
