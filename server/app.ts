@@ -35,6 +35,16 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
+// Redirect .replit.app visitors to custom domain
+app.use((req, res, next) => {
+  const host = req.get('host') || '';
+  if (host.endsWith('.replit.app') || host.endsWith('.repl.co')) {
+    const customDomain = 'sscmadashboard.ignitetech.ai';
+    return res.redirect(301, `https://${customDomain}${req.originalUrl}`);
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
