@@ -47,6 +47,8 @@ const healthStatusConfig = {
 interface ViewReportsProps {
   externalHealthFilter?: string;
   onClearExternalFilter?: () => void;
+  openSummaryModal?: 'leadership' | 'feedback' | null;
+  onCloseSummaryModal?: () => void;
 }
 
 // Type for reporting week API response
@@ -56,7 +58,7 @@ interface ReportingWeekResponse {
   source: 'archive' | 'existing-reports' | 'calendar';
 }
 
-export default function ViewReports({ externalHealthFilter, onClearExternalFilter }: ViewReportsProps) {
+export default function ViewReports({ externalHealthFilter, onClearExternalFilter, openSummaryModal, onCloseSummaryModal }: ViewReportsProps) {
   const { toast } = useToast();
   const permissions = usePermissions();
   const { user } = useAuth();
@@ -241,6 +243,32 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [reportsAnalyzed, setReportsAnalyzed] = useState<number>(0);
   const [showLeadershipModal, setShowLeadershipModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
+  
+  // Open modals based on URL query param
+  useEffect(() => {
+    if (openSummaryModal === 'leadership') {
+      setShowLeadershipModal(true);
+      setShowTeamModal(false);
+    } else if (openSummaryModal === 'feedback') {
+      setShowTeamModal(true);
+      setShowLeadershipModal(false);
+    }
+  }, [openSummaryModal]);
+
+  // Handle modal close to update URL
+  const handleLeadershipModalClose = (open: boolean) => {
+    setShowLeadershipModal(open);
+    if (!open && onCloseSummaryModal) {
+      onCloseSummaryModal();
+    }
+  };
+
+  const handleTeamModalClose = (open: boolean) => {
+    setShowTeamModal(open);
+    if (!open && onCloseSummaryModal) {
+      onCloseSummaryModal();
+    }
+  };
   
   // Auto-archive tracking
   const autoArchiveTriggered = useRef(false);
@@ -3171,7 +3199,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   return (
     <div className="space-y-8">
       {/* Leadership Summary Modal */}
-      <Dialog open={showLeadershipModal} onOpenChange={setShowLeadershipModal}>
+      <Dialog open={showLeadershipModal} onOpenChange={handleLeadershipModalClose}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3">
@@ -3581,7 +3609,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       </Dialog>
 
       {/* SS/CMS Team Feedback Summary Modal */}
-      <Dialog open={showTeamModal} onOpenChange={setShowTeamModal}>
+      <Dialog open={showTeamModal} onOpenChange={handleTeamModalClose}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3">

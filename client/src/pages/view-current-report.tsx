@@ -8,14 +8,21 @@ export default function ViewCurrentReportPage() {
   const [, setLocation] = useLocation();
   const urlParams = new URLSearchParams(search);
   const initialHealth = urlParams.get('health') || 'all';
+  const initialSummary = urlParams.get('summary') as 'leadership' | 'feedback' | null;
   
   const [healthFilter, setHealthFilter] = useState<string>(initialHealth);
+  const [summaryModal, setSummaryModal] = useState<'leadership' | 'feedback' | null>(initialSummary);
   
   useEffect(() => {
     const params = new URLSearchParams(search);
     const health = params.get('health');
+    const summary = params.get('summary') as 'leadership' | 'feedback' | null;
+    
     if (health && health !== healthFilter) {
       setHealthFilter(health);
+    }
+    if (summary !== summaryModal) {
+      setSummaryModal(summary);
     }
   }, [search]);
 
@@ -29,13 +36,23 @@ export default function ViewCurrentReportPage() {
     setLocation('/view-current-report');
   };
 
+  const handleCloseSummaryModal = () => {
+    setSummaryModal(null);
+    const params = new URLSearchParams(search);
+    params.delete('summary');
+    const newSearch = params.toString();
+    setLocation(`/view-current-report${newSearch ? `?${newSearch}` : ''}`);
+  };
+
   return (
     <DashboardLayout 
       onHealthTileClick={handleHealthTileClick}
     >
       <ViewReports 
         externalHealthFilter={healthFilter} 
-        onClearExternalFilter={handleClearFilter} 
+        onClearExternalFilter={handleClearFilter}
+        openSummaryModal={summaryModal}
+        onCloseSummaryModal={handleCloseSummaryModal}
       />
     </DashboardLayout>
   );

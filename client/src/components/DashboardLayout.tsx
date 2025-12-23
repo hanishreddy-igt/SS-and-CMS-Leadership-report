@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { Shield, FileText, Eye, History, Sparkles, Users, BarChart3, CheckCircle2, AlertTriangle, FolderKanban, Menu } from 'lucide-react';
+import { Shield, FileText, Eye, History, BarChart3, CheckCircle2, AlertTriangle, FolderKanban, Menu } from 'lucide-react';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
 import { useQuery } from '@tanstack/react-query';
@@ -60,8 +60,6 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
     { path: '/submit-report', label: 'Submit Report', icon: FileText },
     { path: '/view-current-report', label: 'View Current', icon: Eye },
     { path: '/historical-report', label: 'Historical', icon: History },
-    { path: '/leadership-summary', label: 'Leadership Summary', icon: Sparkles },
-    ...(permissions.canViewTeamFeedbackSummary ? [{ path: '/feedback-summary', label: 'Feedback Summary', icon: Users }] : []),
   ];
 
   const handleHealthClick = (status: string) => {
