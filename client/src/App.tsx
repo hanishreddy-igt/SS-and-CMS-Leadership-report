@@ -7,6 +7,11 @@ import Home from "@/pages/home";
 import Landing from "@/pages/landing";
 import AdminPanel from "@/pages/admin";
 import FeaturePanel from "@/pages/features";
+import SubmitReportPage from "@/pages/submit-report";
+import ViewCurrentReportPage from "@/pages/view-current-report";
+import HistoricalReportPage from "@/pages/historical-report";
+import LeadershipSummaryPage from "@/pages/leadership-summary";
+import FeedbackSummaryPage from "@/pages/feedback-summary";
 import NotFound from "@/pages/not-found";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -20,6 +25,11 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Home} />
+          <Route path="/submit-report" component={SubmitReportPage} />
+          <Route path="/view-current-report" component={ViewCurrentReportPage} />
+          <Route path="/historical-report" component={HistoricalReportPage} />
+          <Route path="/leadership-summary" component={LeadershipSummaryPage} />
+          <Route path="/feedback-summary" component={FeedbackSummaryPage} />
           <Route path="/admin" component={AdminPanel} />
           <Route path="/features" component={FeaturePanel} />
         </>
