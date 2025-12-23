@@ -178,8 +178,8 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
           </div>
           
           <div className={cn(
-            "flex flex-wrap gap-1 py-2",
-            mobileMenuOpen ? "flex" : "hidden md:flex"
+            "grid grid-cols-4 gap-2 py-2",
+            mobileMenuOpen ? "grid" : "hidden md:grid"
           )}>
             {navItems.map((item) => {
               const isActive = location === item.path;
@@ -190,7 +190,7 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
                     variant={isActive ? "default" : "ghost"}
                     size="sm"
                     className={cn(
-                      "gap-2 transition-all",
+                      "w-full gap-2 transition-all justify-center",
                       isActive && "bg-primary text-primary-foreground"
                     )}
                     data-testid={`nav-${item.path.replace('/', '') || 'home'}`}
