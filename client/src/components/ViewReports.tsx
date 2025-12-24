@@ -300,7 +300,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     reportsAnalyzed?: number;
     generatedAt?: string;
   }
-  const { data: savedAiSummary } = useQuery<SavedAiSummaryResponse>({
+  const { data: savedAiSummary, isLoading: isLoadingSavedSummary } = useQuery<SavedAiSummaryResponse>({
     queryKey: ['/api/current-ai-summary', currentWeekStart],
     enabled: !!currentWeekStart,
   });
@@ -330,6 +330,10 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       // Don't run if already triggered or no reports
       if (autoArchiveTriggered.current || weeklyReports.length === 0) return;
       
+      // CRITICAL: Wait for saved AI summary query to complete before running auto-archive
+      // This prevents race condition where we archive before loading existing AI summary
+      if (isLoadingSavedSummary) return;
+      
       const now = new Date();
       const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 3 = Wednesday
       
@@ -352,6 +356,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       // If reports are from a previous week (not current week), auto-archive
       if (reportWeekStart < currentWeekMonday) {
         console.log('Auto-archive triggered: Reports from previous week detected on/after Wednesday');
+        console.log(`[Auto-Archive] Report week: ${reportWeekStart}, Current week: ${currentWeekMonday}`);
+        console.log(`[Auto-Archive] Existing AI summary loaded: ${!!aiSummary}, Team summary: ${!!teamSummary}`);
         autoArchiveTriggered.current = true;
         setIsAutoArchiving(true);
         
@@ -366,7 +372,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           let leadershipSummaryToArchive = aiSummary;
           let teamSummaryToArchive = teamSummary;
           if (!leadershipSummaryToArchive) {
-            console.log('Auto-archive: Generating AI summaries before archiving...');
+            console.log('[Auto-Archive] No existing AI summary - generating new summaries before archiving...');
             try {
               const summaryResponse = await apiRequest('POST', '/api/weekly-reports/ai-summary');
               const summaryData = await summaryResponse.json();
@@ -380,9 +386,11 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 setReportsAnalyzed(summaryData.reportsAnalyzed || 0);
               }
             } catch (summaryError) {
-              console.error('Failed to generate AI summaries for auto-archive:', summaryError);
+              console.error('[Auto-Archive] Failed to generate AI summaries:', summaryError);
               // Continue with archiving even if summary generation fails
             }
+          } else {
+            console.log('[Auto-Archive] Using existing AI summary from database');
           }
           
           // Generate separate data for Account Reports and Team Reports
@@ -408,6 +416,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             : '';
           const teamCsvContent = generateTeamFeedbackCSV();
           
+          console.log(`[Auto-Archive] Leadership summary to archive: ${!!leadershipSummaryToArchive}`);
+          console.log(`[Auto-Archive] Team summary to archive: ${!!teamSummaryToArchive}`);
           console.log(`[Auto-Archive] Account PDF size: ${(accountPdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
           console.log(`[Auto-Archive] Account CSV size: ${(accountCsvContent.length / 1024).toFixed(2)} KB`);
           console.log(`[Auto-Archive] Team PDF size: ${(teamPdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
@@ -488,7 +498,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     };
     
     checkAndAutoArchive();
-  }, [weeklyReports, aiSummary, currentWeekStart, toast]);
+  }, [weeklyReports, aiSummary, currentWeekStart, toast, isLoadingSavedSummary]);
 
   // Format date to UTC string
   const formatUTC = (dateString: string) => {
