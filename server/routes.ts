@@ -721,12 +721,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all people with feedback (for Member Feedback section) - legacy endpoint for compatibility
-  app.get('/api/people/feedback', isAuthenticated, async (_req, res) => {
+  // Get all people with feedback (for Member Feedback section)
+  // Admins/managers see all feedback; leads/members only see feedback they submitted
+  app.get('/api/people/feedback', isAuthenticated, async (req: any, res) => {
     try {
-      const allPeople = await storage.getAllPeople();
-      const peopleWithFeedback = allPeople.filter(p => p.feedback && p.feedback.trim());
-      res.json(peopleWithFeedback);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+      
+      // Admins and managers can view all feedback
+      const canViewAll = user.role === 'admin' || user.role === 'manager';
+      
+      if (canViewAll) {
+        // Return all people with feedback
+        const allPeople = await storage.getAllPeople();
+        const peopleWithFeedback = allPeople.filter(p => p.feedback && p.feedback.trim());
+        res.json(peopleWithFeedback);
+      } else {
+        // Leads and members can only see people they submitted feedback about
+        const userEmail = user.email || '';
+        const feedbackEntries = await storage.getFeedbackEntriesBySubmitter(userEmail);
+        const personIds = new Set(feedbackEntries.map(e => e.aboutPersonId));
+        
+        const allPeople = await storage.getAllPeople();
+        const peopleWithUserFeedback = allPeople.filter(p => personIds.has(p.id));
+        res.json(peopleWithUserFeedback);
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
