@@ -16,20 +16,25 @@ import { useAuth } from "@/hooks/useAuth";
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
+  // Show landing page for unauthenticated users
+  if (isLoading || !isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route component={Landing} />
+      </Switch>
+    );
+  }
+
+  // Authenticated routes
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-          <Route path="/submit" component={SubmitReportPage} />
-          <Route path="/view" component={ViewCurrentReportPage} />
-          <Route path="/historical" component={HistoricalReportPage} />
-          <Route path="/admin" component={AdminPanel} />
-          <Route path="/features" component={FeaturePanel} />
-        </>
-      )}
+      <Route path="/" component={Home} />
+      <Route path="/submit" component={SubmitReportPage} />
+      <Route path="/view" component={ViewCurrentReportPage} />
+      <Route path="/historical" component={HistoricalReportPage} />
+      <Route path="/admin" component={AdminPanel} />
+      <Route path="/features" component={FeaturePanel} />
       <Route component={NotFound} />
     </Switch>
   );
