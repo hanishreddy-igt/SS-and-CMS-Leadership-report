@@ -62,7 +62,12 @@ interface ReportingWeekResponse {
   source: 'archive' | 'existing-reports' | 'calendar';
 }
 
-export default function SubmitReport() {
+interface SubmitReportProps {
+  initialLeadFilter?: string | null;
+  onLeadFilterChange?: (leadName: string | null) => void;
+}
+
+export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: SubmitReportProps) {
   const { toast } = useToast();
   const permissions = usePermissions();
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
@@ -101,6 +106,19 @@ export default function SubmitReport() {
   
   // Lock state for preventing simultaneous editing
   const [projectLockInfo, setProjectLockInfo] = useState<{ isLocked: boolean; lockedBy: string } | null>(null);
+
+  // Set initial lead filter from URL when projectLeads are loaded
+  useEffect(() => {
+    if (initialLeadFilter && projectLeads.length > 0) {
+      // Find lead(s) whose name starts with the filter (case-insensitive)
+      const matchingLeads = projectLeads.filter(lead => 
+        lead.name.toLowerCase().startsWith(initialLeadFilter.toLowerCase())
+      );
+      if (matchingLeads.length > 0) {
+        setStatusFilterLeads(new Set(matchingLeads.map(l => l.id)));
+      }
+    }
+  }, [initialLeadFilter, projectLeads]);
 
   // Use API-provided week or fall back to local calculation
   const currentWeek = reportingWeek?.weekStart || getCurrentWeekStart();
@@ -395,6 +413,7 @@ export default function SubmitReport() {
     setStatusFilterLeads(new Set());
     setStatusFilterStatus('all');
     setStatusLeadSearch('');
+    onLeadFilterChange?.(null);
   };
 
   const toggleLeadFilter = (leadId: string) => {
@@ -666,8 +685,16 @@ export default function SubmitReport() {
     
     if (isAlreadySelected) {
       setStatusFilterLeads(new Set());
+      // Notify parent to clear URL param
+      onLeadFilterChange?.(null);
     } else {
       setStatusFilterLeads(leadIdSet);
+      // Notify parent to update URL with first lead's first name
+      const firstLead = projectLeads.find(l => l.id === leadIds[0]);
+      if (firstLead) {
+        const firstName = firstLead.name.split(' ')[0];
+        onLeadFilterChange?.(firstName);
+      }
     }
     setStatusLeadSearch('');
     setStatusFilterStatus('all');
