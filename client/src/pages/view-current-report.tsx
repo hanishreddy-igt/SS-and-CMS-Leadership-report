@@ -36,6 +36,14 @@ export default function ViewCurrentReportPage() {
     setLocation('/view-current-report');
   };
 
+  const handleOpenSummaryModal = (type: 'leadership' | 'feedback') => {
+    setSummaryModal(type);
+    const params = new URLSearchParams(search);
+    params.set('summary', type);
+    const newSearch = params.toString();
+    setLocation(`/view-current-report?${newSearch}`);
+  };
+
   const handleCloseSummaryModal = () => {
     setSummaryModal(null);
     const params = new URLSearchParams(search);
@@ -52,6 +60,7 @@ export default function ViewCurrentReportPage() {
         externalHealthFilter={healthFilter} 
         onClearExternalFilter={handleClearFilter}
         openSummaryModal={summaryModal}
+        onOpenSummaryModal={handleOpenSummaryModal}
         onCloseSummaryModal={handleCloseSummaryModal}
       />
     </DashboardLayout>

@@ -48,6 +48,7 @@ interface ViewReportsProps {
   externalHealthFilter?: string;
   onClearExternalFilter?: () => void;
   openSummaryModal?: 'leadership' | 'feedback' | null;
+  onOpenSummaryModal?: (type: 'leadership' | 'feedback') => void;
   onCloseSummaryModal?: () => void;
 }
 
@@ -58,7 +59,7 @@ interface ReportingWeekResponse {
   source: 'archive' | 'existing-reports' | 'calendar';
 }
 
-export default function ViewReports({ externalHealthFilter, onClearExternalFilter, openSummaryModal, onCloseSummaryModal }: ViewReportsProps) {
+export default function ViewReports({ externalHealthFilter, onClearExternalFilter, openSummaryModal, onOpenSummaryModal, onCloseSummaryModal }: ViewReportsProps) {
   const { toast } = useToast();
   const permissions = usePermissions();
   const { user } = useAuth();
@@ -267,6 +268,21 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     setShowTeamModal(open);
     if (!open && onCloseSummaryModal) {
       onCloseSummaryModal();
+    }
+  };
+
+  // Handle modal open with URL update
+  const handleOpenLeadershipModal = () => {
+    setShowLeadershipModal(true);
+    if (onOpenSummaryModal) {
+      onOpenSummaryModal('leadership');
+    }
+  };
+
+  const handleOpenTeamModal = () => {
+    setShowTeamModal(true);
+    if (onOpenSummaryModal) {
+      onOpenSummaryModal('feedback');
     }
   };
   
@@ -3941,7 +3957,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
                   'bg-destructive/10 border border-destructive/30'
                 }`}
-                onClick={() => setShowTeamModal(true)}
+                onClick={handleOpenTeamModal}
                 data-testid="tile-team-summary"
               >
                 <div className="flex items-center justify-between mb-3">
@@ -4384,7 +4400,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           {aiSummary ? (
             <div 
               className={`mb-6 p-4 rounded-lg cursor-pointer transition-all hover:border-primary/50 ${getOverallHealthConfig(aiSummary.overallHealth).bgColor} border ${getOverallHealthConfig(aiSummary.overallHealth).borderColor}`}
-              onClick={() => setShowLeadershipModal(true)}
+              onClick={handleOpenLeadershipModal}
               data-testid="tile-leadership-summary"
             >
               <div className="flex items-center justify-between mb-3">
