@@ -92,6 +92,7 @@ export interface IStorage {
 
   // Feedback entries (with submitter tracking)
   getAllFeedbackEntries(): Promise<FeedbackEntry[]>;
+  getFeedbackEntryById(id: string): Promise<FeedbackEntry | undefined>;
   getFeedbackEntriesBySubmitter(email: string): Promise<FeedbackEntry[]>;
   getFeedbackEntriesAboutPerson(personId: string): Promise<FeedbackEntry[]>;
   createFeedbackEntry(entry: InsertFeedbackEntry): Promise<FeedbackEntry>;
@@ -550,6 +551,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.feedbackEntriesStore.values());
   }
 
+  async getFeedbackEntryById(id: string): Promise<FeedbackEntry | undefined> {
+    return this.feedbackEntriesStore.get(id);
+  }
+
   async getFeedbackEntriesBySubmitter(email: string): Promise<FeedbackEntry[]> {
     return Array.from(this.feedbackEntriesStore.values()).filter(e => e.submitterEmail === email);
   }
@@ -712,6 +717,11 @@ export class DatabaseStorage implements IStorage {
   // Feedback entries (with submitter tracking) - DatabaseStorage
   async getAllFeedbackEntries(): Promise<FeedbackEntry[]> {
     return await db.select().from(feedbackEntries);
+  }
+
+  async getFeedbackEntryById(id: string): Promise<FeedbackEntry | undefined> {
+    const [entry] = await db.select().from(feedbackEntries).where(eq(feedbackEntries.id, id));
+    return entry;
   }
 
   async getFeedbackEntriesBySubmitter(email: string): Promise<FeedbackEntry[]> {

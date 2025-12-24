@@ -824,10 +824,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete individual feedback entry (admin/manager only)
   app.delete('/api/feedback-entries/:id', isAuthenticated, requirePermission('canDeleteTeamFeedback'), async (req, res) => {
     try {
+      // Get the feedback entry first to know which person it's about
+      const entry = await storage.getFeedbackEntryById(req.params.id);
+      if (!entry) {
+        return res.status(404).json({ error: 'Feedback entry not found' });
+      }
+      
+      const personId = entry.aboutPersonId;
+      
+      // Delete the feedback entry
       const success = await storage.deleteFeedbackEntry(req.params.id);
       if (!success) {
         return res.status(404).json({ error: 'Feedback entry not found' });
       }
+      
+      // Recalculate the aggregated feedback for the person from remaining entries
+      const remainingEntries = await storage.getFeedbackEntriesAboutPerson(personId);
+      const aggregatedFeedback = remainingEntries.map(e => e.feedback).join('\n\n');
+      
+      // Update the person's aggregated feedback field
+      await storage.updatePersonFeedback(personId, aggregatedFeedback || '');
+      
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
