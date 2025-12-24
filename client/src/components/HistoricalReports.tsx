@@ -86,6 +86,20 @@ interface LeadershipAction {
   rationale: string;
 }
 
+interface WeekOverWeekChanges {
+  improved: string[];
+  worsened: string[];
+  newRisks: string[];
+  resolved: string[];
+}
+
+interface DependencyItem {
+  project: string;
+  dependency: string;
+  impact: string;
+  requiredSupport: string;
+}
+
 interface AISummary {
   overallHealth: 'on-track' | 'needs-attention' | 'critical';
   executiveSummary: string;
@@ -98,6 +112,8 @@ interface AISummary {
   weekHighlights?: string[];
   criticalIssues?: string[];
   attentionNeeded?: string[];
+  weekOverWeekChanges?: WeekOverWeekChanges;
+  dependenciesAndCrossTeamNeeds?: DependencyItem[];
 }
 
 // Comprehensive Team Summary interfaces
