@@ -95,6 +95,7 @@ export interface IStorage {
   getFeedbackEntriesBySubmitter(email: string): Promise<FeedbackEntry[]>;
   getFeedbackEntriesAboutPerson(personId: string): Promise<FeedbackEntry[]>;
   createFeedbackEntry(entry: InsertFeedbackEntry): Promise<FeedbackEntry>;
+  deleteFeedbackEntry(id: string): Promise<boolean>;
   clearAllFeedbackEntries(): Promise<void>;
 
   // User role management
@@ -570,6 +571,10 @@ export class MemStorage implements IStorage {
     return newEntry;
   }
 
+  async deleteFeedbackEntry(id: string): Promise<boolean> {
+    return this.feedbackEntriesStore.delete(id);
+  }
+
   async clearAllFeedbackEntries(): Promise<void> {
     this.feedbackEntriesStore.clear();
   }
@@ -720,6 +725,11 @@ export class DatabaseStorage implements IStorage {
   async createFeedbackEntry(entry: InsertFeedbackEntry): Promise<FeedbackEntry> {
     const [newEntry] = await db.insert(feedbackEntries).values(entry).returning();
     return newEntry;
+  }
+
+  async deleteFeedbackEntry(id: string): Promise<boolean> {
+    const result = await db.delete(feedbackEntries).where(eq(feedbackEntries.id, id)).returning();
+    return result.length > 0;
   }
 
   async clearAllFeedbackEntries(): Promise<void> {

@@ -102,14 +102,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'canDeleteReports', 'canAddTeamMembers', 'canEditTeamMembers', 'canAddProjectLeads', 
       'canEditProjectLeads', 'canDeletePeople',
       'canAddContracts', 'canEditContracts', 'canDeleteContracts', 'canGenerateAISummary',
-      'canViewAISummary', 'canExportReports', 'canArchiveReports', 'canViewFeedback', 'canSubmitFeedback'
+      'canRegenerateAISummary', 'canViewAISummary', 'canExportReports', 'canArchiveReports', 
+      'canViewFeedback', 'canSubmitFeedback', 'canDeleteTeamFeedback'
     ],
     manager: [
       'canViewAllReports', 'canSubmitReports', 'canEditReports', 'canDeleteReports',
       'canAddTeamMembers', 'canEditTeamMembers', 'canAddProjectLeads', 'canEditProjectLeads', 
       'canDeletePeople', 'canAddContracts', 
-      'canEditContracts', 'canDeleteContracts', 'canGenerateAISummary', 'canViewAISummary',
-      'canExportReports', 'canArchiveReports', 'canViewFeedback', 'canSubmitFeedback'
+      'canEditContracts', 'canDeleteContracts', 'canGenerateAISummary', 'canRegenerateAISummary',
+      'canViewAISummary', 'canExportReports', 'canArchiveReports', 'canViewFeedback', 
+      'canSubmitFeedback', 'canDeleteTeamFeedback'
     ],
     lead: [
       'canViewAllReports', 'canSubmitReports', 'canEditReports',
@@ -814,6 +816,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updated = await storage.updatePersonFeedback(req.params.id, updatedFeedback);
       res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete individual feedback entry (admin/manager only)
+  app.delete('/api/feedback-entries/:id', isAuthenticated, requirePermission('canDeleteTeamFeedback'), async (req, res) => {
+    try {
+      const success = await storage.deleteFeedbackEntry(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Feedback entry not found' });
+      }
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
