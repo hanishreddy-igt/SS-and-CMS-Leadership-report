@@ -104,6 +104,11 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "Generate AI-powered summaries of reports",
     roles: { admin: true, manager: true, lead: true, member: false },
   },
+  canRegenerateAISummary: {
+    label: "Regenerate AI Summary",
+    description: "Regenerate AI summaries for archived historical reports",
+    roles: { admin: true, manager: true, lead: false, member: false },
+  },
   canViewAISummary: {
     label: "View AI Summary for Account Reports",
     description: "View generated AI summaries for account reports",
@@ -129,6 +134,11 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "View all feedback submitted by anyone (anonymous view)",
     roles: { admin: true, manager: true, lead: false, member: false },
   },
+  canDeleteTeamFeedback: {
+    label: "Delete Team Feedback Reports",
+    description: "Delete individual team feedback entries from weekly reports",
+    roles: { admin: true, manager: true, lead: false, member: false },
+  },
 };
 
 const featureCategories = [
@@ -137,8 +147,8 @@ const featureCategories = [
   { name: "People Management", features: ["canAddEditTeamMembers", "canAddEditProjectLeads", "canDeletePeople"] },
   { name: "Report Submission", features: ["canSaveDraft", "canEditOwnReports", "canSubmitReports", "canDeleteReports"] },
   { name: "Account Reports & Archive", features: ["canExportReports", "canArchiveReports", "canViewHistoricalAccountReports"] },
-  { name: "AI Summaries", features: ["canViewAISummary", "canGenerateAISummary", "canViewTeamFeedbackAISummary"] },
-  { name: "Team Feedback Reports & Archive", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewHistoricalTeamReports"] },
+  { name: "AI Summaries", features: ["canViewAISummary", "canGenerateAISummary", "canRegenerateAISummary", "canViewTeamFeedbackAISummary"] },
+  { name: "Team Feedback Reports & Archive", features: ["canSubmitFeedback", "canViewOwnSubmittedFeedback", "canViewAllFeedback", "canViewHistoricalTeamReports", "canDeleteTeamFeedback"] },
 ];
 
 const roles: UserRole[] = ["admin", "manager", "lead", "member"];
