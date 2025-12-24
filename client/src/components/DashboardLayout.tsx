@@ -57,16 +57,16 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: FolderKanban },
-    { path: '/submit-report', label: 'Submit Report', icon: FileText },
-    { path: '/view-current-report', label: 'View Current', icon: Eye },
-    { path: '/historical-report', label: 'Historical', icon: History },
+    { path: '/submit', label: 'Submit Report', icon: FileText },
+    { path: '/view', label: 'View Current', icon: Eye },
+    { path: '/historical', label: 'Historical', icon: History },
   ];
 
   const handleHealthClick = (status: string) => {
     if (onHealthTileClick) {
       onHealthTileClick(status);
     } else {
-      setLocation(`/view-current-report?health=${status}`);
+      setLocation(`/view?health=${status}`);
     }
   };
 
@@ -145,7 +145,7 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
                 : 'bg-warning/10 border border-warning/30 hover:bg-warning/15 hover:border-warning/40'
             }`}
             data-testid="banner-report-completeness"
-            onClick={() => setLocation('/submit-report')}
+            onClick={() => setLocation('/submit')}
           >
             {contractsWithReports === activeProjects.length ? (
               <CheckCircle2 className="h-5 w-5 text-success shrink-0" />

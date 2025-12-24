@@ -23,9 +23,9 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Home} />
-          <Route path="/submit-report" component={SubmitReportPage} />
-          <Route path="/view-current-report" component={ViewCurrentReportPage} />
-          <Route path="/historical-report" component={HistoricalReportPage} />
+          <Route path="/submit" component={SubmitReportPage} />
+          <Route path="/view" component={ViewCurrentReportPage} />
+          <Route path="/historical" component={HistoricalReportPage} />
           <Route path="/admin" component={AdminPanel} />
           <Route path="/features" component={FeaturePanel} />
         </>

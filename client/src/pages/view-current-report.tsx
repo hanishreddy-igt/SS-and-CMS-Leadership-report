@@ -28,12 +28,12 @@ export default function ViewCurrentReportPage() {
 
   const handleHealthTileClick = (status: string) => {
     setHealthFilter(status);
-    setLocation(`/view-current-report?health=${status}`);
+    setLocation(`/view?health=${status}`);
   };
 
   const handleClearFilter = () => {
     setHealthFilter('all');
-    setLocation('/view-current-report');
+    setLocation('/view');
   };
 
   const handleOpenSummaryModal = (type: 'leadership' | 'feedback') => {
@@ -41,7 +41,7 @@ export default function ViewCurrentReportPage() {
     const params = new URLSearchParams(search);
     params.set('summary', type);
     const newSearch = params.toString();
-    setLocation(`/view-current-report?${newSearch}`);
+    setLocation(`/view?${newSearch}`);
   };
 
   const handleCloseSummaryModal = () => {
@@ -49,7 +49,7 @@ export default function ViewCurrentReportPage() {
     const params = new URLSearchParams(search);
     params.delete('summary');
     const newSearch = params.toString();
-    setLocation(`/view-current-report${newSearch ? `?${newSearch}` : ''}`);
+    setLocation(`/view${newSearch ? `?${newSearch}` : ''}`);
   };
 
   return (
