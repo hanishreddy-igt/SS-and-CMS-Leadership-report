@@ -1160,20 +1160,41 @@ export default function HistoricalReports() {
                     </div>
                     <p className="text-sm mb-4">{reportAiSummary.executiveSummary}</p>
                     
-                    {/* Portfolio Health Breakdown (new comprehensive format) */}
+                    {/* Portfolio Health Breakdown (matching ViewReports format) */}
                     {reportAiSummary.portfolioHealthBreakdown && (
-                      <div className="grid grid-cols-3 gap-2 mb-4">
-                        <div className="p-2 rounded bg-success/10 border border-success/20">
-                          <p className="text-xs font-medium text-success mb-1">On Track ({reportAiSummary.portfolioHealthBreakdown.onTrack.count})</p>
-                          <p className="text-xs text-muted-foreground">{reportAiSummary.portfolioHealthBreakdown.onTrack.projects.slice(0, 3).join(', ')}{reportAiSummary.portfolioHealthBreakdown.onTrack.projects.length > 3 ? '...' : ''}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="p-4 rounded-lg bg-success/10 border border-success/30">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle2 className="h-4 w-4 text-success" />
+                            <h4 className="font-medium text-success">On Track ({reportAiSummary.portfolioHealthBreakdown.onTrack.count})</h4>
+                          </div>
+                          <ul className="space-y-1 max-h-32 overflow-y-auto scrollbar-visible pr-2">
+                            {reportAiSummary.portfolioHealthBreakdown.onTrack.projects.map((project, i) => (
+                              <li key={i} className="text-xs text-muted-foreground">{project}</li>
+                            ))}
+                          </ul>
                         </div>
-                        <div className="p-2 rounded bg-warning/10 border border-warning/20">
-                          <p className="text-xs font-medium text-warning mb-1">Needs Attention ({reportAiSummary.portfolioHealthBreakdown.needsAttention.count})</p>
-                          <p className="text-xs text-muted-foreground">{reportAiSummary.portfolioHealthBreakdown.needsAttention.projects.slice(0, 3).join(', ')}{reportAiSummary.portfolioHealthBreakdown.needsAttention.projects.length > 3 ? '...' : ''}</p>
+                        <div className="p-4 rounded-lg bg-warning/10 border border-warning/30">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertTriangle className="h-4 w-4 text-warning" />
+                            <h4 className="font-medium text-warning">Needs Attention ({reportAiSummary.portfolioHealthBreakdown.needsAttention.count})</h4>
+                          </div>
+                          <ul className="space-y-1 max-h-32 overflow-y-auto scrollbar-visible pr-2">
+                            {reportAiSummary.portfolioHealthBreakdown.needsAttention.projects.map((project, i) => (
+                              <li key={i} className="text-xs text-muted-foreground">{project}</li>
+                            ))}
+                          </ul>
                         </div>
-                        <div className="p-2 rounded bg-destructive/10 border border-destructive/20">
-                          <p className="text-xs font-medium text-destructive mb-1">Critical ({reportAiSummary.portfolioHealthBreakdown.critical.count})</p>
-                          <p className="text-xs text-muted-foreground">{reportAiSummary.portfolioHealthBreakdown.critical.projects.slice(0, 3).join(', ')}{reportAiSummary.portfolioHealthBreakdown.critical.projects.length > 3 ? '...' : ''}</p>
+                        <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle className="h-4 w-4 text-destructive" />
+                            <h4 className="font-medium text-destructive">Critical ({reportAiSummary.portfolioHealthBreakdown.critical.count})</h4>
+                          </div>
+                          <ul className="space-y-1 max-h-32 overflow-y-auto scrollbar-visible pr-2">
+                            {reportAiSummary.portfolioHealthBreakdown.critical.projects.map((project, i) => (
+                              <li key={i} className="text-xs text-muted-foreground">{project}</li>
+                            ))}
+                          </ul>
                         </div>
                       </div>
                     )}
