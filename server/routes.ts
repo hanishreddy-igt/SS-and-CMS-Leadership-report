@@ -63,6 +63,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'member': 1
   };
 
+  // Helper function to parse CSV lines with quoted fields
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    result.push(current.trim());
+    return result;
+  };
+
   const hasMinRole = (userRole: string, requiredRole: string): boolean => {
     return (roleHierarchy[userRole] || 0) >= (roleHierarchy[requiredRole] || 0);
   };
@@ -1389,6 +1417,310 @@ IMPORTANT:
       res.json({ success });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Regenerate AI summary for an archived report
+  app.post('/api/saved-reports/:id/regenerate-summary', isAuthenticated, requirePermission('canGenerateAISummary'), async (req, res) => {
+    try {
+      const report = await storage.getSavedReport(req.params.id);
+      if (!report) {
+        return res.status(404).json({ error: 'Saved report not found' });
+      }
+
+      // Parse CSV data to extract report details
+      const csvData = report.csvData;
+      if (!csvData) {
+        return res.status(400).json({ error: 'No CSV data available to analyze' });
+      }
+
+      console.log(`[Regenerate AI] Starting regeneration for ${report.reportType} report, week ${report.weekStart}`);
+
+      if (report.reportType === 'account') {
+        // Parse account CSV to extract leadership report data
+        // CSV format: Project, Lead, Week Start, Health Status, Progress, Challenges, Next Week, Team Feedback, Submitted
+        // State machine approach: preserve raw lines, only normalize after parsing
+        const lines = csvData.split('\n');
+        const reportContext: Array<{
+          project: string;
+          customer: string;
+          lead: string;
+          healthStatus: string;
+          progress: string;
+          challenges: string;
+          nextWeek: string;
+        }> = [];
+
+        // State machine: track current section
+        let inReportsSection = false;
+        let passedHeader = false;
+
+        // Helper to normalize a parsed value (remove quotes, trim whitespace)
+        const normalize = (val: string | undefined): string => {
+          if (!val) return '';
+          return val.replace(/^"|"$/g, '').replace(/""/g, '"').trim();
+        };
+
+        for (let i = 0; i < lines.length; i++) {
+          const rawLine = lines[i];
+          const trimmedForCheck = rawLine.trim(); // Only for section/blank detection
+          
+          // Check for section headers (use trimmed for comparison only)
+          if (trimmedForCheck.includes('=== WEEKLY REPORTS ===')) {
+            inReportsSection = true;
+            passedHeader = false;
+            continue;
+          }
+          
+          // Stop at next section
+          if (inReportsSection && trimmedForCheck.startsWith('===')) {
+            break;
+          }
+          
+          // Skip blank/empty lines
+          if (!trimmedForCheck) {
+            continue;
+          }
+          
+          if (!inReportsSection) {
+            continue;
+          }
+          
+          // Parse CSV line using raw line (parseCSVLine handles quotes properly)
+          const values = parseCSVLine(rawLine);
+          
+          // Skip header row - check for Project header
+          const firstVal = normalize(values[0]);
+          if (firstVal === 'Project') {
+            passedHeader = true;
+            continue;
+          }
+          
+          // Need at least 7 columns for valid data row (and must have passed header)
+          if (values.length >= 7 && firstVal && passedHeader) {
+            reportContext.push({
+              project: normalize(values[0]),
+              lead: normalize(values[1]),
+              customer: 'Not available', // Customer data not in CSV
+              healthStatus: normalize(values[3]),
+              progress: normalize(values[4]),
+              challenges: normalize(values[5]),
+              nextWeek: normalize(values[6])
+            });
+          }
+        }
+
+        if (reportContext.length === 0) {
+          console.log(`[Regenerate AI] Failed to parse report data. CSV preview: ${csvData.substring(0, 500)}`);
+          return res.status(400).json({ error: 'Could not parse report data from CSV. The CSV may not contain valid report rows or the WEEKLY REPORTS section is missing.' });
+        }
+
+        console.log(`[Regenerate AI] Parsed ${reportContext.length} reports from CSV`);
+
+        // Generate leadership AI summary
+        const leadershipPrompt = `You are a senior executive assistant synthesizing weekly project reports for C-level leadership.
+You are analyzing ${reportContext.length} project reports across the portfolio.
+Your goal is to provide a COMPREHENSIVE, DECISION-READY executive summary that eliminates the need for leadership to read individual reports.
+
+REPORT DATA TO ANALYZE:
+${JSON.stringify(reportContext, null, 2)}
+
+LAST WEEK'S DATA: Not available (regenerating from archived data).
+
+INSTRUCTIONS:
+
+General Requirements:
+- Be thorough and explicit — name projects, customers, and leads throughout.
+- Do not omit or downplay significant details — include ALL meaningful insights.
+- Do not infer or invent missing information. If something is not in the reports, state "not provided".
+- Prioritize insights by business impact, not by project order.
+- Group related insights for readability and portfolio-level clarity.
+- Return valid JSON ONLY, with no commentary before or after the JSON.
+
+Project Health Classification Rules (use these definitions strictly):
+- on-track → Progressing as planned, no major risks or blockers, milestones on schedule.
+- needs-attention → Emerging risks, moderate delays, resource constraints, or minor blockers that require monitoring.
+- critical → Major blockers, severe delays, missed milestones, customer escalations, or high probability of failure without intervention.
+- All projects must be assigned to exactly one category.
+
+JSON STRUCTURE TO GENERATE:
+{
+  "overallHealth": "on-track" | "needs-attention" | "critical",
+  "executiveSummary": "A comprehensive 4–5 sentence synthesis of overall portfolio health, major themes, critical concerns, positive trends.",
+  "weekOverWeekChanges": {
+    "improved": ["Not available - regenerated from archive"],
+    "worsened": ["Not available - regenerated from archive"],
+    "newRisks": ["Not available - regenerated from archive"],
+    "resolved": ["Not available - regenerated from archive"]
+  },
+  "portfolioHealthBreakdown": {
+    "onTrack": { "count": number, "projects": ["Project A – Lead Name"] },
+    "needsAttention": { "count": number, "projects": ["Project B – Lead Name: brief reason"] },
+    "critical": { "count": number, "projects": ["Project C – Lead Name: brief reason"] }
+  },
+  "immediateAttentionRequired": [
+    { "project": "Project Name", "customer": "Customer Name", "lead": "Lead Name", "issue": "Specific blocker or risk", "recommendedAction": "Clear recommendation" }
+  ],
+  "keyAchievements": [
+    { "project": "Project Name", "achievement": "Specific milestone or success", "impact": "Business impact" }
+  ],
+  "crossProjectPatterns": {
+    "commonChallenges": ["Challenge 1 affecting multiple projects"],
+    "resourceConstraints": ["Staffing or capacity issues"],
+    "processIssues": ["Recurring workflow problems"]
+  },
+  "dependenciesAndCrossTeamNeeds": [],
+  "upcomingFocus": [
+    { "project": "Project Name", "focus": "What the team will focus on next week", "priority": "high" | "medium" | "low" }
+  ],
+  "recommendedLeadershipActions": [
+    { "action": "Specific action leadership should take", "priority": "high" | "medium", "rationale": "Why this matters" }
+  ],
+  "weekHighlights": ["Key highlight 1 with context", "Key highlight 2 with context"]
+}
+
+Output valid JSON only.`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: leadershipPrompt }],
+          response_format: { type: "json_object" },
+          max_completion_tokens: 4096,
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error('No response from AI');
+        }
+
+        const aiSummary = JSON.parse(content);
+        const updated = await storage.updateSavedReportAiSummary(report.id, aiSummary);
+        
+        console.log(`[Regenerate AI] Successfully regenerated leadership summary`);
+        res.json({ success: true, aiSummary, report: updated });
+
+      } else if (report.reportType === 'team') {
+        // Parse team feedback CSV
+        // CSV format: Team Member, Role, Projects, Feedback
+        // State machine approach: preserve raw lines, only normalize after parsing
+        const lines = csvData.split('\n');
+        const feedbackContext: Array<{
+          personName: string;
+          role: string;
+          projects: string[];
+          feedback: string;
+        }> = [];
+
+        // State machine: track whether we've passed the header
+        let passedHeader = false;
+
+        // Helper to normalize a parsed value (remove quotes, trim whitespace)
+        const normalize = (val: string | undefined): string => {
+          if (!val) return '';
+          return val.replace(/^"|"$/g, '').replace(/""/g, '"').trim();
+        };
+
+        for (let i = 0; i < lines.length; i++) {
+          const rawLine = lines[i];
+          const trimmedForCheck = rawLine.trim(); // Only for section/blank detection
+          
+          // Skip blank/empty lines
+          if (!trimmedForCheck) {
+            continue;
+          }
+          
+          // Stop at section delimiter
+          if (trimmedForCheck.startsWith('===')) {
+            if (passedHeader) {
+              break; // Already found data, stop at next section
+            }
+            continue; // Skip section headers before data
+          }
+          
+          // Parse CSV line using raw line (parseCSVLine handles quotes properly)
+          const values = parseCSVLine(rawLine);
+          
+          // Check for header row (handles both quoted and unquoted)
+          const firstVal = normalize(values[0]);
+          if (firstVal === 'Team Member') {
+            passedHeader = true;
+            continue;
+          }
+          
+          // Validate we have at least 4 columns and a valid person name (and must have passed header)
+          if (values.length >= 4 && firstVal && passedHeader) {
+            feedbackContext.push({
+              personName: normalize(values[0]),
+              role: normalize(values[1]) || 'Team Member',
+              projects: normalize(values[2]).split(';').map(p => p.trim()).filter(Boolean),
+              feedback: normalize(values[3])
+            });
+          }
+        }
+
+        if (feedbackContext.length === 0) {
+          console.log(`[Regenerate AI] Failed to parse feedback data. CSV preview: ${csvData.substring(0, 500)}`);
+          return res.status(400).json({ error: 'Could not parse feedback data from CSV. The CSV may not contain valid feedback rows or no header row was found.' });
+        }
+
+        console.log(`[Regenerate AI] Parsed ${feedbackContext.length} feedback entries from CSV`);
+
+        const teamPrompt = `You are a senior HR analyst synthesizing anonymous feedback about team members and leads.
+
+ANONYMOUS FEEDBACK DATA:
+${JSON.stringify(feedbackContext, null, 2)}
+
+Generate a comprehensive team insights summary in JSON format:
+{
+  "overallTeamMorale": "positive" | "mixed" | "concerning",
+  "teamSummary": "A comprehensive 4-5 sentence synthesis of team sentiment, key themes, notable achievements, and areas requiring attention.",
+  "teamHighlights": [
+    { "memberName": "Name", "project": "Project Name", "highlight": "Specific positive observation" }
+  ],
+  "recognitionOpportunities": [
+    { "memberName": "Name", "project": "Project Name", "achievement": "What they did", "suggestedRecognition": "How to recognize" }
+  ],
+  "teamConcerns": [
+    { "concern": "Specific concern", "affectedMembers": ["Name 1"], "project": "Project Name", "severity": "high" | "medium" | "low" }
+  ],
+  "workloadObservations": [],
+  "supportNeeded": [
+    { "area": "Area where support is needed", "members": ["Names"], "suggestedSupport": "Specific support recommendation" }
+  ],
+  "developmentOpportunities": [],
+  "retentionRisks": [],
+  "recommendedHRActions": [
+    { "action": "Specific action for leadership", "priority": "high" | "medium", "rationale": "Why this matters" }
+  ]
+}
+
+Output valid JSON only.`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: teamPrompt }],
+          response_format: { type: "json_object" },
+          max_completion_tokens: 4096,
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error('No response from AI');
+        }
+
+        const aiSummary = JSON.parse(content);
+        const updated = await storage.updateSavedReportAiSummary(report.id, aiSummary);
+        
+        console.log(`[Regenerate AI] Successfully regenerated team summary`);
+        res.json({ success: true, aiSummary, report: updated });
+
+      } else {
+        return res.status(400).json({ error: 'Unknown report type' });
+      }
+
+    } catch (error: any) {
+      console.error('[Regenerate AI] Error:', error);
+      res.status(500).json({ error: error.message || 'Failed to regenerate AI summary' });
     }
   });
 

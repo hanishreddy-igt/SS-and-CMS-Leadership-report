@@ -68,6 +68,7 @@ export interface IStorage {
   getSavedReportByWeek(weekStart: string, reportType: SavedReportType): Promise<SavedReport | undefined>;
   getSavedReportsByWeek(weekStart: string): Promise<SavedReport[]>;
   upsertSavedReport(report: InsertSavedReport): Promise<SavedReport>;
+  updateSavedReportAiSummary(id: string, aiSummary: unknown): Promise<SavedReport | undefined>;
   deleteSavedReport(id: string): Promise<boolean>;
   deleteSavedReportsByWeek(weekStart: string): Promise<boolean>;
 
@@ -423,6 +424,14 @@ export class MemStorage implements IStorage {
     };
     this.savedReports.set(id, report);
     return report;
+  }
+
+  async updateSavedReportAiSummary(id: string, aiSummary: unknown): Promise<SavedReport | undefined> {
+    const existing = this.savedReports.get(id);
+    if (!existing) return undefined;
+    const updated: SavedReport = { ...existing, aiSummary };
+    this.savedReports.set(id, updated);
+    return updated;
   }
 
   async deleteSavedReport(id: string): Promise<boolean> {
@@ -807,6 +816,15 @@ export class DatabaseStorage implements IStorage {
       .values({ ...insertReport, reportType })
       .returning();
     return report;
+  }
+
+  async updateSavedReportAiSummary(id: string, aiSummary: unknown): Promise<SavedReport | undefined> {
+    const [updated] = await db
+      .update(savedReports)
+      .set({ aiSummary })
+      .where(eq(savedReports.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async deleteSavedReport(id: string): Promise<boolean> {

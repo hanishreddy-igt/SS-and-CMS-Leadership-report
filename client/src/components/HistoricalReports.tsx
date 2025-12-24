@@ -38,7 +38,9 @@ import {
   Users,
   TrendingUp,
   Lightbulb,
-  Target
+  Target,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import type { SavedReport } from '@shared/schema';
 
@@ -433,6 +435,47 @@ export default function HistoricalReports() {
       toast({
         title: 'Delete Failed',
         description: error.message || 'Failed to delete archived report',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const regenerateAISummaryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('POST', `/api/saved-reports/${id}/regenerate-summary`);
+    },
+    onSuccess: (data: any) => {
+      // Invalidate cache to get fresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
+      
+      // Only update state if we got a valid response with the updated report
+      if (data.report) {
+        setSelectedReport(data.report);
+        toast({
+          title: 'AI Summary Regenerated',
+          description: 'The AI summary has been successfully regenerated from the archived data',
+        });
+      } else if (data.aiSummary || data.teamSummary) {
+        // Fallback: if report not included, refetch to get updated data
+        // Close modal and let user reopen to see updated data
+        setShowPdfModal(false);
+        setSelectedReport(null);
+        toast({
+          title: 'AI Summary Regenerated',
+          description: 'Please reopen the report to view the updated summary',
+        });
+      } else {
+        // Unexpected response format
+        toast({
+          title: 'Regeneration Complete',
+          description: 'Please refresh the page to see the updated summary',
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Regeneration Failed',
+        description: error.message || 'Failed to regenerate AI summary',
         variant: 'destructive',
       });
     }
@@ -1079,6 +1122,32 @@ export default function HistoricalReports() {
                   </div>
                 </div>
 
+                {!isSelectedTeamReport && !reportAiSummary && permissions.canGenerateAISummary && (
+                  <div className="p-4 rounded-lg bg-muted/20 border border-muted/30 my-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-warning" />
+                        <span className="text-sm text-muted-foreground">No AI summary available for this archived report</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => regenerateAISummaryMutation.mutate(selectedReport.id)}
+                        disabled={regenerateAISummaryMutation.isPending}
+                        data-testid="button-regenerate-ai-summary"
+                      >
+                        {regenerateAISummaryMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                        {regenerateAISummaryMutation.isPending ? 'Generating...' : 'Regenerate AI Summary'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {reportAiSummary && healthConfig && (
                   <div className={`p-4 rounded-lg ${healthConfig.bgColor} border ${healthConfig.borderColor} my-4`}>
                     <div className="flex items-center gap-2 mb-3">
@@ -1319,6 +1388,32 @@ export default function HistoricalReports() {
                 )}
 
                 {/* Team Member Summary Section */}
+                {isSelectedTeamReport && !reportTeamSummary && permissions.canGenerateAISummary && (
+                  <div className="p-4 rounded-lg bg-muted/20 border border-muted/30 my-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-warning" />
+                        <span className="text-sm text-muted-foreground">No AI summary available for this archived team report</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => regenerateAISummaryMutation.mutate(selectedReport.id)}
+                        disabled={regenerateAISummaryMutation.isPending}
+                        data-testid="button-regenerate-team-ai-summary"
+                      >
+                        {regenerateAISummaryMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                        {regenerateAISummaryMutation.isPending ? 'Generating...' : 'Regenerate AI Summary'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {reportTeamSummary && (
                   <div className={`p-4 rounded-lg ${
                     reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
