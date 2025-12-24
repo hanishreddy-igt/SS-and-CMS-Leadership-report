@@ -110,12 +110,21 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
   // Set initial lead filter from URL when projectLeads are loaded
   useEffect(() => {
     if (initialLeadFilter && projectLeads.length > 0) {
-      // Find lead(s) whose name starts with the filter (case-insensitive)
-      const matchingLeads = projectLeads.filter(lead => 
-        lead.name.toLowerCase().startsWith(initialLeadFilter.toLowerCase())
-      );
-      if (matchingLeads.length > 0) {
-        setStatusFilterLeads(new Set(matchingLeads.map(l => l.id)));
+      // Support comma-separated first names for co-leads (e.g., "John,Jane")
+      const filterNames = initialLeadFilter.split(',').map(n => n.trim().toLowerCase());
+      const matchingLeadIds: string[] = [];
+      
+      for (const filterName of filterNames) {
+        const matchingLead = projectLeads.find(lead => 
+          lead.name.toLowerCase().startsWith(filterName)
+        );
+        if (matchingLead) {
+          matchingLeadIds.push(matchingLead.id);
+        }
+      }
+      
+      if (matchingLeadIds.length > 0) {
+        setStatusFilterLeads(new Set(matchingLeadIds));
       }
     }
   }, [initialLeadFilter, projectLeads]);
@@ -689,11 +698,13 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
       onLeadFilterChange?.(null);
     } else {
       setStatusFilterLeads(leadIdSet);
-      // Notify parent to update URL with first lead's first name
-      const firstLead = projectLeads.find(l => l.id === leadIds[0]);
-      if (firstLead) {
-        const firstName = firstLead.name.split(' ')[0];
-        onLeadFilterChange?.(firstName);
+      // Notify parent to update URL with all leads' first names (comma-separated for co-leads)
+      const firstNames = leadIds
+        .map(id => projectLeads.find(l => l.id === id)?.name.split(' ')[0])
+        .filter(Boolean)
+        .join(',');
+      if (firstNames) {
+        onLeadFilterChange?.(firstNames);
       }
     }
     setStatusLeadSearch('');
