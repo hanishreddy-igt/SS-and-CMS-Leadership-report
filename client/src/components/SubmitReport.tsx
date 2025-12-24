@@ -327,20 +327,27 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
     setProjectLockInfo(null);
   };
 
+  // Check if we're filtering by a single lead (for split view of sole/co-lead projects)
+  const isSingleLeadFilter = statusFilterLeads.size === 1;
+  const singleFilterLeadId = isSingleLeadFilter ? Array.from(statusFilterLeads)[0] : null;
+
   const filteredStatusProjects = projects.filter((project) => {
     // Exclude ended projects from the status list
     if (isProjectEndedCheck(project.endDate)) return false;
     
-    // Check if project's lead combination matches the filter exactly
-    // When filtering by a combined category (e.g., "John & Jane"), only show projects 
-    // that have EXACTLY that combination of leads
     const projectLeadIds = getProjectLeadIds(project);
     if (statusFilterLeads.size > 0) {
-      // Project must have exactly the same leads as the filter
-      const projectLeadSet = new Set(projectLeadIds);
-      const sameSize = projectLeadSet.size === statusFilterLeads.size;
-      const allMatch = Array.from(statusFilterLeads).every(id => projectLeadSet.has(id));
-      if (!sameSize || !allMatch) return false;
+      if (isSingleLeadFilter) {
+        // Single lead filter: include projects where lead is sole OR co-lead
+        const hasThisLead = projectLeadIds.includes(singleFilterLeadId!);
+        if (!hasThisLead) return false;
+      } else {
+        // Multiple leads filter: require EXACT match of lead combinations
+        const projectLeadSet = new Set(projectLeadIds);
+        const sameSize = projectLeadSet.size === statusFilterLeads.size;
+        const allMatch = Array.from(statusFilterLeads).every(id => projectLeadSet.has(id));
+        if (!sameSize || !allMatch) return false;
+      }
     }
     
     const reportStatus = getProjectReportStatus(project.id);
@@ -352,6 +359,21 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
     
     return true;
   });
+
+  // When single lead filter, split into sole-lead and co-lead projects
+  const soleLeadProjects = isSingleLeadFilter 
+    ? filteredStatusProjects.filter(p => {
+        const leadIds = getProjectLeadIds(p);
+        return leadIds.length === 1 && leadIds[0] === singleFilterLeadId;
+      })
+    : [];
+  
+  const coLeadProjects = isSingleLeadFilter
+    ? filteredStatusProjects.filter(p => {
+        const leadIds = getProjectLeadIds(p);
+        return leadIds.length > 1 && leadIds.includes(singleFilterLeadId!);
+      })
+    : [];
 
   const getLeadName = (leadId: string) => {
     return projectLeads.find((l) => l.id === leadId)?.name || 'Unknown';
@@ -867,26 +889,29 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
           <div className="space-y-6" data-testid="section-report-status">
             {Object.keys(groupedByLead).length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No projects found matching the filters.</p>
-            ) : statusFilterLeads.size === 1 ? (
-              // Single lead filter - show flat list without lead header
+            ) : isSingleLeadFilter ? (
+              // Single lead filter - show split sections for As Lead and As Co-Lead
               (() => {
-                // Deduplicate projects (co-lead projects may appear multiple times)
-                const allProjects = Object.values(groupedByLead).flat();
-                const uniqueProjects = allProjects.filter((project, index, self) => 
-                  index === self.findIndex(p => p.id === project.id)
-                );
-                // Sort projects: drafted first, then pending, then submitted
-                const sortedProjects = [...uniqueProjects].sort((a, b) => {
+                const filterLeadName = singleFilterLeadId ? getLeadName(singleFilterLeadId) : '';
+                
+                // Sort function for projects: drafted first, then pending, then submitted
+                const sortProjects = (projects: Project[]) => [...projects].sort((a, b) => {
                   const statusOrder = { 'drafted': 0, 'pending': 1, 'submitted': 2 };
                   const statusA = getProjectReportStatus(a.id) as keyof typeof statusOrder;
                   const statusB = getProjectReportStatus(b.id) as keyof typeof statusOrder;
                   return (statusOrder[statusA] ?? 1) - (statusOrder[statusB] ?? 1);
                 });
-                return (
+
+                const renderProjectGrid = (projects: Project[], showCoLeadPartner: boolean = false) => (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {sortedProjects.map((project) => {
+                    {projects.map((project) => {
                       const reportStatus = getProjectReportStatus(project.id);
-                      const isCoLead = hasCoLeads(project);
+                      const coLeadNames = showCoLeadPartner 
+                        ? getProjectLeadIds(project)
+                            .filter(id => id !== singleFilterLeadId)
+                            .map(id => getLeadName(id))
+                            .join(' & ')
+                        : null;
                       return (
                         <div
                           key={project.id}
@@ -894,28 +919,28 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                           data-testid={`status-${project.id}`}
                           onClick={() => handleProjectTileClick(project)}
                         >
-                          <div className="flex-1">
-                            <p className="font-medium">{project.name}</p>
-                            {isCoLead && (
-                              <Badge variant="outline" className="text-xs mt-1">Co-Lead</Badge>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{project.name}</p>
+                            {coLeadNames && (
+                              <p className="text-xs text-muted-foreground mt-1">with {coLeadNames}</p>
                             )}
                           </div>
                           {reportStatus === 'submitted' ? (
-                            <div className="flex items-center gap-2 text-success">
+                            <div className="flex items-center gap-2 text-success shrink-0">
                               <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
                                 <Check className="h-4 w-4" />
                               </div>
                               <span className="text-sm font-medium">Submitted</span>
                             </div>
                           ) : reportStatus === 'drafted' ? (
-                            <div className="flex items-center gap-2 text-primary">
+                            <div className="flex items-center gap-2 text-primary shrink-0">
                               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                 <PenLine className="h-4 w-4" />
                               </div>
                               <span className="text-sm font-medium">Drafted</span>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2 text-warning">
+                            <div className="flex items-center gap-2 text-warning shrink-0">
                               <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center">
                                 <Clock className="h-4 w-4" />
                               </div>
@@ -925,6 +950,41 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                         </div>
                       );
                     })}
+                  </div>
+                );
+
+                const sortedSoleProjects = sortProjects(soleLeadProjects);
+                const sortedCoProjects = sortProjects(coLeadProjects);
+                const soleSubmitted = soleLeadProjects.filter(p => getProjectReportStatus(p.id) === 'submitted').length;
+                const coSubmitted = coLeadProjects.filter(p => getProjectReportStatus(p.id) === 'submitted').length;
+
+                return (
+                  <div className="space-y-6">
+                    {/* As Lead Section */}
+                    {soleLeadProjects.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                          <h3 className="text-base font-bold uppercase tracking-wide text-muted-foreground">As Lead</h3>
+                          <span className="text-sm text-muted-foreground">{soleSubmitted}/{soleLeadProjects.length} submitted</span>
+                        </div>
+                        {renderProjectGrid(sortedSoleProjects, false)}
+                      </div>
+                    )}
+
+                    {/* As Co-Lead Section */}
+                    {coLeadProjects.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                          <h3 className="text-base font-bold uppercase tracking-wide text-muted-foreground">As Co-Lead</h3>
+                          <span className="text-sm text-muted-foreground">{coSubmitted}/{coLeadProjects.length} submitted</span>
+                        </div>
+                        {renderProjectGrid(sortedCoProjects, true)}
+                      </div>
+                    )}
+
+                    {soleLeadProjects.length === 0 && coLeadProjects.length === 0 && (
+                      <p className="text-muted-foreground text-center py-4">No projects found for {filterLeadName}.</p>
+                    )}
                   </div>
                 );
               })()
