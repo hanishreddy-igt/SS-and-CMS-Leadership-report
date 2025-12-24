@@ -22,10 +22,12 @@ export interface Permissions {
   canExportReports: boolean;
   canArchiveReports: boolean;
   canGenerateAISummary: boolean;
+  canRegenerateAISummary: boolean;
   canViewAISummary: boolean;
   canSubmitFeedback: boolean;
   canViewAllFeedback: boolean;
   canViewTeamFeedbackSummary: boolean;
+  canDeleteTeamFeedback: boolean;
   role: UserRole;
   isAdmin: boolean;
 }
@@ -50,10 +52,12 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canExportReports: true,
     canArchiveReports: true,
     canGenerateAISummary: true,
+    canRegenerateAISummary: true,
     canViewAISummary: true,
     canSubmitFeedback: true,
     canViewAllFeedback: true,
     canViewTeamFeedbackSummary: true,
+    canDeleteTeamFeedback: true,
   },
   manager: {
     canManageUsers: false,
@@ -74,10 +78,12 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canExportReports: true,
     canArchiveReports: true,
     canGenerateAISummary: true,
+    canRegenerateAISummary: true,
     canViewAISummary: true,
     canSubmitFeedback: true,
     canViewAllFeedback: true,
     canViewTeamFeedbackSummary: true,
+    canDeleteTeamFeedback: true,
   },
   lead: {
     canManageUsers: false,
@@ -98,10 +104,12 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canExportReports: true,
     canArchiveReports: false,
     canGenerateAISummary: true,
+    canRegenerateAISummary: false,
     canViewAISummary: true,
     canSubmitFeedback: true,
     canViewAllFeedback: false,
     canViewTeamFeedbackSummary: false,
+    canDeleteTeamFeedback: false,
   },
   member: {
     canManageUsers: false,
@@ -122,10 +130,12 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canExportReports: false,
     canArchiveReports: false,
     canGenerateAISummary: false,
+    canRegenerateAISummary: false,
     canViewAISummary: true,
     canSubmitFeedback: true,
     canViewAllFeedback: false,
     canViewTeamFeedbackSummary: false,
+    canDeleteTeamFeedback: false,
   },
 };
 
