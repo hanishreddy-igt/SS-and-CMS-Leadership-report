@@ -33,6 +33,7 @@ This project provides a tool for leadership to monitor the delivery status of al
     - **Teams & Projects Tab**: Unified dashboard for project and team management, including project cards, team member/lead grids, and modal forms for adding new entities. Features project name filtering, lead/member filtering, and sorting by end date.
     - **Submit Report Tab**: Consolidated view with metrics for submitted/pending reports, a weekly report submission form with health status, progress, challenges, next steps, and optional team member feedback. Includes a report status overview by lead with filtering. Draft report functionality allows saving partial reports.
     - **View Reports Tab**: Displays overall project health statistics (On Track, Needs Attention, Critical), offers comprehensive filtering by lead, member, and health status, provides export options (PDF/CSV), and includes archive functionality for storing and viewing historical weekly reports.
+    - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI. Uses state-machine CSV parsing that preserves raw lines and normalizes values post-tokenization.
     - **Jira Integration**: Functionality to import projects, leads, and team members directly from Jira epics.
 
 ### System Design Choices
