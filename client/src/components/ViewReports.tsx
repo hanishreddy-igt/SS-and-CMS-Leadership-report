@@ -66,7 +66,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const { data: projectLeads = [] } = useQuery<ProjectLead[]>({ queryKey: ['/api/project-leads'] });
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({ queryKey: ['/api/team-members'] });
   const { data: projects = [] } = useQuery<Project[]>({ queryKey: ['/api/projects'] });
-  const { data: peopleWithFeedback = [] } = useQuery<Person[]>({ queryKey: ['/api/people/feedback'] });
+  const { data: peopleWithFeedback = [], isLoading: isLoadingFeedback } = useQuery<Person[]>({ queryKey: ['/api/people/feedback'] });
   // Feedback entries with submitter tracking - filtered by backend based on user role
   const { data: feedbackEntries = [] } = useQuery<FeedbackEntry[]>({ queryKey: ['/api/feedback-entries'] });
   const { data: allPeople = [] } = useQuery<Person[]>({ queryKey: ['/api/people'] });
@@ -330,9 +330,9 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       // Don't run if already triggered or no reports
       if (autoArchiveTriggered.current || weeklyReports.length === 0) return;
       
-      // CRITICAL: Wait for saved AI summary query to complete before running auto-archive
-      // This prevents race condition where we archive before loading existing AI summary
-      if (isLoadingSavedSummary) return;
+      // CRITICAL: Wait for saved AI summary and feedback data to load before running auto-archive
+      // This prevents race condition where we archive before loading existing data
+      if (isLoadingSavedSummary || isLoadingFeedback) return;
       
       const now = new Date();
       const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 3 = Wednesday
@@ -418,6 +418,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           
           console.log(`[Auto-Archive] Leadership summary to archive: ${!!leadershipSummaryToArchive}`);
           console.log(`[Auto-Archive] Team summary to archive: ${!!teamSummaryToArchive}`);
+          console.log(`[Auto-Archive] People with feedback to archive: ${peopleWithFeedback.length}`);
           console.log(`[Auto-Archive] Account PDF size: ${(accountPdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
           console.log(`[Auto-Archive] Account CSV size: ${(accountCsvContent.length / 1024).toFixed(2)} KB`);
           console.log(`[Auto-Archive] Team PDF size: ${(teamPdfBase64.length / 1024 / 1024).toFixed(2)} MB`);
@@ -466,11 +467,17 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             await apiRequest('DELETE', `/api/current-ai-summary/${currentWeekStart}`, {});
           }
           
+          // Clear all team feedback after archiving (same as Force Archive)
+          await apiRequest('DELETE', '/api/people/feedback', {});
+          console.log('[Auto-Archive] Team feedback cleared');
+          
           // Invalidate queries
           queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
           queryClient.invalidateQueries({ queryKey: ['/api/saved-reports'] });
           queryClient.invalidateQueries({ queryKey: ['/api/current-ai-summary'] });
           queryClient.invalidateQueries({ queryKey: ['/api/reporting-week'] }); // Advance to next week
+          queryClient.invalidateQueries({ queryKey: ['/api/people/feedback'] }); // Clear feedback UI
+          queryClient.invalidateQueries({ queryKey: ['/api/feedback-entries'] }); // Clear feedback entries
           
           // Clear local state
           setAiSummary(null);
@@ -479,9 +486,10 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           setReportsAnalyzed(0);
           
           const summaryNote = leadershipSummaryToArchive ? (teamSummaryToArchive ? ' with AI summaries' : ' with leadership summary') : '';
+          const feedbackNote = peopleWithFeedback.length > 0 ? ` and ${peopleWithFeedback.length} team feedbacks` : '';
           toast({
             title: 'Auto-Archive Complete',
-            description: `Previous week's ${weeklyReports.length} reports have been archived${summaryNote} as 2 separate reports (Account + Team).`,
+            description: `Previous week's ${weeklyReports.length} reports${feedbackNote} have been archived${summaryNote} as 2 separate reports (Account + Team).`,
           });
         } catch (error: any) {
           console.error('Auto-archive failed:', error);
@@ -498,7 +506,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     };
     
     checkAndAutoArchive();
-  }, [weeklyReports, aiSummary, currentWeekStart, toast, isLoadingSavedSummary]);
+  }, [weeklyReports, aiSummary, currentWeekStart, toast, isLoadingSavedSummary, isLoadingFeedback, peopleWithFeedback, teamSummary]);
 
   // Format date to UTC string
   const formatUTC = (dateString: string) => {
