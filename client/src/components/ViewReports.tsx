@@ -50,6 +50,7 @@ interface ViewReportsProps {
   openSummaryModal?: 'leadership' | 'feedback' | null;
   onOpenSummaryModal?: (type: 'leadership' | 'feedback') => void;
   onCloseSummaryModal?: () => void;
+  initialSummaryView?: 'leadership' | 'feedback' | null;
 }
 
 // Type for reporting week API response
@@ -59,7 +60,7 @@ interface ReportingWeekResponse {
   source: 'archive' | 'existing-reports' | 'calendar';
 }
 
-export default function ViewReports({ externalHealthFilter, onClearExternalFilter, openSummaryModal, onOpenSummaryModal, onCloseSummaryModal }: ViewReportsProps) {
+export default function ViewReports({ externalHealthFilter, onClearExternalFilter, openSummaryModal, onOpenSummaryModal, onCloseSummaryModal, initialSummaryView }: ViewReportsProps) {
   const { toast } = useToast();
   const permissions = usePermissions();
   const { user } = useAuth();
@@ -245,16 +246,17 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   const [showLeadershipModal, setShowLeadershipModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   
-  // Open modals based on URL query param
+  // Open modals based on URL query param or initial prop
   useEffect(() => {
-    if (openSummaryModal === 'leadership') {
+    const summaryType = openSummaryModal || initialSummaryView;
+    if (summaryType === 'leadership') {
       setShowLeadershipModal(true);
       setShowTeamModal(false);
-    } else if (openSummaryModal === 'feedback') {
+    } else if (summaryType === 'feedback') {
       setShowTeamModal(true);
       setShowLeadershipModal(false);
     }
-  }, [openSummaryModal]);
+  }, [openSummaryModal, initialSummaryView]);
 
   // Handle modal close to update URL
   const handleLeadershipModalClose = (open: boolean) => {

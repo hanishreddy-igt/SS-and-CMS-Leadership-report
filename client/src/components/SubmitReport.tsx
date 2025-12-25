@@ -455,6 +455,19 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
       newSet.add(leadId);
     }
     setStatusFilterLeads(newSet);
+    
+    // Update URL with first names of selected leads
+    if (onLeadFilterChange) {
+      if (newSet.size === 0) {
+        onLeadFilterChange(null);
+      } else {
+        const selectedLeadNames = Array.from(newSet)
+          .map(id => projectLeads.find(l => l.id === id)?.name.split(' ')[0])
+          .filter(Boolean)
+          .join(',');
+        onLeadFilterChange(selectedLeadNames);
+      }
+    }
   };
 
   const saveDraftMutation = useMutation({
@@ -671,6 +684,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
     // Clear lead filters first
     setStatusFilterLeads(new Set());
     setStatusLeadSearch('');
+    onLeadFilterChange?.(null);
     
     // Toggle: if already filtered to 'submitted', clear it; otherwise apply it
     if (statusFilterStatus === 'submitted') {
@@ -691,6 +705,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
     // Clear lead filters first
     setStatusFilterLeads(new Set());
     setStatusLeadSearch('');
+    onLeadFilterChange?.(null);
     
     // Toggle: if already filtered to 'awaiting' (pending + drafted), clear it; otherwise apply it
     if (statusFilterStatus === 'awaiting') {
