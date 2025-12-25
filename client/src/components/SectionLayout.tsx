@@ -27,9 +27,9 @@ interface SectionLayoutProps {
 }
 
 const sectionNav = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/reports', label: 'Reports', icon: FileText },
-  { path: '/tasks', label: 'Tasks', icon: ListTodo },
+  { path: '/dashboard/contracts', label: 'Dashboard', icon: LayoutDashboard, basePath: '/dashboard' },
+  { path: '/reports/submit', label: 'Reports', icon: FileText, basePath: '/reports' },
+  { path: '/tasks/all', label: 'Tasks', icon: ListTodo, basePath: '/tasks' },
 ];
 
 export default function SectionLayout({
@@ -86,7 +86,7 @@ export default function SectionLayout({
     }
   };
 
-  const currentSection = sectionNav.find(s => location.startsWith(s.path));
+  const currentSection = sectionNav.find(s => location.startsWith(s.basePath));
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -120,7 +120,7 @@ export default function SectionLayout({
             
             <div className="hidden md:flex items-center gap-1 bg-muted/30 rounded-lg p-1">
               {sectionNav.map((item) => {
-                const isActive = location.startsWith(item.path);
+                const isActive = location.startsWith(item.basePath);
                 const Icon = item.icon;
                 return (
                   <Button
@@ -132,7 +132,7 @@ export default function SectionLayout({
                       "gap-2 transition-all",
                       isActive && "bg-primary text-primary-foreground"
                     )}
-                    data-testid={`nav-section-${item.path.replace('/', '')}`}
+                    data-testid={`nav-section-${item.basePath.replace('/', '')}`}
                   >
                     <Icon className="h-4 w-4" />
                     <span>{item.label}</span>
@@ -234,7 +234,7 @@ export default function SectionLayout({
             
             <div className="flex gap-1">
               {sectionNav.map((item) => {
-                const isActive = location.startsWith(item.path);
+                const isActive = location.startsWith(item.basePath);
                 const Icon = item.icon;
                 return (
                   <Button
@@ -252,8 +252,11 @@ export default function SectionLayout({
           </div>
           
           <div className={cn(
-            "flex gap-1 py-2 overflow-x-auto",
-            mobileMenuOpen ? "flex" : "hidden md:flex"
+            "grid gap-1 py-2",
+            mobileMenuOpen ? "grid" : "hidden md:grid",
+            tabs.length === 2 && "grid-cols-2",
+            tabs.length === 3 && "grid-cols-3",
+            tabs.length === 4 && "grid-cols-4"
           )}>
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -268,7 +271,7 @@ export default function SectionLayout({
                     setMobileMenuOpen(false);
                   }}
                   className={cn(
-                    "gap-2 transition-all whitespace-nowrap",
+                    "gap-2 transition-all whitespace-nowrap justify-center",
                     isActive && "bg-primary text-primary-foreground"
                   )}
                   data-testid={`tab-${tab.id}`}

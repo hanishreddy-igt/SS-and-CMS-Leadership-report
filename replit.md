@@ -17,9 +17,9 @@ This project provides a tool for leadership to monitor the delivery status of al
 - **Section-Based Layout**: Each section opens full-screen with its own sub-tabs. Back arrow returns to Hub, mini-nav bar allows quick section switching.
 - **Routes Structure**:
   - `/` - Hub landing page with 3 icons
-  - `/dashboard` - Dashboard section (Contracts, Team tabs)
-  - `/reports` - Reports section (Submit Report, View Current, Historical tabs)
-  - `/tasks` - Work Management section (All Tasks, My Tasks, Task Templates tabs) - in development
+  - `/dashboard/:tab` - Dashboard section (contracts, team)
+  - `/reports/:tab` - Reports section (submit, view, historical)
+  - `/tasks/:tab` - Work Management section (all, my, templates) - in development
   - Legacy routes (`/submit`, `/view`, `/historical`) redirect to new structure
 - **Premium Executive Dashboard UI**: Features a dark navy color palette with layered depth, glassmorphism cards using `backdrop-blur` effects, and premium transparency.
 - **Unified Theme Tokens**: Utilizes consistent health status colors (text-success, text-warning, text-destructive), spacing, and the Inter font family.

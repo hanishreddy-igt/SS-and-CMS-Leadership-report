@@ -30,14 +30,17 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Hub} />
-      <Route path="/dashboard" component={DashboardSection} />
-      <Route path="/reports" component={ReportsSection} />
-      <Route path="/tasks" component={TasksSection} />
+      <Route path="/dashboard/:tab" component={DashboardSection} />
+      <Route path="/dashboard">{() => <Redirect to="/dashboard/contracts" />}</Route>
+      <Route path="/reports/:tab" component={ReportsSection} />
+      <Route path="/reports">{() => <Redirect to="/reports/submit" />}</Route>
+      <Route path="/tasks/:tab" component={TasksSection} />
+      <Route path="/tasks">{() => <Redirect to="/tasks/all" />}</Route>
       <Route path="/admin" component={AdminPanel} />
       <Route path="/features" component={FeaturePanel} />
-      <Route path="/submit">{() => <Redirect to="/reports?tab=submit" />}</Route>
-      <Route path="/view">{() => <Redirect to="/reports?tab=view" />}</Route>
-      <Route path="/historical">{() => <Redirect to="/reports?tab=historical" />}</Route>
+      <Route path="/submit">{() => <Redirect to="/reports/submit" />}</Route>
+      <Route path="/view">{() => <Redirect to="/reports/view" />}</Route>
+      <Route path="/historical">{() => <Redirect to="/reports/historical" />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

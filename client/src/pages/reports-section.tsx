@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, useParams } from 'wouter';
 import { FileText, Eye, History } from 'lucide-react';
 import SectionLayout from '@/components/SectionLayout';
 import SubmitReport from '@/components/SubmitReport';
@@ -14,14 +14,14 @@ const tabs = [
 
 export default function ReportsSection() {
   const [location, setLocation] = useLocation();
+  const params = useParams<{ tab?: string }>();
   
   const getInitialState = () => {
     const searchParams = new URLSearchParams(location.split('?')[1] || '');
-    const tabParam = searchParams.get('tab');
     const healthParam = searchParams.get('health');
     
-    let tab = tabParam || 'submit';
-    if (healthParam && !tabParam) {
+    let tab = params.tab || 'submit';
+    if (healthParam && !params.tab) {
       tab = 'view';
     }
     
@@ -36,26 +36,27 @@ export default function ReportsSection() {
   const [healthFilter, setHealthFilter] = useState<string | null>(initialState.healthFilter);
 
   useEffect(() => {
+    if (params.tab && params.tab !== activeTab) {
+      setActiveTab(params.tab);
+    }
     const searchParams = new URLSearchParams(location.split('?')[1] || '');
     const healthParam = searchParams.get('health');
     if (healthParam) {
       setActiveTab('view');
       setHealthFilter(healthParam);
     }
-  }, [location]);
+  }, [location, params.tab]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     setHealthFilter(null);
-    const basePath = location.split('?')[0];
-    setLocation(`${basePath}?tab=${tabId}`);
+    setLocation(`/reports/${tabId}`);
   };
 
   const handleHealthTileClick = (status: string) => {
     setActiveTab('view');
     setHealthFilter(status);
-    const basePath = location.split('?')[0];
-    setLocation(`${basePath}?tab=view&health=${status}`);
+    setLocation(`/reports/view?health=${status}`);
   };
 
   return (

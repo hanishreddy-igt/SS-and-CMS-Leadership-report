@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useLocation } from 'wouter';
+import { useState, useEffect } from 'react';
+import { useLocation, useParams } from 'wouter';
 import { List, User, FileStack } from 'lucide-react';
 import SectionLayout from '@/components/SectionLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,13 +25,19 @@ function PlaceholderContent({ title, description }: { title: string; description
 }
 
 export default function TasksSection() {
-  const [location] = useLocation();
-  const searchParams = new URLSearchParams(location.split('?')[1] || '');
-  const initialTab = searchParams.get('tab') || 'all';
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [, setLocation] = useLocation();
+  const params = useParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState(params.tab || 'all');
+
+  useEffect(() => {
+    if (params.tab && params.tab !== activeTab) {
+      setActiveTab(params.tab);
+    }
+  }, [params.tab]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
+    setLocation(`/tasks/${tabId}`);
   };
 
   return (

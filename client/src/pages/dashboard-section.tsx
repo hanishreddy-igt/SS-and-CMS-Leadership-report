@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useLocation } from 'wouter';
+import { useState, useEffect } from 'react';
+import { useLocation, useParams } from 'wouter';
 import { Briefcase, Users } from 'lucide-react';
 import SectionLayout from '@/components/SectionLayout';
 import ProjectsDashboard from '@/components/ProjectsDashboard';
@@ -10,13 +10,19 @@ const tabs = [
 ];
 
 export default function DashboardSection() {
-  const [location] = useLocation();
-  const searchParams = new URLSearchParams(location.split('?')[1] || '');
-  const initialTab = searchParams.get('tab') || 'contracts';
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [, setLocation] = useLocation();
+  const params = useParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState(params.tab || 'contracts');
+
+  useEffect(() => {
+    if (params.tab && params.tab !== activeTab) {
+      setActiveTab(params.tab);
+    }
+  }, [params.tab]);
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
+    setLocation(`/dashboard/${tabId}`);
   };
 
   return (
