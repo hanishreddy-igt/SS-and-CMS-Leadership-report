@@ -3287,6 +3287,185 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       </>
       )}
 
+      {/* Project Detail Modal - Rendered outside of tab conditionals */}
+      <Dialog open={showProjectDetailModal} onOpenChange={(open) => !open && closeProjectDetailModal()}>
+        <DialogContent className="max-w-lg" data-testid="dialog-project-detail">
+          <DialogHeader className="pb-4 border-b">
+            <div className="flex items-center gap-3">
+              {selectedProject && <EndDateIndicator endDate={selectedProject.endDate} />}
+              <DialogTitle className="text-2xl">{selectedProject?.name}</DialogTitle>
+            </div>
+            <DialogDescription className="sr-only">
+              View detailed information about this project including customer, lead, team members, and timeline.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProject && (
+            <div className="space-y-6 py-4">
+              {/* Customer Section */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Customer Contact Name</p>
+                  <p className="text-lg font-semibold" data-testid="text-project-detail-customer">{selectedProject.customer}</p>
+                  {selectedProject.customerContactEmail && (
+                    <p className="text-sm text-primary flex items-center gap-1.5 mt-1" data-testid="text-project-detail-customer-email">
+                      <Mail className="h-3.5 w-3.5" />
+                      {selectedProject.customerContactEmail}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Contractual Time Section */}
+              {selectedProject.totalContractualHours && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Contractual Time</p>
+                    <p className="text-lg font-semibold" data-testid="text-project-detail-hours">{formatContractualTime(selectedProject.totalContractualHours)}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Project Lead Section - with clickable email (supports co-leads) */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <UserCog className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {hasCoLeads(selectedProject) ? 'Team Leads (Co-Lead)' : 'Team Lead'}
+                  </p>
+                  <div className="space-y-2">
+                    {(selectedProject.leadIds && selectedProject.leadIds.length > 0 
+                      ? selectedProject.leadIds 
+                      : [selectedProject.leadId]
+                    ).map((leadId) => (
+                      <div key={leadId}>
+                        <div 
+                          className="flex items-center gap-2 cursor-pointer group"
+                          onClick={() => toggleLeadEmailVisibility(leadId)}
+                          data-testid={`button-toggle-lead-email-${leadId}`}
+                        >
+                          <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid={`text-project-detail-lead-${leadId}`}>
+                            {getLeadName(leadId)}
+                          </p>
+                          <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                        {visibleLeadEmails.has(leadId) && (
+                          <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid={`text-lead-email-${leadId}`}>
+                            <Mail className="h-3.5 w-3.5" />
+                            {getLeadById(leadId)?.email || 'No email set'}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Team Members Section */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Team Members</p>
+                  <div className="flex flex-wrap gap-2" data-testid="container-project-detail-team">
+                    {getTeamMembersWithRoles(selectedProject.teamMembers).map((member, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-sm py-1 flex items-center gap-1.5">
+                        <span>{member.name}</span>
+                        {member.role && (
+                          <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm">
+                            {member.role}
+                          </span>
+                        )}
+                      </Badge>
+                    ))}
+                    {(!selectedProject.teamMembers || (selectedProject.teamMembers as TeamMemberAssignment[]).length === 0) && (
+                      <p className="text-sm text-muted-foreground">No team members assigned</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dates Section */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Project Timeline</p>
+                  <div className="flex items-center gap-2 mt-1" data-testid="text-project-detail-dates">
+                    <span className="text-base">{selectedProject.startDate ? formatDisplayDate(selectedProject.startDate) : 'Not set'}</span>
+                    <span className="text-muted-foreground">to</span>
+                    <span className="text-base">{selectedProject.endDate ? formatDisplayDate(selectedProject.endDate) : 'Not set'}</span>
+                  </div>
+                  {!selectedProject.endDate && (
+                    <div className="flex items-center gap-1.5 mt-1 text-warning text-sm">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      <span>End date is missing</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Project Type Section */}
+              {selectedProject.projectType && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Briefcase className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Project Type</p>
+                    <Badge variant="outline" className="mt-1" data-testid="badge-project-detail-type">
+                      {selectedProject.projectType === 'CMS' ? 'Community Managed Services' : 'Strategic Services'}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Indicator */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  {(() => {
+                    const status = getProjectStatus(selectedProject.endDate);
+                    if (status === 'active') {
+                      return (
+                        <Badge className="mt-1 bg-success/20 text-success border-success/30" data-testid="badge-project-detail-status">
+                          Long-term Active
+                        </Badge>
+                      );
+                    } else if (status === 'renewal') {
+                      return (
+                        <Badge className="mt-1 bg-warning/20 text-warning border-warning/30" data-testid="badge-project-detail-status">
+                          Renewal Soon
+                        </Badge>
+                      );
+                    } else {
+                      return (
+                        <Badge className="mt-1 bg-destructive/20 text-destructive border-destructive/30" data-testid="badge-project-detail-status">
+                          Ended
+                        </Badge>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Team Tab Content */}
       {activeTab === 'team' && (
       <>
@@ -3957,185 +4136,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Project Detail Modal */}
-      <Dialog open={showProjectDetailModal} onOpenChange={(open) => !open && closeProjectDetailModal()}>
-        <DialogContent className="max-w-lg" data-testid="dialog-project-detail">
-          <DialogHeader className="pb-4 border-b">
-            <div className="flex items-center gap-3">
-              {selectedProject && <EndDateIndicator endDate={selectedProject.endDate} />}
-              <DialogTitle className="text-2xl">{selectedProject?.name}</DialogTitle>
-            </div>
-            <DialogDescription className="sr-only">
-              View detailed information about this project including customer, lead, team members, and timeline.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedProject && (
-            <div className="space-y-6 py-4">
-              {/* Customer Section */}
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-muted">
-                  <Building2 className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Customer Contact Name</p>
-                  <p className="text-lg font-semibold" data-testid="text-project-detail-customer">{selectedProject.customer}</p>
-                  {selectedProject.customerContactEmail && (
-                    <p className="text-sm text-primary flex items-center gap-1.5 mt-1" data-testid="text-project-detail-customer-email">
-                      <Mail className="h-3.5 w-3.5" />
-                      {selectedProject.customerContactEmail}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Contractual Time Section */}
-              {selectedProject.totalContractualHours && (
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Clock className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Contractual Time</p>
-                    <p className="text-lg font-semibold" data-testid="text-project-detail-hours">{formatContractualTime(selectedProject.totalContractualHours)}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Project Lead Section - with clickable email (supports co-leads) */}
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-muted">
-                  <UserCog className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {hasCoLeads(selectedProject) ? 'Team Leads (Co-Lead)' : 'Team Lead'}
-                  </p>
-                  <div className="space-y-2">
-                    {(selectedProject.leadIds && selectedProject.leadIds.length > 0 
-                      ? selectedProject.leadIds 
-                      : [selectedProject.leadId]
-                    ).map((leadId) => (
-                      <div key={leadId}>
-                        <div 
-                          className="flex items-center gap-2 cursor-pointer group"
-                          onClick={() => toggleLeadEmailVisibility(leadId)}
-                          data-testid={`button-toggle-lead-email-${leadId}`}
-                        >
-                          <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid={`text-project-detail-lead-${leadId}`}>
-                            {getLeadName(leadId)}
-                          </p>
-                          <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        </div>
-                        {visibleLeadEmails.has(leadId) && (
-                          <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid={`text-lead-email-${leadId}`}>
-                            <Mail className="h-3.5 w-3.5" />
-                            {getLeadById(leadId)?.email || 'No email set'}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Team Members Section */}
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-muted">
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Team Members</p>
-                  <div className="flex flex-wrap gap-2" data-testid="container-project-detail-team">
-                    {getTeamMembersWithRoles(selectedProject.teamMembers).map((member, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-sm py-1 flex items-center gap-1.5">
-                        <span>{member.name}</span>
-                        {member.role && (
-                          <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm">
-                            {member.role}
-                          </span>
-                        )}
-                      </Badge>
-                    ))}
-                    {(!selectedProject.teamMembers || (selectedProject.teamMembers as TeamMemberAssignment[]).length === 0) && (
-                      <p className="text-sm text-muted-foreground">No team members assigned</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Dates Section */}
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-muted">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Project Timeline</p>
-                  <div className="flex items-center gap-2 mt-1" data-testid="text-project-detail-dates">
-                    <span className="text-base">{selectedProject.startDate ? formatDisplayDate(selectedProject.startDate) : 'Not set'}</span>
-                    <span className="text-muted-foreground">to</span>
-                    <span className="text-base">{selectedProject.endDate ? formatDisplayDate(selectedProject.endDate) : 'Not set'}</span>
-                  </div>
-                  {!selectedProject.endDate && (
-                    <div className="flex items-center gap-1.5 mt-1 text-warning text-sm">
-                      <AlertCircle className="h-3.5 w-3.5" />
-                      <span>End date is missing</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Project Type Section */}
-              {selectedProject.projectType && (
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Briefcase className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Project Type</p>
-                    <Badge variant="outline" className="mt-1" data-testid="badge-project-detail-type">
-                      {selectedProject.projectType === 'CMS' ? 'Community Managed Services' : 'Strategic Services'}
-                    </Badge>
-                  </div>
-                </div>
-              )}
-
-              {/* Status Indicator */}
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-muted">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  {(() => {
-                    const status = getProjectStatus(selectedProject.endDate);
-                    if (status === 'active') {
-                      return (
-                        <Badge className="mt-1 bg-success/20 text-success border-success/30" data-testid="badge-project-detail-status">
-                          Long-term Active
-                        </Badge>
-                      );
-                    } else if (status === 'renewal') {
-                      return (
-                        <Badge className="mt-1 bg-warning/20 text-warning border-warning/30" data-testid="badge-project-detail-status">
-                          Renewal Soon
-                        </Badge>
-                      );
-                    } else {
-                      return (
-                        <Badge className="mt-1 bg-destructive/20 text-destructive border-destructive/30" data-testid="badge-project-detail-status">
-                          Ended
-                        </Badge>
-                      );
-                    }
-                  })()}
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Lead Dialog */}
       <Dialog open={showEditLeadDialog} onOpenChange={(open) => !open && cancelEditLead()}>
