@@ -86,6 +86,16 @@ export default function ReportsSection() {
     setLocation(`/reports/view?health=${status}`);
   };
 
+  const handleOpenSummaryModal = (type: 'leadership' | 'feedback') => {
+    setSummaryFilter(type);
+    setLocation(`/reports/view?summary=${type}`);
+  };
+
+  const handleCloseSummaryModal = () => {
+    setSummaryFilter(null);
+    setLocation('/reports/view');
+  };
+
   return (
     <SectionLayout
       title="Reports & Feedback"
@@ -106,6 +116,8 @@ export default function ReportsSection() {
           externalHealthFilter={healthFilter || undefined} 
           onClearExternalFilter={() => setHealthFilter(null)}
           initialSummaryView={summaryFilter as 'leadership' | 'feedback' | null}
+          onOpenSummaryModal={handleOpenSummaryModal}
+          onCloseSummaryModal={handleCloseSummaryModal}
         />
       )}
       {activeTab === 'historical' && <HistoricalReports />}
