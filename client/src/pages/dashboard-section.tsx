@@ -32,7 +32,7 @@ export default function DashboardSection() {
       activeTab={activeTab}
       onTabChange={handleTabChange}
     >
-      <ProjectsDashboard />
+      <ProjectsDashboard activeTab={activeTab as 'contracts' | 'team'} />
     </SectionLayout>
   );
 }

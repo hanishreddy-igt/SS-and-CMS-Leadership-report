@@ -26,11 +26,12 @@ type SortOrder = 'asc' | 'desc';
 type SortField = 'endDate' | 'startDate';
 
 interface ProjectsDashboardProps {
+  activeTab?: 'contracts' | 'team';
   shouldClearFilters?: boolean;
   onFiltersClear?: () => void;
 }
 
-export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }: ProjectsDashboardProps) {
+export default function ProjectsDashboard({ activeTab = 'contracts', shouldClearFilters, onFiltersClear }: ProjectsDashboardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const permissions = usePermissions();
@@ -1793,8 +1794,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
 
   return (
     <div className="space-y-8">
-      {/* Caution banner for leads not registered - only show if user role is 'lead' */}
-      {user && permissions.role === 'lead' && !isUserRegisteredLead && (
+      {/* Caution banner for leads not registered - only show if user role is 'lead' and on team tab */}
+      {activeTab === 'team' && user && permissions.role === 'lead' && !isUserRegisteredLead && (
         <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-start gap-3" data-testid="banner-unregistered-lead">
           <AlertTriangle className="h-6 w-6 text-warning flex-shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -1807,8 +1808,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         </div>
       )}
 
-      {/* Caution banner for members not registered - only show if user role is 'member' */}
-      {user && permissions.role === 'member' && !isUserRegisteredTeamMember && (
+      {/* Caution banner for members not registered - only show if user role is 'member' and on team tab */}
+      {activeTab === 'team' && user && permissions.role === 'member' && !isUserRegisteredTeamMember && (
         <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-start gap-3" data-testid="banner-unregistered-member">
           <AlertTriangle className="h-6 w-6 text-warning flex-shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -1821,6 +1822,9 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
         </div>
       )}
 
+      {/* Contracts Tab Content */}
+      {activeTab === 'contracts' && (
+      <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div 
           className="metric-card metric-card-success cursor-pointer hover:border-success/30 transition-all"
@@ -3280,7 +3284,12 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
           </div>
         </DialogContent>
       </Dialog>
+      </>
+      )}
 
+      {/* Team Tab Content */}
+      {activeTab === 'team' && (
+      <>
       {/* Team Members Section */}
       <Card data-testid="section-team-members">
         <CardHeader>
@@ -4541,6 +4550,8 @@ export default function ProjectsDashboard({ shouldClearFilters, onFiltersClear }
           )}
         </DialogContent>
       </Dialog>
+      </>
+      )}
     </div>
   );
 }
