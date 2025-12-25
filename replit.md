@@ -13,6 +13,14 @@ This project provides a tool for leadership to monitor the delivery status of al
 ## System Architecture
 
 ### UI/UX Decisions
+- **Hub Navigation**: Landing page with 3 large clickable icons (Dashboard, Reports & Feedback, Work Management) replacing horizontal tab navigation.
+- **Section-Based Layout**: Each section opens full-screen with its own sub-tabs. Back arrow returns to Hub, mini-nav bar allows quick section switching.
+- **Routes Structure**:
+  - `/` - Hub landing page with 3 icons
+  - `/dashboard` - Dashboard section (Contracts, Team tabs)
+  - `/reports` - Reports section (Submit Report, View Current, Historical tabs)
+  - `/tasks` - Work Management section (All Tasks, My Tasks, Task Templates tabs) - in development
+  - Legacy routes (`/submit`, `/view`, `/historical`) redirect to new structure
 - **Premium Executive Dashboard UI**: Features a dark navy color palette with layered depth, glassmorphism cards using `backdrop-blur` effects, and premium transparency.
 - **Unified Theme Tokens**: Utilizes consistent health status colors (text-success, text-warning, text-destructive), spacing, and the Inter font family.
 - **Component Redesign**: Homepage with gradient mesh header, premium metric cards, and glass styling across various dashboards and report forms.
@@ -30,10 +38,18 @@ This project provides a tool for leadership to monitor the delivery status of al
     - **Weekly Reports**: Stores progress, health status, and team feedback.
     - **Saved Reports**: Archived weekly report snapshots with PDF/CSV data, AI summary, and health counts.
 - **Key Features**:
-    - **Teams & Projects Tab**: Unified dashboard for project and team management, including project cards, team member/lead grids, and modal forms for adding new entities. Features project name filtering, lead/member filtering, and sorting by end date.
-    - **Submit Report Tab**: Consolidated view with metrics for submitted/pending reports, a weekly report submission form with health status, progress, challenges, next steps, and optional team member feedback. Includes a report status overview by lead with filtering. Draft report functionality allows saving partial reports.
-    - **View Reports Tab**: Displays overall project health statistics (On Track, Needs Attention, Critical), offers comprehensive filtering by lead, member, and health status, provides export options (PDF/CSV), and includes archive functionality for storing and viewing historical weekly reports.
-    - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI. Uses state-machine CSV parsing that preserves raw lines and normalizes values post-tokenization.
+    - **Dashboard Section**: Unified dashboard for project and team management, including project cards, team member/lead grids, and modal forms for adding new entities. Features project name filtering, lead/member filtering, and sorting by end date.
+    - **Reports Section**: 
+      - Submit Report: Consolidated view with metrics for submitted/pending reports, a weekly report submission form with health status, progress, challenges, next steps, and optional team member feedback. Draft report functionality allows saving partial reports.
+      - View Current: Displays overall project health statistics (On Track, Needs Attention, Critical), offers comprehensive filtering by lead, member, and health status, provides export options (PDF/CSV), and includes archive functionality.
+      - Historical: View and manage archived weekly reports with AI summaries.
+    - **Work Management Section** (in development): Workflowy-style task outliner with:
+      - Hierarchical tasks with Tab/Shift+Tab indentation
+      - Inline tagging: `@@project`, `@person`, `#status`
+      - Notes with `//` prefix auto-stamped with author and timestamp
+      - Recurring task templates with EOS update formats
+      - AI integration for weekly report auto-generation from tasks
+    - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI.
     - **Jira Integration**: Functionality to import projects, leads, and team members directly from Jira epics.
 
 ### System Design Choices
