@@ -37,6 +37,7 @@ const statusColors: Record<string, string> = {
   'in-progress': 'bg-blue-500',
   blocked: 'bg-red-500',
   done: 'bg-green-500',
+  cancelled: 'bg-gray-400',
 };
 
 const statusLabels: Record<string, string> = {
@@ -44,7 +45,16 @@ const statusLabels: Record<string, string> = {
   'in-progress': 'In Progress',
   blocked: 'Blocked',
   done: 'Done',
+  cancelled: 'Cancelled',
 };
+
+const STATUS_OPTIONS = [
+  { value: 'todo', label: 'To Do' },
+  { value: 'in-progress', label: 'In Progress' },
+  { value: 'done', label: 'Done' },
+  { value: 'blocked', label: 'Blocked' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
 
 interface ParsedTitle {
   text: string;
@@ -69,12 +79,12 @@ function parseInlineTags(title: string): ParsedTitle {
     result.text = result.text.replace(/@\w+/g, '').trim();
   }
   
-  const statusMatch = title.match(/#(todo|in-progress|blocked|done|inprogress)/i);
+  const statusMatch = title.match(/#(todo|in-progress|blocked|done|inprogress|cancelled)/i);
   if (statusMatch) {
     let status = statusMatch[1].toLowerCase();
     if (status === 'inprogress') status = 'in-progress';
     result.statusTag = status;
-    result.text = result.text.replace(/#(todo|in-progress|blocked|done|inprogress)/gi, '').trim();
+    result.text = result.text.replace(/#(todo|in-progress|blocked|done|inprogress|cancelled)/gi, '').trim();
   }
   
   return result;
@@ -90,6 +100,12 @@ interface TaskNote {
   timestamp: string;
 }
 
+interface SuggestionState {
+  type: 'project' | 'person' | 'status' | null;
+  startIndex: number;
+  query: string;
+}
+
 interface InlineTaskInputProps {
   onSubmit: (title: string, parsed: ParsedTitle) => void;
   placeholder?: string;
@@ -97,17 +113,23 @@ interface InlineTaskInputProps {
   depth?: number;
   onIndent?: () => void;
   onOutdent?: () => void;
+  projects?: Project[];
+  people?: Person[];
 }
 
 function InlineTaskInput({ 
   onSubmit, 
-  placeholder = "Type a task... (use @@project @person #status)", 
+  placeholder = "Type a task... (@@project @person #status //note)", 
   autoFocus = false, 
   depth = 0,
   onIndent,
-  onOutdent
+  onOutdent,
+  projects = [],
+  people = []
 }: InlineTaskInputProps) {
   const [value, setValue] = useState('');
+  const [suggestion, setSuggestion] = useState<SuggestionState>({ type: null, startIndex: 0, query: '' });
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -116,16 +138,106 @@ function InlineTaskInput({
     }
   }, [autoFocus]);
 
+  const detectTrigger = (text: string, cursorPos: number): SuggestionState => {
+    const beforeCursor = text.slice(0, cursorPos);
+    
+    const projectMatch = beforeCursor.match(/@@(\w*)$/);
+    if (projectMatch) {
+      return { type: 'project', startIndex: projectMatch.index!, query: projectMatch[1] };
+    }
+    
+    const personMatch = beforeCursor.match(/(?<![@@])@(\w*)$/);
+    if (personMatch) {
+      return { type: 'person', startIndex: personMatch.index!, query: personMatch[1] };
+    }
+    
+    const statusMatch = beforeCursor.match(/#(\w*)$/);
+    if (statusMatch) {
+      return { type: 'status', startIndex: statusMatch.index!, query: statusMatch[1] };
+    }
+    
+    return { type: null, startIndex: 0, query: '' };
+  };
+
+  const getSuggestions = (): { value: string; label: string }[] => {
+    if (suggestion.type === 'project') {
+      return projects
+        .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .slice(0, 8)
+        .map(p => ({ value: p.name.replace(/\s+/g, ''), label: p.name }));
+    }
+    if (suggestion.type === 'person') {
+      return people
+        .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .slice(0, 8)
+        .map(p => ({ value: p.name.split(' ')[0], label: p.name }));
+    }
+    if (suggestion.type === 'status') {
+      return STATUS_OPTIONS.filter(s => 
+        s.label.toLowerCase().includes(suggestion.query.toLowerCase()) ||
+        s.value.toLowerCase().includes(suggestion.query.toLowerCase())
+      );
+    }
+    return [];
+  };
+
+  const suggestions = getSuggestions();
+
+  const insertSuggestion = (item: { value: string; label: string }) => {
+    const prefix = suggestion.type === 'project' ? '@@' : suggestion.type === 'person' ? '@' : '#';
+    const beforeTrigger = value.slice(0, suggestion.startIndex);
+    const afterCursor = value.slice(suggestion.startIndex + prefix.length + suggestion.query.length);
+    const newValue = beforeTrigger + prefix + item.value + ' ' + afterCursor;
+    setValue(newValue.trim() + ' ');
+    setSuggestion({ type: null, startIndex: 0, query: '' });
+    setSelectedIndex(0);
+    inputRef.current?.focus();
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    const cursorPos = e.target.selectionStart || 0;
+    setValue(newValue);
+    const newSuggestion = detectTrigger(newValue, cursorPos);
+    setSuggestion(newSuggestion);
+    setSelectedIndex(0);
+  };
+
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (suggestion.type && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(i => (i + 1) % suggestions.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(i => (i - 1 + suggestions.length) % suggestions.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        insertSuggestion(suggestions[selectedIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSuggestion({ type: null, startIndex: 0, query: '' });
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && value.trim()) {
       const parsed = parseInlineTags(value.trim());
       onSubmit(value.trim(), parsed);
       setValue('');
+      setSuggestion({ type: null, startIndex: 0, query: '' });
     }
     if (e.key === 'Escape') {
       setValue('');
+      setSuggestion({ type: null, startIndex: 0, query: '' });
     }
-    if (e.key === 'Tab') {
+    if (e.key === 'Tab' && (!suggestion.type || suggestions.length === 0)) {
       e.preventDefault();
       if (e.shiftKey && onOutdent) {
         onOutdent();
@@ -137,19 +249,42 @@ function InlineTaskInput({
 
   return (
     <div 
-      className="flex items-center gap-2 py-1.5"
+      className="relative flex items-center gap-2 py-1.5"
       style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px' }}
     >
       <Circle className="h-3 w-3 text-muted-foreground/40" />
-      <Input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-8 px-1"
-        data-testid="inline-task-input"
-      />
+      <div className="relative flex-1">
+        <Input
+          ref={inputRef}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-8 px-1"
+          data-testid="inline-task-input"
+        />
+        {suggestion.type && suggestions.length > 0 && (
+          <div className="absolute left-0 top-full mt-1 z-50 bg-popover border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" data-testid="suggestion-popover">
+            {suggestions.map((item, index) => (
+              <div
+                key={item.value}
+                className={`px-2 py-1.5 text-sm rounded cursor-pointer flex items-center gap-2 ${
+                  index === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover-elevate'
+                }`}
+                onClick={() => insertSuggestion(item)}
+                data-testid={`suggestion-${item.value}`}
+              >
+                {suggestion.type === 'project' && <FolderKanban className="h-3 w-3 text-muted-foreground" />}
+                {suggestion.type === 'person' && <User className="h-3 w-3 text-muted-foreground" />}
+                {suggestion.type === 'status' && (
+                  <span className={`h-2 w-2 rounded-full ${statusColors[item.value] || 'bg-gray-400'}`} />
+                )}
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -592,6 +727,8 @@ function TaskRow({
           placeholder="Add sub-task... (@@project @person #status)"
           autoFocus
           depth={depth + 1}
+          projects={projects}
+          people={people}
         />
       )}
     </div>
@@ -760,6 +897,8 @@ export default function WorkingSpace() {
               onSubmit={(title, parsed) => handleCreateTask(title, parsed)} 
               placeholder="Type a task... (@@project @person #status //note)"
               autoFocus
+              projects={projects}
+              people={people}
             />
             
             {myRootTasks.length > 0 && (
