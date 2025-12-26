@@ -399,7 +399,7 @@ function InlineTaskInput({
           data-testid="inline-task-input"
         />
         {suggestion.type && suggestions.length > 0 && (
-          <div className="absolute left-0 top-full mt-1 z-50 bg-popover border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" data-testid="suggestion-popover">
+          <div className="absolute left-0 top-full mt-1 z-50 bg-background border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" data-testid="suggestion-popover">
             {suggestions.map((item, index) => (
               <div
                 key={item.id || item.value}
@@ -630,6 +630,7 @@ interface TaskRowProps {
   onOutdent?: (taskId: string) => void;
   depth?: number;
   userEmail: string;
+  hideProjectBadge?: boolean;
 }
 
 function TaskRow({ 
@@ -643,7 +644,8 @@ function TaskRow({
   onIndent,
   onOutdent,
   depth = 0,
-  userEmail
+  userEmail,
+  hideProjectBadge = false
 }: TaskRowProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -873,20 +875,6 @@ function TaskRow({
         style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px' }}
       >
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            ref={notesButtonRef}
-            onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
-            className={`p-0.5 hover:bg-accent rounded relative ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}
-            title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
-            data-testid={`notes-icon-${task.id}`}
-          >
-            <StickyNote className="h-3.5 w-3.5" />
-            {notes.length > 0 && (
-              <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
-                {notes.length}
-              </span>
-            )}
-          </button>
           {hasSubtasks ? (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
@@ -928,7 +916,7 @@ function TaskRow({
                 data-testid={`edit-input-${task.id}`}
               />
               {suggestion.type && editSuggestions.length > 0 && (
-                <div className="absolute left-0 top-full mt-1 z-50 bg-popover border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" data-testid="edit-suggestion-popover">
+                <div className="absolute left-0 top-full mt-1 z-50 bg-background border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" data-testid="edit-suggestion-popover">
                   {editSuggestions.map((item, index) => (
                     <div
                       key={item.id || item.value}
@@ -963,6 +951,21 @@ function TaskRow({
           )}
           
           <button
+            ref={notesButtonRef}
+            onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
+            className={`p-0.5 hover:bg-accent rounded relative flex-shrink-0 ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}
+            title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
+            data-testid={`notes-icon-${task.id}`}
+          >
+            <StickyNote className="h-3.5 w-3.5" />
+            {notes.length > 0 && (
+              <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
+                {notes.length}
+              </span>
+            )}
+          </button>
+          
+          <button
             ref={assigneeButtonRef}
             onClick={() => activePanel === 'assignee' ? closePanel() : openPanel('assignee', 'assignee')}
             className="text-xs text-muted-foreground truncate max-w-[150px] hover:text-foreground hover:underline cursor-pointer"
@@ -972,7 +975,7 @@ function TaskRow({
             {assignees.length > 0 ? assignees.map(p => p.name).join(', ') : '+assign'}
           </button>
           
-          {project && (
+          {project && !hideProjectBadge && (
             <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0">
               <FolderKanban className="h-2.5 w-2.5" />
               {project.name}
@@ -1063,6 +1066,7 @@ function TaskRow({
               onOutdent={onOutdent}
               depth={depth + 1}
               userEmail={userEmail}
+              hideProjectBadge={hideProjectBadge}
             />
           ))}
         </div>
@@ -1321,6 +1325,7 @@ export default function WorkingSpace() {
                             onIndent={handleIndent}
                             onOutdent={handleOutdent}
                             userEmail={userEmail}
+                            hideProjectBadge={true}
                           />
                         ))}
                       </div>
@@ -1354,6 +1359,7 @@ export default function WorkingSpace() {
                           onIndent={handleIndent}
                           onOutdent={handleOutdent}
                           userEmail={userEmail}
+                          hideProjectBadge={true}
                         />
                       ))}
                     </div>
