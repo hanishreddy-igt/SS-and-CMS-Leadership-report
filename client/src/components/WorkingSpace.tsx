@@ -669,7 +669,10 @@ function TaskRow({
             )
           );
           if (matchedPeople.length > 0) {
-            updates.assignedTo = matchedPeople.map(p => p.id);
+            const existingAssignees = task.assignedTo || [];
+            const newAssigneeIds = matchedPeople.map(p => p.id);
+            const mergedAssignees = Array.from(new Set([...existingAssignees, ...newAssigneeIds]));
+            updates.assignedTo = mergedAssignees;
           }
         }
         if (parsed.noteText) {
