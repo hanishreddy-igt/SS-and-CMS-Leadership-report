@@ -1287,25 +1287,96 @@ export default function WorkingSpace() {
               people={people}
             />
             
-            {myRootTasks.length > 0 && (
-              <div className="border-t">
-                {myRootTasks.map(task => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    allTasks={myTasks}
-                    projects={projects}
-                    people={people}
-                    onUpdate={handleUpdateTask}
-                    onDelete={handleDeleteTask}
-                    onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
-                    onIndent={handleIndent}
-                    onOutdent={handleOutdent}
-                    userEmail={userEmail}
-                  />
-                ))}
-              </div>
-            )}
+            {myRootTasks.length > 0 && (() => {
+              const myActiveTasks = myRootTasks.filter(t => t.status === 'todo' || t.status === 'in-progress');
+              const myBlockedTasks = myRootTasks.filter(t => t.status === 'blocked');
+              const myClosedTasks = myRootTasks.filter(t => t.status === 'done');
+              
+              return (
+                <div className="border-t space-y-2 p-2">
+                  {myActiveTasks.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                        <Play className="h-3 w-3" />
+                        To-do / In-progress ({myActiveTasks.length})
+                      </div>
+                      <div className="border rounded-md bg-background">
+                        {myActiveTasks.map(task => (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            allTasks={myTasks}
+                            projects={projects}
+                            people={people}
+                            onUpdate={handleUpdateTask}
+                            onDelete={handleDeleteTask}
+                            onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                            onIndent={handleIndent}
+                            onOutdent={handleOutdent}
+                            userEmail={userEmail}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {myBlockedTasks.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-destructive">
+                        <Ban className="h-3 w-3" />
+                        Blockers ({myBlockedTasks.length})
+                      </div>
+                      <div className="border border-destructive/30 rounded-md bg-destructive/5">
+                        {myBlockedTasks.map(task => (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            allTasks={myTasks}
+                            projects={projects}
+                            people={people}
+                            onUpdate={handleUpdateTask}
+                            onDelete={handleDeleteTask}
+                            onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                            onIndent={handleIndent}
+                            onOutdent={handleOutdent}
+                            userEmail={userEmail}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {myClosedTasks.length > 0 && (
+                    <Collapsible defaultOpen={false}>
+                      <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
+                        <ChevronRight className="h-3 w-3" />
+                        <Check className="h-3 w-3" />
+                        Closed ({myClosedTasks.length})
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="border rounded-md bg-muted/30">
+                          {myClosedTasks.map(task => (
+                            <TaskRow
+                              key={task.id}
+                              task={task}
+                              allTasks={myTasks}
+                              projects={projects}
+                              people={people}
+                              onUpdate={handleUpdateTask}
+                              onDelete={handleDeleteTask}
+                              onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                              onIndent={handleIndent}
+                              onOutdent={handleOutdent}
+                              userEmail={userEmail}
+                            />
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+                </div>
+              );
+            })()}
             
             {myRootTasks.length === 0 && (
               <div className="text-center py-6 text-muted-foreground text-sm border-t">
