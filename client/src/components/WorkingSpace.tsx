@@ -73,7 +73,7 @@ const STATUS_OPTIONS = [
   { value: 'blocked', label: 'Blocked' },
 ];
 
-const STATUS_CYCLE = ['todo', 'done'];
+const STATUS_CYCLE = ['todo', 'in-progress', 'done'];
 
 function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () => void; taskId?: string }) {
   const iconClass = "h-4 w-4 cursor-pointer transition-colors";
@@ -97,8 +97,8 @@ function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () =
         <button 
           onClick={onClick} 
           className="p-0.5 hover:bg-accent rounded" 
-          title="In Progress - Click to change"
-          aria-label="Status: In Progress. Click to change to Blocked"
+          title="In Progress - Click to mark done"
+          aria-label="Status: In Progress. Click to change to Done"
           data-testid={testId}
         >
           <Play className={`${iconClass} text-blue-500 fill-blue-500`} />
@@ -106,27 +106,23 @@ function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () =
       );
     case 'blocked':
       return (
-        <button 
-          onClick={onClick} 
-          className="p-0.5 hover:bg-accent rounded" 
-          title="Blocked - Click to change"
-          aria-label="Status: Blocked. Click to change to Done"
+        <div 
+          className="p-0.5" 
+          title="Blocked"
           data-testid={testId}
         >
-          <Ban className={`${iconClass} text-red-500`} />
-        </button>
+          <Ban className="h-4 w-4 text-red-500" />
+        </div>
       );
     case 'done':
       return (
-        <button 
-          onClick={onClick} 
-          className="p-0.5 hover:bg-accent rounded" 
-          title="Done - Click to change"
-          aria-label="Status: Done. Click to change to To Do"
+        <div 
+          className="p-0.5" 
+          title="Done"
           data-testid={testId}
         >
-          <Check className={`${iconClass} text-green-500`} />
-        </button>
+          <Check className="h-4 w-4 text-green-500" />
+        </div>
       );
     default:
       return (
@@ -782,9 +778,14 @@ function TaskRow({
   };
 
   const handleCycleStatus = () => {
+    // Don't cycle if status is 'done' or 'blocked'
+    if (task.status === 'done' || task.status === 'blocked') return;
+    
     const currentIndex = STATUS_CYCLE.indexOf(task.status);
-    const nextIndex = (currentIndex + 1) % STATUS_CYCLE.length;
-    onUpdate(task.id, { status: STATUS_CYCLE[nextIndex] });
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < STATUS_CYCLE.length) {
+      onUpdate(task.id, { status: STATUS_CYCLE[nextIndex] });
+    }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
