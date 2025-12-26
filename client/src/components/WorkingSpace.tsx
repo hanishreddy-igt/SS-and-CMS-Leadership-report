@@ -1338,10 +1338,10 @@ export default function WorkingSpace() {
           </div>
         </CardHeader>
         <CardContent>
-          {projectsWithTasks.length === 0 && (leadFilter !== 'all' || tasksWithoutProject.length === 0) ? (
+          {projectsWithTasks.length === 0 && tasksWithoutProject.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               <FolderKanban className="h-6 w-6 mx-auto mb-2 opacity-50" />
-              <p>{leadFilter !== 'all' ? 'No projects found for the selected lead.' : 'No team tasks yet. Tasks from all team members will appear here.'}</p>
+              <p>No team tasks yet. Tasks from all team members will appear here.</p>
             </div>
           ) : (
             <div className="space-y-3">
