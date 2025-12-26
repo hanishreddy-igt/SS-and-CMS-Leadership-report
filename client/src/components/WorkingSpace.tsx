@@ -194,8 +194,8 @@ function InlineTaskInput({
 
   const getPersonRoleLabel = (person: Person): string => {
     const roles = person.roles || [];
-    const isLead = roles.includes('lead');
-    const isMember = roles.includes('member');
+    const isLead = roles.includes('lead') || roles.includes('project-lead');
+    const isMember = roles.includes('member') || roles.includes('team-member');
     if (isLead && isMember) return `${person.name} (Lead/Member)`;
     if (isLead) return `${person.name} (Lead)`;
     if (isMember) return `${person.name} (Member)`;
@@ -354,8 +354,8 @@ function AssigneePicker({ people, selected, onSelect }: AssigneePickerProps) {
 
   const getRoleLabel = (person: Person): string => {
     const roles = person.roles || [];
-    const isLead = roles.includes('lead');
-    const isMember = roles.includes('member');
+    const isLead = roles.includes('lead') || roles.includes('project-lead');
+    const isMember = roles.includes('member') || roles.includes('team-member');
     if (isLead && isMember) return '(Lead/Member)';
     if (isLead) return '(Lead)';
     if (isMember) return '(Member)';
@@ -598,8 +598,8 @@ function TaskRow({
     if (suggestion.type === 'person') {
       const getEditPersonRoleLabel = (person: Person): string => {
         const roles = person.roles || [];
-        const isLead = roles.includes('lead');
-        const isMember = roles.includes('member');
+        const isLead = roles.includes('lead') || roles.includes('project-lead');
+        const isMember = roles.includes('member') || roles.includes('team-member');
         if (isLead && isMember) return `${person.name} (Lead/Member)`;
         if (isLead) return `${person.name} (Lead)`;
         if (isMember) return `${person.name} (Member)`;
