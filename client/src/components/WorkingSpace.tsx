@@ -192,6 +192,16 @@ function InlineTaskInput({
     return people.filter(p => projectPeopleIds.has(p.id));
   };
 
+  const getPersonRoleLabel = (person: Person): string => {
+    const roles = person.roles || [];
+    const isLead = roles.includes('lead');
+    const isMember = roles.includes('member');
+    if (isLead && isMember) return `${person.name} (Lead/Member)`;
+    if (isLead) return `${person.name} (Lead)`;
+    if (isMember) return `${person.name} (Member)`;
+    return person.name;
+  };
+
   const getSuggestions = (): { value: string; label: string; id?: string }[] => {
     if (suggestion.type === 'project') {
       return projects
@@ -205,7 +215,7 @@ function InlineTaskInput({
       return availablePeople
         .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
         .slice(0, 8)
-        .map(p => ({ value: p.name.split(' ')[0], label: p.name, id: p.id }));
+        .map(p => ({ value: p.name.split(' ')[0], label: getPersonRoleLabel(p), id: p.id }));
     }
     if (suggestion.type === 'status') {
       return STATUS_OPTIONS.filter(s => 
@@ -575,10 +585,19 @@ function TaskRow({
         .map(p => ({ value: p.name.replace(/\s+/g, ''), label: p.name, id: p.id }));
     }
     if (suggestion.type === 'person') {
+      const getEditPersonRoleLabel = (person: Person): string => {
+        const roles = person.roles || [];
+        const isLead = roles.includes('lead');
+        const isMember = roles.includes('member');
+        if (isLead && isMember) return `${person.name} (Lead/Member)`;
+        if (isLead) return `${person.name} (Lead)`;
+        if (isMember) return `${person.name} (Member)`;
+        return person.name;
+      };
       return people
         .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
         .slice(0, 8)
-        .map(p => ({ value: p.name.split(' ')[0], label: p.name, id: p.id }));
+        .map(p => ({ value: p.name.split(' ')[0], label: getEditPersonRoleLabel(p), id: p.id }));
     }
     if (suggestion.type === 'status') {
       return STATUS_OPTIONS.filter(s => 
