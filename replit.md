@@ -19,7 +19,7 @@ This project provides a tool for leadership to monitor the delivery status of al
   - `/` - Hub landing page with 3 icons
   - `/dashboard/:tab` - Dashboard section (contracts, team)
   - `/reports/:tab` - Reports section (submit, view, historical)
-  - `/tasks/:tab` - Work Management section (all, my, templates) - in development
+  - `/tasks/:tab` - Work Management section (workspace, assigned, templates)
   - Legacy routes (`/submit`, `/view`, `/historical`) redirect to new structure
 - **Premium Executive Dashboard UI**: Features a dark navy color palette with layered depth, glassmorphism cards using `backdrop-blur` effects, and premium transparency.
 - **Unified Theme Tokens**: Utilizes consistent health status colors (text-success, text-warning, text-destructive), spacing, and the Inter font family.
@@ -43,12 +43,11 @@ This project provides a tool for leadership to monitor the delivery status of al
       - Submit Report: Consolidated view with metrics for submitted/pending reports, a weekly report submission form with health status, progress, challenges, next steps, and optional team member feedback. Draft report functionality allows saving partial reports.
       - View Current: Displays overall project health statistics (On Track, Needs Attention, Critical), offers comprehensive filtering by lead, member, and health status, provides export options (PDF/CSV), and includes archive functionality.
       - Historical: View and manage archived weekly reports with AI summaries.
-    - **Work Management Section** (in development): Workflowy-style task outliner with:
-      - Hierarchical tasks with Tab/Shift+Tab indentation
-      - Inline tagging: `@@project`, `@person`, `#status`
-      - Notes with `//` prefix auto-stamped with author and timestamp
-      - Recurring task templates with EOS update formats
-      - AI integration for weekly report auto-generation from tasks
+    - **Work Management Section**: Workflowy-style task management system with three tabs:
+      - **Working Space**: Primary task creation area with "Your Workspace" section (create and manage your own tasks) and "All Tasks" section (team-wide view grouped by project with collapsible groups).
+      - **Tasks Assigned to You**: Filtered view showing tasks assigned to the current user, grouped by status (To Do, In Progress, Blocked, Done) with quick status updates.
+      - **Task Templates**: Recurring task templates with support for daily/weekly/monthly patterns, EOS update formats (Rocks, Issues, To-dos, Scorecard), and hierarchical task structure creation.
+      - Tasks support hierarchical nesting via parentTaskId, project linking, multiple assignees, priority levels, tags, and timestamped notes.
     - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI.
     - **Jira Integration**: Functionality to import projects, leads, and team members directly from Jira epics.
 
