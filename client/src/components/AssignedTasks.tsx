@@ -266,7 +266,7 @@ export default function AssignedTasks() {
   
   const currentPerson = people.find(p => p.email === userEmail);
   const assignedTasks = currentPerson 
-    ? allTasks.filter(t => t.assignedTo.includes(currentPerson.id))
+    ? allTasks.filter(t => t.assignedTo?.includes(currentPerson.id))
     : [];
 
   const todoTasks = assignedTasks.filter(t => t.status === 'todo' && !t.parentTaskId);
