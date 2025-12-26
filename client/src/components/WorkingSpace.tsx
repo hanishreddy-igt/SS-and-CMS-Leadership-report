@@ -159,6 +159,32 @@ function InlineTaskInput({
     return { type: null, startIndex: 0, query: '' };
   };
 
+  const getTaggedProject = (): Project | undefined => {
+    const projectMatch = value.match(/@@(\w+)/);
+    if (projectMatch) {
+      const projectTag = projectMatch[1].toLowerCase();
+      return projects.find(p => 
+        p.name.toLowerCase().replace(/\s+/g, '').includes(projectTag) ||
+        p.name.toLowerCase().includes(projectTag)
+      );
+    }
+    return undefined;
+  };
+
+  const getProjectPeople = (project: Project): Person[] => {
+    const projectPeopleIds = new Set<string>();
+    if (project.leadId) projectPeopleIds.add(project.leadId);
+    if (project.leadIds) {
+      project.leadIds.forEach(id => projectPeopleIds.add(id));
+    }
+    if (project.teamMembers && Array.isArray(project.teamMembers)) {
+      (project.teamMembers as Array<{memberId: string}>).forEach(tm => {
+        if (tm.memberId) projectPeopleIds.add(tm.memberId);
+      });
+    }
+    return people.filter(p => projectPeopleIds.has(p.id));
+  };
+
   const getSuggestions = (): { value: string; label: string }[] => {
     if (suggestion.type === 'project') {
       return projects
@@ -167,7 +193,9 @@ function InlineTaskInput({
         .map(p => ({ value: p.name.replace(/\s+/g, ''), label: p.name }));
     }
     if (suggestion.type === 'person') {
-      return people
+      const taggedProject = getTaggedProject();
+      const availablePeople = taggedProject ? getProjectPeople(taggedProject) : people;
+      return availablePeople
         .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
         .slice(0, 8)
         .map(p => ({ value: p.name.split(' ')[0], label: p.name }));
