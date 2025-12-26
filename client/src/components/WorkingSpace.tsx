@@ -394,6 +394,11 @@ function InlineTaskInput({
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          onBlur={() => {
+            setTimeout(() => {
+              setSuggestion({ type: null, startIndex: 0, query: '' });
+            }, 150);
+          }}
           placeholder={placeholder}
           className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-8 px-1"
           data-testid="inline-task-input"
@@ -903,13 +908,12 @@ function TaskRow({
                 onKeyDown={handleKeyDown}
                 onBlur={() => {
                   setTimeout(() => {
-                    if (!suggestion.type) {
-                      if (editValue.trim() && editValue !== task.title) {
-                        const parsed = parseInlineTags(editValue.trim());
-                        onUpdate(task.id, { title: parsed.text || editValue.trim() });
-                      }
-                      setIsEditing(false);
+                    setSuggestion({ type: null, startIndex: 0, query: '' });
+                    if (editValue.trim() && editValue !== task.title) {
+                      const parsed = parseInlineTags(editValue.trim());
+                      onUpdate(task.id, { title: parsed.text || editValue.trim() });
                     }
+                    setIsEditing(false);
                   }, 150);
                 }}
                 className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-7 px-1"
