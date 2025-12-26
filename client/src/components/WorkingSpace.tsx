@@ -174,6 +174,15 @@ function parseInlineTags(title: string): ParsedTitle {
     result.text = result.text.replace(/#(todo|in-progress|blocked|done|inprogress|cancelled)/gi, '').trim();
   }
   
+  // Clean up any orphaned tag prefixes (@@, @, #, //) that weren't matched
+  result.text = result.text
+    .replace(/@@\s*/g, '')  // Remove orphaned @@
+    .replace(/@\s*/g, '')   // Remove orphaned @
+    .replace(/#\s*/g, '')   // Remove orphaned #
+    .replace(/\/\/\s*/g, '') // Remove orphaned //
+    .replace(/\s+/g, ' ')   // Normalize multiple spaces
+    .trim();
+  
   return result;
 }
 
