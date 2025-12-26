@@ -1386,7 +1386,7 @@ export default function WorkingSpace() {
                   <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover-elevate text-left">
                     <ChevronDown className="h-4 w-4" />
                     <Circle className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-sm text-muted-foreground">No Project</span>
+                    <span className="font-medium text-sm text-muted-foreground">Project unassigned/general</span>
                     <Badge variant="secondary" className="ml-auto text-xs">
                       {tasksWithoutProject.length}
                     </Badge>
