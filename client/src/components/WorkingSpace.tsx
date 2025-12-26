@@ -404,7 +404,7 @@ function InlineTaskInput({
           data-testid="inline-task-input"
         />
         {suggestion.type && suggestions.length > 0 && (
-          <div className="absolute left-0 top-full mt-1 z-50 bg-background border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" data-testid="suggestion-popover">
+          <div className="absolute left-0 top-full mt-1 z-50 bg-card border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" style={{ backgroundColor: 'hsl(var(--card))' }} data-testid="suggestion-popover">
             {suggestions.map((item, index) => (
               <div
                 key={item.id || item.value}
@@ -920,7 +920,7 @@ function TaskRow({
                 data-testid={`edit-input-${task.id}`}
               />
               {suggestion.type && editSuggestions.length > 0 && (
-                <div className="absolute left-0 top-full mt-1 z-50 bg-background border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" data-testid="edit-suggestion-popover">
+                <div className="absolute left-0 top-full mt-1 z-50 bg-card border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" style={{ backgroundColor: 'hsl(var(--card))' }} data-testid="edit-suggestion-popover">
                   {editSuggestions.map((item, index) => (
                     <div
                       key={item.id || item.value}
