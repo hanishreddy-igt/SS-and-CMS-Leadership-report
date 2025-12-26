@@ -532,6 +532,8 @@ function TaskRow({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(task.title);
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+  const [suggestion, setSuggestion] = useState<SuggestionState>({ type: null, startIndex: 0, query: '' });
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const subtasks = allTasks.filter(t => t.parentTaskId === task.id);
@@ -548,13 +550,101 @@ function TaskRow({
     }
   }, [isEditing]);
 
+  const detectTrigger = (text: string, cursorPos: number): SuggestionState => {
+    const beforeCursor = text.slice(0, cursorPos);
+    const projectMatch = beforeCursor.match(/@@(\w*)$/);
+    if (projectMatch) {
+      return { type: 'project', startIndex: projectMatch.index!, query: projectMatch[1] };
+    }
+    const personMatch = beforeCursor.match(/(?<![@@])@(\w*)$/);
+    if (personMatch) {
+      return { type: 'person', startIndex: personMatch.index!, query: personMatch[1] };
+    }
+    const statusMatch = beforeCursor.match(/#(\w*)$/);
+    if (statusMatch) {
+      return { type: 'status', startIndex: statusMatch.index!, query: statusMatch[1] };
+    }
+    return { type: null, startIndex: 0, query: '' };
+  };
+
+  const getEditSuggestions = (): { value: string; label: string; id?: string }[] => {
+    if (suggestion.type === 'project') {
+      return projects
+        .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .slice(0, 8)
+        .map(p => ({ value: p.name.replace(/\s+/g, ''), label: p.name, id: p.id }));
+    }
+    if (suggestion.type === 'person') {
+      return people
+        .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .slice(0, 8)
+        .map(p => ({ value: p.name.split(' ')[0], label: p.name, id: p.id }));
+    }
+    if (suggestion.type === 'status') {
+      return STATUS_OPTIONS.filter(s => 
+        s.label.toLowerCase().includes(suggestion.query.toLowerCase()) ||
+        s.value.toLowerCase().includes(suggestion.query.toLowerCase())
+      );
+    }
+    return [];
+  };
+
+  const editSuggestions = getEditSuggestions();
+
+  const insertEditSuggestion = (item: { value: string; label: string }) => {
+    const prefix = suggestion.type === 'project' ? '@@' : suggestion.type === 'person' ? '@' : '#';
+    const beforeTrigger = editValue.slice(0, suggestion.startIndex);
+    const afterCursor = editValue.slice(suggestion.startIndex + prefix.length + suggestion.query.length);
+    const newValue = beforeTrigger + prefix + item.value + ' ' + afterCursor;
+    setEditValue(newValue.trim() + ' ');
+    setSuggestion({ type: null, startIndex: 0, query: '' });
+    setSelectedIndex(0);
+    inputRef.current?.focus();
+  };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    const cursorPos = e.target.selectionStart || 0;
+    setEditValue(newValue);
+    setSuggestion(detectTrigger(newValue, cursorPos));
+    setSelectedIndex(0);
+  };
+
   const handleToggleComplete = () => {
     const newStatus = task.status === 'done' ? 'todo' : 'done';
     onUpdate(task.id, { status: newStatus });
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (suggestion.type && editSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(i => (i + 1) % editSuggestions.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(i => (i - 1 + editSuggestions.length) % editSuggestions.length);
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        insertEditSuggestion(editSuggestions[selectedIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSuggestion({ type: null, startIndex: 0, query: '' });
+        return;
+      }
+    }
+
     if (e.key === 'Enter') {
+      if (suggestion.type && editSuggestions.length > 0) {
+        e.preventDefault();
+        insertEditSuggestion(editSuggestions[selectedIndex]);
+        return;
+      }
       if (editValue.trim()) {
         const parsed = parseInlineTags(editValue.trim());
         const updates: Partial<Task> = { title: parsed.text || editValue.trim() };
@@ -594,12 +684,13 @@ function TaskRow({
         onUpdate(task.id, updates);
       }
       setIsEditing(false);
+      setSuggestion({ type: null, startIndex: 0, query: '' });
     }
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && !suggestion.type) {
       setEditValue(task.title);
       setIsEditing(false);
     }
-    if (e.key === 'Tab') {
+    if (e.key === 'Tab' && (!suggestion.type || editSuggestions.length === 0)) {
       e.preventDefault();
       if (e.shiftKey && onOutdent) {
         onOutdent(task.id);
@@ -651,19 +742,51 @@ function TaskRow({
 
         <div className="flex-1 min-w-0 flex items-center gap-2">
           {isEditing ? (
-            <Input
-              ref={inputRef}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={() => {
-                if (editValue.trim() && editValue !== task.title) {
-                  onUpdate(task.id, { title: editValue.trim() });
-                }
-                setIsEditing(false);
-              }}
-              className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-7 px-1"
-            />
+            <div className="relative flex-1">
+              <Input
+                ref={inputRef}
+                value={editValue}
+                onChange={handleEditChange}
+                onKeyDown={handleKeyDown}
+                onBlur={() => {
+                  setTimeout(() => {
+                    if (!suggestion.type) {
+                      if (editValue.trim() && editValue !== task.title) {
+                        const parsed = parseInlineTags(editValue.trim());
+                        onUpdate(task.id, { title: parsed.text || editValue.trim() });
+                      }
+                      setIsEditing(false);
+                    }
+                  }, 150);
+                }}
+                className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-7 px-1"
+                data-testid={`edit-input-${task.id}`}
+              />
+              {suggestion.type && editSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 z-50 bg-popover border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" data-testid="edit-suggestion-popover">
+                  {editSuggestions.map((item, index) => (
+                    <div
+                      key={item.id || item.value}
+                      className={`px-2 py-1.5 text-sm rounded cursor-pointer flex items-center gap-2 ${
+                        index === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover-elevate'
+                      }`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        insertEditSuggestion(item);
+                      }}
+                      data-testid={`edit-suggestion-${item.id || item.value}`}
+                    >
+                      {suggestion.type === 'project' && <FolderKanban className="h-3 w-3 text-muted-foreground" />}
+                      {suggestion.type === 'person' && <User className="h-3 w-3 text-muted-foreground" />}
+                      {suggestion.type === 'status' && (
+                        <span className={`h-2 w-2 rounded-full ${statusColors[item.value] || 'bg-gray-400'}`} />
+                      )}
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <span 
               className={`text-sm cursor-text flex-1 ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}
