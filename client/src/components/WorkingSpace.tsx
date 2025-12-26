@@ -120,6 +120,7 @@ interface InlineTaskInputProps {
   depth?: number;
   onIndent?: () => void;
   onOutdent?: () => void;
+  onCancel?: () => void;
   projects?: Project[];
   people?: Person[];
 }
@@ -131,6 +132,7 @@ function InlineTaskInput({
   depth = 0,
   onIndent,
   onOutdent,
+  onCancel,
   projects = [],
   people = []
 }: InlineTaskInputProps) {
@@ -279,13 +281,21 @@ function InlineTaskInput({
       setSuggestion({ type: null, startIndex: 0, query: '' });
     }
     if (e.key === 'Escape') {
-      setValue('');
-      setSuggestion({ type: null, startIndex: 0, query: '' });
+      if (onCancel) {
+        onCancel();
+      } else {
+        setValue('');
+        setSuggestion({ type: null, startIndex: 0, query: '' });
+      }
     }
     if (e.key === 'Tab' && (!suggestion.type || suggestions.length === 0)) {
       e.preventDefault();
-      if (e.shiftKey && onOutdent) {
-        onOutdent();
+      if (e.shiftKey) {
+        if (onCancel) {
+          onCancel();
+        } else if (onOutdent) {
+          onOutdent();
+        }
       } else if (!e.shiftKey && onIndent) {
         onIndent();
       }
@@ -926,6 +936,7 @@ function TaskRow({
       {showSubtaskInput && (
         <InlineTaskInput
           onSubmit={handleSubtaskCreate}
+          onCancel={() => setShowSubtaskInput(false)}
           placeholder="Add sub-task... (@@project @person #status)"
           autoFocus
           depth={depth + 1}
