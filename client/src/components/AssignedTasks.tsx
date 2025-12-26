@@ -466,14 +466,14 @@ export default function AssignedTasks() {
       )}
 
       {blockedTasks.length > 0 && (
-        <Card className="border-red-200 dark:border-red-900">
-          <CardHeader className="py-3 bg-red-50 dark:bg-red-950/30 rounded-t-lg">
-            <CardTitle className="text-sm flex items-center gap-2 text-red-700 dark:text-red-400">
-              <Ban className="h-4 w-4" />
+        <Card>
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Ban className="h-4 w-4 text-red-500" />
               Blockers ({blockedTasks.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 bg-red-50/50 dark:bg-red-950/20 rounded-b-lg">
+          <CardContent className="pt-0">
             {blockedTasks.map(task => (
               <TaskItem
                 key={task.id}

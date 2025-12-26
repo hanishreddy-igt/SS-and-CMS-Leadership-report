@@ -1323,11 +1323,11 @@ export default function WorkingSpace() {
                   
                   {myBlockedTasks.length > 0 && (
                     <div>
-                      <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-destructive">
-                        <Ban className="h-3 w-3" />
+                      <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                        <Ban className="h-3 w-3 text-red-500" />
                         Blockers ({myBlockedTasks.length})
                       </div>
-                      <div className="border border-destructive/30 rounded-md bg-destructive/5">
+                      <div className="border rounded-md">
                         {myBlockedTasks.map(task => (
                           <TaskRow
                             key={task.id}
@@ -1464,11 +1464,11 @@ export default function WorkingSpace() {
                         
                         {blockedTasks.length > 0 && (
                           <div>
-                            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-destructive">
-                              <Ban className="h-3 w-3" />
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                              <Ban className="h-3 w-3 text-red-500" />
                               Blockers ({blockedTasks.length})
                             </div>
-                            <div className="border border-destructive/30 rounded-md bg-destructive/5">
+                            <div className="border rounded-md">
                               {blockedTasks.map(task => (
                                 <TaskRow
                                   key={task.id}
@@ -1570,11 +1570,11 @@ export default function WorkingSpace() {
                         
                         {blockedUnassigned.length > 0 && (
                           <div>
-                            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-destructive">
-                              <Ban className="h-3 w-3" />
+                            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                              <Ban className="h-3 w-3 text-red-500" />
                               Blockers ({blockedUnassigned.length})
                             </div>
-                            <div className="border border-destructive/30 rounded-md bg-destructive/5">
+                            <div className="border rounded-md">
                               {blockedUnassigned.map(task => (
                                 <TaskRow
                                   key={task.id}
