@@ -73,7 +73,7 @@ const STATUS_OPTIONS = [
   { value: 'blocked', label: 'Blocked' },
 ];
 
-const STATUS_CYCLE = ['todo', 'in-progress', 'blocked', 'done'];
+const STATUS_CYCLE = ['todo', 'done'];
 
 function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () => void; taskId?: string }) {
   const iconClass = "h-4 w-4 cursor-pointer transition-colors";
