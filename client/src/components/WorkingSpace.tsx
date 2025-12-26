@@ -32,8 +32,7 @@ import {
   Play,
   Check,
   Ban,
-  MoreVertical,
-  UserPlus
+  MoreVertical
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -65,10 +64,9 @@ const STATUS_OPTIONS = [
   { value: 'in-progress', label: 'In Progress' },
   { value: 'done', label: 'Done' },
   { value: 'blocked', label: 'Blocked' },
-  { value: 'cancelled', label: 'Cancelled' },
 ];
 
-const STATUS_CYCLE = ['todo', 'in-progress', 'blocked', 'done', 'cancelled'];
+const STATUS_CYCLE = ['todo', 'in-progress', 'blocked', 'done'];
 
 function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () => void; taskId?: string }) {
   const iconClass = "h-4 w-4 cursor-pointer transition-colors";
@@ -117,22 +115,10 @@ function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () =
           onClick={onClick} 
           className="p-0.5 hover:bg-accent rounded" 
           title="Done - Click to change"
-          aria-label="Status: Done. Click to change to Cancelled"
+          aria-label="Status: Done. Click to change to To Do"
           data-testid={testId}
         >
           <Check className={`${iconClass} text-green-500`} />
-        </button>
-      );
-    case 'cancelled':
-      return (
-        <button 
-          onClick={onClick} 
-          className="p-0.5 hover:bg-accent rounded" 
-          title="Cancelled - Click to change"
-          aria-label="Status: Cancelled. Click to change to To Do"
-          data-testid={testId}
-        >
-          <X className={`${iconClass} text-gray-400`} />
         </button>
       );
     default:
@@ -666,8 +652,28 @@ function TaskRow({
   const [suggestion, setSuggestion] = useState<SuggestionState>({ type: null, startIndex: 0, query: '' });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
+  const [panelTrigger, setPanelTrigger] = useState<'notes' | 'assignee' | 'menu' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const notesButtonRef = useRef<HTMLButtonElement>(null);
+  const assigneeButtonRef = useRef<HTMLButtonElement>(null);
+
+  const openPanel = (panel: 'assignee' | 'dueDate' | 'notes', trigger: 'notes' | 'assignee' | 'menu') => {
+    setActivePanel(panel);
+    setPanelTrigger(trigger);
+  };
+
+  const closePanel = () => {
+    setActivePanel(null);
+    if (panelTrigger === 'notes') {
+      notesButtonRef.current?.focus();
+    } else if (panelTrigger === 'assignee') {
+      assigneeButtonRef.current?.focus();
+    } else {
+      menuButtonRef.current?.focus();
+    }
+    setPanelTrigger(null);
+  };
 
   const subtasks = allTasks.filter(t => t.parentTaskId === task.id);
   const hasSubtasks = subtasks.length > 0;
@@ -867,6 +873,20 @@ function TaskRow({
         style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px' }}
       >
         <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            ref={notesButtonRef}
+            onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
+            className={`p-0.5 hover:bg-accent rounded relative ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}
+            title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
+            data-testid={`notes-icon-${task.id}`}
+          >
+            <StickyNote className="h-3.5 w-3.5" />
+            {notes.length > 0 && (
+              <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
+                {notes.length}
+              </span>
+            )}
+          </button>
           {hasSubtasks ? (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
@@ -942,11 +962,15 @@ function TaskRow({
             </span>
           )}
           
-          {assignees.length > 0 && (
-            <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-              {assignees.map(p => p.name).join(', ')}
-            </span>
-          )}
+          <button
+            ref={assigneeButtonRef}
+            onClick={() => activePanel === 'assignee' ? closePanel() : openPanel('assignee', 'assignee')}
+            className="text-xs text-muted-foreground truncate max-w-[150px] hover:text-foreground hover:underline cursor-pointer"
+            title="Click to assign people"
+            data-testid={`assignee-trigger-${task.id}`}
+          >
+            {assignees.length > 0 ? assignees.map(p => p.name).join(', ') : '+assign'}
+          </button>
           
           {project && (
             <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0">
@@ -958,13 +982,6 @@ function TaskRow({
           {task.dueDate && (
             <Badge variant={isOverdue ? "destructive" : "secondary"} className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
               {format(new Date(task.dueDate), 'MMM d')}
-            </Badge>
-          )}
-          
-          {notes.length > 0 && (
-            <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0">
-              <StickyNote className="h-2.5 w-2.5" />
-              {notes.length}
             </Badge>
           )}
         </div>
@@ -983,25 +1000,10 @@ function TaskRow({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setActivePanel('assignee')} data-testid="menu-assignee">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Assign People
-                {assignees.length > 0 && <span className="ml-auto text-xs text-muted-foreground">{assignees.length}</span>}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setActivePanel('dueDate')} data-testid="menu-due-date">
+              <DropdownMenuItem onClick={() => openPanel('dueDate', 'menu')} data-testid="menu-due-date">
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 Set Due Date
                 {task.dueDate && <span className="ml-auto text-xs text-muted-foreground">{format(new Date(task.dueDate), 'MMM d')}</span>}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setActivePanel('notes')} data-testid="menu-notes">
-                <StickyNote className="h-4 w-4 mr-2" />
-                Add Note
-                {notes.length > 0 && <span className="ml-auto text-xs text-muted-foreground">{notes.length}</span>}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShowSubtaskInput(true)} data-testid={`add-subtask-${task.id}`}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Sub-task
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
@@ -1022,7 +1024,7 @@ function TaskRow({
           task={task}
           people={people}
           onUpdate={onUpdate}
-          onClose={() => { setActivePanel(null); menuButtonRef.current?.focus(); }}
+          onClose={closePanel}
           depth={depth}
         />
       )}
@@ -1031,7 +1033,7 @@ function TaskRow({
         <InlineDueDatePanel
           task={task}
           onUpdate={onUpdate}
-          onClose={() => { setActivePanel(null); menuButtonRef.current?.focus(); }}
+          onClose={closePanel}
           depth={depth}
         />
       )}
@@ -1040,7 +1042,7 @@ function TaskRow({
         <InlineNotesPanel
           notes={notes}
           onAddNote={handleAddNote}
-          onClose={() => { setActivePanel(null); menuButtonRef.current?.focus(); }}
+          onClose={closePanel}
           depth={depth}
         />
       )}
@@ -1234,7 +1236,7 @@ export default function WorkingSpace() {
             Your Workspace
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Use @@project to link, @name to assign, #status to set status, // for notes
+            Use @@project to link, @name to assign, #status to set status, // for notes. Press TAB on a task to create a sub-task.
           </p>
         </CardHeader>
         <CardContent>
