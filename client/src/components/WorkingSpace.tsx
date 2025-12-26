@@ -352,6 +352,16 @@ function AssigneePicker({ people, selected, onSelect }: AssigneePickerProps) {
     }
   };
 
+  const getRoleLabel = (person: Person): string => {
+    const roles = person.roles || [];
+    const isLead = roles.includes('lead');
+    const isMember = roles.includes('member');
+    if (isLead && isMember) return '(Lead/Member)';
+    if (isLead) return '(Lead)';
+    if (isMember) return '(Member)';
+    return '';
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -372,7 +382,7 @@ function AssigneePicker({ people, selected, onSelect }: AssigneePickerProps) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-2" align="start">
+      <PopoverContent className="w-64 p-2" align="start">
         <div className="space-y-1 max-h-48 overflow-auto">
           {people.map(person => (
             <button
@@ -386,6 +396,7 @@ function AssigneePicker({ people, selected, onSelect }: AssigneePickerProps) {
                 <AvatarFallback className="text-xs">{getInitials(person.name)}</AvatarFallback>
               </Avatar>
               <span className="flex-1 text-left truncate">{person.name}</span>
+              <span className="text-xs text-muted-foreground">{getRoleLabel(person)}</span>
               {selected.includes(person.id) && <Checkbox checked className="h-4 w-4" />}
             </button>
           ))}
