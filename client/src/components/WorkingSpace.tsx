@@ -982,7 +982,7 @@ function TaskRow({
           <button
             ref={notesButtonRef}
             onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
-            className={`p-1 hover:bg-accent rounded relative ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity'}`}
+            className={`p-1 hover:bg-accent rounded relative ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}
             title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
             data-testid={`notes-icon-${task.id}`}
           >
