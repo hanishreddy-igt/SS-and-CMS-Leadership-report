@@ -61,12 +61,19 @@ interface ParsedTitle {
   projectTag?: string;
   personTags: string[];
   statusTag?: string;
+  noteText?: string;
 }
 
 function parseInlineTags(title: string): ParsedTitle {
   const result: ParsedTitle = { text: title, personTags: [] };
   
-  const projectMatch = title.match(/@@(\w+)/);
+  const noteMatch = title.match(/\/\/(.+?)(?=@@|@(?!@)|#|$)/);
+  if (noteMatch) {
+    result.noteText = noteMatch[1].trim();
+    result.text = result.text.replace(/\/\/.+?(?=@@|@(?!@)|#|$)/, '').trim();
+  }
+  
+  const projectMatch = result.text.match(/@@(\w+)/);
   if (projectMatch) {
     result.projectTag = projectMatch[1];
     result.text = result.text.replace(/@@\w+/g, '').trim();
@@ -185,12 +192,12 @@ function InlineTaskInput({
     return people.filter(p => projectPeopleIds.has(p.id));
   };
 
-  const getSuggestions = (): { value: string; label: string }[] => {
+  const getSuggestions = (): { value: string; label: string; id?: string }[] => {
     if (suggestion.type === 'project') {
       return projects
         .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
         .slice(0, 8)
-        .map(p => ({ value: p.name.replace(/\s+/g, ''), label: p.name }));
+        .map(p => ({ value: p.name.replace(/\s+/g, ''), label: p.name, id: p.id }));
     }
     if (suggestion.type === 'person') {
       const taggedProject = getTaggedProject();
@@ -198,7 +205,7 @@ function InlineTaskInput({
       return availablePeople
         .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
         .slice(0, 8)
-        .map(p => ({ value: p.name.split(' ')[0], label: p.name }));
+        .map(p => ({ value: p.name.split(' ')[0], label: p.name, id: p.id }));
     }
     if (suggestion.type === 'status') {
       return STATUS_OPTIONS.filter(s => 
@@ -295,12 +302,12 @@ function InlineTaskInput({
           <div className="absolute left-0 top-full mt-1 z-50 bg-popover border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" data-testid="suggestion-popover">
             {suggestions.map((item, index) => (
               <div
-                key={item.value}
+                key={item.id || item.value}
                 className={`px-2 py-1.5 text-sm rounded cursor-pointer flex items-center gap-2 ${
                   index === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover-elevate'
                 }`}
                 onClick={() => insertSuggestion(item)}
-                data-testid={`suggestion-${item.value}`}
+                data-testid={`suggestion-${item.id || item.value}`}
               >
                 {suggestion.type === 'project' && <FolderKanban className="h-3 w-3 text-muted-foreground" />}
                 {suggestion.type === 'person' && <User className="h-3 w-3 text-muted-foreground" />}
@@ -557,20 +564,31 @@ function TaskRow({
         }
         if (parsed.projectTag) {
           const matchedProject = projects.find(p => 
+            p.name.toLowerCase().replace(/\s+/g, '').includes(parsed.projectTag!.toLowerCase()) ||
             p.name.toLowerCase().includes(parsed.projectTag!.toLowerCase())
           );
-          if (matchedProject) updates.projectId = matchedProject.id;
+          if (matchedProject) {
+            updates.projectId = matchedProject.id;
+          }
         }
         if (parsed.personTags.length > 0) {
           const matchedPeople = people.filter(p => 
             parsed.personTags.some(tag => 
-              p.name.toLowerCase().includes(tag.toLowerCase())
+              p.name.toLowerCase().includes(tag.toLowerCase()) ||
+              p.name.split(' ')[0].toLowerCase() === tag.toLowerCase()
             )
           );
           if (matchedPeople.length > 0) {
-            const allIds = [...(task.assignedTo || []), ...matchedPeople.map(p => p.id)];
-            updates.assignedTo = Array.from(new Set(allIds));
+            updates.assignedTo = matchedPeople.map(p => p.id);
           }
+        }
+        if (parsed.noteText) {
+          const newNote: TaskNote = {
+            content: parsed.noteText,
+            author: userEmail,
+            timestamp: new Date().toISOString(),
+          };
+          updates.notes = [...notes, newNote];
         }
         
         onUpdate(task.id, updates);
@@ -833,6 +851,7 @@ export default function WorkingSpace() {
     
     if (parsed.projectTag) {
       const matchedProject = projects.find(p => 
+        p.name.toLowerCase().replace(/\s+/g, '').includes(parsed.projectTag!.toLowerCase()) ||
         p.name.toLowerCase().includes(parsed.projectTag!.toLowerCase())
       );
       if (matchedProject) taskData.projectId = matchedProject.id;
@@ -841,7 +860,8 @@ export default function WorkingSpace() {
     if (parsed.personTags.length > 0) {
       const matchedPeople = people.filter(p => 
         parsed.personTags.some(tag => 
-          p.name.toLowerCase().includes(tag.toLowerCase())
+          p.name.toLowerCase().includes(tag.toLowerCase()) ||
+          p.name.split(' ')[0].toLowerCase() === tag.toLowerCase()
         )
       );
       if (matchedPeople.length > 0) {
@@ -849,11 +869,9 @@ export default function WorkingSpace() {
       }
     }
     
-    const noteMatch = title.match(/\/\/(.+)$/);
-    if (noteMatch) {
-      taskData.title = title.replace(/\/\/.+$/, '').trim();
+    if (parsed.noteText) {
       taskData.notes = [{
-        content: noteMatch[1].trim(),
+        content: parsed.noteText,
         author: userEmail,
         timestamp: new Date().toISOString(),
       }];
