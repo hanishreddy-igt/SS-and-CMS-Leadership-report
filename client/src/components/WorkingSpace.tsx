@@ -874,7 +874,7 @@ function TaskRow({
   };
 
   return (
-    <div data-testid={`task-row-${task.id}`}>
+    <div data-testid={`task-row-${task.id}`} className={`relative ${isEditing ? 'z-50' : ''}`}>
       <div 
         className={`group flex items-center gap-2 py-1.5 rounded hover-elevate ${isOverdue ? 'bg-destructive/5' : ''}`}
         style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px' }}
