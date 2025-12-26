@@ -35,7 +35,7 @@ function Router() {
       <Route path="/reports/:tab" component={ReportsSection} />
       <Route path="/reports">{() => <Redirect to="/reports/submit" />}</Route>
       <Route path="/tasks/:tab" component={TasksSection} />
-      <Route path="/tasks">{() => <Redirect to="/tasks/all" />}</Route>
+      <Route path="/tasks">{() => <Redirect to="/tasks/workspace" />}</Route>
       <Route path="/admin" component={AdminPanel} />
       <Route path="/features" component={FeaturePanel} />
       <Route path="/submit">{() => <Redirect to="/reports/submit" />}</Route>
