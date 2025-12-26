@@ -24,8 +24,12 @@ import type {
   UserRole,
   FeedbackEntry,
   InsertFeedbackEntry,
+  Task,
+  InsertTask,
+  TaskTemplate,
+  InsertTaskTemplate,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries, tasks, taskTemplates } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -112,6 +116,25 @@ export interface IStorage {
   getPendingRoleRequests(): Promise<RoleRequest[]>;
   createRoleRequest(request: InsertRoleRequest): Promise<RoleRequest>;
   updateRoleRequest(id: string, status: 'approved' | 'denied', resolvedBy: string): Promise<RoleRequest | undefined>;
+
+  // Task operations
+  getTasks(): Promise<Task[]>;
+  getTask(id: string): Promise<Task | undefined>;
+  getTasksByCreator(createdBy: string): Promise<Task[]>;
+  getTasksByAssignee(personId: string): Promise<Task[]>;
+  getTasksByProject(projectId: string): Promise<Task[]>;
+  getSubTasks(parentTaskId: string): Promise<Task[]>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
+  deleteTask(id: string): Promise<boolean>;
+
+  // Task template operations
+  getTaskTemplates(): Promise<TaskTemplate[]>;
+  getTaskTemplate(id: string): Promise<TaskTemplate | undefined>;
+  getTaskTemplatesByCreator(createdBy: string): Promise<TaskTemplate[]>;
+  createTaskTemplate(template: InsertTaskTemplate): Promise<TaskTemplate>;
+  updateTaskTemplate(id: string, template: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined>;
+  deleteTaskTemplate(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -583,6 +606,116 @@ export class MemStorage implements IStorage {
   async clearAllFeedbackEntries(): Promise<void> {
     this.feedbackEntriesStore.clear();
   }
+
+  // Task operations for MemStorage
+  private tasksStore: Map<string, Task> = new Map();
+
+  async getTasks(): Promise<Task[]> {
+    return Array.from(this.tasksStore.values());
+  }
+
+  async getTask(id: string): Promise<Task | undefined> {
+    return this.tasksStore.get(id);
+  }
+
+  async getTasksByCreator(createdBy: string): Promise<Task[]> {
+    return Array.from(this.tasksStore.values()).filter(t => t.createdBy === createdBy);
+  }
+
+  async getTasksByAssignee(personId: string): Promise<Task[]> {
+    return Array.from(this.tasksStore.values()).filter(t => t.assignedTo.includes(personId));
+  }
+
+  async getTasksByProject(projectId: string): Promise<Task[]> {
+    return Array.from(this.tasksStore.values()).filter(t => t.projectId === projectId);
+  }
+
+  async getSubTasks(parentTaskId: string): Promise<Task[]> {
+    return Array.from(this.tasksStore.values()).filter(t => t.parentTaskId === parentTaskId);
+  }
+
+  async createTask(task: InsertTask): Promise<Task> {
+    const id = randomUUID();
+    const now = new Date();
+    const newTask: Task = {
+      id,
+      title: task.title,
+      description: task.description ?? null,
+      projectId: task.projectId ?? null,
+      parentTaskId: task.parentTaskId ?? null,
+      assignedTo: task.assignedTo ?? [],
+      createdBy: task.createdBy,
+      status: task.status ?? 'todo',
+      priority: task.priority ?? 'medium',
+      tags: task.tags ?? [],
+      notes: task.notes ?? [],
+      dueDate: task.dueDate ?? null,
+      sortOrder: task.sortOrder ?? '0',
+      isExpanded: task.isExpanded ?? 'true',
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.tasksStore.set(id, newTask);
+    return newTask;
+  }
+
+  async updateTask(id: string, updates: Partial<InsertTask>): Promise<Task | undefined> {
+    const task = this.tasksStore.get(id);
+    if (!task) return undefined;
+    const updated: Task = { ...task, ...updates, updatedAt: new Date() };
+    this.tasksStore.set(id, updated);
+    return updated;
+  }
+
+  async deleteTask(id: string): Promise<boolean> {
+    return this.tasksStore.delete(id);
+  }
+
+  // Task template operations for MemStorage
+  private taskTemplatesStore: Map<string, TaskTemplate> = new Map();
+
+  async getTaskTemplates(): Promise<TaskTemplate[]> {
+    return Array.from(this.taskTemplatesStore.values());
+  }
+
+  async getTaskTemplate(id: string): Promise<TaskTemplate | undefined> {
+    return this.taskTemplatesStore.get(id);
+  }
+
+  async getTaskTemplatesByCreator(createdBy: string): Promise<TaskTemplate[]> {
+    return Array.from(this.taskTemplatesStore.values()).filter(t => t.createdBy === createdBy);
+  }
+
+  async createTaskTemplate(template: InsertTaskTemplate): Promise<TaskTemplate> {
+    const id = randomUUID();
+    const newTemplate: TaskTemplate = {
+      id,
+      name: template.name,
+      description: template.description ?? null,
+      projectId: template.projectId ?? null,
+      taskStructure: template.taskStructure,
+      recurrence: template.recurrence ?? null,
+      eosFormat: template.eosFormat ?? null,
+      createdBy: template.createdBy,
+      isActive: template.isActive ?? 'true',
+      lastUsedAt: null,
+      createdAt: new Date(),
+    };
+    this.taskTemplatesStore.set(id, newTemplate);
+    return newTemplate;
+  }
+
+  async updateTaskTemplate(id: string, updates: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined> {
+    const template = this.taskTemplatesStore.get(id);
+    if (!template) return undefined;
+    const updated: TaskTemplate = { ...template, ...updates };
+    this.taskTemplatesStore.set(id, updated);
+    return updated;
+  }
+
+  async deleteTaskTemplate(id: string): Promise<boolean> {
+    return this.taskTemplatesStore.delete(id);
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -986,6 +1119,88 @@ export class DatabaseStorage implements IStorage {
       .where(eq(roleRequests.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  // Task operations for DatabaseStorage
+  async getTasks(): Promise<Task[]> {
+    return await db.select().from(tasks);
+  }
+
+  async getTask(id: string): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task || undefined;
+  }
+
+  async getTasksByCreator(createdBy: string): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.createdBy, createdBy));
+  }
+
+  async getTasksByAssignee(personId: string): Promise<Task[]> {
+    const allTasks = await db.select().from(tasks);
+    return allTasks.filter(t => t.assignedTo.includes(personId));
+  }
+
+  async getTasksByProject(projectId: string): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.projectId, projectId));
+  }
+
+  async getSubTasks(parentTaskId: string): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.parentTaskId, parentTaskId));
+  }
+
+  async createTask(task: InsertTask): Promise<Task> {
+    const [newTask] = await db.insert(tasks).values({
+      ...task,
+      assignedTo: task.assignedTo ?? [],
+      tags: task.tags ?? [],
+      notes: task.notes ?? [],
+    }).returning();
+    return newTask;
+  }
+
+  async updateTask(id: string, updates: Partial<InsertTask>): Promise<Task | undefined> {
+    const [updated] = await db.update(tasks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tasks.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteTask(id: string): Promise<boolean> {
+    const result = await db.delete(tasks).where(eq(tasks.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Task template operations for DatabaseStorage
+  async getTaskTemplates(): Promise<TaskTemplate[]> {
+    return await db.select().from(taskTemplates);
+  }
+
+  async getTaskTemplate(id: string): Promise<TaskTemplate | undefined> {
+    const [template] = await db.select().from(taskTemplates).where(eq(taskTemplates.id, id));
+    return template || undefined;
+  }
+
+  async getTaskTemplatesByCreator(createdBy: string): Promise<TaskTemplate[]> {
+    return await db.select().from(taskTemplates).where(eq(taskTemplates.createdBy, createdBy));
+  }
+
+  async createTaskTemplate(template: InsertTaskTemplate): Promise<TaskTemplate> {
+    const [newTemplate] = await db.insert(taskTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateTaskTemplate(id: string, updates: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined> {
+    const [updated] = await db.update(taskTemplates)
+      .set(updates)
+      .where(eq(taskTemplates.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteTaskTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(taskTemplates).where(eq(taskTemplates.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 }
 

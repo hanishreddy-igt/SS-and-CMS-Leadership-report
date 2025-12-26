@@ -128,6 +128,41 @@ export const feedbackEntries = pgTable("feedback_entries", {
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
 
+// Tasks table - hierarchical task management with Workflowy-style features
+export const tasks = pgTable("tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"), // Extended description/details
+  projectId: varchar("project_id"), // Links to a project (optional)
+  parentTaskId: varchar("parent_task_id"), // For sub-tasks (null = top-level task)
+  assignedTo: text("assigned_to").array().notNull().default(sql`'{}'`), // Array of person IDs
+  createdBy: text("created_by").notNull(), // Email of who created the task
+  status: text("status").notNull().default('todo'), // todo, in-progress, done, cancelled
+  priority: text("priority").default('medium'), // low, medium, high
+  tags: text("tags").array().notNull().default(sql`'{}'`), // Inline tags like #status
+  notes: jsonb("notes").notNull().default(sql`'[]'`), // Array of { content, author, timestamp }
+  dueDate: text("due_date"), // Optional due date
+  sortOrder: text("sort_order").default('0'), // For manual ordering within parent
+  isExpanded: text("is_expanded").default('true'), // For tree view collapse state
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Task templates table - recurring task templates with EOS update formats
+export const taskTemplates = pgTable("task_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // Template name
+  description: text("description"), // What this template is for
+  projectId: varchar("project_id"), // Optional: link to specific project
+  taskStructure: jsonb("task_structure").notNull(), // Hierarchical task structure to create
+  recurrence: text("recurrence"), // weekly, biweekly, monthly, or null for one-time
+  eosFormat: jsonb("eos_format"), // EOS update format configuration
+  createdBy: text("created_by").notNull(), // Who created the template
+  isActive: text("is_active").default('true'), // Whether template is active
+  lastUsedAt: timestamp("last_used_at"), // When template was last used
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertCurrentAiSummarySchema = createInsertSchema(currentAiSummary).omit({ id: true, generatedAt: true });
 export type CurrentAiSummary = typeof currentAiSummary.$inferSelect;
 export type InsertCurrentAiSummary = z.infer<typeof insertCurrentAiSummarySchema>;
@@ -179,3 +214,43 @@ export type TeamMemberAssignment = {
 
 export type HealthStatus = 'on-track' | 'at-risk' | 'critical';
 export type ReportStatus = 'draft' | 'submitted';
+
+// Task schemas and types
+export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true });
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+
+// Task template schemas and types
+export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).omit({ id: true, createdAt: true, lastUsedAt: true });
+export type TaskTemplate = typeof taskTemplates.$inferSelect;
+export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
+
+// Task status enum
+export type TaskStatus = 'todo' | 'in-progress' | 'done' | 'cancelled';
+export type TaskPriority = 'low' | 'medium' | 'high';
+
+// Task note structure
+export type TaskNote = {
+  content: string;
+  author: string; // Email of who added the note
+  timestamp: string; // ISO date string
+};
+
+// Task template structure (for hierarchical task creation)
+export type TaskTemplateNode = {
+  title: string;
+  description?: string;
+  assignedTo?: string[];
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  children?: TaskTemplateNode[];
+};
+
+// EOS format configuration
+export type EOSFormat = {
+  includeStatus: boolean;
+  includeProgress: boolean;
+  includeBlockers: boolean;
+  includeNextSteps: boolean;
+  customFields?: string[];
+};

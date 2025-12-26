@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { JiraService } from "./services/jiraService";
-import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema } from "@shared/schema";
+import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema, insertTaskSchema, insertTaskTemplateSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
 
@@ -1807,6 +1807,204 @@ Output valid JSON only.`;
         success: false,
         error: error.message || 'Failed to import from Jira',
       });
+    }
+  });
+
+  // ====== TASK MANAGEMENT ROUTES ======
+
+  // Get all tasks
+  app.get('/api/tasks', isAuthenticated, async (req, res) => {
+    try {
+      const tasks = await storage.getTasks();
+      res.json(tasks);
+    } catch (error: any) {
+      console.error('Error fetching tasks:', error);
+      res.status(500).json({ message: 'Failed to fetch tasks' });
+    }
+  });
+
+  // Get task by ID
+  app.get('/api/tasks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const task = await storage.getTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      res.json(task);
+    } catch (error: any) {
+      console.error('Error fetching task:', error);
+      res.status(500).json({ message: 'Failed to fetch task' });
+    }
+  });
+
+  // Get tasks by creator (for "Your Workspace" section)
+  app.get('/api/tasks/creator/:email', isAuthenticated, async (req, res) => {
+    try {
+      const tasks = await storage.getTasksByCreator(req.params.email);
+      res.json(tasks);
+    } catch (error: any) {
+      console.error('Error fetching tasks by creator:', error);
+      res.status(500).json({ message: 'Failed to fetch tasks' });
+    }
+  });
+
+  // Get tasks by assignee (for "Tasks Assigned to You" tab)
+  app.get('/api/tasks/assignee/:personId', isAuthenticated, async (req, res) => {
+    try {
+      const tasks = await storage.getTasksByAssignee(req.params.personId);
+      res.json(tasks);
+    } catch (error: any) {
+      console.error('Error fetching tasks by assignee:', error);
+      res.status(500).json({ message: 'Failed to fetch tasks' });
+    }
+  });
+
+  // Get tasks by project (for "All Tasks" tree view)
+  app.get('/api/tasks/project/:projectId', isAuthenticated, async (req, res) => {
+    try {
+      const tasks = await storage.getTasksByProject(req.params.projectId);
+      res.json(tasks);
+    } catch (error: any) {
+      console.error('Error fetching tasks by project:', error);
+      res.status(500).json({ message: 'Failed to fetch tasks' });
+    }
+  });
+
+  // Get sub-tasks
+  app.get('/api/tasks/:id/subtasks', isAuthenticated, async (req, res) => {
+    try {
+      const subtasks = await storage.getSubTasks(req.params.id);
+      res.json(subtasks);
+    } catch (error: any) {
+      console.error('Error fetching subtasks:', error);
+      res.status(500).json({ message: 'Failed to fetch subtasks' });
+    }
+  });
+
+  // Create task
+  app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user.claims.email;
+      const taskData = {
+        ...req.body,
+        createdBy: userEmail,
+      };
+      
+      const parsed = insertTaskSchema.safeParse(taskData);
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid task data', errors: parsed.error.errors });
+      }
+      
+      const task = await storage.createTask(parsed.data);
+      res.status(201).json(task);
+    } catch (error: any) {
+      console.error('Error creating task:', error);
+      res.status(500).json({ message: 'Failed to create task' });
+    }
+  });
+
+  // Update task
+  app.patch('/api/tasks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const task = await storage.updateTask(req.params.id, req.body);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      res.json(task);
+    } catch (error: any) {
+      console.error('Error updating task:', error);
+      res.status(500).json({ message: 'Failed to update task' });
+    }
+  });
+
+  // Delete task
+  app.delete('/api/tasks/:id', isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deleteTask(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting task:', error);
+      res.status(500).json({ message: 'Failed to delete task' });
+    }
+  });
+
+  // ====== TASK TEMPLATE ROUTES ======
+
+  // Get all task templates
+  app.get('/api/task-templates', isAuthenticated, async (req, res) => {
+    try {
+      const templates = await storage.getTaskTemplates();
+      res.json(templates);
+    } catch (error: any) {
+      console.error('Error fetching task templates:', error);
+      res.status(500).json({ message: 'Failed to fetch task templates' });
+    }
+  });
+
+  // Get task template by ID
+  app.get('/api/task-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.getTaskTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ message: 'Task template not found' });
+      }
+      res.json(template);
+    } catch (error: any) {
+      console.error('Error fetching task template:', error);
+      res.status(500).json({ message: 'Failed to fetch task template' });
+    }
+  });
+
+  // Create task template
+  app.post('/api/task-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user.claims.email;
+      const templateData = {
+        ...req.body,
+        createdBy: userEmail,
+      };
+      
+      const parsed = insertTaskTemplateSchema.safeParse(templateData);
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid template data', errors: parsed.error.errors });
+      }
+      
+      const template = await storage.createTaskTemplate(parsed.data);
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error('Error creating task template:', error);
+      res.status(500).json({ message: 'Failed to create task template' });
+    }
+  });
+
+  // Update task template
+  app.patch('/api/task-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const template = await storage.updateTaskTemplate(req.params.id, req.body);
+      if (!template) {
+        return res.status(404).json({ message: 'Task template not found' });
+      }
+      res.json(template);
+    } catch (error: any) {
+      console.error('Error updating task template:', error);
+      res.status(500).json({ message: 'Failed to update task template' });
+    }
+  });
+
+  // Delete task template
+  app.delete('/api/task-templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deleteTaskTemplate(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: 'Task template not found' });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting task template:', error);
+      res.status(500).json({ message: 'Failed to delete task template' });
     }
   });
 
