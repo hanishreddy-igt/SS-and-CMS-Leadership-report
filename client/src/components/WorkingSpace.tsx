@@ -955,21 +955,6 @@ function TaskRow({
           )}
           
           <button
-            ref={notesButtonRef}
-            onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
-            className={`p-0.5 hover:bg-accent rounded relative flex-shrink-0 ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}
-            title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
-            data-testid={`notes-icon-${task.id}`}
-          >
-            <StickyNote className="h-3.5 w-3.5" />
-            {notes.length > 0 && (
-              <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
-                {notes.length}
-              </span>
-            )}
-          </button>
-          
-          <button
             ref={assigneeButtonRef}
             onClick={() => activePanel === 'assignee' ? closePanel() : openPanel('assignee', 'assignee')}
             className="text-xs text-muted-foreground truncate max-w-[150px] hover:text-foreground hover:underline cursor-pointer"
@@ -993,14 +978,28 @@ function TaskRow({
           )}
         </div>
 
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5">
+          <button
+            ref={notesButtonRef}
+            onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
+            className={`p-1 hover:bg-accent rounded relative ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity'}`}
+            title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
+            data-testid={`notes-icon-${task.id}`}
+          >
+            <StickyNote className="h-3.5 w-3.5" />
+            {notes.length > 0 && (
+              <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
+                {notes.length}
+              </span>
+            )}
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 ref={menuButtonRef}
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                 data-testid={`task-menu-${task.id}`}
               >
                 <MoreVertical className="h-3.5 w-3.5" />
