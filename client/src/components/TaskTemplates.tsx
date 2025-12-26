@@ -126,14 +126,14 @@ function TemplateForm({ initialData, projects, onSubmit, onCancel, isSubmitting 
         <div className="space-y-2">
           <Label>Project</Label>
           <Select 
-            value={formData.projectId} 
-            onValueChange={(v) => setFormData({ ...formData, projectId: v })}
+            value={formData.projectId || "none"} 
+            onValueChange={(v) => setFormData({ ...formData, projectId: v === "none" ? "" : v })}
           >
             <SelectTrigger data-testid="template-project-select">
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No project</SelectItem>
+              <SelectItem value="none">No project</SelectItem>
               {projects.map(p => (
                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
               ))}
@@ -144,14 +144,14 @@ function TemplateForm({ initialData, projects, onSubmit, onCancel, isSubmitting 
         <div className="space-y-2">
           <Label>Recurrence</Label>
           <Select 
-            value={formData.recurrence} 
-            onValueChange={(v) => setFormData({ ...formData, recurrence: v })}
+            value={formData.recurrence || "once"} 
+            onValueChange={(v) => setFormData({ ...formData, recurrence: v === "once" ? "" : v })}
           >
             <SelectTrigger data-testid="template-recurrence-select">
               <SelectValue placeholder="How often?" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">One-time</SelectItem>
+              <SelectItem value="once">One-time</SelectItem>
               {recurrenceOptions.map(opt => (
                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
               ))}
@@ -163,14 +163,14 @@ function TemplateForm({ initialData, projects, onSubmit, onCancel, isSubmitting 
       <div className="space-y-2">
         <Label>EOS Format</Label>
         <Select 
-          value={formData.eosFormat} 
-          onValueChange={(v) => setFormData({ ...formData, eosFormat: v })}
+          value={formData.eosFormat || "none"} 
+          onValueChange={(v) => setFormData({ ...formData, eosFormat: v === "none" ? "" : v })}
         >
           <SelectTrigger data-testid="template-eos-select">
             <SelectValue placeholder="Optional EOS format" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">No EOS format</SelectItem>
+            <SelectItem value="none">No EOS format</SelectItem>
             {eosFormatOptions.map(opt => (
               <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
             ))}

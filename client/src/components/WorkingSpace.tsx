@@ -298,12 +298,12 @@ function TaskForm({ projects, people, parentTaskId, onSubmit, onCancel }: TaskFo
         data-testid="new-task-title"
       />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Select value={projectId} onValueChange={setProjectId}>
+        <Select value={projectId || "none"} onValueChange={(v) => setProjectId(v === "none" ? "" : v)}>
           <SelectTrigger className="h-8 text-xs" data-testid="new-task-project">
             <SelectValue placeholder="Project" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">No Project</SelectItem>
+            <SelectItem value="none">No Project</SelectItem>
             {projects.map(p => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
