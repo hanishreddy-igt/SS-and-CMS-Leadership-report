@@ -1,32 +1,23 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   ChevronDown, 
   ChevronRight, 
-  Trash2, 
-  Edit2, 
-  Save, 
-  X,
+  Trash2,
   FolderKanban,
   User,
-  Tag,
   MessageSquare,
-  AlertCircle,
-  Check,
-  Clock
+  Circle
 } from 'lucide-react';
 import type { Task, Project, Person } from '@shared/schema';
 
@@ -37,175 +28,183 @@ const statusColors: Record<string, string> = {
   done: 'bg-green-500',
 };
 
-const priorityColors: Record<string, string> = {
-  low: 'text-slate-500',
-  medium: 'text-yellow-500',
-  high: 'text-orange-500',
-  urgent: 'text-red-500',
-};
+interface InlineTaskInputProps {
+  onSubmit: (title: string) => void;
+  placeholder?: string;
+  autoFocus?: boolean;
+  depth?: number;
+}
 
-interface TaskItemProps {
+function InlineTaskInput({ onSubmit, placeholder = "Type a task and press Enter...", autoFocus = false, depth = 0 }: InlineTaskInputProps) {
+  const [value, setValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [autoFocus]);
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && value.trim()) {
+      onSubmit(value.trim());
+      setValue('');
+    }
+    if (e.key === 'Escape') {
+      setValue('');
+    }
+  };
+
+  return (
+    <div 
+      className="flex items-center gap-2 py-1.5"
+      style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px' }}
+    >
+      <Circle className="h-3 w-3 text-muted-foreground/40" />
+      <Input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-8 px-1"
+        data-testid="inline-task-input"
+      />
+    </div>
+  );
+}
+
+interface TaskRowProps {
   task: Task;
   allTasks: Task[];
   projects: Project[];
   people: Person[];
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
-  onAddSubtask: (parentId: string) => void;
+  onCreateSubtask: (parentId: string, title: string) => void;
   depth?: number;
 }
 
-function TaskItem({ 
+function TaskRow({ 
   task, 
   allTasks, 
   projects, 
   people, 
   onUpdate, 
   onDelete, 
-  onAddSubtask,
+  onCreateSubtask,
   depth = 0 
-}: TaskItemProps) {
+}: TaskRowProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(task.isExpanded === 'true');
-  const [editTitle, setEditTitle] = useState(task.title);
-  const [editDescription, setEditDescription] = useState(task.description || '');
+  const [editValue, setEditValue] = useState(task.title);
+  const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const subtasks = allTasks.filter(t => t.parentTaskId === task.id);
   const hasSubtasks = subtasks.length > 0;
   const project = task.projectId ? projects.find(p => p.id === task.projectId) : null;
-  const assignees = people.filter(p => task.assignedTo.includes(p.id));
 
-  const handleSave = () => {
-    onUpdate(task.id, { title: editTitle, description: editDescription });
-    setIsEditing(false);
-  };
-
-  const handleStatusChange = (status: string) => {
-    onUpdate(task.id, { status: status as Task['status'] });
-  };
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
 
   const handleToggleComplete = () => {
     const newStatus = task.status === 'done' ? 'todo' : 'done';
     onUpdate(task.id, { status: newStatus });
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      if (editValue.trim()) {
+        onUpdate(task.id, { title: editValue.trim() });
+      }
+      setIsEditing(false);
+    }
+    if (e.key === 'Escape') {
+      setEditValue(task.title);
+      setIsEditing(false);
+    }
+    if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault();
+      setShowSubtaskInput(true);
+    }
+  };
+
+  const handleSubtaskCreate = (title: string) => {
+    onCreateSubtask(task.id, title);
+    setShowSubtaskInput(false);
+  };
+
   return (
-    <div 
-      className="group"
-      style={{ marginLeft: depth > 0 ? `${depth * 24}px` : 0 }}
-      data-testid={`task-item-${task.id}`}
-    >
-      <div className="flex items-start gap-2 py-2 px-3 rounded-lg hover-elevate transition-colors">
-        <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+    <div data-testid={`task-row-${task.id}`}>
+      <div 
+        className="group flex items-center gap-2 py-1.5 rounded hover-elevate"
+        style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px' }}
+      >
+        <div className="flex items-center gap-1 flex-shrink-0">
           {hasSubtasks ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5"
+            <button
               onClick={() => setIsExpanded(!isExpanded)}
-              data-testid={`toggle-expand-${task.id}`}
+              className="p-0.5 hover:bg-accent rounded"
+              data-testid={`toggle-${task.id}`}
             >
               {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-            </Button>
+            </button>
           ) : (
-            <div className="w-5" />
+            <div className="w-4" />
           )}
           <Checkbox
             checked={task.status === 'done'}
             onCheckedChange={handleToggleComplete}
-            data-testid={`task-checkbox-${task.id}`}
+            className="h-4 w-4"
+            data-testid={`checkbox-${task.id}`}
           />
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex items-center gap-2">
           {isEditing ? (
-            <div className="space-y-2">
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="h-8"
-                data-testid={`edit-task-title-${task.id}`}
-              />
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Add description..."
-                className="min-h-[60px]"
-                data-testid={`edit-task-description-${task.id}`}
-              />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleSave} data-testid={`save-task-${task.id}`}>
-                  <Save className="h-3 w-3 mr-1" /> Save
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} data-testid={`cancel-edit-${task.id}`}>
-                  <X className="h-3 w-3 mr-1" /> Cancel
-                </Button>
-              </div>
-            </div>
+            <Input
+              ref={inputRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={() => {
+                if (editValue.trim() && editValue !== task.title) {
+                  onUpdate(task.id, { title: editValue.trim() });
+                }
+                setIsEditing(false);
+              }}
+              className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-7 px-1"
+            />
           ) : (
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span 
-                  className={`text-sm ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}
-                  data-testid={`task-title-${task.id}`}
-                >
-                  {task.title}
-                </span>
-                <div className={`w-2 h-2 rounded-full ${statusColors[task.status]}`} title={task.status} />
-                {task.priority && task.priority !== 'medium' && (
-                  <AlertCircle className={`h-3 w-3 ${priorityColors[task.priority]}`} />
-                )}
-              </div>
-              {task.description && (
-                <p className="text-xs text-muted-foreground line-clamp-1">{task.description}</p>
-              )}
-              <div className="flex items-center gap-2 flex-wrap">
-                {project && (
-                  <Badge variant="outline" className="text-xs gap-1">
-                    <FolderKanban className="h-3 w-3" />
-                    {project.name}
-                  </Badge>
-                )}
-                {assignees.map(person => (
-                  <Badge key={person.id} variant="secondary" className="text-xs gap-1">
-                    <User className="h-3 w-3" />
-                    {person.name}
-                  </Badge>
-                ))}
-                {task.tags.length > 0 && task.tags.map((tag, i) => (
-                  <Badge key={i} variant="outline" className="text-xs gap-1">
-                    <Tag className="h-3 w-3" />
-                    {tag}
-                  </Badge>
-                ))}
-                {task.dueDate && (
-                  <Badge variant="outline" className="text-xs gap-1">
-                    <Clock className="h-3 w-3" />
-                    {new Date(task.dueDate).toLocaleDateString()}
-                  </Badge>
-                )}
-              </div>
-            </div>
+            <span 
+              className={`text-sm cursor-text flex-1 ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}
+              onClick={() => setIsEditing(true)}
+              data-testid={`task-title-${task.id}`}
+            >
+              {task.title}
+            </span>
           )}
+          
+          {project && (
+            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
+              {project.name}
+            </Badge>
+          )}
+          
+          <div className={`w-2 h-2 rounded-full ${statusColors[task.status] || statusColors.todo}`} />
         </div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Select value={task.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="h-7 w-24 text-xs" data-testid={`status-select-${task.id}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todo">To Do</SelectItem>
-              <SelectItem value="in-progress">In Progress</SelectItem>
-              <SelectItem value="blocked">Blocked</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
-            </SelectContent>
-          </Select>
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
-            onClick={() => onAddSubtask(task.id)}
+            className="h-6 w-6"
+            onClick={() => setShowSubtaskInput(true)}
             data-testid={`add-subtask-${task.id}`}
           >
             <Plus className="h-3 w-3" />
@@ -213,28 +212,19 @@ function TaskItem({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
-            onClick={() => setIsEditing(true)}
-            data-testid={`edit-task-btn-${task.id}`}
-          >
-            <Edit2 className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-destructive"
+            className="h-6 w-6 text-destructive"
             onClick={() => onDelete(task.id)}
-            data-testid={`delete-task-${task.id}`}
+            data-testid={`delete-${task.id}`}
           >
             <Trash2 className="h-3 w-3" />
           </Button>
         </div>
       </div>
 
-      {hasSubtasks && isExpanded && (
-        <div className="border-l border-border ml-4">
+      {isExpanded && hasSubtasks && (
+        <div>
           {subtasks.map(subtask => (
-            <TaskItem
+            <TaskRow
               key={subtask.id}
               task={subtask}
               allTasks={allTasks}
@@ -242,110 +232,28 @@ function TaskItem({
               people={people}
               onUpdate={onUpdate}
               onDelete={onDelete}
-              onAddSubtask={onAddSubtask}
+              onCreateSubtask={onCreateSubtask}
               depth={depth + 1}
             />
           ))}
         </div>
       )}
+
+      {showSubtaskInput && (
+        <InlineTaskInput
+          onSubmit={handleSubtaskCreate}
+          placeholder="Add sub-task..."
+          autoFocus
+          depth={depth + 1}
+        />
+      )}
     </div>
-  );
-}
-
-interface TaskFormProps {
-  projects: Project[];
-  people: Person[];
-  parentTaskId?: string | null;
-  onSubmit: (task: { title: string; description?: string; projectId?: string; parentTaskId?: string; assignedTo?: string[]; priority?: string }) => void;
-  onCancel?: () => void;
-}
-
-function TaskForm({ projects, people, parentTaskId, onSubmit, onCancel }: TaskFormProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [projectId, setProjectId] = useState<string>('');
-  const [assignedTo, setAssignedTo] = useState<string[]>([]);
-  const [priority, setPriority] = useState('medium');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    
-    onSubmit({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      projectId: projectId || undefined,
-      parentTaskId: parentTaskId || undefined,
-      assignedTo,
-      priority,
-    });
-    
-    setTitle('');
-    setDescription('');
-    setProjectId('');
-    setAssignedTo([]);
-    setPriority('medium');
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <Input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="What needs to be done?"
-        className="text-sm"
-        autoFocus
-        data-testid="new-task-title"
-      />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Select value={projectId || "none"} onValueChange={(v) => setProjectId(v === "none" ? "" : v)}>
-          <SelectTrigger className="h-8 text-xs" data-testid="new-task-project">
-            <SelectValue placeholder="Project" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No Project</SelectItem>
-            {projects.map(p => (
-              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={priority} onValueChange={setPriority}>
-          <SelectTrigger className="h-8 text-xs" data-testid="new-task-priority">
-            <SelectValue placeholder="Priority" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="low">Low</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="urgent">Urgent</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <Textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Add details... (optional)"
-        className="min-h-[60px] text-sm"
-        data-testid="new-task-description"
-      />
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" data-testid="submit-new-task">
-          <Plus className="h-4 w-4 mr-1" /> Add Task
-        </Button>
-        {onCancel && (
-          <Button type="button" variant="ghost" size="sm" onClick={onCancel} data-testid="cancel-new-task">
-            Cancel
-          </Button>
-        )}
-      </div>
-    </form>
   );
 }
 
 export default function WorkingSpace() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [addingSubtaskTo, setAddingSubtaskTo] = useState<string | null>(null);
 
   const { data: allTasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ['/api/tasks'],
@@ -366,8 +274,6 @@ export default function WorkingSpace() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-      toast({ title: 'Task created', description: 'Your task has been added.' });
-      setAddingSubtaskTo(null);
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -394,7 +300,6 @@ export default function WorkingSpace() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
-      toast({ title: 'Task deleted' });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -403,10 +308,16 @@ export default function WorkingSpace() {
 
   const userEmail = user?.email || '';
   const myTasks = allTasks.filter(t => t.createdBy === userEmail);
-  const rootTasks = myTasks.filter(t => !t.parentTaskId);
+  const myRootTasks = myTasks.filter(t => !t.parentTaskId);
 
-  const handleCreateTask = (taskData: Partial<Task>) => {
-    createTaskMutation.mutate(taskData);
+  const handleCreateTask = (title: string, parentTaskId?: string) => {
+    createTaskMutation.mutate({ 
+      title, 
+      parentTaskId: parentTaskId || undefined,
+      status: 'todo',
+      priority: 'medium',
+      assignedTo: [],
+    });
   };
 
   const handleUpdateTask = (id: string, updates: Partial<Task>) => {
@@ -415,10 +326,6 @@ export default function WorkingSpace() {
 
   const handleDeleteTask = (id: string) => {
     deleteTaskMutation.mutate(id);
-  };
-
-  const handleAddSubtask = (parentId: string) => {
-    setAddingSubtaskTo(parentId);
   };
 
   const projectsWithTasks = projects.filter(p => 
@@ -438,72 +345,62 @@ export default function WorkingSpace() {
   return (
     <div className="space-y-6">
       <Card data-testid="your-workspace-section">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <User className="h-5 w-5" />
             Your Workspace
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <TaskForm 
-            projects={projects} 
-            people={people} 
-            onSubmit={handleCreateTask}
-          />
-          
-          <Separator />
-          
-          {rootTasks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No tasks yet. Create your first task above!</p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {rootTasks.map(task => (
-                <div key={task.id}>
-                  <TaskItem
+        <CardContent>
+          <div className="border rounded-lg bg-card">
+            <InlineTaskInput 
+              onSubmit={(title) => handleCreateTask(title)} 
+              placeholder="Type a task and press Enter..."
+              autoFocus
+            />
+            
+            {myRootTasks.length > 0 && (
+              <div className="border-t">
+                {myRootTasks.map(task => (
+                  <TaskRow
+                    key={task.id}
                     task={task}
                     allTasks={myTasks}
                     projects={projects}
                     people={people}
                     onUpdate={handleUpdateTask}
                     onDelete={handleDeleteTask}
-                    onAddSubtask={handleAddSubtask}
+                    onCreateSubtask={(parentId, title) => handleCreateTask(title, parentId)}
                   />
-                  {addingSubtaskTo === task.id && (
-                    <div className="ml-12 mt-2 p-3 bg-muted/50 rounded-lg">
-                      <TaskForm
-                        projects={projects}
-                        people={people}
-                        parentTaskId={task.id}
-                        onSubmit={handleCreateTask}
-                        onCancel={() => setAddingSubtaskTo(null)}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+            
+            {myRootTasks.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground text-sm border-t">
+                <MessageSquare className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                <p>No tasks yet. Type above to create your first task.</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
       <Card data-testid="all-tasks-section">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <FolderKanban className="h-5 w-5" />
             All Tasks by Project
           </CardTitle>
         </CardHeader>
         <CardContent>
           {projectsWithTasks.length === 0 && tasksWithoutProject.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FolderKanban className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No team tasks yet. Tasks from all team members will appear here organized by project.</p>
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              <FolderKanban className="h-6 w-6 mx-auto mb-2 opacity-50" />
+              <p>No team tasks yet. Tasks from all team members will appear here.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {projectsWithTasks.map(project => {
                 const projectTasks = allTasks.filter(t => t.projectId === project.id && !t.parentTaskId);
                 return (
@@ -511,34 +408,26 @@ export default function WorkingSpace() {
                     <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover-elevate text-left">
                       <ChevronDown className="h-4 w-4" />
                       <FolderKanban className="h-4 w-4 text-primary" />
-                      <span className="font-medium">{project.name}</span>
-                      <Badge variant="secondary" className="ml-auto">{projectTasks.length}</Badge>
+                      <span className="font-medium text-sm">{project.name}</span>
+                      <Badge variant="secondary" className="ml-auto text-xs">
+                        {projectTasks.length}
+                      </Badge>
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2">
-                      {projectTasks.map(task => (
-                        <div key={task.id}>
-                          <TaskItem
+                    <CollapsibleContent>
+                      <div className="border rounded-lg mt-2 bg-card">
+                        {projectTasks.map(task => (
+                          <TaskRow
+                            key={task.id}
                             task={task}
                             allTasks={allTasks}
                             projects={projects}
                             people={people}
                             onUpdate={handleUpdateTask}
                             onDelete={handleDeleteTask}
-                            onAddSubtask={handleAddSubtask}
+                            onCreateSubtask={(parentId, title) => handleCreateTask(title, parentId)}
                           />
-                          {addingSubtaskTo === task.id && (
-                            <div className="ml-12 mt-2 p-3 bg-muted/50 rounded-lg">
-                              <TaskForm
-                                projects={projects}
-                                people={people}
-                                parentTaskId={task.id}
-                                onSubmit={handleCreateTask}
-                                onCancel={() => setAddingSubtaskTo(null)}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </CollapsibleContent>
                   </Collapsible>
                 );
@@ -548,35 +437,27 @@ export default function WorkingSpace() {
                 <Collapsible defaultOpen>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover-elevate text-left">
                     <ChevronDown className="h-4 w-4" />
-                    <FolderKanban className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-muted-foreground">Unassigned</span>
-                    <Badge variant="secondary" className="ml-auto">{tasksWithoutProject.length}</Badge>
+                    <Circle className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-sm text-muted-foreground">No Project</span>
+                    <Badge variant="secondary" className="ml-auto text-xs">
+                      {tasksWithoutProject.length}
+                    </Badge>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2">
-                    {tasksWithoutProject.map(task => (
-                      <div key={task.id}>
-                        <TaskItem
+                  <CollapsibleContent>
+                    <div className="border rounded-lg mt-2 bg-card">
+                      {tasksWithoutProject.map(task => (
+                        <TaskRow
+                          key={task.id}
                           task={task}
                           allTasks={allTasks}
                           projects={projects}
                           people={people}
                           onUpdate={handleUpdateTask}
                           onDelete={handleDeleteTask}
-                          onAddSubtask={handleAddSubtask}
+                          onCreateSubtask={(parentId, title) => handleCreateTask(title, parentId)}
                         />
-                        {addingSubtaskTo === task.id && (
-                          <div className="ml-12 mt-2 p-3 bg-muted/50 rounded-lg">
-                            <TaskForm
-                              projects={projects}
-                              people={people}
-                              parentTaskId={task.id}
-                              onSubmit={handleCreateTask}
-                              onCancel={() => setAddingSubtaskTo(null)}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </CollapsibleContent>
                 </Collapsible>
               )}

@@ -50,7 +50,7 @@ export default function Hub() {
       icon: ListTodo,
       title: 'Work Management',
       description: 'Manage tasks, templates, and daily work',
-      path: '/tasks/all',
+      path: '/tasks/workspace',
       testId: 'hub-tasks',
     },
   ];

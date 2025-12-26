@@ -29,7 +29,7 @@ interface SectionLayoutProps {
 const sectionNav = [
   { path: '/dashboard/contracts', label: 'Dashboard', icon: LayoutDashboard, basePath: '/dashboard' },
   { path: '/reports/submit', label: 'Reports', icon: FileText, basePath: '/reports' },
-  { path: '/tasks/all', label: 'Tasks', icon: ListTodo, basePath: '/tasks' },
+  { path: '/tasks/workspace', label: 'Tasks', icon: ListTodo, basePath: '/tasks' },
 ];
 
 export default function SectionLayout({
