@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, KeyboardEvent, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +41,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Task, Project, Person } from '@shared/schema';
 
 const statusColors: Record<string, string> = {
@@ -1229,9 +1236,24 @@ export default function WorkingSpace() {
     }
   };
 
-  const projectsWithTasks = projects.filter(p => 
-    allTasks.some(t => t.projectId === p.id)
-  );
+  const [leadFilter, setLeadFilter] = useState<string>('all');
+
+  // Get unique leads from projects
+  const projectLeads = useMemo(() => {
+    const leadIds = new Set<string>();
+    projects.forEach(p => {
+      if (p.leadId) leadIds.add(p.leadId);
+      if (p.leadIds) p.leadIds.forEach(id => leadIds.add(id));
+    });
+    return people.filter(p => leadIds.has(p.id));
+  }, [projects, people]);
+
+  const projectsWithTasks = projects.filter(p => {
+    const hasTasks = allTasks.some(t => t.projectId === p.id);
+    if (!hasTasks) return false;
+    if (leadFilter === 'all') return true;
+    return p.leadId === leadFilter || (p.leadIds && p.leadIds.includes(leadFilter));
+  });
 
   const tasksWithoutProject = allTasks.filter(t => !t.projectId && !t.parentTaskId);
 
@@ -1297,16 +1319,29 @@ export default function WorkingSpace() {
 
       <Card data-testid="all-tasks-section">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <FolderKanban className="h-5 w-5" />
-            All Tasks by Project
-          </CardTitle>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FolderKanban className="h-5 w-5" />
+              All Tasks by Project
+            </CardTitle>
+            <Select value={leadFilter} onValueChange={setLeadFilter}>
+              <SelectTrigger className="w-[200px] h-8" data-testid="lead-filter">
+                <SelectValue placeholder="Filter by Lead" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Leads</SelectItem>
+                {projectLeads.map(lead => (
+                  <SelectItem key={lead.id} value={lead.id}>{lead.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
-          {projectsWithTasks.length === 0 && tasksWithoutProject.length === 0 ? (
+          {projectsWithTasks.length === 0 && (leadFilter !== 'all' || tasksWithoutProject.length === 0) ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               <FolderKanban className="h-6 w-6 mx-auto mb-2 opacity-50" />
-              <p>No team tasks yet. Tasks from all team members will appear here.</p>
+              <p>{leadFilter !== 'all' ? 'No projects found for the selected lead.' : 'No team tasks yet. Tasks from all team members will appear here.'}</p>
             </div>
           ) : (
             <div className="space-y-3">
