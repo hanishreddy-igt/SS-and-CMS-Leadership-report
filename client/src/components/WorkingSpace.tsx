@@ -28,8 +28,20 @@ import {
   Hash,
   AtSign,
   StickyNote,
-  X
+  X,
+  Play,
+  Check,
+  Ban,
+  MoreVertical,
+  UserPlus
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Task, Project, Person } from '@shared/schema';
 
 const statusColors: Record<string, string> = {
@@ -55,6 +67,88 @@ const STATUS_OPTIONS = [
   { value: 'blocked', label: 'Blocked' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
+
+const STATUS_CYCLE = ['todo', 'in-progress', 'blocked', 'done', 'cancelled'];
+
+function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () => void; taskId?: string }) {
+  const iconClass = "h-4 w-4 cursor-pointer transition-colors";
+  const testId = taskId ? `status-${taskId}` : 'status-icon';
+  
+  switch (status) {
+    case 'todo':
+      return (
+        <button 
+          onClick={onClick} 
+          className="p-0.5 hover:bg-accent rounded" 
+          title="To Do - Click to change"
+          aria-label="Status: To Do. Click to change to In Progress"
+          data-testid={testId}
+        >
+          <Circle className={`${iconClass} text-slate-400`} />
+        </button>
+      );
+    case 'in-progress':
+      return (
+        <button 
+          onClick={onClick} 
+          className="p-0.5 hover:bg-accent rounded" 
+          title="In Progress - Click to change"
+          aria-label="Status: In Progress. Click to change to Blocked"
+          data-testid={testId}
+        >
+          <Play className={`${iconClass} text-blue-500 fill-blue-500`} />
+        </button>
+      );
+    case 'blocked':
+      return (
+        <button 
+          onClick={onClick} 
+          className="p-0.5 hover:bg-accent rounded" 
+          title="Blocked - Click to change"
+          aria-label="Status: Blocked. Click to change to Done"
+          data-testid={testId}
+        >
+          <Ban className={`${iconClass} text-red-500`} />
+        </button>
+      );
+    case 'done':
+      return (
+        <button 
+          onClick={onClick} 
+          className="p-0.5 hover:bg-accent rounded" 
+          title="Done - Click to change"
+          aria-label="Status: Done. Click to change to Cancelled"
+          data-testid={testId}
+        >
+          <Check className={`${iconClass} text-green-500`} />
+        </button>
+      );
+    case 'cancelled':
+      return (
+        <button 
+          onClick={onClick} 
+          className="p-0.5 hover:bg-accent rounded" 
+          title="Cancelled - Click to change"
+          aria-label="Status: Cancelled. Click to change to To Do"
+          data-testid={testId}
+        >
+          <X className={`${iconClass} text-gray-400`} />
+        </button>
+      );
+    default:
+      return (
+        <button 
+          onClick={onClick} 
+          className="p-0.5 hover:bg-accent rounded" 
+          title="Click to change status"
+          aria-label="Click to change status"
+          data-testid={testId}
+        >
+          <Circle className={`${iconClass} text-slate-400`} />
+        </button>
+      );
+  }
+}
 
 interface ParsedTitle {
   text: string;
@@ -344,138 +438,135 @@ function InlineTaskInput({
   );
 }
 
-interface AssigneePickerProps {
+interface InlineAssigneePanelProps {
+  task: Task;
   people: Person[];
-  selected: string[];
-  onSelect: (personIds: string[]) => void;
+  onUpdate: (id: string, updates: Partial<Task>) => void;
+  onClose: () => void;
+  depth: number;
 }
 
-function AssigneePicker({ people, selected, onSelect }: AssigneePickerProps) {
-  const [open, setOpen] = useState(false);
-  const selectedPeople = people.filter(p => selected.includes(p.id));
+function InlineAssigneePanel({ task, people, onUpdate, onClose, depth }: InlineAssigneePanelProps) {
+  const firstButtonRef = useRef<HTMLButtonElement>(null);
 
-  const togglePerson = (personId: string) => {
-    if (selected.includes(personId)) {
-      onSelect(selected.filter(id => id !== personId));
-    } else {
-      onSelect([...selected, personId]);
-    }
-  };
-
-  const getRoleLabel = (person: Person): string => {
-    const roles = person.roles || [];
-    const isLead = roles.includes('lead') || roles.includes('project-lead');
-    const isMember = roles.includes('member') || roles.includes('team-member');
-    if (isLead && isMember) return '(Lead/Member)';
-    if (isLead) return '(Lead)';
-    if (isMember) return '(Member)';
-    return '';
-  };
+  useEffect(() => {
+    firstButtonRef.current?.focus();
+  }, []);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-6 px-1.5 gap-1" data-testid="assignee-picker">
-          {selectedPeople.length > 0 ? (
-            <div className="flex -space-x-1">
-              {selectedPeople.slice(0, 3).map(p => (
-                <Avatar key={p.id} className="h-5 w-5 border border-background">
-                  <AvatarFallback className="text-[10px] bg-primary/20">{getInitials(p.name)}</AvatarFallback>
-                </Avatar>
-              ))}
-              {selectedPeople.length > 3 && (
-                <span className="text-xs text-muted-foreground ml-1">+{selectedPeople.length - 3}</span>
-              )}
-            </div>
-          ) : (
-            <Users className="h-3 w-3 text-muted-foreground" />
-          )}
+    <div 
+      className="ml-8 p-3 border-l-2 border-primary/20 bg-muted/30 rounded-r"
+      style={{ marginLeft: depth > 0 ? `${depth * 24 + 32}px` : '32px' }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium">Assign People</span>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-5 w-5"
+          onClick={onClose}
+        >
+          <X className="h-3 w-3" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-2" align="start">
-        <div className="space-y-1 max-h-48 overflow-auto">
-          {people.map(person => (
+      </div>
+      <div className="space-y-1 max-h-48 overflow-auto">
+        {people.map((person, idx) => {
+          const roles = person.roles || [];
+          const isLead = roles.includes('lead') || roles.includes('project-lead');
+          const isMember = roles.includes('member') || roles.includes('team-member');
+          const roleLabel = isLead && isMember ? '(Lead/Member)' : isLead ? '(Lead)' : isMember ? '(Member)' : '';
+          const isSelected = task.assignedTo?.includes(person.id);
+          return (
             <button
               key={person.id}
-              onClick={() => togglePerson(person.id)}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover-elevate ${
-                selected.includes(person.id) ? 'bg-primary/10' : ''
-              }`}
+              ref={idx === 0 ? firstButtonRef : undefined}
+              onClick={() => {
+                const newIds = isSelected 
+                  ? (task.assignedTo || []).filter(id => id !== person.id)
+                  : [...(task.assignedTo || []), person.id];
+                onUpdate(task.id, { assignedTo: newIds });
+              }}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover-elevate ${isSelected ? 'bg-primary/10' : ''}`}
             >
               <Avatar className="h-6 w-6">
                 <AvatarFallback className="text-xs">{getInitials(person.name)}</AvatarFallback>
               </Avatar>
               <span className="flex-1 text-left truncate">{person.name}</span>
-              <span className="text-xs text-muted-foreground">{getRoleLabel(person)}</span>
-              {selected.includes(person.id) && <Checkbox checked className="h-4 w-4" />}
+              <span className="text-xs text-muted-foreground">{roleLabel}</span>
+              {isSelected && <Check className="h-4 w-4 text-primary" />}
             </button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
-interface DueDatePickerProps {
-  date?: string | null;
-  onSelect: (date: string | null) => void;
+interface InlineDueDatePanelProps {
+  task: Task;
+  onUpdate: (id: string, updates: Partial<Task>) => void;
+  onClose: () => void;
+  depth: number;
 }
 
-function DueDatePicker({ date, onSelect }: DueDatePickerProps) {
-  const [open, setOpen] = useState(false);
-  const dateValue = date ? new Date(date) : undefined;
-  const isOverdue = dateValue && isPast(dateValue) && !isToday(dateValue);
-
+function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePanelProps) {
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <div 
+      className="ml-8 p-3 border-l-2 border-primary/20 bg-muted/30 rounded-r"
+      style={{ marginLeft: depth > 0 ? `${depth * 24 + 32}px` : '32px' }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium">Set Due Date</span>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-5 w-5"
+          onClick={onClose}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+      <Calendar
+        mode="single"
+        selected={task.dueDate ? new Date(task.dueDate) : undefined}
+        onSelect={(d) => {
+          onUpdate(task.id, { dueDate: d ? format(d, 'yyyy-MM-dd') : null });
+          onClose();
+        }}
+        initialFocus
+      />
+      {task.dueDate && (
         <Button 
           variant="ghost" 
           size="sm" 
-          className={`h-6 px-1.5 gap-1 ${isOverdue ? 'text-destructive' : ''}`}
-          data-testid="due-date-picker"
+          className="w-full text-destructive mt-2"
+          onClick={() => { onUpdate(task.id, { dueDate: null }); onClose(); }}
         >
-          <CalendarIcon className="h-3 w-3" />
-          {dateValue && (
-            <span className="text-xs">{format(dateValue, 'MMM d')}</span>
-          )}
+          Clear date
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={dateValue}
-          onSelect={(d) => {
-            onSelect(d ? format(d, 'yyyy-MM-dd') : null);
-            setOpen(false);
-          }}
-          initialFocus
-        />
-        {date && (
-          <div className="p-2 border-t">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full text-destructive"
-              onClick={() => { onSelect(null); setOpen(false); }}
-            >
-              Clear date
-            </Button>
-          </div>
-        )}
-      </PopoverContent>
-    </Popover>
+      )}
+    </div>
   );
 }
 
-interface NotesPopoverProps {
+interface InlineNotesPanelProps {
   notes: TaskNote[];
   onAddNote: (content: string) => void;
-  userEmail: string;
+  onClose: () => void;
+  depth: number;
 }
 
-function NotesPopover({ notes, onAddNote, userEmail }: NotesPopoverProps) {
-  const [open, setOpen] = useState(false);
+function InlineNotesPanel({ notes, onAddNote, onClose, depth }: InlineNotesPanelProps) {
   const [newNote, setNewNote] = useState('');
 
   const handleAdd = () => {
@@ -486,49 +577,58 @@ function NotesPopover({ notes, onAddNote, userEmail }: NotesPopoverProps) {
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-6 px-1.5 gap-1" data-testid="notes-button">
-          <StickyNote className="h-3 w-3" />
-          {notes.length > 0 && <span className="text-xs">{notes.length}</span>}
+    <div 
+      className="ml-8 p-3 border-l-2 border-primary/20 bg-muted/30 rounded-r"
+      style={{ marginLeft: depth > 0 ? `${depth * 24 + 32}px` : '32px' }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium">Notes</span>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-5 w-5"
+          onClick={onClose}
+        >
+          <X className="h-3 w-3" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-3" align="start">
-        <div className="space-y-3">
-          <div className="text-sm font-medium">Notes</div>
-          
-          {notes.length > 0 && (
-            <div className="space-y-2 max-h-40 overflow-auto">
-              {notes.map((note, i) => (
-                <div key={i} className="text-xs p-2 bg-muted rounded">
-                  <div className="text-muted-foreground mb-1">
-                    {note.author} - {format(new Date(note.timestamp), 'MMM d, h:mm a')}
-                  </div>
-                  <div>{note.content}</div>
-                </div>
-              ))}
+      </div>
+      
+      {notes.length > 0 && (
+        <div className="space-y-2 max-h-40 overflow-auto mb-3">
+          {notes.map((note, i) => (
+            <div key={i} className="text-xs p-2 bg-background rounded border">
+              <div className="text-muted-foreground mb-1">
+                {note.author} - {format(new Date(note.timestamp), 'MMM d, h:mm a')}
+              </div>
+              <div>{note.content}</div>
             </div>
-          )}
-          
-          <div className="space-y-2">
-            <Textarea
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              placeholder="Add a note... (or use // in task)"
-              className="min-h-[60px] text-sm"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey) {
-                  handleAdd();
-                }
-              }}
-            />
-            <Button size="sm" onClick={handleAdd} disabled={!newNote.trim()}>
-              Add Note
-            </Button>
-          </div>
+          ))}
         </div>
-      </PopoverContent>
-    </Popover>
+      )}
+      
+      <div className="space-y-2">
+        <Textarea
+          value={newNote}
+          onChange={(e) => setNewNote(e.target.value)}
+          placeholder="Add a note..."
+          className="min-h-[60px] text-sm"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+              handleAdd();
+            }
+          }}
+        />
+        <Button size="sm" onClick={handleAdd} disabled={!newNote.trim()}>
+          Add Note
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -565,7 +665,9 @@ function TaskRow({
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
   const [suggestion, setSuggestion] = useState<SuggestionState>({ type: null, startIndex: 0, query: '' });
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   const subtasks = allTasks.filter(t => t.parentTaskId === task.id);
   const hasSubtasks = subtasks.length > 0;
@@ -650,9 +752,10 @@ function TaskRow({
     setSelectedIndex(0);
   };
 
-  const handleToggleComplete = () => {
-    const newStatus = task.status === 'done' ? 'todo' : 'done';
-    onUpdate(task.id, { status: newStatus });
+  const handleCycleStatus = () => {
+    const currentIndex = STATUS_CYCLE.indexOf(task.status);
+    const nextIndex = (currentIndex + 1) % STATUS_CYCLE.length;
+    onUpdate(task.id, { status: STATUS_CYCLE[nextIndex] });
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -775,11 +878,10 @@ function TaskRow({
           ) : (
             <div className="w-4" />
           )}
-          <Checkbox
-            checked={task.status === 'done'}
-            onCheckedChange={handleToggleComplete}
-            className="h-4 w-4"
-            data-testid={`checkbox-${task.id}`}
+          <StatusIcon 
+            status={task.status} 
+            onClick={handleCycleStatus}
+            taskId={task.id}
           />
         </div>
 
@@ -840,77 +942,108 @@ function TaskRow({
             </span>
           )}
           
+          {assignees.length > 0 && (
+            <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+              {assignees.map(p => p.name).join(', ')}
+            </span>
+          )}
+          
           {project && (
-            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1">
+            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0">
               <FolderKanban className="h-2.5 w-2.5" />
               {project.name}
             </Badge>
           )}
           
-          {assignees.length > 0 && (
-            <div className="flex -space-x-1">
-              {assignees.slice(0, 2).map(p => (
-                <Avatar key={p.id} className="h-5 w-5 border border-background">
-                  <AvatarFallback className="text-[10px] bg-primary/20">{getInitials(p.name)}</AvatarFallback>
-                </Avatar>
-              ))}
-              {assignees.length > 2 && (
-                <span className="text-xs text-muted-foreground ml-1">+{assignees.length - 2}</span>
-              )}
-            </div>
-          )}
-          
           {task.dueDate && (
-            <Badge variant={isOverdue ? "destructive" : "secondary"} className="text-xs px-1.5 py-0 h-5">
+            <Badge variant={isOverdue ? "destructive" : "secondary"} className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
               {format(new Date(task.dueDate), 'MMM d')}
             </Badge>
           )}
           
           {notes.length > 0 && (
-            <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5 gap-1">
+            <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0">
               <StickyNote className="h-2.5 w-2.5" />
               {notes.length}
             </Badge>
           )}
-          
-          <div className={`w-2 h-2 rounded-full ${statusColors[task.status] || statusColors.todo}`} title={statusLabels[task.status]} />
         </div>
 
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <AssigneePicker
-            people={people}
-            selected={task.assignedTo || []}
-            onSelect={(ids) => onUpdate(task.id, { assignedTo: ids })}
-          />
-          <DueDatePicker
-            date={task.dueDate}
-            onSelect={(date) => onUpdate(task.id, { dueDate: date })}
-          />
-          <NotesPopover
-            notes={notes}
-            onAddNote={handleAddNote}
-            userEmail={userEmail}
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => setShowSubtaskInput(true)}
-            data-testid={`add-subtask-${task.id}`}
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-destructive"
-            onClick={() => onDelete(task.id)}
-            data-testid={`delete-${task.id}`}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                ref={menuButtonRef}
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                data-testid={`task-menu-${task.id}`}
+              >
+                <MoreVertical className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setActivePanel('assignee')} data-testid="menu-assignee">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Assign People
+                {assignees.length > 0 && <span className="ml-auto text-xs text-muted-foreground">{assignees.length}</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActivePanel('dueDate')} data-testid="menu-due-date">
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                Set Due Date
+                {task.dueDate && <span className="ml-auto text-xs text-muted-foreground">{format(new Date(task.dueDate), 'MMM d')}</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setActivePanel('notes')} data-testid="menu-notes">
+                <StickyNote className="h-4 w-4 mr-2" />
+                Add Note
+                {notes.length > 0 && <span className="ml-auto text-xs text-muted-foreground">{notes.length}</span>}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setShowSubtaskInput(true)} data-testid={`add-subtask-${task.id}`}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Sub-task
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => onDelete(task.id)} 
+                className="text-destructive focus:text-destructive"
+                data-testid={`delete-${task.id}`}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Task
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {activePanel === 'assignee' && (
+        <InlineAssigneePanel
+          task={task}
+          people={people}
+          onUpdate={onUpdate}
+          onClose={() => { setActivePanel(null); menuButtonRef.current?.focus(); }}
+          depth={depth}
+        />
+      )}
+
+      {activePanel === 'dueDate' && (
+        <InlineDueDatePanel
+          task={task}
+          onUpdate={onUpdate}
+          onClose={() => { setActivePanel(null); menuButtonRef.current?.focus(); }}
+          depth={depth}
+        />
+      )}
+
+      {activePanel === 'notes' && (
+        <InlineNotesPanel
+          notes={notes}
+          onAddNote={handleAddNote}
+          onClose={() => { setActivePanel(null); menuButtonRef.current?.focus(); }}
+          depth={depth}
+        />
+      )}
 
       {isExpanded && hasSubtasks && (
         <div>
