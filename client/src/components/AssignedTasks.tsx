@@ -264,9 +264,10 @@ export default function AssignedTasks() {
 
   const userEmail = user?.email || '';
   
-  const currentPerson = people.find(p => p.email === userEmail);
-  const assignedTasks = currentPerson 
-    ? allTasks.filter(t => t.assignedTo?.includes(currentPerson.id))
+  const matchingPeople = people.filter(p => p.email === userEmail);
+  const myPersonIds = matchingPeople.map(p => p.id);
+  const assignedTasks = myPersonIds.length > 0
+    ? allTasks.filter(t => t.assignedTo?.some(id => myPersonIds.includes(id)))
     : [];
 
   const todoTasks = assignedTasks.filter(t => t.status === 'todo' && !t.parentTaskId);
@@ -290,7 +291,7 @@ export default function AssignedTasks() {
     );
   }
 
-  if (!currentPerson) {
+  if (matchingPeople.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
