@@ -220,6 +220,7 @@ export default function AssignedTasks() {
                 onDelete={handleDeleteTask}
                 onCreateSubtask={handleCreateSubtask}
                 userEmail={userEmail}
+                hiddenAssigneeIds={myPersonIds}
               />
             ))}
           </CardContent>
@@ -246,6 +247,7 @@ export default function AssignedTasks() {
                 onDelete={handleDeleteTask}
                 onCreateSubtask={handleCreateSubtask}
                 userEmail={userEmail}
+                hiddenAssigneeIds={myPersonIds}
               />
             ))}
           </CardContent>
@@ -281,6 +283,7 @@ export default function AssignedTasks() {
                     onDelete={handleDeleteTask}
                     onCreateSubtask={handleCreateSubtask}
                     userEmail={userEmail}
+                    hiddenAssigneeIds={myPersonIds}
                   />
                 ))}
               </CardContent>

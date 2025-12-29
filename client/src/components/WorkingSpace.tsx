@@ -648,6 +648,7 @@ export interface TaskRowProps {
   depth?: number;
   userEmail: string;
   hideProjectBadge?: boolean;
+  hiddenAssigneeIds?: string[];
 }
 
 export function TaskRow({ 
@@ -662,7 +663,8 @@ export function TaskRow({
   onOutdent,
   depth = 0,
   userEmail,
-  hideProjectBadge = false
+  hideProjectBadge = false,
+  hiddenAssigneeIds = []
 }: TaskRowProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -698,6 +700,7 @@ export function TaskRow({
   const hasSubtasks = subtasks.length > 0;
   const project = task.projectId ? projects.find(p => p.id === task.projectId) : null;
   const assignees = people.filter(p => task.assignedTo?.includes(p.id));
+  const displayAssignees = assignees.filter(p => !hiddenAssigneeIds.includes(p.id));
   const notes = (task.notes || []) as TaskNote[];
   const isOverdue = task.dueDate && isPast(new Date(task.dueDate)) && !isToday(new Date(task.dueDate)) && task.status !== 'done';
 
@@ -978,7 +981,7 @@ export function TaskRow({
             title="Click to assign people"
             data-testid={`assignee-trigger-${task.id}`}
           >
-            {assignees.length > 0 ? assignees.map(p => p.name).join(', ') : '+assign'}
+            {displayAssignees.length > 0 ? displayAssignees.map(p => p.name).join(', ') : (assignees.length > 0 ? '' : '+assign')}
           </button>
           
           {!hideProjectBadge && (
@@ -1112,6 +1115,7 @@ export function TaskRow({
               depth={depth + 1}
               userEmail={userEmail}
               hideProjectBadge={hideProjectBadge}
+              hiddenAssigneeIds={hiddenAssigneeIds}
             />
           ))}
         </div>
