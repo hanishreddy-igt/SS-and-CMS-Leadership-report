@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
@@ -17,11 +19,12 @@ import {
   Edit2, 
   Play,
   FileStack,
-  Calendar,
+  FolderKanban,
   RefreshCw,
-  Clock
+  Clock,
+  Users
 } from 'lucide-react';
-import type { TaskTemplate, Project } from '@shared/schema';
+import type { TaskTemplate, Project, Person } from '@shared/schema';
 
 const recurrenceOptions = [
   { value: 'daily', label: 'Daily' },
@@ -31,77 +34,55 @@ const recurrenceOptions = [
   { value: 'quarterly', label: 'Quarterly' },
 ];
 
-const eosFormatOptions = [
-  { value: 'rocks', label: 'Rocks (90-day goals)' },
-  { value: 'issues', label: 'Issues (IDS process)' },
-  { value: 'todos', label: 'To-dos (7-day actions)' },
-  { value: 'scorecard', label: 'Scorecard metrics' },
-];
-
 interface TemplateFormData {
   name: string;
   description: string;
   projectId: string;
+  assignedTo: string[];
+  taskItems: string;
   recurrence: string;
-  eosFormat: string;
   isActive: boolean;
-  taskStructure: { title: string; children?: { title: string }[] }[];
 }
 
 interface TemplateFormProps {
   initialData?: TemplateFormData;
   projects: Project[];
+  people: Person[];
   onSubmit: (data: TemplateFormData) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
 
-function TemplateForm({ initialData, projects, onSubmit, onCancel, isSubmitting }: TemplateFormProps) {
+function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSubmitting }: TemplateFormProps) {
   const [formData, setFormData] = useState<TemplateFormData>(initialData || {
     name: '',
     description: '',
     projectId: '',
+    assignedTo: [],
+    taskItems: '',
     recurrence: '',
-    eosFormat: '',
     isActive: true,
-    taskStructure: [{ title: '' }],
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
-    
-    const cleanedStructure = formData.taskStructure.filter(t => t.title.trim());
-    onSubmit({
-      ...formData,
-      taskStructure: cleanedStructure.length > 0 ? cleanedStructure : [{ title: 'New Task' }],
-    });
+    onSubmit(formData);
   };
 
-  const addTaskItem = () => {
-    setFormData({
-      ...formData,
-      taskStructure: [...formData.taskStructure, { title: '' }],
-    });
-  };
-
-  const updateTaskItem = (index: number, title: string) => {
-    const newStructure = [...formData.taskStructure];
-    newStructure[index] = { ...newStructure[index], title };
-    setFormData({ ...formData, taskStructure: newStructure });
-  };
-
-  const removeTaskItem = (index: number) => {
-    setFormData({
-      ...formData,
-      taskStructure: formData.taskStructure.filter((_, i) => i !== index),
-    });
+  const togglePerson = (personId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      assignedTo: prev.assignedTo.includes(personId)
+        ? prev.assignedTo.filter(id => id !== personId)
+        : [...prev.assignedTo, personId]
+    }));
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Template Name</Label>
+        <Label htmlFor="name">Template Name (becomes task title)</Label>
         <Input
           id="name"
           value={formData.name}
@@ -112,12 +93,13 @@ function TemplateForm({ initialData, projects, onSubmit, onCancel, isSubmitting 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">Description (informational)</Label>
         <Textarea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="Describe what this template is for..."
+          rows={2}
           data-testid="template-description-input"
         />
       </div>
@@ -142,7 +124,7 @@ function TemplateForm({ initialData, projects, onSubmit, onCancel, isSubmitting 
         </div>
 
         <div className="space-y-2">
-          <Label>Recurrence</Label>
+          <Label>Recurrence (label)</Label>
           <Select 
             value={formData.recurrence || "once"} 
             onValueChange={(v) => setFormData({ ...formData, recurrence: v === "once" ? "" : v })}
@@ -161,59 +143,48 @@ function TemplateForm({ initialData, projects, onSubmit, onCancel, isSubmitting 
       </div>
 
       <div className="space-y-2">
-        <Label>EOS Format</Label>
-        <Select 
-          value={formData.eosFormat || "none"} 
-          onValueChange={(v) => setFormData({ ...formData, eosFormat: v === "none" ? "" : v })}
-        >
-          <SelectTrigger data-testid="template-eos-select">
-            <SelectValue placeholder="Optional EOS format" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No EOS format</SelectItem>
-            {eosFormatOptions.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label>Assign to People</Label>
+        <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+          {people.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No people available</p>
+          ) : (
+            people.map(person => (
+              <div key={person.id} className="flex items-center gap-2">
+                <Checkbox
+                  id={`person-${person.id}`}
+                  checked={formData.assignedTo.includes(person.id)}
+                  onCheckedChange={() => togglePerson(person.id)}
+                />
+                <label 
+                  htmlFor={`person-${person.id}`} 
+                  className="text-sm cursor-pointer flex-1"
+                >
+                  {person.name}
+                  {person.email && (
+                    <span className="text-muted-foreground ml-1">({person.email})</span>
+                  )}
+                </label>
+              </div>
+            ))
+          )}
+        </div>
+        {formData.assignedTo.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {formData.assignedTo.length} person(s) selected
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
-        <Label>Task Structure</Label>
-        <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
-          {formData.taskStructure.map((task, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <Input
-                value={task.title}
-                onChange={(e) => updateTaskItem(index, e.target.value)}
-                placeholder={`Task ${index + 1}`}
-                className="flex-1"
-                data-testid={`template-task-${index}`}
-              />
-              {formData.taskStructure.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeTaskItem(index)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addTaskItem}
-            className="w-full"
-            data-testid="add-template-task"
-          >
-            <Plus className="h-4 w-4 mr-1" /> Add Task
-          </Button>
-        </div>
+        <Label htmlFor="taskItems">Task Items / Notes (becomes task note)</Label>
+        <Textarea
+          id="taskItems"
+          value={formData.taskItems}
+          onChange={(e) => setFormData({ ...formData, taskItems: e.target.value })}
+          placeholder="Enter EOS format items, checklist, or any details...&#10;&#10;Example:&#10;- Review Q1 Rocks progress&#10;- Discuss blockers&#10;- Update scorecard"
+          rows={6}
+          data-testid="template-task-items-input"
+        />
       </div>
 
       <div className="flex items-center justify-between">
@@ -228,10 +199,10 @@ function TemplateForm({ initialData, projects, onSubmit, onCancel, isSubmitting 
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting} data-testid="save-template">
+        <Button type="submit" disabled={isSubmitting || !formData.name.trim()}>
           {isSubmitting ? 'Saving...' : 'Save Template'}
         </Button>
       </DialogFooter>
@@ -242,14 +213,15 @@ function TemplateForm({ initialData, projects, onSubmit, onCancel, isSubmitting 
 interface TemplateCardProps {
   template: TaskTemplate;
   projects: Project[];
+  people: Person[];
   onEdit: (template: TaskTemplate) => void;
   onDelete: (id: string) => void;
-  onUse: (template: TaskTemplate) => void;
+  onTrigger: (template: TaskTemplate) => void;
 }
 
-function TemplateCard({ template, projects, onEdit, onDelete, onUse }: TemplateCardProps) {
+function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger }: TemplateCardProps) {
   const project = template.projectId ? projects.find(p => p.id === template.projectId) : null;
-  const taskCount = Array.isArray(template.taskStructure) ? template.taskStructure.length : 0;
+  const assignedPeople = people.filter(p => template.assignedTo?.includes(p.id));
   
   return (
     <Card 
@@ -258,24 +230,25 @@ function TemplateCard({ template, projects, onEdit, onDelete, onUse }: TemplateC
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="flex-1 min-w-0">
             <CardTitle className="text-base flex items-center gap-2">
-              <FileStack className="h-4 w-4 text-primary" />
-              {template.name}
+              <FileStack className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="truncate">{template.name}</span>
             </CardTitle>
             {template.description && (
-              <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{template.description}</p>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onUse(template)}
-              title="Use template"
-              data-testid={`use-template-${template.id}`}
+              variant="default" 
+              size="sm"
+              onClick={() => onTrigger(template)}
+              title="Trigger template - Create task"
+              data-testid={`trigger-template-${template.id}`}
             >
-              <Play className="h-4 w-4 text-primary" />
+              <Play className="h-4 w-4 mr-1" />
+              Trigger
             </Button>
             <Button 
               variant="ghost" 
@@ -301,7 +274,7 @@ function TemplateCard({ template, projects, onEdit, onDelete, onUse }: TemplateC
         <div className="flex items-center gap-2 flex-wrap">
           {project && (
             <Badge variant="outline" className="gap-1">
-              <Calendar className="h-3 w-3" />
+              <FolderKanban className="h-3 w-3" />
               {project.name}
             </Badge>
           )}
@@ -311,27 +284,31 @@ function TemplateCard({ template, projects, onEdit, onDelete, onUse }: TemplateC
               {template.recurrence}
             </Badge>
           )}
-          {template.eosFormat && (
+          {assignedPeople.length > 0 && (
             <Badge variant="secondary" className="gap-1">
-              EOS: {template.eosFormat}
+              <Users className="h-3 w-3" />
+              {assignedPeople.length} assignee{assignedPeople.length !== 1 ? 's' : ''}
             </Badge>
           )}
-          <Badge variant="outline" className="gap-1">
-            {taskCount} task{taskCount !== 1 ? 's' : ''}
-          </Badge>
           {template.lastUsedAt && (
             <Badge variant="outline" className="gap-1">
               <Clock className="h-3 w-3" />
-              Last used: {new Date(template.lastUsedAt).toLocaleDateString()}
+              Last: {new Date(template.lastUsedAt).toLocaleDateString()}
             </Badge>
           )}
         </div>
+        {template.taskItems && (
+          <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground whitespace-pre-wrap line-clamp-3">
+            {template.taskItems}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 export default function TaskTemplates() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
@@ -344,16 +321,20 @@ export default function TaskTemplates() {
     queryKey: ['/api/projects'],
   });
 
+  const { data: people = [] } = useQuery<Person[]>({
+    queryKey: ['/api/people'],
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: TemplateFormData) => {
       const res = await apiRequest('POST', '/api/task-templates', {
         name: data.name,
         description: data.description || null,
         projectId: data.projectId || null,
+        assignedTo: data.assignedTo,
+        taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
-        eosFormat: data.eosFormat || null,
         isActive: data.isActive ? 'true' : 'false',
-        taskStructure: data.taskStructure,
       });
       return res.json();
     },
@@ -373,10 +354,10 @@ export default function TaskTemplates() {
         name: data.name,
         description: data.description || null,
         projectId: data.projectId || null,
+        assignedTo: data.assignedTo,
+        taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
-        eosFormat: data.eosFormat || null,
         isActive: data.isActive ? 'true' : 'false',
-        taskStructure: data.taskStructure,
       });
       return res.json();
     },
@@ -405,30 +386,47 @@ export default function TaskTemplates() {
     },
   });
 
-  const useTemplateMutation = useMutation({
+  const triggerMutation = useMutation({
     mutationFn: async (template: TaskTemplate) => {
-      const tasks = Array.isArray(template.taskStructure) ? template.taskStructure : [];
-      const promises = tasks.map((task: { title: string }) => 
-        apiRequest('POST', '/api/tasks', {
-          title: task.title,
-          projectId: template.projectId || null,
-        })
-      );
-      await Promise.all(promises);
+      const notes: { content: string; author: string; timestamp: string }[] = [];
+      if (template.taskItems) {
+        notes.push({
+          content: template.taskItems,
+          author: user?.email || 'system',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      const res = await apiRequest('POST', '/api/tasks', {
+        title: template.name,
+        projectId: template.projectId || null,
+        assignedTo: template.assignedTo || [],
+        notes,
+        status: 'todo',
+        priority: 'medium',
+        createdBy: user?.email || 'system',
+      });
       
       await apiRequest('PATCH', `/api/task-templates/${template.id}`, { 
         lastUsedAt: new Date().toISOString() 
       });
+      
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
-      toast({ title: 'Tasks created from template' });
+      toast({ title: 'Task created from template' });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
+
+  const handleEdit = (template: TaskTemplate) => {
+    setEditingTemplate(template);
+    setIsDialogOpen(true);
+  };
 
   const handleSubmit = (data: TemplateFormData) => {
     if (editingTemplate) {
@@ -438,14 +436,22 @@ export default function TaskTemplates() {
     }
   };
 
-  const handleEdit = (template: TaskTemplate) => {
-    setEditingTemplate(template);
-    setIsDialogOpen(true);
-  };
-
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingTemplate(null);
+  };
+
+  const getInitialFormData = (): TemplateFormData | undefined => {
+    if (!editingTemplate) return undefined;
+    return {
+      name: editingTemplate.name,
+      description: editingTemplate.description || '',
+      projectId: editingTemplate.projectId || '',
+      assignedTo: editingTemplate.assignedTo || [],
+      taskItems: editingTemplate.taskItems || '',
+      recurrence: editingTemplate.recurrence || '',
+      isActive: editingTemplate.isActive !== 'false',
+    };
   };
 
   if (isLoading) {
@@ -457,42 +463,16 @@ export default function TaskTemplates() {
   }
 
   return (
-    <div className="space-y-4" data-testid="task-templates-section">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">
-          Create recurring task templates for regular workflows like weekly syncs, sprint planning, and EOS updates.
-        </p>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingTemplate(null)} data-testid="create-template-btn">
-              <Plus className="h-4 w-4 mr-1" /> New Template
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {editingTemplate ? 'Edit Template' : 'Create Template'}
-              </DialogTitle>
-            </DialogHeader>
-            <TemplateForm
-              initialData={editingTemplate ? {
-                name: editingTemplate.name,
-                description: editingTemplate.description || '',
-                projectId: editingTemplate.projectId || '',
-                recurrence: editingTemplate.recurrence || '',
-                eosFormat: editingTemplate.eosFormat || '',
-                isActive: editingTemplate.isActive === 'true',
-                taskStructure: Array.isArray(editingTemplate.taskStructure) 
-                  ? editingTemplate.taskStructure as { title: string }[]
-                  : [{ title: '' }],
-              } : undefined}
-              projects={projects}
-              onSubmit={handleSubmit}
-              onCancel={handleCloseDialog}
-              isSubmitting={createMutation.isPending || updateMutation.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <FileStack className="h-5 w-5" />
+          Task Templates
+        </h2>
+        <Button onClick={() => setIsDialogOpen(true)} data-testid="new-template-btn">
+          <Plus className="h-4 w-4 mr-1" />
+          New Template
+        </Button>
       </div>
 
       {templates.length === 0 ? (
@@ -501,10 +481,11 @@ export default function TaskTemplates() {
             <FileStack className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <h3 className="text-lg font-medium mb-2">No Templates Yet</h3>
             <p className="text-muted-foreground mb-4">
-              Create your first template to quickly generate recurring task sets.
+              Create templates for recurring tasks like weekly syncs, sprint planning, or EOS updates.
             </p>
-            <Button onClick={() => setIsDialogOpen(true)} data-testid="create-first-template">
-              <Plus className="h-4 w-4 mr-1" /> Create Template
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Create First Template
             </Button>
           </CardContent>
         </Card>
@@ -515,13 +496,33 @@ export default function TaskTemplates() {
               key={template.id}
               template={template}
               projects={projects}
+              people={people}
               onEdit={handleEdit}
               onDelete={(id) => deleteMutation.mutate(id)}
-              onUse={(t) => useTemplateMutation.mutate(t)}
+              onTrigger={(t) => triggerMutation.mutate(t)}
             />
           ))}
         </div>
       )}
+
+      <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTemplate ? 'Edit Template' : 'Create Template'}
+            </DialogTitle>
+          </DialogHeader>
+          <TemplateForm
+            key={editingTemplate?.id || 'new'}
+            initialData={getInitialFormData()}
+            projects={projects}
+            people={people}
+            onSubmit={handleSubmit}
+            onCancel={handleCloseDialog}
+            isSubmitting={createMutation.isPending || updateMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -151,12 +151,12 @@ export const tasks = pgTable("tasks", {
 // Task templates table - recurring task templates with EOS update formats
 export const taskTemplates = pgTable("task_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(), // Template name
-  description: text("description"), // What this template is for
-  projectId: varchar("project_id"), // Optional: link to specific project
-  taskStructure: jsonb("task_structure").notNull(), // Hierarchical task structure to create
-  recurrence: text("recurrence"), // weekly, biweekly, monthly, or null for one-time
-  eosFormat: text("eos_format"), // EOS update format: rocks, issues, todos, scorecard
+  name: text("name").notNull(), // Template name (becomes task title)
+  description: text("description"), // Informational description
+  projectId: varchar("project_id"), // Link to specific project
+  assignedTo: text("assigned_to").array().notNull().default(sql`'{}'`), // Array of person IDs
+  taskItems: text("task_items"), // EOS format or details (becomes task note)
+  recurrence: text("recurrence"), // weekly, biweekly, monthly - label only for now
   createdBy: text("created_by").notNull(), // Who created the template
   isActive: text("is_active").default('true'), // Whether template is active
   lastUsedAt: timestamp("last_used_at"), // When template was last used
