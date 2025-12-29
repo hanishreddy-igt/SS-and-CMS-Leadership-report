@@ -139,7 +139,7 @@ function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () =
   }
 }
 
-interface ParsedTitle {
+export interface ParsedTitle {
   text: string;
   projectTag?: string;
   personTags: string[];
@@ -147,7 +147,7 @@ interface ParsedTitle {
   noteText?: string;
 }
 
-function parseInlineTags(title: string): ParsedTitle {
+export function parseInlineTags(title: string): ParsedTitle {
   const result: ParsedTitle = { text: title, personTags: [] };
   
   const noteMatch = title.match(/\/\/(.+?)(?=@@|@(?!@)|#|$)/);
@@ -635,7 +635,7 @@ function InlineNotesPanel({ notes, onAddNote, onClose, depth }: InlineNotesPanel
   );
 }
 
-interface TaskRowProps {
+export interface TaskRowProps {
   task: Task;
   allTasks: Task[];
   projects: Project[];
@@ -650,7 +650,7 @@ interface TaskRowProps {
   hideProjectBadge?: boolean;
 }
 
-function TaskRow({ 
+export function TaskRow({ 
   task, 
   allTasks, 
   projects, 
