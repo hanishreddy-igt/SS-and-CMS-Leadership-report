@@ -981,11 +981,36 @@ export function TaskRow({
             {assignees.length > 0 ? assignees.map(p => p.name).join(', ') : '+assign'}
           </button>
           
-          {project && !hideProjectBadge && (
-            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0">
-              <FolderKanban className="h-2.5 w-2.5" />
-              {project.name}
-            </Badge>
+          {!hideProjectBadge && (
+            project ? (
+              <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0">
+                <FolderKanban className="h-2.5 w-2.5" />
+                {project.name}
+              </Badge>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
+                    data-testid={`assign-project-${task.id}`}
+                  >
+                    +project
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48 max-h-64 overflow-y-auto">
+                  {projects.map(p => (
+                    <DropdownMenuItem
+                      key={p.id}
+                      onClick={() => onUpdate(task.id, { projectId: p.id })}
+                      data-testid={`select-project-${p.id}`}
+                    >
+                      <FolderKanban className="h-3 w-3 mr-2" />
+                      {p.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
           )}
           
           {task.dueDate && (
