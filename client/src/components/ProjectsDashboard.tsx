@@ -362,21 +362,14 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     return null;
   };
 
-  // Validate end date is after start date and after current date
+  // Validate end date is after start date
   const validateEndDate = (startInput: string, endInput: string): string | null => {
     if (!endInput || !isValidDateFormat(endInput)) return null;
     const endParsed = parseInputDate(endInput);
     if (!endParsed) return null;
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const endDate = new Date(endParsed);
     endDate.setHours(0, 0, 0, 0);
-    
-    // End date must be after today
-    if (endDate <= today) {
-      return 'End date must be in the future';
-    }
     
     // If start date is valid, end date must be after start date
     if (startInput && isValidDateFormat(startInput)) {
@@ -451,7 +444,11 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   };
 
   // Helper to check if a project has caution (missing end date OR unfilled team member roles OR missing contractual hours OR missing customer email)
+  // Projects that have ended are excluded from caution checks
   const projectHasCaution = (project: Project): boolean => {
+    // Skip caution for ended projects
+    if (getProjectStatus(project.endDate) === 'ended') return false;
+    
     // Check for missing end date
     if (!project.endDate) return true;
     
@@ -896,7 +893,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         return;
       }
       
-      // Validate end date is after start date and in the future
+      // Validate end date is after start date
       const endDateError = validateEndDate(editStartDateInput, editEndDateInput);
       if (endDateError) {
         toast({
@@ -1569,7 +1566,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       errors.startDate = startDateError;
     }
     
-    // Validate end date is after start date and in the future
+    // Validate end date is after start date
     const endDateError = validateEndDate(projectStartDateInput, projectEndDateInput);
     if (endDateError) {
       errors.endDate = endDateError;
