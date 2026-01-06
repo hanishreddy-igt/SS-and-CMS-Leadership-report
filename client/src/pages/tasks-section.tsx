@@ -8,6 +8,12 @@ import TaskTemplates from '@/components/TaskTemplates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePermissions } from '@/hooks/usePermissions';
 
+// ============================================================
+// TASK ACCESS CONTROL - Change this to allow/restrict access
+// Set to true to allow everyone, or check specific roles
+// ============================================================
+const TASKS_ALLOWED_ROLES = ['admin', 'manager']; // Add 'lead', 'member' to open up
+
 const tabs = [
   { id: 'workspace', label: 'Working Space', icon: LayoutGrid },
   { id: 'assigned', label: 'Tasks Assigned to You', icon: UserCheck },
@@ -18,7 +24,10 @@ export default function TasksSection() {
   const [, setLocation] = useLocation();
   const params = useParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState(params.tab || 'workspace');
-  const { canManageTasks, role } = usePermissions();
+  const { role } = usePermissions();
+  
+  // Simple role check - easy to modify
+  const hasAccess = TASKS_ALLOWED_ROLES.includes(role);
 
   useEffect(() => {
     if (params.tab && params.tab !== activeTab) {
@@ -31,7 +40,7 @@ export default function TasksSection() {
     setLocation(`/tasks/${tabId}`);
   };
 
-  if (!canManageTasks) {
+  if (!hasAccess) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md w-full">

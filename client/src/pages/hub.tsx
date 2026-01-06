@@ -29,9 +29,17 @@ function HubCard({ icon: Icon, title, description, onClick, testId }: HubCardPro
   );
 }
 
+// ============================================================
+// TASK ACCESS CONTROL - Must match tasks-section.tsx
+// ============================================================
+const TASKS_ALLOWED_ROLES = ['admin', 'manager']; // Add 'lead', 'member' to open up
+
 export default function Hub() {
   const [, setLocation] = useLocation();
-  const { canManageTasks } = usePermissions();
+  const { role } = usePermissions();
+  
+  // Simple role check - easy to modify
+  const canAccessTasks = TASKS_ALLOWED_ROLES.includes(role);
 
   const sections = [
     {
@@ -56,7 +64,7 @@ export default function Hub() {
       description: 'Manage tasks, templates, and daily work',
       path: '/tasks/workspace',
       testId: 'hub-tasks',
-      visible: canManageTasks,
+      visible: canAccessTasks,
     },
   ].filter(section => section.visible);
 
