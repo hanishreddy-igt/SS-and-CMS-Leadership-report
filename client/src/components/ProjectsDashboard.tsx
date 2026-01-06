@@ -2871,8 +2871,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       </div>
                     )}
                     
-                    {/* Caution warnings */}
-                    {(!project.endDate || projectHasUnfilledRoles(project) || !project.totalContractualHours || !project.customerContactEmail) && (
+                    {/* Caution warnings - only show for non-ended projects */}
+                    {getProjectStatus(project.endDate) !== 'ended' && (!project.endDate || projectHasUnfilledRoles(project) || !project.totalContractualHours || !project.customerContactEmail) && (
                       <div className="space-y-1 mt-2">
                         {!project.endDate && (
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-end-date-${project.id}`}>
