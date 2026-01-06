@@ -3,6 +3,7 @@ import { LayoutDashboard, FileText, ListTodo, Shield } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface HubCardProps {
   icon: typeof LayoutDashboard;
@@ -30,6 +31,7 @@ function HubCard({ icon: Icon, title, description, onClick, testId }: HubCardPro
 
 export default function Hub() {
   const [, setLocation] = useLocation();
+  const { canManageTasks } = usePermissions();
 
   const sections = [
     {
@@ -38,6 +40,7 @@ export default function Hub() {
       description: 'View contracts, team members, and project leads',
       path: '/dashboard/contracts',
       testId: 'hub-dashboard',
+      visible: true,
     },
     {
       icon: FileText,
@@ -45,6 +48,7 @@ export default function Hub() {
       description: 'Submit, view, and analyze weekly reports',
       path: '/reports/submit',
       testId: 'hub-reports',
+      visible: true,
     },
     {
       icon: ListTodo,
@@ -52,8 +56,9 @@ export default function Hub() {
       description: 'Manage tasks, templates, and daily work',
       path: '/tasks/workspace',
       testId: 'hub-tasks',
+      visible: canManageTasks,
     },
-  ];
+  ].filter(section => section.visible);
 
   return (
     <div className="min-h-screen flex flex-col">

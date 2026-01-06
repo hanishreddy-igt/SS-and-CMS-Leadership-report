@@ -28,6 +28,7 @@ export interface Permissions {
   canViewAllFeedback: boolean;
   canViewTeamFeedbackSummary: boolean;
   canDeleteTeamFeedback: boolean;
+  canManageTasks: boolean;
   role: UserRole;
   isAdmin: boolean;
 }
@@ -58,6 +59,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canViewAllFeedback: true,
     canViewTeamFeedbackSummary: true,
     canDeleteTeamFeedback: true,
+    canManageTasks: true,
   },
   manager: {
     canManageUsers: false,
@@ -84,6 +86,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canViewAllFeedback: true,
     canViewTeamFeedbackSummary: true,
     canDeleteTeamFeedback: true,
+    canManageTasks: true,
   },
   lead: {
     canManageUsers: false,
@@ -110,6 +113,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canViewAllFeedback: false,
     canViewTeamFeedbackSummary: false,
     canDeleteTeamFeedback: false,
+    canManageTasks: false,
   },
   member: {
     canManageUsers: false,
@@ -136,6 +140,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
     canViewAllFeedback: false,
     canViewTeamFeedbackSummary: false,
     canDeleteTeamFeedback: false,
+    canManageTasks: false,
   },
 };
 

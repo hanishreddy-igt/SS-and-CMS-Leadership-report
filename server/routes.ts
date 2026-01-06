@@ -103,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'canEditProjectLeads', 'canDeletePeople',
       'canAddContracts', 'canEditContracts', 'canDeleteContracts', 'canGenerateAISummary',
       'canRegenerateAISummary', 'canViewAISummary', 'canExportReports', 'canArchiveReports', 
-      'canViewFeedback', 'canSubmitFeedback', 'canDeleteTeamFeedback'
+      'canViewFeedback', 'canSubmitFeedback', 'canDeleteTeamFeedback', 'canManageTasks'
     ],
     manager: [
       'canViewAllReports', 'canSubmitReports', 'canEditReports', 'canDeleteReports',
@@ -111,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'canDeletePeople', 'canAddContracts', 
       'canEditContracts', 'canDeleteContracts', 'canGenerateAISummary', 'canRegenerateAISummary',
       'canViewAISummary', 'canExportReports', 'canArchiveReports', 'canViewFeedback', 
-      'canSubmitFeedback', 'canDeleteTeamFeedback'
+      'canSubmitFeedback', 'canDeleteTeamFeedback', 'canManageTasks'
     ],
     lead: [
       'canViewAllReports', 'canSubmitReports', 'canEditReports',
@@ -1811,9 +1811,10 @@ Output valid JSON only.`;
   });
 
   // ====== TASK MANAGEMENT ROUTES ======
+  // All task routes require canManageTasks permission (admin/manager only)
 
   // Get all tasks
-  app.get('/api/tasks', isAuthenticated, async (req, res) => {
+  app.get('/api/tasks', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const tasks = await storage.getTasks();
       res.json(tasks);
@@ -1824,7 +1825,7 @@ Output valid JSON only.`;
   });
 
   // Get task by ID
-  app.get('/api/tasks/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/tasks/:id', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const task = await storage.getTask(req.params.id);
       if (!task) {
@@ -1838,7 +1839,7 @@ Output valid JSON only.`;
   });
 
   // Get tasks by creator (for "Your Workspace" section)
-  app.get('/api/tasks/creator/:email', isAuthenticated, async (req, res) => {
+  app.get('/api/tasks/creator/:email', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const tasks = await storage.getTasksByCreator(req.params.email);
       res.json(tasks);
@@ -1849,7 +1850,7 @@ Output valid JSON only.`;
   });
 
   // Get tasks by assignee (for "Tasks Assigned to You" tab)
-  app.get('/api/tasks/assignee/:personId', isAuthenticated, async (req, res) => {
+  app.get('/api/tasks/assignee/:personId', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const tasks = await storage.getTasksByAssignee(req.params.personId);
       res.json(tasks);
@@ -1860,7 +1861,7 @@ Output valid JSON only.`;
   });
 
   // Get tasks by project (for "All Tasks" tree view)
-  app.get('/api/tasks/project/:projectId', isAuthenticated, async (req, res) => {
+  app.get('/api/tasks/project/:projectId', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const tasks = await storage.getTasksByProject(req.params.projectId);
       res.json(tasks);
@@ -1871,7 +1872,7 @@ Output valid JSON only.`;
   });
 
   // Get sub-tasks
-  app.get('/api/tasks/:id/subtasks', isAuthenticated, async (req, res) => {
+  app.get('/api/tasks/:id/subtasks', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const subtasks = await storage.getSubTasks(req.params.id);
       res.json(subtasks);
@@ -1882,7 +1883,7 @@ Output valid JSON only.`;
   });
 
   // Create task
-  app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
+  app.post('/api/tasks', isAuthenticated, requirePermission('canManageTasks'), async (req: any, res) => {
     try {
       const userEmail = req.user.claims.email;
       const taskData = {
@@ -1904,7 +1905,7 @@ Output valid JSON only.`;
   });
 
   // Update task
-  app.patch('/api/tasks/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/tasks/:id', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const task = await storage.updateTask(req.params.id, req.body);
       if (!task) {
@@ -1918,7 +1919,7 @@ Output valid JSON only.`;
   });
 
   // Delete task
-  app.delete('/api/tasks/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/tasks/:id', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const deleted = await storage.deleteTask(req.params.id);
       if (!deleted) {
@@ -1932,9 +1933,10 @@ Output valid JSON only.`;
   });
 
   // ====== TASK TEMPLATE ROUTES ======
+  // All template routes require canManageTasks permission (admin/manager only)
 
   // Get all task templates
-  app.get('/api/task-templates', isAuthenticated, async (req, res) => {
+  app.get('/api/task-templates', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const templates = await storage.getTaskTemplates();
       res.json(templates);
@@ -1945,7 +1947,7 @@ Output valid JSON only.`;
   });
 
   // Get task template by ID
-  app.get('/api/task-templates/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/task-templates/:id', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const template = await storage.getTaskTemplate(req.params.id);
       if (!template) {
@@ -1959,7 +1961,7 @@ Output valid JSON only.`;
   });
 
   // Create task template
-  app.post('/api/task-templates', isAuthenticated, async (req: any, res) => {
+  app.post('/api/task-templates', isAuthenticated, requirePermission('canManageTasks'), async (req: any, res) => {
     try {
       const userEmail = req.user.claims.email;
       const templateData = {
@@ -1981,7 +1983,7 @@ Output valid JSON only.`;
   });
 
   // Update task template
-  app.patch('/api/task-templates/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/task-templates/:id', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const template = await storage.updateTaskTemplate(req.params.id, req.body);
       if (!template) {
@@ -1995,7 +1997,7 @@ Output valid JSON only.`;
   });
 
   // Delete task template
-  app.delete('/api/task-templates/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/task-templates/:id', isAuthenticated, requirePermission('canManageTasks'), async (req, res) => {
     try {
       const deleted = await storage.deleteTaskTemplate(req.params.id);
       if (!deleted) {
