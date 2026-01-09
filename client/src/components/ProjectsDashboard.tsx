@@ -3705,10 +3705,15 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       {selectedMembers.has(member.id) && <Check className="h-3 w-3 text-primary-foreground" />}
                     </div>
                   )}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <span data-testid={`text-member-${member.id}`} className="font-medium block truncate">
                       {member.name}
                     </span>
+                    {member.roles?.includes('project-lead') && (
+                      <Badge variant="outline" className="text-xs mt-0.5" data-testid={`badge-also-lead-${member.id}`}>
+                        Also Lead
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 {!selectionModeMembers && (permissions.canEditTeamMembers || permissions.canDeletePeople) && (
@@ -3958,15 +3963,22 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   }
                 }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                   {selectionModeLeads && (
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedLeads.has(lead.id) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
                       {selectedLeads.has(lead.id) && <Check className="h-3 w-3 text-primary-foreground" />}
                     </div>
                   )}
-                  <span data-testid={`text-lead-${lead.id}`} className="font-medium">
-                    {lead.name}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span data-testid={`text-lead-${lead.id}`} className="font-medium block truncate">
+                      {lead.name}
+                    </span>
+                    {lead.roles?.includes('team-member') && (
+                      <Badge variant="outline" className="text-xs mt-0.5" data-testid={`badge-also-member-${lead.id}`}>
+                        Also Member
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 {!selectionModeLeads && (permissions.canEditProjectLeads || permissions.canDeletePeople) && (
                   <DropdownMenu>

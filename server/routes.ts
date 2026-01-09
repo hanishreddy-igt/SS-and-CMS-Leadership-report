@@ -122,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ],
     member: [
       'canViewAllReports', 'canViewAISummary', 'canViewFeedback', 'canSubmitFeedback',
-      'canAddTeamMembers', 'canEditTeamMembers'
+      'canAddTeamMembers', 'canEditTeamMembers', 'canEditContracts'
     ]
   };
 
@@ -626,11 +626,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unified People API
   // Get all people (for resolving person names in feedback entries)
   app.get('/api/people', isAuthenticated, async (_req, res) => {
     try {
       const allPeople = await storage.getAllPeople();
       res.json(allPeople);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create a person with specified roles
+  app.post('/api/people', isAuthenticated, requirePermission('canAddTeamMembers'), async (req, res) => {
+    try {
+      const { name, email, roles } = req.body;
+      if (!name) {
+        return res.status(400).json({ error: 'Name is required' });
+      }
+      
+      // Check if person with this email already exists
+      if (email) {
+        const existingPerson = await storage.getPersonByEmail(email);
+        if (existingPerson) {
+          // Person exists - add any new roles
+          let updated = existingPerson;
+          for (const role of (roles || [])) {
+            updated = await storage.addRoleToPerson(existingPerson.id, role) || updated;
+          }
+          // Update name if different
+          if (name && name !== existingPerson.name) {
+            updated = await storage.updatePerson(existingPerson.id, { name }) || updated;
+          }
+          return res.json(updated);
+        }
+      }
+      
+      // Create new person with specified roles
+      const person = await storage.createPerson({
+        name,
+        email: email || null,
+        roles: roles || [],
+      });
+      res.json(person);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update a person
+  app.patch('/api/people/:id', isAuthenticated, requirePermission('canEditTeamMembers'), async (req, res) => {
+    try {
+      const { name, email, roles } = req.body;
+      const person = await storage.getPersonById(req.params.id);
+      if (!person) {
+        return res.status(404).json({ error: 'Person not found' });
+      }
+      
+      const updates: any = {};
+      if (name !== undefined) updates.name = name;
+      if (email !== undefined) updates.email = email;
+      if (roles !== undefined) updates.roles = roles;
+      
+      const updated = await storage.updatePerson(req.params.id, updates);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Add role to person
+  app.post('/api/people/:id/roles', isAuthenticated, requirePermission('canEditTeamMembers'), async (req, res) => {
+    try {
+      const { role } = req.body;
+      if (!role) {
+        return res.status(400).json({ error: 'Role is required' });
+      }
+      const updated = await storage.addRoleToPerson(req.params.id, role);
+      if (!updated) {
+        return res.status(404).json({ error: 'Person not found' });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Remove role from person
+  app.delete('/api/people/:id/roles/:role', isAuthenticated, requirePermission('canDeletePeople'), async (req, res) => {
+    try {
+      const person = await storage.getPersonById(req.params.id);
+      if (!person) {
+        return res.status(404).json({ error: 'Person not found' });
+      }
+      
+      const updated = await storage.removeRoleFromPerson(req.params.id, req.params.role);
+      
+      // If person has no roles left, delete them entirely
+      if (updated && updated.roles.length === 0) {
+        await storage.deletePerson(req.params.id);
+        return res.json({ deleted: true });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Merge duplicate people by email (admin only)
+  app.post('/api/people/merge-duplicates', isAuthenticated, requirePermission('canManageUsers'), async (req, res) => {
+    try {
+      const allPeople = await storage.getAllPeople();
+      const emailMap = new Map<string, typeof allPeople>();
+      
+      // Group people by email (case-insensitive)
+      for (const person of allPeople) {
+        if (!person.email) continue;
+        const normalizedEmail = person.email.toLowerCase();
+        const existing = emailMap.get(normalizedEmail) || [];
+        existing.push(person);
+        emailMap.set(normalizedEmail, existing);
+      }
+      
+      let mergeCount = 0;
+      const mergedResults: { email: string; mergedIds: string[]; keepId: string }[] = [];
+      
+      // Merge duplicates
+      for (const [email, duplicates] of emailMap.entries()) {
+        if (duplicates.length <= 1) continue;
+        
+        // Keep the first one, merge roles from others
+        const primary = duplicates[0];
+        const mergedRoles = new Set(primary.roles);
+        
+        for (let i = 1; i < duplicates.length; i++) {
+          const dup = duplicates[i];
+          // Add all roles from duplicate
+          for (const role of dup.roles) {
+            mergedRoles.add(role);
+          }
+          // Delete the duplicate
+          await storage.deletePerson(dup.id);
+          mergeCount++;
+        }
+        
+        // Update primary with merged roles
+        await storage.updatePerson(primary.id, { roles: Array.from(mergedRoles) });
+        
+        mergedResults.push({
+          email,
+          mergedIds: duplicates.slice(1).map(d => d.id),
+          keepId: primary.id
+        });
+      }
+      
+      res.json({ 
+        message: `Merged ${mergeCount} duplicate entries`, 
+        mergedCount: mergeCount,
+        details: mergedResults
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -649,6 +804,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/team-members', isAuthenticated, requirePermission('canAddTeamMembers'), async (req, res) => {
     try {
       const data = insertPersonSchema.parse(req.body);
+      
+      // Check if person with this email already exists
+      if (data.email) {
+        const existingPerson = await storage.getPersonByEmail(data.email);
+        if (existingPerson) {
+          // Person exists - add team-member role if not already present
+          const updated = await storage.addRoleToPerson(existingPerson.id, 'team-member');
+          // Update name if provided and different
+          if (data.name && data.name !== existingPerson.name) {
+            await storage.updatePerson(existingPerson.id, { name: data.name });
+          }
+          return res.json(updated);
+        }
+      }
+      
+      // No existing person - create new one
       const member = await storage.createTeamMember(data);
       res.json(member);
     } catch (error: any) {
@@ -671,11 +842,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/team-members/:id', isAuthenticated, requirePermission('canDeletePeople'), async (req, res) => {
     try {
-      const success = await storage.deleteTeamMember(req.params.id);
-      if (!success) {
+      const person = await storage.getPersonById(req.params.id);
+      if (!person) {
         return res.status(404).json({ error: 'Team member not found' });
       }
-      res.json({ success });
+      
+      // Remove team-member role instead of deleting person entirely
+      const updated = await storage.removeRoleFromPerson(req.params.id, 'team-member');
+      
+      // If person has no roles left, delete them entirely
+      if (updated && updated.roles.length === 0) {
+        await storage.deletePerson(req.params.id);
+        return res.json({ success: true, deleted: true });
+      }
+      
+      res.json({ success: true, roleRemoved: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -694,6 +875,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/project-leads', isAuthenticated, requirePermission('canAddProjectLeads'), async (req, res) => {
     try {
       const data = insertPersonSchema.parse(req.body);
+      
+      // Check if person with this email already exists
+      if (data.email) {
+        const existingPerson = await storage.getPersonByEmail(data.email);
+        if (existingPerson) {
+          // Person exists - add project-lead role if not already present
+          const updated = await storage.addRoleToPerson(existingPerson.id, 'project-lead');
+          // Update name if provided and different
+          if (data.name && data.name !== existingPerson.name) {
+            await storage.updatePerson(existingPerson.id, { name: data.name });
+          }
+          return res.json(updated);
+        }
+      }
+      
+      // No existing person - create new one
       const lead = await storage.createProjectLead(data);
       res.json(lead);
     } catch (error: any) {
@@ -716,11 +913,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/project-leads/:id', isAuthenticated, requirePermission('canDeletePeople'), async (req, res) => {
     try {
-      const success = await storage.deleteProjectLead(req.params.id);
-      if (!success) {
+      const person = await storage.getPersonById(req.params.id);
+      if (!person) {
         return res.status(404).json({ error: 'Project lead not found' });
       }
-      res.json({ success });
+      
+      // Remove project-lead role instead of deleting person entirely
+      const updated = await storage.removeRoleFromPerson(req.params.id, 'project-lead');
+      
+      // If person has no roles left, delete them entirely
+      if (updated && updated.roles.length === 0) {
+        await storage.deletePerson(req.params.id);
+        return res.json({ success: true, deleted: true });
+      }
+      
+      res.json({ success: true, roleRemoved: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

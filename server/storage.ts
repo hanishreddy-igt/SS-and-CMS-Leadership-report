@@ -88,9 +88,15 @@ export interface IStorage {
   deleteProjectRole(id: string): Promise<boolean>;
   seedDefaultRoles(): Promise<void>;
 
-  // Person feedback operations
+  // Unified People operations
   getAllPeople(): Promise<Person[]>;
   getPersonById(id: string): Promise<Person | undefined>;
+  getPersonByEmail(email: string): Promise<Person | undefined>;
+  createPerson(person: InsertPerson): Promise<Person>;
+  updatePerson(id: string, updates: Partial<InsertPerson>): Promise<Person | undefined>;
+  deletePerson(id: string): Promise<boolean>;
+  addRoleToPerson(id: string, role: string): Promise<Person | undefined>;
+  removeRoleFromPerson(id: string, role: string): Promise<Person | undefined>;
   updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined>;
   clearAllFeedback(): Promise<void>;
 
@@ -541,13 +547,62 @@ export class MemStorage implements IStorage {
     }
   }
 
-  // Person feedback operations for MemStorage
+  // Unified People operations for MemStorage
   async getAllPeople(): Promise<Person[]> {
     return Array.from(this.people.values());
   }
 
   async getPersonById(id: string): Promise<Person | undefined> {
     return this.people.get(id);
+  }
+
+  async getPersonByEmail(email: string): Promise<Person | undefined> {
+    if (!email) return undefined;
+    return Array.from(this.people.values()).find(
+      p => p.email?.toLowerCase() === email.toLowerCase()
+    );
+  }
+
+  async createPerson(insertPerson: InsertPerson): Promise<Person> {
+    const id = randomUUID();
+    const person: Person = {
+      id,
+      name: insertPerson.name,
+      email: insertPerson.email ?? null,
+      roles: insertPerson.roles ?? [],
+      feedback: insertPerson.feedback ?? null,
+    };
+    this.people.set(id, person);
+    return person;
+  }
+
+  async updatePerson(id: string, updates: Partial<InsertPerson>): Promise<Person | undefined> {
+    const person = this.people.get(id);
+    if (!person) return undefined;
+    const updated = { ...person, ...updates };
+    this.people.set(id, updated);
+    return updated;
+  }
+
+  async deletePerson(id: string): Promise<boolean> {
+    return this.people.delete(id);
+  }
+
+  async addRoleToPerson(id: string, role: string): Promise<Person | undefined> {
+    const person = this.people.get(id);
+    if (!person) return undefined;
+    if (person.roles.includes(role)) return person; // Already has role
+    const updated = { ...person, roles: [...person.roles, role] };
+    this.people.set(id, updated);
+    return updated;
+  }
+
+  async removeRoleFromPerson(id: string, role: string): Promise<Person | undefined> {
+    const person = this.people.get(id);
+    if (!person) return undefined;
+    const updated = { ...person, roles: person.roles.filter(r => r !== role) };
+    this.people.set(id, updated);
+    return updated;
   }
 
   async updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined> {
@@ -828,19 +883,57 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
-  // Generic person methods for feedback
+  // Unified People operations for DatabaseStorage
   async getPersonById(id: string): Promise<Person | undefined> {
     const [person] = await db.select().from(people).where(eq(people.id, id));
     return person || undefined;
   }
 
-  async updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined> {
-    const [updated] = await db.update(people).set({ feedback }).where(eq(people.id, id)).returning();
-    return updated || undefined;
+  async getPersonByEmail(email: string): Promise<Person | undefined> {
+    if (!email) return undefined;
+    const allPeople = await db.select().from(people);
+    return allPeople.find(p => p.email?.toLowerCase() === email.toLowerCase());
   }
 
   async getAllPeople(): Promise<Person[]> {
     return await db.select().from(people);
+  }
+
+  async createPerson(insertPerson: InsertPerson): Promise<Person> {
+    const [person] = await db.insert(people).values(insertPerson).returning();
+    return person;
+  }
+
+  async updatePerson(id: string, updates: Partial<InsertPerson>): Promise<Person | undefined> {
+    const [updated] = await db.update(people).set(updates).where(eq(people.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deletePerson(id: string): Promise<boolean> {
+    const result = await db.delete(people).where(eq(people.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async addRoleToPerson(id: string, role: string): Promise<Person | undefined> {
+    const person = await this.getPersonById(id);
+    if (!person) return undefined;
+    if (person.roles.includes(role)) return person; // Already has role
+    const newRoles = [...person.roles, role];
+    const [updated] = await db.update(people).set({ roles: newRoles }).where(eq(people.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async removeRoleFromPerson(id: string, role: string): Promise<Person | undefined> {
+    const person = await this.getPersonById(id);
+    if (!person) return undefined;
+    const newRoles = person.roles.filter(r => r !== role);
+    const [updated] = await db.update(people).set({ roles: newRoles }).where(eq(people.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async updatePersonFeedback(id: string, feedback: string): Promise<Person | undefined> {
+    const [updated] = await db.update(people).set({ feedback }).where(eq(people.id, id)).returning();
+    return updated || undefined;
   }
 
   async clearAllFeedback(): Promise<void> {
