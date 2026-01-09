@@ -85,7 +85,7 @@ export type Permission =
   | 'view_ai_summary'        // 10
   | 'view_historical'        // 11
   | 'export_reports'         // 12
-  | 'add_edit_contracts'     // 13
+  | 'add_contracts'          // 13 - Add only (edit is available to all)
   | 'add_edit_leads'         // 14
   | 'add_edit_members'       // 15
   | 'save_draft'             // 16
@@ -106,7 +106,7 @@ const permissionRoles: Record<Permission, UserRole> = {
   'view_ai_summary': 'lead',
   'view_historical': 'lead',
   'export_reports': 'lead',
-  'add_edit_contracts': 'member',
+  'add_contracts': 'lead', // Add contracts requires lead or higher
   'add_edit_leads': 'member',
   'add_edit_members': 'member',
   'save_draft': 'member',
@@ -144,7 +144,8 @@ export function usePermissions() {
     canViewAiSummary: hasPermission('view_ai_summary'),
     canViewHistorical: hasPermission('view_historical'),
     canExportReports: hasPermission('export_reports'),
-    canAddEditContracts: hasPermission('add_edit_contracts'),
+    canAddContracts: hasPermission('add_contracts'),
+    canEditContracts: true, // All roles can edit contracts
     canAddEditLeads: hasPermission('add_edit_leads'),
     canAddEditMembers: hasPermission('add_edit_members'),
     canSaveDraft: hasPermission('save_draft'),

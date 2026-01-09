@@ -92,10 +92,15 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
     description: "Add, edit, and manage user roles and role requests",
     roles: { admin: true, manager: false, lead: false, member: false },
   },
-  canAddEditContracts: {
-    label: "Add/Edit Contracts",
-    description: "Create new contracts and modify existing contract details",
+  canAddContracts: {
+    label: "Add Contracts",
+    description: "Create new contracts in the system",
     roles: { admin: true, manager: true, lead: true, member: false },
+  },
+  canEditContracts: {
+    label: "Edit Contracts",
+    description: "Modify existing contract details",
+    roles: { admin: true, manager: true, lead: true, member: true },
   },
   canDeleteContracts: {
     label: "Delete Contracts",
@@ -201,7 +206,7 @@ const FEATURE_PERMISSIONS: Record<string, { label: string; description: string; 
 
 const featureCategories = [
   { name: "User Management", features: ["canManageUsers"] },
-  { name: "Contract Operations", features: ["canAddEditContracts", "canDeleteContracts", "canViewAllContracts"] },
+  { name: "Contract Operations", features: ["canAddContracts", "canEditContracts", "canDeleteContracts", "canViewAllContracts"] },
   { name: "People Management", features: ["canAddEditTeamMembers", "canAddEditProjectLeads", "canDeletePeople"] },
   { name: "Report Submission", features: ["canSubmitReports", "canSaveDraft", "canEditOwnReports", "canDeleteReports"] },
   { name: "Account Reports & Archive", features: ["canViewAllReports", "canExportReports", "canArchiveReports", "canViewHistoricalAccountReports"] },

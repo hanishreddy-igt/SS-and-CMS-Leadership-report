@@ -118,7 +118,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Omit<Permissions, "role" | "isAdmin">> 
   member: {
     canManageUsers: false,
     canAddContracts: false,
-    canEditContracts: false,
+    canEditContracts: true,
     canDeleteContracts: false,
     canViewAllContracts: true,
     canAddTeamMembers: true,
