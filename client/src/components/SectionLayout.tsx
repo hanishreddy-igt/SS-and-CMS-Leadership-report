@@ -104,21 +104,14 @@ export default function SectionLayout({
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <img 
-                    src={logoImage} 
-                    alt="IgniteTech + Khoros" 
-                    className="h-10 object-contain"
-                  />
-                  <span className="section-label text-xs">{title}</span>
-                </div>
-                <Link href="/">
-                  <h1 className="text-lg md:text-xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity" data-testid="text-section-title">
-                    <span className="text-foreground">SS & CMA Dashboard</span>
-                  </h1>
-                </Link>
-              </div>
+              <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+                <img 
+                  src={logoImage} 
+                  alt="IgniteTech + Khoros" 
+                  className="h-10 object-contain"
+                />
+                <span className="section-label text-sm font-medium">{title}</span>
+              </Link>
             </div>
             
             <div className="hidden md:flex items-center gap-1 bg-muted/30 rounded-lg p-1">

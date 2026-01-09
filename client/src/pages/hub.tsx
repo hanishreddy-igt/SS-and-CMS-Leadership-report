@@ -75,16 +75,16 @@ export default function Hub() {
         <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-4 mb-2">
                 <img 
                   src={logoImage} 
                   alt="IgniteTech + Khoros" 
                   className="h-16 object-contain"
                 />
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-hub-title">
+                  <span className="text-foreground">SS & CMA Dashboard</span>
+                </h1>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-hub-title">
-                <span className="text-foreground">SS & CMA Dashboard</span>
-              </h1>
               <p className="text-muted-foreground text-base mt-1">
                 Comprehensive tracking system for Strategic Services & Community Managed Services
               </p>
