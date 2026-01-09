@@ -8,6 +8,7 @@ import express, {
 } from "express";
 
 import { registerRoutes } from "./routes";
+import { storage } from "./storage";
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -79,6 +80,21 @@ export default async function runApp(
   setup: (app: Express, server: Server) => Promise<void>,
 ) {
   const server = await registerRoutes(app);
+
+  // Run startup tasks - merge duplicate people entries
+  try {
+    const result = await storage.mergeDuplicatePeople();
+    if (result.mergedCount > 0) {
+      log(`Person cleanup: merged ${result.mergedCount} duplicate entries`, 'startup');
+      result.details.forEach(d => {
+        log(`  Merged ${d.email}: kept ${d.keepId}, removed ${d.mergedIds.join(', ')}`, 'startup');
+      });
+    } else {
+      log('Person cleanup: no duplicates found', 'startup');
+    }
+  } catch (error) {
+    log(`Person cleanup failed: ${error}`, 'startup');
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

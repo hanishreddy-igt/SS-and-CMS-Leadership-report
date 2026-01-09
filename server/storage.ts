@@ -1295,6 +1295,49 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(taskTemplates).where(eq(taskTemplates.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
+
+  async mergeDuplicatePeople(): Promise<{ mergedCount: number; details: { email: string; mergedIds: string[]; keepId: string }[] }> {
+    const allPeople = await this.getAllPeople();
+    const emailMap = new Map<string, Person[]>();
+    
+    for (const person of allPeople) {
+      if (!person.email) continue;
+      const normalizedEmail = person.email.toLowerCase();
+      const existing = emailMap.get(normalizedEmail) || [];
+      existing.push(person);
+      emailMap.set(normalizedEmail, existing);
+    }
+    
+    let mergedCount = 0;
+    const details: { email: string; mergedIds: string[]; keepId: string }[] = [];
+    
+    const entries = Array.from(emailMap.entries());
+    for (const [email, duplicates] of entries) {
+      if (duplicates.length <= 1) continue;
+      
+      const primary = duplicates[0];
+      const mergedRoles = new Set<string>(primary.roles);
+      
+      for (let i = 1; i < duplicates.length; i++) {
+        const dup = duplicates[i];
+        for (const role of dup.roles) {
+          mergedRoles.add(role);
+        }
+        await this.deletePerson(dup.id);
+        mergedCount++;
+      }
+      
+      await this.updatePerson(primary.id, { roles: Array.from(mergedRoles) as string[] });
+      
+      details.push({
+        email,
+        mergedIds: duplicates.slice(1).map((d: Person) => d.id),
+        keepId: primary.id
+      });
+    }
+    
+    return { mergedCount, details };
+  }
 }
 
 export const storage = new DatabaseStorage();
