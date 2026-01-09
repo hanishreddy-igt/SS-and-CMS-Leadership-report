@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { Shield, FileText, Eye, History, BarChart3, CheckCircle2, AlertTriangle, FolderKanban, Menu } from 'lucide-react';
+import { FileText, Eye, History, BarChart3, CheckCircle2, AlertTriangle, FolderKanban, Menu } from 'lucide-react';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
 import { useQuery } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Project, WeeklyReport } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import logoImage from '@assets/IgniteTech__Khoros_Logos-removebg-preview_1767951034958.png';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -77,9 +78,11 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
-                </div>
+                <img 
+                  src={logoImage} 
+                  alt="IgniteTech + Khoros" 
+                  className="h-16 object-contain"
+                />
               </div>
               <Link href="/">
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity" data-testid="text-title">

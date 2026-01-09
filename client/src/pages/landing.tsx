@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, FileText, Users, BarChart, Zap, Lock, TrendingUp, CheckCircle2 } from "lucide-react";
+import { FileText, Users, BarChart, Zap, Lock, TrendingUp, CheckCircle2 } from "lucide-react";
+import logoImage from '@assets/IgniteTech__Khoros_Logos-removebg-preview_1767951034958.png';
 
 export default function Landing() {
   const handleLogin = () => {
@@ -12,9 +13,11 @@ export default function Landing() {
       <header className="border-b border-white/5 backdrop-blur-xl bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-              <Shield className="h-5 w-5 text-muted-foreground" />
-            </div>
+            <img 
+              src={logoImage} 
+              alt="IgniteTech + Khoros" 
+              className="h-12 object-contain"
+            />
             <h1 className="text-xl font-bold text-foreground">SS & CMA Dashboard</h1>
           </div>
           <Button onClick={handleLogin} data-testid="button-login" variant="default">

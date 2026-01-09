@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { ArrowLeft, LayoutDashboard, FileText, ListTodo, Shield, Menu, BarChart3, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, FileText, ListTodo, Menu, BarChart3, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import type { Project, WeeklyReport } from '@shared/schema';
+import logoImage from '@assets/IgniteTech__Khoros_Logos-removebg-preview_1767951034958.png';
 
 interface Tab {
   id: string;
@@ -105,9 +106,11 @@ export default function SectionLayout({
               </Button>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <div className="p-1.5 rounded-lg bg-white/5 border border-white/10">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                  </div>
+                  <img 
+                    src={logoImage} 
+                    alt="IgniteTech + Khoros" 
+                    className="h-10 object-contain"
+                  />
                   <span className="section-label text-xs">{title}</span>
                 </div>
                 <Link href="/">
