@@ -86,7 +86,7 @@ export default function Hub() {
                 </h1>
               </div>
               <p className="text-muted-foreground text-base mt-1">
-                Comprehensive tracking system for Strategic Services & Community Managed Services
+                Comprehensive tracking system for Strategic Services & Community Managed Advisory
               </p>
             </div>
             <div className="flex items-center gap-2">

@@ -1,7 +1,7 @@
 # SS & CMA Dashboard
 
 ## Overview
-This project provides a comprehensive tracking system for Strategic Services (SS) and Community Managed Services (CMA) accounts. It offers a complete overview of project health, progress, and team contributions, aiming to enhance strategic decision-making and operational efficiency. The system is secured with Google authentication, restricted to specific corporate email domains.
+This project provides a comprehensive tracking system for Strategic Services (SS) and Community Managed Advisory (CMA) accounts. It offers a complete overview of project health, progress, and team contributions, aiming to enhance strategic decision-making and operational efficiency. The system is secured with Google authentication, restricted to specific corporate email domains.
 
 ## User Preferences
 - Material Design approach for data-rich enterprise applications

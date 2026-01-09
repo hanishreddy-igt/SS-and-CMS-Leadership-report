@@ -2284,7 +2284,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                             }}
                           />
                           <Label htmlFor="project-type-cms" className="font-normal cursor-pointer">
-                            Community Managed Services (CMS)
+                            Community Managed Advisory (CMS)
                           </Label>
                         </div>
                         <div className="flex items-center gap-2">
@@ -2866,7 +2866,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       <div className="flex items-center gap-2 text-sm">
                         <Briefcase className="h-4 w-4 text-muted-foreground" />
                         <Badge variant="outline" className="text-xs" data-testid={`badge-project-type-${project.id}`}>
-                          {project.projectType === 'CMS' ? 'Community Managed Services' : 'Strategic Services'}
+                          {project.projectType === 'CMS' ? 'Community Managed Advisory' : 'Strategic Services'}
                         </Badge>
                       </div>
                     )}
@@ -3238,7 +3238,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     }}
                   />
                   <Label htmlFor="edit-project-type-cms" className="font-normal cursor-pointer">
-                    Community Managed Services (CMS)
+                    Community Managed Advisory (CMS)
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -3421,7 +3421,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Project Type</p>
                     <Badge variant="outline" className="mt-1" data-testid="badge-project-detail-type">
-                      {selectedProject.projectType === 'CMS' ? 'Community Managed Services' : 'Strategic Services'}
+                      {selectedProject.projectType === 'CMS' ? 'Community Managed Advisory' : 'Strategic Services'}
                     </Badge>
                   </div>
                 </div>
