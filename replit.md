@@ -33,10 +33,17 @@ This project provides a comprehensive tracking system for Strategic Services (SS
 - **Database Schema (PostgreSQL with Drizzle ORM)**:
     - **Users**: Authentication data.
     - **Sessions**: Session storage.
-    - **People**: Unified table for team members and project leads.
+    - **People**: Unified table for team members and project leads. Each person has a `roles` array that can contain `['team-member']`, `['project-lead']`, or both. API endpoints automatically detect existing people by email to prevent duplicates.
     - **Projects**: Project details including customer, lead, team member assignments with roles, and dates. Team members are stored as JSONB array: `[{memberId: string, role: string}]`.
     - **Weekly Reports**: Stores progress, health status, and team feedback.
     - **Saved Reports**: Archived weekly report snapshots with PDF/CSV data, AI summary, and health counts.
+- **Unified Person Management**:
+    - People can have multiple roles (team-member, project-lead) simultaneously
+    - When adding a team member or project lead, the system checks if a person with that email already exists
+    - If exists, the new role is added to the existing person instead of creating a duplicate
+    - UI shows "Also Lead" / "Also Member" badges to indicate people with multiple roles
+    - Delete operations remove only the specific role; person is only fully deleted when no roles remain
+    - Admin-only `/api/people/merge-duplicates` endpoint available to consolidate existing duplicate entries
 - **Key Features**:
     - **Dashboard Section**: Unified dashboard for project and team management, including project cards, team member/lead grids, and modal forms for adding new entities. Features project name filtering, lead/member filtering, and sorting by end date.
     - **Reports Section**: 
