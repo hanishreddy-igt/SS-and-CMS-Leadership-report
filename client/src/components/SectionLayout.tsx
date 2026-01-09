@@ -104,13 +104,13 @@ export default function SectionLayout({
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+              <Link href="/" className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity">
                 <img 
                   src={logoImage} 
                   alt="IgniteTech + Khoros" 
                   className="h-10 object-contain"
                 />
-                <span className="section-label text-sm font-medium">{title}</span>
+                <span className="text-xl md:text-2xl font-bold tracking-tight text-foreground">{title}</span>
               </Link>
             </div>
             
