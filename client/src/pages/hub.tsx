@@ -1,9 +1,10 @@
 import { useLocation } from 'wouter';
-import { LayoutDashboard, FileText, ListTodo, Shield } from 'lucide-react';
+import { LayoutDashboard, FileText, ListTodo } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
 import { usePermissions } from '@/hooks/usePermissions';
+import logoImage from '@assets/IgniteTech__Khoros_Logos-removebg-preview_1767951034958.png';
 
 interface HubCardProps {
   icon: typeof LayoutDashboard;
@@ -75,9 +76,11 @@ export default function Hub() {
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
-                </div>
+                <img 
+                  src={logoImage} 
+                  alt="IgniteTech + Khoros" 
+                  className="h-16 object-contain"
+                />
               </div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-hub-title">
                 <span className="text-foreground">SS & CMA Dashboard</span>
