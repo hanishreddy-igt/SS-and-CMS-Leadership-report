@@ -112,7 +112,7 @@ export default function SectionLayout({
                 </div>
                 <Link href="/">
                   <h1 className="text-lg md:text-xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity" data-testid="text-section-title">
-                    <span className="text-foreground">CMS & SS Leadership Report</span>
+                    <span className="text-foreground">SS & CMA Dashboard</span>
                   </h1>
                 </Link>
               </div>
@@ -292,7 +292,7 @@ export default function SectionLayout({
       <footer className="border-t border-white/5 mt-8">
         <div className="px-4 sm:px-6 lg:px-8 py-4 text-center">
           <p className="text-sm text-muted-foreground">
-            CMS & SS Leadership Report — <span className="text-primary">IgniteTech</span>
+            SS & CMA Dashboard — <span className="text-primary">IgniteTech</span>
           </p>
         </div>
       </footer>

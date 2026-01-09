@@ -15,7 +15,7 @@ export default function Landing() {
             <div className="p-2 rounded-lg bg-white/5 border border-white/10">
               <Shield className="h-5 w-5 text-muted-foreground" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">CMS & SS Leadership Report</h1>
+            <h1 className="text-xl font-bold text-foreground">SS & CMA Dashboard</h1>
           </div>
           <Button onClick={handleLogin} data-testid="button-login" variant="default">
             Sign In
@@ -34,20 +34,19 @@ export default function Landing() {
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6">
                 <Zap className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Executive Dashboard</span>
+                <span className="text-sm font-medium text-muted-foreground">SS & CMA Dashboard</span>
               </div>
               
               <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-foreground">
-                Community Managed Services
+                Strategic Services
                 <br />
-                & Strategic Services
+                & Community Managed
                 <br />
-                Leadership Report
+                Dashboard
               </h2>
               
               <p className="text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
-                A comprehensive tool for leadership to monitor and understand the delivery status 
-                of all CMS and SS account engagements in real-time.
+                Comprehensive tracking system for Strategic Services & Community Managed Services.
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -170,7 +169,7 @@ export default function Landing() {
       <footer className="border-t border-white/5 py-8">
         <div className="container mx-auto px-6 text-center">
           <p className="text-sm text-muted-foreground">
-            CMS & SS Leadership Report — IgniteTech
+            SS & CMA Dashboard — IgniteTech
           </p>
         </div>
       </footer>

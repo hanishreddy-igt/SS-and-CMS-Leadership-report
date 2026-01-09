@@ -1061,7 +1061,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.setTextColor(...colors.white as [number, number, number]);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('CMS & SS Leadership Report', 14, 18);
+    doc.text('SS & CMA Dashboard', 14, 18);
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -1313,7 +1313,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
         doc.setFontSize(8);
         doc.setTextColor(...colors.muted as [number, number, number]);
-        doc.text('CMS & SS Leadership Report', 14, pageHeight - 5);
+        doc.text('SS & CMA Dashboard', 14, pageHeight - 5);
         doc.text(`Page ${data.pageNumber}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
         doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 5, { align: 'right' });
       },
@@ -1462,7 +1462,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.setTextColor(...colors.white as [number, number, number]);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('CMS & SS Leadership Report', 14, 18);
+    doc.text('SS & CMA Dashboard', 14, 18);
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -1957,7 +1957,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         doc.setFontSize(8);
         doc.setTextColor(...colors.muted as [number, number, number]);
         doc.text(
-          `CMS & SS Leadership Report`,
+          `SS & CMA Dashboard`,
           14,
           pageHeight - 5,
         );
@@ -1976,7 +1976,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       },
     });
 
-    doc.save(`cms_ss_leadership_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`ss_cma_dashboard_report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   // Export Leadership Summary as standalone PDF (AI Insights only - no team feedback)
@@ -2341,7 +2341,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
     doc.setFontSize(7);
     doc.setTextColor(...colors.muted as [number, number, number]);
-    doc.text('CMS & SS Leadership Summary - AI Generated', 14, pageHeight - 4);
+    doc.text('SS & CMA Dashboard - AI Generated', 14, pageHeight - 4);
     doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 4, { align: 'right' });
 
     doc.save(`leadership_summary_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -3090,7 +3090,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     doc.rect(0, pageHeight - 10, pageWidth, 10, 'F');
     doc.setFontSize(7);
     doc.setTextColor(...colors.muted as [number, number, number]);
-    doc.text('CMS & SS Executive Summary - AI Generated', 14, pageHeight - 4);
+    doc.text('SS & CMA Dashboard - AI Generated', 14, pageHeight - 4);
     doc.text(new Date().toLocaleDateString(), pageWidth - 14, pageHeight - 4, { align: 'right' });
 
     return doc.output('datauristring').split(',')[1];

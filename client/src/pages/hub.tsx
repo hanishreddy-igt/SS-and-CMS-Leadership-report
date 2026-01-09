@@ -78,13 +78,12 @@ export default function Hub() {
                 <div className="p-2 rounded-lg bg-white/5 border border-white/10">
                   <Shield className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <span className="section-label">Executive Dashboard</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-hub-title">
-                <span className="text-foreground">CMS & SS Leadership Report</span>
+                <span className="text-foreground">SS & CMA Dashboard</span>
               </h1>
               <p className="text-muted-foreground text-base mt-1">
-                Comprehensive delivery status tracking for Community Managed & Strategic Services
+                Comprehensive tracking system for Strategic Services & Community Managed Services
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -118,7 +117,7 @@ export default function Hub() {
       <footer className="border-t border-white/5">
         <div className="px-4 sm:px-6 lg:px-8 py-4 text-center">
           <p className="text-sm text-muted-foreground">
-            CMS & SS Leadership Report — <span className="text-primary">IgniteTech</span>
+            SS & CMA Dashboard — <span className="text-primary">IgniteTech</span>
           </p>
         </div>
       </footer>
