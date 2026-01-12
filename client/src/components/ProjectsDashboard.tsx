@@ -65,6 +65,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     name: '',
     customer: '',
     customerContactEmail: '',
+    accountOwner: '',
     contractualHours: '',
     contractualMinutes: '',
     leadIds: [] as string[],
@@ -98,6 +99,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     name: '',
     customer: '',
     customerContactEmail: '',
+    accountOwner: '',
     contractualHours: '',
     contractualMinutes: '',
     leadIds: [] as string[],
@@ -526,6 +528,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     // Check for missing customer contact email
     if (!project.customerContactEmail) return true;
     
+    // Check for missing account owner
+    if (!project.accountOwner) return true;
+    
     // Check for missing external links
     if (!project.jiraEpic) return true;
     if (!project.googleDriveLink) return true;
@@ -630,6 +635,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       'Contract Name',
       'Customer',
       'Customer Contact Email',
+      'Account Owner',
       'Project Type',
       'Lead(s)',
       'Team Members',
@@ -665,6 +671,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         project.name,
         project.customer,
         project.customerContactEmail || '',
+        project.accountOwner || '',
         project.projectType || '',
         leadNames,
         teamMembersList,
@@ -822,6 +829,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       name: project.name,
       customer: project.customer,
       customerContactEmail: project.customerContactEmail || '',
+      accountOwner: project.accountOwner || '',
       contractualHours: hours,
       contractualMinutes: minutes,
       leadIds: leadIdsArray,
@@ -1040,6 +1048,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           name: editFormData.name,
           customer: editFormData.customer,
           customerContactEmail: editFormData.customerContactEmail,
+          accountOwner: editFormData.accountOwner || null,
           totalContractualHours: totalMinutes || null,
           leadId: editFormData.leadIds[0], // Primary lead is first in the array
           leadIds: editFormData.leadIds,
@@ -1306,6 +1315,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         name: '',
         customer: '',
         customerContactEmail: '',
+        accountOwner: '',
         contractualHours: '',
         contractualMinutes: '',
         leadIds: [],
@@ -1750,6 +1760,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         name: projectFormData.name,
         customer: projectFormData.customer,
         customerContactEmail: projectFormData.customerContactEmail,
+        accountOwner: projectFormData.accountOwner || null,
         totalContractualHours: totalMinutes || null,
         leadId: projectFormData.leadIds[0], // Primary lead is first in the array
         leadIds: projectFormData.leadIds,
@@ -2075,6 +2086,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     name: '',
                     customer: '',
                     customerContactEmail: '',
+                    accountOwner: '',
                     contractualHours: '',
                     contractualMinutes: '',
                     leadIds: [],
@@ -2183,6 +2195,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       {projectFormErrors.customerContactEmail && (
                         <p className="text-sm text-red-500" data-testid="error-customer-email">{projectFormErrors.customerContactEmail}</p>
                       )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-account-owner">Account Owner</Label>
+                      <Input
+                        id="new-account-owner"
+                        data-testid="input-account-owner"
+                        type="text"
+                        value={projectFormData.accountOwner}
+                        onChange={(e) => setProjectFormData({ ...projectFormData, accountOwner: e.target.value })}
+                        placeholder="Enter account owner"
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -3249,6 +3273,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                             <span>Customer contact email missing</span>
                           </div>
                         )}
+                        {!project.accountOwner && (
+                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-account-owner-${project.id}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>Account owner missing</span>
+                          </div>
+                        )}
                         {!project.jiraEpic && (
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-jira-${project.id}`}>
                             <AlertTriangle className="h-4 w-4" />
@@ -3341,6 +3371,17 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 value={editFormData.customerContactEmail}
                 onChange={(e) => setEditFormData({ ...editFormData, customerContactEmail: e.target.value })}
                 placeholder="Enter customer contact email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-account-owner">Account Owner</Label>
+              <Input
+                id="edit-account-owner"
+                data-testid="input-edit-account-owner"
+                type="text"
+                value={editFormData.accountOwner}
+                onChange={(e) => setEditFormData({ ...editFormData, accountOwner: e.target.value })}
+                placeholder="Enter account owner"
               />
             </div>
             <div className="space-y-2">

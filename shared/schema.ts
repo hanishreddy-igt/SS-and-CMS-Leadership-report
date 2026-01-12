@@ -59,6 +59,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   customer: text("customer").notNull(),
   customerContactEmail: text("customer_contact_email"), // Customer contact email (optional in DB, validated in form)
+  accountOwner: text("account_owner"), // Account owner (optional in DB, validated as caution)
   totalContractualHours: text("total_contractual_hours"), // Total contractual hours (optional)
   leadId: varchar("lead_id").notNull(), // Primary lead (for backward compatibility)
   leadIds: text("lead_ids").array().notNull().default(sql`'{}'`), // All leads including co-leads
