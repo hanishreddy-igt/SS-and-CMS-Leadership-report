@@ -316,6 +316,17 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     return totalHours;
   };
 
+  // Helper to validate URL format
+  const isValidUrl = (urlString: string | null | undefined): boolean => {
+    if (!urlString || urlString.trim() === '') return true; // Empty is valid (not filled yet)
+    try {
+      const url = new URL(urlString.trim());
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   // Get project status based on end date
   // 'active' = Green (end date far), 'renewal' = Yellow/Caution (within 2 months or missing), 'ended' = Red (past end date)
   const getProjectStatus = (endDate: string | null | undefined): 'active' | 'renewal' | 'ended' => {
@@ -927,6 +938,48 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       toast({
         title: 'Missing Field',
         description: 'Project type (CMS or SS) is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Validate external link URLs
+    if (editFormData.jiraEpic && !isValidUrl(editFormData.jiraEpic)) {
+      toast({
+        title: 'Invalid URL',
+        description: 'Jira Epic URL must be a valid URL (start with http:// or https://)',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (editFormData.googleDriveLink && !isValidUrl(editFormData.googleDriveLink)) {
+      toast({
+        title: 'Invalid URL',
+        description: 'Google internal folder link must be a valid URL (start with http:// or https://)',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (editFormData.googleExternalLink && !isValidUrl(editFormData.googleExternalLink)) {
+      toast({
+        title: 'Invalid URL',
+        description: 'Google external folder link must be a valid URL (start with http:// or https://)',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (editFormData.workflowyLink && !isValidUrl(editFormData.workflowyLink)) {
+      toast({
+        title: 'Invalid URL',
+        description: 'Workflowy URL must be a valid URL (start with http:// or https://)',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (editFormData.contractFileLink && !isValidUrl(editFormData.contractFileLink)) {
+      toast({
+        title: 'Invalid URL',
+        description: 'Contract file link must be a valid URL (start with http:// or https://)',
         variant: 'destructive',
       });
       return;
@@ -1637,6 +1690,22 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     }
     if (!projectFormData.projectType) {
       errors.projectType = 'Project type is required';
+    }
+    // Validate external link URLs
+    if (projectFormData.jiraEpic && !isValidUrl(projectFormData.jiraEpic)) {
+      errors.jiraEpic = 'Please enter a valid URL (must start with http:// or https://)';
+    }
+    if (projectFormData.googleDriveLink && !isValidUrl(projectFormData.googleDriveLink)) {
+      errors.googleDriveLink = 'Please enter a valid URL (must start with http:// or https://)';
+    }
+    if (projectFormData.googleExternalLink && !isValidUrl(projectFormData.googleExternalLink)) {
+      errors.googleExternalLink = 'Please enter a valid URL (must start with http:// or https://)';
+    }
+    if (projectFormData.workflowyLink && !isValidUrl(projectFormData.workflowyLink)) {
+      errors.workflowyLink = 'Please enter a valid URL (must start with http:// or https://)';
+    }
+    if (projectFormData.contractFileLink && !isValidUrl(projectFormData.contractFileLink)) {
+      errors.contractFileLink = 'Please enter a valid URL (must start with http:// or https://)';
     }
     return errors;
   };
@@ -2480,50 +2549,95 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     {/* External Links Section */}
                     <div className="space-y-3">
                       <Label className="text-sm font-medium">External Links</Label>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Input
                           id="new-jira-epic"
                           data-testid="input-jira-epic"
                           placeholder="Jira Epic URL"
                           value={projectFormData.jiraEpic}
-                          onChange={(e) => setProjectFormData({ ...projectFormData, jiraEpic: e.target.value })}
+                          onChange={(e) => {
+                            setProjectFormData({ ...projectFormData, jiraEpic: e.target.value });
+                            if (projectFormErrors.jiraEpic) {
+                              setProjectFormErrors({ ...projectFormErrors, jiraEpic: '' });
+                            }
+                          }}
+                          className={projectFormErrors.jiraEpic ? 'border-red-500' : ''}
                         />
+                        {projectFormErrors.jiraEpic && (
+                          <p className="text-xs text-red-500">{projectFormErrors.jiraEpic}</p>
+                        )}
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Input
                           id="new-google-drive"
                           data-testid="input-google-drive"
                           placeholder="Google internal folder link"
                           value={projectFormData.googleDriveLink}
-                          onChange={(e) => setProjectFormData({ ...projectFormData, googleDriveLink: e.target.value })}
+                          onChange={(e) => {
+                            setProjectFormData({ ...projectFormData, googleDriveLink: e.target.value });
+                            if (projectFormErrors.googleDriveLink) {
+                              setProjectFormErrors({ ...projectFormErrors, googleDriveLink: '' });
+                            }
+                          }}
+                          className={projectFormErrors.googleDriveLink ? 'border-red-500' : ''}
                         />
+                        {projectFormErrors.googleDriveLink && (
+                          <p className="text-xs text-red-500">{projectFormErrors.googleDriveLink}</p>
+                        )}
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Input
                           id="new-google-external"
                           data-testid="input-google-external"
                           placeholder="Google external folder link (if exists)"
                           value={projectFormData.googleExternalLink}
-                          onChange={(e) => setProjectFormData({ ...projectFormData, googleExternalLink: e.target.value })}
+                          onChange={(e) => {
+                            setProjectFormData({ ...projectFormData, googleExternalLink: e.target.value });
+                            if (projectFormErrors.googleExternalLink) {
+                              setProjectFormErrors({ ...projectFormErrors, googleExternalLink: '' });
+                            }
+                          }}
+                          className={projectFormErrors.googleExternalLink ? 'border-red-500' : ''}
                         />
+                        {projectFormErrors.googleExternalLink && (
+                          <p className="text-xs text-red-500">{projectFormErrors.googleExternalLink}</p>
+                        )}
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Input
                           id="new-workflowy"
                           data-testid="input-workflowy"
                           placeholder="Workflowy URL"
                           value={projectFormData.workflowyLink}
-                          onChange={(e) => setProjectFormData({ ...projectFormData, workflowyLink: e.target.value })}
+                          onChange={(e) => {
+                            setProjectFormData({ ...projectFormData, workflowyLink: e.target.value });
+                            if (projectFormErrors.workflowyLink) {
+                              setProjectFormErrors({ ...projectFormErrors, workflowyLink: '' });
+                            }
+                          }}
+                          className={projectFormErrors.workflowyLink ? 'border-red-500' : ''}
                         />
+                        {projectFormErrors.workflowyLink && (
+                          <p className="text-xs text-red-500">{projectFormErrors.workflowyLink}</p>
+                        )}
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <Input
                           id="new-contract-file"
                           data-testid="input-contract-file"
                           placeholder="Contract file link"
                           value={projectFormData.contractFileLink}
-                          onChange={(e) => setProjectFormData({ ...projectFormData, contractFileLink: e.target.value })}
+                          onChange={(e) => {
+                            setProjectFormData({ ...projectFormData, contractFileLink: e.target.value });
+                            if (projectFormErrors.contractFileLink) {
+                              setProjectFormErrors({ ...projectFormErrors, contractFileLink: '' });
+                            }
+                          }}
+                          className={projectFormErrors.contractFileLink ? 'border-red-500' : ''}
                         />
+                        {projectFormErrors.contractFileLink && (
+                          <p className="text-xs text-red-500">{projectFormErrors.contractFileLink}</p>
+                        )}
                       </div>
                     </div>
 
@@ -3537,50 +3651,70 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             {/* External Links Section */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">External Links</Label>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Input
                   id="edit-jira-epic"
                   data-testid="input-edit-jira-epic"
                   placeholder="Jira Epic URL"
                   value={editFormData.jiraEpic}
                   onChange={(e) => setEditFormData({ ...editFormData, jiraEpic: e.target.value })}
+                  className={editFormData.jiraEpic && !isValidUrl(editFormData.jiraEpic) ? 'border-red-500' : ''}
                 />
+                {editFormData.jiraEpic && !isValidUrl(editFormData.jiraEpic) && (
+                  <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Input
                   id="edit-google-drive"
                   data-testid="input-edit-google-drive"
                   placeholder="Google internal folder link"
                   value={editFormData.googleDriveLink}
                   onChange={(e) => setEditFormData({ ...editFormData, googleDriveLink: e.target.value })}
+                  className={editFormData.googleDriveLink && !isValidUrl(editFormData.googleDriveLink) ? 'border-red-500' : ''}
                 />
+                {editFormData.googleDriveLink && !isValidUrl(editFormData.googleDriveLink) && (
+                  <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Input
                   id="edit-google-external"
                   data-testid="input-edit-google-external"
                   placeholder="Google external folder link (if exists)"
                   value={editFormData.googleExternalLink}
                   onChange={(e) => setEditFormData({ ...editFormData, googleExternalLink: e.target.value })}
+                  className={editFormData.googleExternalLink && !isValidUrl(editFormData.googleExternalLink) ? 'border-red-500' : ''}
                 />
+                {editFormData.googleExternalLink && !isValidUrl(editFormData.googleExternalLink) && (
+                  <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Input
                   id="edit-workflowy"
                   data-testid="input-edit-workflowy"
                   placeholder="Workflowy URL"
                   value={editFormData.workflowyLink}
                   onChange={(e) => setEditFormData({ ...editFormData, workflowyLink: e.target.value })}
+                  className={editFormData.workflowyLink && !isValidUrl(editFormData.workflowyLink) ? 'border-red-500' : ''}
                 />
+                {editFormData.workflowyLink && !isValidUrl(editFormData.workflowyLink) && (
+                  <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Input
                   id="edit-contract-file"
                   data-testid="input-edit-contract-file"
                   placeholder="Contract file link"
                   value={editFormData.contractFileLink}
                   onChange={(e) => setEditFormData({ ...editFormData, contractFileLink: e.target.value })}
+                  className={editFormData.contractFileLink && !isValidUrl(editFormData.contractFileLink) ? 'border-red-500' : ''}
                 />
+                {editFormData.contractFileLink && !isValidUrl(editFormData.contractFileLink) && (
+                  <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                )}
               </div>
             </div>
 
