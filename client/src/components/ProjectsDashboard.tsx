@@ -4043,7 +4043,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       )}
                       {member.roles?.includes('project-lead') && (
                         <Badge variant="outline" className="text-xs" data-testid={`badge-also-lead-${member.id}`}>
-                          Also Lead
+                          Also Lead{getTotalHoursForLead(member.id) > 0 && ` (${getTotalHoursForLead(member.id)} hrs/wk)`}
                         </Badge>
                       )}
                     </div>
@@ -4309,7 +4309,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     <div className="flex items-center gap-2 flex-wrap">
                       {lead.roles?.includes('team-member') && (
                         <Badge variant="outline" className="text-xs" data-testid={`badge-also-member-${lead.id}`}>
-                          Also Member
+                          Also Member{getTotalHoursForMember(lead.id) > 0 && ` (${getTotalHoursForMember(lead.id)} hrs/wk)`}
                         </Badge>
                       )}
                       {getTotalHoursForLead(lead.id) > 0 && (
