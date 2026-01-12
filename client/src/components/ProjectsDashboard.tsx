@@ -495,7 +495,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     return assignments.some(a => !a.role || a.role.trim() === '');
   };
 
-  // Helper to check if a project has caution (missing end date OR unfilled team member roles OR missing contractual hours OR missing customer email)
+  // Helper to check if a project has caution (missing required fields)
   // Projects that have ended are excluded from caution checks
   const projectHasCaution = (project: Project): boolean => {
     // Skip caution for ended projects
@@ -512,6 +512,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     
     // Check for missing customer contact email
     if (!project.customerContactEmail) return true;
+    
+    // Check for missing external links
+    if (!project.jiraEpic) return true;
+    if (!project.googleDriveLink) return true;
+    if (!project.workflowyLink) return true;
+    if (!project.contractFileLink) return true;
     
     return false;
   };
