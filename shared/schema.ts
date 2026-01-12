@@ -67,6 +67,7 @@ export const projects = pgTable("projects", {
   startDate: text("start_date"),
   endDate: text("end_date"),
   projectType: text("project_type"),
+  steadyKey: text("steady_key"), // Steady key identifier
   jiraEpic: text("jira_epic"), // Jira Epic URL
   googleDriveLink: text("google_drive_link"), // Google internal folder link
   googleExternalLink: text("google_external_link"), // Google external folder link (if exists)

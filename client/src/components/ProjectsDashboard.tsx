@@ -73,6 +73,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     startDate: '',
     endDate: '',
     projectType: '' as string,
+    steadyKey: '',
     jiraEpic: '',
     googleDriveLink: '',
     googleExternalLink: '',
@@ -105,6 +106,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     startDate: '',
     endDate: '',
     projectType: '' as string,
+    steadyKey: '',
     jiraEpic: '',
     googleDriveLink: '',
     googleExternalLink: '',
@@ -828,6 +830,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       startDate: project.startDate || '',
       endDate: project.endDate || '',
       projectType: project.projectType || '',
+      steadyKey: project.steadyKey || '',
       jiraEpic: project.jiraEpic || '',
       googleDriveLink: project.googleDriveLink || '',
       googleExternalLink: project.googleExternalLink || '',
@@ -1045,6 +1048,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           startDate: startDateParsed || '2025-08-30',
           endDate: endDateParsed || null,
           projectType: editFormData.projectType || null,
+          steadyKey: editFormData.steadyKey || null,
           jiraEpic: editFormData.jiraEpic || null,
           googleDriveLink: editFormData.googleDriveLink || null,
           googleExternalLink: editFormData.googleExternalLink || null,
@@ -1310,6 +1314,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         startDate: '',
         endDate: '',
         projectType: '',
+        steadyKey: '',
         jiraEpic: '',
         googleDriveLink: '',
         googleExternalLink: '',
@@ -1753,6 +1758,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         startDate: startDateParsed || '2025-08-30',
         endDate: endDateParsed || null,
         projectType: projectFormData.projectType || null,
+        steadyKey: projectFormData.steadyKey || null,
         jiraEpic: projectFormData.jiraEpic || null,
         googleDriveLink: projectFormData.googleDriveLink || null,
         googleExternalLink: projectFormData.googleExternalLink || null,
@@ -2077,6 +2083,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     startDate: '',
                     endDate: '',
                     projectType: '',
+                    steadyKey: '',
                     jiraEpic: '',
                     googleDriveLink: '',
                     googleExternalLink: '',
@@ -2544,6 +2551,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       {projectFormErrors.projectType && (
                         <p className="text-xs text-red-500">{projectFormErrors.projectType}</p>
                       )}
+                    </div>
+
+                    {/* Steady Key Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="new-steady-key">Steady Key</Label>
+                      <Input
+                        id="new-steady-key"
+                        data-testid="input-steady-key"
+                        placeholder="Enter Steady Key"
+                        value={projectFormData.steadyKey}
+                        onChange={(e) => setProjectFormData({ ...projectFormData, steadyKey: e.target.value })}
+                      />
                     </div>
 
                     {/* External Links Section */}
@@ -3646,6 +3665,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
               {!editFormData.projectType && (
                 <p className="text-xs text-red-500">Project type is required</p>
               )}
+            </div>
+
+            {/* Steady Key Field */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-steady-key">Steady Key</Label>
+              <Input
+                id="edit-steady-key"
+                data-testid="input-edit-steady-key"
+                placeholder="Enter Steady Key"
+                value={editFormData.steadyKey}
+                onChange={(e) => setEditFormData({ ...editFormData, steadyKey: e.target.value })}
+              />
             </div>
 
             {/* External Links Section */}
