@@ -1984,10 +1984,14 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     contractualHours: '',
                     contractualMinutes: '',
                     leadIds: [],
+                    leadAssignments: [],
                     teamMembers: [],
                     startDate: '',
                     endDate: '',
                     projectType: '',
+                    jiraEpic: '',
+                    googleDriveLink: '',
+                    workflowyLink: '',
                   });
                   setProjectStartDateInput('');
                   setProjectEndDateInput('');
@@ -3650,26 +3654,35 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     {(selectedProject.leadIds && selectedProject.leadIds.length > 0 
                       ? selectedProject.leadIds 
                       : [selectedProject.leadId]
-                    ).map((leadId) => (
-                      <div key={leadId}>
-                        <div 
-                          className="flex items-center gap-2 cursor-pointer group"
-                          onClick={() => toggleLeadEmailVisibility(leadId)}
-                          data-testid={`button-toggle-lead-email-${leadId}`}
-                        >
-                          <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid={`text-project-detail-lead-${leadId}`}>
-                            {getLeadName(leadId)}
-                          </p>
-                          <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                        </div>
-                        {visibleLeadEmails.has(leadId) && (
-                          <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid={`text-lead-email-${leadId}`}>
-                            <Mail className="h-3.5 w-3.5" />
-                            {getLeadById(leadId)?.email || 'No email set'}
+                    ).map((leadId) => {
+                      const leadAssignments = (selectedProject.leadAssignments as LeadAssignment[]) || [];
+                      const leadAssignment = leadAssignments.find(a => a.leadId === leadId);
+                      return (
+                        <div key={leadId}>
+                          <div 
+                            className="flex items-center gap-2 cursor-pointer group"
+                            onClick={() => toggleLeadEmailVisibility(leadId)}
+                            data-testid={`button-toggle-lead-email-${leadId}`}
+                          >
+                            <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid={`text-project-detail-lead-${leadId}`}>
+                              {getLeadName(leadId)}
+                            </p>
+                            {leadAssignment?.hours && (
+                              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm" data-testid={`text-lead-hours-project-${leadId}`}>
+                                {leadAssignment.hours} hrs/wk
+                              </span>
+                            )}
+                            <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          {visibleLeadEmails.has(leadId) && (
+                            <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid={`text-lead-email-${leadId}`}>
+                              <Mail className="h-3.5 w-3.5" />
+                              {getLeadById(leadId)?.email || 'No email set'}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
