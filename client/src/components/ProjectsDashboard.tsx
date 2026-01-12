@@ -3223,7 +3223,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     )}
                     
                     {/* Caution warnings - only show for non-ended projects */}
-                    {getProjectStatus(project.endDate) !== 'ended' && (!project.endDate || projectHasUnfilledRoles(project) || !project.totalContractualHours || !project.customerContactEmail) && (
+                    {getProjectStatus(project.endDate) !== 'ended' && projectHasCaution(project) && (
                       <div className="space-y-1 mt-2">
                         {!project.endDate && (
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-end-date-${project.id}`}>
@@ -3247,6 +3247,30 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                           <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-email-${project.id}`}>
                             <AlertTriangle className="h-4 w-4" />
                             <span>Customer contact email missing</span>
+                          </div>
+                        )}
+                        {!project.jiraEpic && (
+                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-jira-${project.id}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>Jira Epic URL missing</span>
+                          </div>
+                        )}
+                        {!project.googleDriveLink && (
+                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-gdrive-${project.id}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>Google internal folder link missing</span>
+                          </div>
+                        )}
+                        {!project.workflowyLink && (
+                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-workflowy-${project.id}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>Workflowy URL missing</span>
+                          </div>
+                        )}
+                        {!project.contractFileLink && (
+                          <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-contract-${project.id}`}>
+                            <AlertTriangle className="h-4 w-4" />
+                            <span>Contract file link missing</span>
                           </div>
                         )}
                       </div>
