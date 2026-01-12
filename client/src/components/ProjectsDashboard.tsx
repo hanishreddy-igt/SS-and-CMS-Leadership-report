@@ -4306,16 +4306,16 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     <span data-testid={`text-lead-${lead.id}`} className="font-medium block truncate">
                       {lead.name}
                     </span>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {lead.roles?.includes('team-member') && (
-                        <Badge variant="outline" className="text-xs" data-testid={`badge-also-member-${lead.id}`}>
-                          Also Member{getTotalHoursForMember(lead.id) > 0 && ` (${getTotalHoursForMember(lead.id)} hrs/wk)`}
-                        </Badge>
-                      )}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                       {getTotalHoursForLead(lead.id) > 0 && (
                         <span className="text-xs text-muted-foreground" data-testid={`text-lead-hours-${lead.id}`}>
                           {getTotalHoursForLead(lead.id)} hrs/week
                         </span>
+                      )}
+                      {lead.roles?.includes('team-member') && (
+                        <Badge variant="outline" className="text-xs" data-testid={`badge-also-member-${lead.id}`}>
+                          Also Member{getTotalHoursForMember(lead.id) > 0 && ` (${getTotalHoursForMember(lead.id)} hrs/wk)`}
+                        </Badge>
                       )}
                     </div>
                   </div>
