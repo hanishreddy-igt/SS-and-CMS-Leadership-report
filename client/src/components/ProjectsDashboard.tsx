@@ -1526,7 +1526,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     setShowAllMemberContracts(false);
   };
 
-  // Get projects a team member is working on with their roles
+  // Get projects a team member is working on with their roles and hours
   const getMemberProjects = (memberId: string) => {
     return projects.filter(p => {
       const assignments = (p.teamMembers as TeamMemberAssignment[]) || [];
@@ -1536,7 +1536,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       const assignment = assignments.find(a => a.memberId === memberId);
       return {
         project: p,
-        role: assignment?.role || 'No role assigned'
+        role: assignment?.role || 'No role assigned',
+        hours: assignment?.hours || ''
       };
     });
   };
@@ -4661,28 +4662,39 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   const remainingCount = ledProjects.length - 4;
                   return (
                     <div className="space-y-2" data-testid="list-lead-projects">
-                      {displayedProjects.map(project => (
-                        <div key={project.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{project.name}</span>
-                            {hasCoLeads(project) && (
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal text-muted-foreground">
-                                Co-Lead
-                              </Badge>
-                            )}
+                      {displayedProjects.map(project => {
+                        const leadAssignments = (project.leadAssignments as LeadAssignment[]) || [];
+                        const leadAssignment = leadAssignments.find(a => a.leadId === selectedLeadForDetail.id);
+                        return (
+                          <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{project.name}</span>
+                              {(() => {
+                                const status = getProjectStatus(project.endDate);
+                                if (status === 'active') {
+                                  return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
+                                } else if (status === 'renewal') {
+                                  return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
+                                } else {
+                                  return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
+                                }
+                              })()}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {hasCoLeads(project) && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal text-muted-foreground">
+                                  Co-Lead
+                                </Badge>
+                              )}
+                              {leadAssignment?.hours && (
+                                <span className="text-xs text-muted-foreground">
+                                  {leadAssignment.hours} hrs/wk
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          {(() => {
-                            const status = getProjectStatus(project.endDate);
-                            if (status === 'active') {
-                              return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
-                            } else if (status === 'renewal') {
-                              return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
-                            } else {
-                              return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
-                            }
-                          })()}
-                        </div>
-                      ))}
+                        );
+                      })}
                       {remainingCount > 0 && !showAllLeadContracts && (
                         <button
                           type="button"
@@ -4821,12 +4833,19 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   const remainingCount = memberProjects.length - 4;
                   return (
                     <div className="space-y-2" data-testid="list-member-projects">
-                      {displayedProjects.map(({ project, role }) => (
+                      {displayedProjects.map(({ project, role, hours }) => (
                         <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
                           <span className="text-sm font-medium truncate">{project.name}</span>
-                          <Badge variant="secondary" className="text-xs font-medium w-fit max-w-full">
-                            <span className="truncate">{role}</span>
-                          </Badge>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary" className="text-xs font-medium w-fit max-w-full">
+                              <span className="truncate">{role}</span>
+                            </Badge>
+                            {hours && (
+                              <span className="text-xs text-muted-foreground">
+                                {hours} hrs/wk
+                              </span>
+                            )}
+                          </div>
                         </div>
                       ))}
                       {remainingCount > 0 && !showAllMemberContracts && (
