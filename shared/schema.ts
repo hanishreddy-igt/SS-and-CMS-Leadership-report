@@ -62,7 +62,8 @@ export const projects = pgTable("projects", {
   totalContractualHours: text("total_contractual_hours"), // Total contractual hours (optional)
   leadId: varchar("lead_id").notNull(), // Primary lead (for backward compatibility)
   leadIds: text("lead_ids").array().notNull().default(sql`'{}'`), // All leads including co-leads
-  teamMembers: jsonb("team_members").notNull().default(sql`'[]'`), // Array of { memberId, role }
+  leadAssignments: jsonb("lead_assignments").notNull().default(sql`'[]'`), // Array of { leadId, hours } for lead hours tracking
+  teamMembers: jsonb("team_members").notNull().default(sql`'[]'`), // Array of { memberId, role, hours }
   startDate: text("start_date"),
   endDate: text("end_date"),
   projectType: text("project_type"),
@@ -214,6 +215,12 @@ export type TeamMemberFeedback = {
 export type TeamMemberAssignment = {
   memberId: string;
   role: string;
+  hours?: string; // Hours per week for this specific project assignment
+};
+
+// Lead assignment with project-specific hours
+export type LeadAssignment = {
+  leadId: string;
   hours?: string; // Hours per week for this specific project assignment
 };
 

@@ -20,7 +20,7 @@ import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Tr
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import type { Project, ProjectLead, TeamMember, InsertProject, Person, TeamMemberAssignment, ProjectRole } from '@shared/schema';
+import type { Project, ProjectLead, TeamMember, InsertProject, Person, TeamMemberAssignment, LeadAssignment, ProjectRole } from '@shared/schema';
 
 type SortOrder = 'asc' | 'desc';
 type SortField = 'endDate' | 'startDate';
@@ -68,6 +68,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     contractualHours: '',
     contractualMinutes: '',
     leadIds: [] as string[],
+    leadAssignments: [] as LeadAssignment[],
     teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
     endDate: '',
@@ -97,6 +98,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     contractualHours: '',
     contractualMinutes: '',
     leadIds: [] as string[],
+    leadAssignments: [] as LeadAssignment[],
     teamMembers: [] as TeamMemberAssignment[],
     startDate: '',
     endDate: '',
@@ -279,6 +281,26 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       if (status === 'active' || status === 'renewal') {
         const assignments = (p.teamMembers as TeamMemberAssignment[]) || [];
         const assignment = assignments.find(a => a.memberId === memberId);
+        if (assignment?.hours) {
+          const hours = parseFloat(assignment.hours);
+          if (!isNaN(hours)) {
+            totalHours += hours;
+          }
+        }
+      }
+    });
+    return totalHours;
+  };
+
+  // Calculate total hours for a lead from all active project assignments (as lead)
+  const getTotalHoursForLead = (leadId: string): number => {
+    let totalHours = 0;
+    projects.forEach(p => {
+      const status = getProjectStatus(p.endDate);
+      // Only count hours from active or renewal projects (not ended)
+      if (status === 'active' || status === 'renewal') {
+        const assignments = (p.leadAssignments as LeadAssignment[]) || [];
+        const assignment = assignments.find(a => a.leadId === leadId);
         if (assignment?.hours) {
           const hours = parseFloat(assignment.hours);
           if (!isNaN(hours)) {
@@ -766,6 +788,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     const leadIdsArray = project.leadIds && project.leadIds.length > 0 
       ? project.leadIds 
       : [project.leadId];
+    // Get existing lead assignments or create from leadIds for backwards compatibility
+    const existingLeadAssignments = (project.leadAssignments as LeadAssignment[]) || [];
+    const leadAssignmentsArray = leadIdsArray.map(leadId => {
+      const existing = existingLeadAssignments.find(a => a.leadId === leadId);
+      return existing || { leadId, hours: '' };
+    });
     const { hours, minutes } = parseContractualTime(project.totalContractualHours);
     setEditFormData({
       name: project.name,
@@ -774,6 +802,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       contractualHours: hours,
       contractualMinutes: minutes,
       leadIds: leadIdsArray,
+      leadAssignments: leadAssignmentsArray,
       teamMembers: (project.teamMembers as TeamMemberAssignment[]) || [],
       startDate: project.startDate || '',
       endDate: project.endDate || '',
@@ -946,6 +975,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           totalContractualHours: totalMinutes || null,
           leadId: editFormData.leadIds[0], // Primary lead is first in the array
           leadIds: editFormData.leadIds,
+          leadAssignments: editFormData.leadAssignments,
           teamMembers: editFormData.teamMembers,
           startDate: startDateParsed || '2025-08-30',
           endDate: endDateParsed || null,
@@ -1208,10 +1238,14 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         contractualHours: '',
         contractualMinutes: '',
         leadIds: [],
+        leadAssignments: [],
         teamMembers: [],
         startDate: '',
         endDate: '',
         projectType: '',
+        jiraEpic: '',
+        googleDriveLink: '',
+        workflowyLink: '',
       });
       setProjectStartDateInput('');
       setProjectEndDateInput('');
@@ -1628,6 +1662,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         totalContractualHours: totalMinutes || null,
         leadId: projectFormData.leadIds[0], // Primary lead is first in the array
         leadIds: projectFormData.leadIds,
+        leadAssignments: projectFormData.leadAssignments,
         teamMembers: projectFormData.teamMembers,
         startDate: startDateParsed || '2025-08-30',
         endDate: endDateParsed || null,
@@ -2095,34 +2130,69 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                           </Badge>
                         )}
                       </div>
-                      <div className={`border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto ${projectFormErrors.leadIds ? 'border-red-500' : ''}`} data-testid="leads-selection-container">
+                      <div className={`border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto ${projectFormErrors.leadIds ? 'border-red-500' : ''}`} data-testid="leads-selection-container">
                         {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => {
                           const isSelected = projectFormData.leadIds.includes(lead.id);
+                          const leadAssignment = projectFormData.leadAssignments.find(a => a.leadId === lead.id);
                           return (
-                            <div key={lead.id} className="flex items-center gap-2">
-                              <Checkbox
-                                id={`new-lead-${lead.id}`}
-                                data-testid={`checkbox-lead-${lead.id}`}
-                                checked={isSelected}
-                                onCheckedChange={() => {
-                                  const newLeadIds = isSelected
-                                    ? projectFormData.leadIds.filter(id => id !== lead.id)
-                                    : [...projectFormData.leadIds, lead.id];
-                                  setProjectFormData({ ...projectFormData, leadIds: newLeadIds });
-                                  if (projectFormErrors.leadIds) {
-                                    setProjectFormErrors({ ...projectFormErrors, leadIds: '' });
-                                  }
-                                }}
-                              />
-                              <Label
-                                htmlFor={`new-lead-${lead.id}`}
-                                className="font-normal text-sm cursor-pointer flex-1"
-                              >
-                                {lead.name}
-                                {projectFormData.leadIds.indexOf(lead.id) === 0 && projectFormData.leadIds.length > 1 && (
-                                  <span className="text-xs text-muted-foreground ml-2">(Primary)</span>
-                                )}
-                              </Label>
+                            <div key={lead.id} className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`new-lead-${lead.id}`}
+                                  data-testid={`checkbox-lead-${lead.id}`}
+                                  checked={isSelected}
+                                  onCheckedChange={() => {
+                                    if (isSelected) {
+                                      setProjectFormData({ 
+                                        ...projectFormData, 
+                                        leadIds: projectFormData.leadIds.filter(id => id !== lead.id),
+                                        leadAssignments: projectFormData.leadAssignments.filter(a => a.leadId !== lead.id)
+                                      });
+                                    } else {
+                                      setProjectFormData({ 
+                                        ...projectFormData, 
+                                        leadIds: [...projectFormData.leadIds, lead.id],
+                                        leadAssignments: [...projectFormData.leadAssignments, { leadId: lead.id, hours: '' }]
+                                      });
+                                    }
+                                    if (projectFormErrors.leadIds) {
+                                      setProjectFormErrors({ ...projectFormErrors, leadIds: '' });
+                                    }
+                                  }}
+                                />
+                                <Label
+                                  htmlFor={`new-lead-${lead.id}`}
+                                  className="font-normal text-sm cursor-pointer flex-1"
+                                >
+                                  {lead.name}
+                                  {projectFormData.leadIds.indexOf(lead.id) === 0 && projectFormData.leadIds.length > 1 && (
+                                    <span className="text-xs text-muted-foreground ml-2">(Primary)</span>
+                                  )}
+                                </Label>
+                              </div>
+                              {isSelected && (
+                                <div className="ml-6 flex items-center gap-2">
+                                  <Input
+                                    type="text"
+                                    placeholder="Hours/week"
+                                    className="h-8 text-sm w-24"
+                                    value={leadAssignment?.hours || ''}
+                                    onChange={(e) => {
+                                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                        setProjectFormData({
+                                          ...projectFormData,
+                                          leadAssignments: projectFormData.leadAssignments.map(a => 
+                                            a.leadId === lead.id ? { ...a, hours: value } : a
+                                          )
+                                        });
+                                      }
+                                    }}
+                                    data-testid={`input-lead-hours-${lead.id}`}
+                                  />
+                                  <span className="text-xs text-muted-foreground">hrs/week</span>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -3118,31 +3188,66 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   </Badge>
                 )}
               </div>
-              <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto" data-testid="edit-leads-selection-container">
+              <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto" data-testid="edit-leads-selection-container">
                 {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => {
                   const isSelected = editFormData.leadIds.includes(lead.id);
+                  const leadAssignment = editFormData.leadAssignments.find(a => a.leadId === lead.id);
                   return (
-                    <div key={lead.id} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`edit-lead-${lead.id}`}
-                        data-testid={`checkbox-edit-lead-${lead.id}`}
-                        checked={isSelected}
-                        onCheckedChange={() => {
-                          const newLeadIds = isSelected
-                            ? editFormData.leadIds.filter(id => id !== lead.id)
-                            : [...editFormData.leadIds, lead.id];
-                          setEditFormData({ ...editFormData, leadIds: newLeadIds });
-                        }}
-                      />
-                      <Label
-                        htmlFor={`edit-lead-${lead.id}`}
-                        className="font-normal text-sm cursor-pointer flex-1"
-                      >
-                        {lead.name}
-                        {editFormData.leadIds.indexOf(lead.id) === 0 && editFormData.leadIds.length > 1 && (
-                          <span className="text-xs text-muted-foreground ml-2">(Primary)</span>
-                        )}
-                      </Label>
+                    <div key={lead.id} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`edit-lead-${lead.id}`}
+                          data-testid={`checkbox-edit-lead-${lead.id}`}
+                          checked={isSelected}
+                          onCheckedChange={() => {
+                            if (isSelected) {
+                              setEditFormData({ 
+                                ...editFormData, 
+                                leadIds: editFormData.leadIds.filter(id => id !== lead.id),
+                                leadAssignments: editFormData.leadAssignments.filter(a => a.leadId !== lead.id)
+                              });
+                            } else {
+                              setEditFormData({ 
+                                ...editFormData, 
+                                leadIds: [...editFormData.leadIds, lead.id],
+                                leadAssignments: [...editFormData.leadAssignments, { leadId: lead.id, hours: '' }]
+                              });
+                            }
+                          }}
+                        />
+                        <Label
+                          htmlFor={`edit-lead-${lead.id}`}
+                          className="font-normal text-sm cursor-pointer flex-1"
+                        >
+                          {lead.name}
+                          {editFormData.leadIds.indexOf(lead.id) === 0 && editFormData.leadIds.length > 1 && (
+                            <span className="text-xs text-muted-foreground ml-2">(Primary)</span>
+                          )}
+                        </Label>
+                      </div>
+                      {isSelected && (
+                        <div className="ml-6 flex items-center gap-2">
+                          <Input
+                            type="text"
+                            placeholder="Hours/week"
+                            className="h-8 text-sm w-24"
+                            value={leadAssignment?.hours || ''}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9.]/g, '');
+                              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                setEditFormData({
+                                  ...editFormData,
+                                  leadAssignments: editFormData.leadAssignments.map(a => 
+                                    a.leadId === lead.id ? { ...a, hours: value } : a
+                                  )
+                                });
+                              }
+                            }}
+                            data-testid={`input-edit-lead-hours-${lead.id}`}
+                          />
+                          <span className="text-xs text-muted-foreground">hrs/week</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -4188,11 +4293,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     <span data-testid={`text-lead-${lead.id}`} className="font-medium block truncate">
                       {lead.name}
                     </span>
-                    {lead.roles?.includes('team-member') && (
-                      <Badge variant="outline" className="text-xs mt-0.5" data-testid={`badge-also-member-${lead.id}`}>
-                        Also Member
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {lead.roles?.includes('team-member') && (
+                        <Badge variant="outline" className="text-xs" data-testid={`badge-also-member-${lead.id}`}>
+                          Also Member
+                        </Badge>
+                      )}
+                      {getTotalHoursForLead(lead.id) > 0 && (
+                        <span className="text-xs text-muted-foreground" data-testid={`text-lead-hours-${lead.id}`}>
+                          {getTotalHoursForLead(lead.id)} hrs/week
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {!selectionModeLeads && (permissions.canEditProjectLeads || permissions.canDeletePeople) && (
@@ -4497,7 +4609,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCog className="h-6 w-6 text-primary" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-lg font-semibold" data-testid="text-lead-detail-name">
                     {selectedLeadForDetail.name}
                   </p>
@@ -4507,6 +4619,14 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       {selectedLeadForDetail.email || 'No email set'}
                     </span>
                   </div>
+                  {getTotalHoursForLead(selectedLeadForDetail.id) > 0 && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground text-sm mt-0.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span data-testid="text-lead-detail-hours">
+                        {getTotalHoursForLead(selectedLeadForDetail.id)} hours/week (as lead)
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               
