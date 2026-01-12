@@ -4919,6 +4919,17 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     // Check leadIds array first (co-lead support), then fall back to leadId
                     const projectLeadIds = p.leadIds && p.leadIds.length > 0 ? p.leadIds : [p.leadId];
                     return projectLeadIds.includes(selectedLeadForDetail.id);
+                  }).sort((a, b) => {
+                    const statusA = getProjectStatus(a.endDate);
+                    const statusB = getProjectStatus(b.endDate);
+                    // Ended projects go to the bottom
+                    if (statusA === 'ended' && statusB !== 'ended') return 1;
+                    if (statusA !== 'ended' && statusB === 'ended') return -1;
+                    // Sort by end date (earliest first), null dates go after dated ones
+                    if (!a.endDate && b.endDate) return 1;
+                    if (a.endDate && !b.endDate) return -1;
+                    if (!a.endDate && !b.endDate) return 0;
+                    return new Date(a.endDate!).getTime() - new Date(b.endDate!).getTime();
                   });
                   if (ledProjects.length === 0) {
                     return (
@@ -5082,18 +5093,26 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 </div>
               </div>
               
-              {/* Projects this member is working on (only active/renewal) - max 4 shown */}
+              {/* Projects this member is working on - sorted by end date, ended projects last - max 4 shown */}
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-2">Contracts & Roles</p>
                 {(() => {
                   const memberProjects = getMemberProjects(selectedMemberForDetail.id)
-                    .filter(({ project }) => {
-                      const status = getProjectStatus(project.endDate);
-                      return status === 'active' || status === 'renewal';
+                    .sort((a, b) => {
+                      const statusA = getProjectStatus(a.project.endDate);
+                      const statusB = getProjectStatus(b.project.endDate);
+                      // Ended projects go to the bottom
+                      if (statusA === 'ended' && statusB !== 'ended') return 1;
+                      if (statusA !== 'ended' && statusB === 'ended') return -1;
+                      // Sort by end date (earliest first), null dates go after dated ones
+                      if (!a.project.endDate && b.project.endDate) return 1;
+                      if (a.project.endDate && !b.project.endDate) return -1;
+                      if (!a.project.endDate && !b.project.endDate) return 0;
+                      return new Date(a.project.endDate!).getTime() - new Date(b.project.endDate!).getTime();
                     });
                   if (memberProjects.length === 0) {
                     return (
-                      <p className="text-sm text-muted-foreground italic">No active contracts</p>
+                      <p className="text-sm text-muted-foreground italic">No contracts assigned</p>
                     );
                   }
                   const displayedProjects = showAllMemberContracts ? memberProjects : memberProjects.slice(0, 4);
@@ -5102,7 +5121,19 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     <div className="space-y-2" data-testid="list-member-projects">
                       {displayedProjects.map(({ project, role, hours }) => (
                         <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
-                          <span className="text-sm font-medium truncate">{project.name}</span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium truncate">{project.name}</span>
+                            {(() => {
+                              const status = getProjectStatus(project.endDate);
+                              if (status === 'active') {
+                                return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
+                              } else if (status === 'renewal') {
+                                return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
+                              } else {
+                                return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
+                              }
+                            })()}
+                          </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="secondary" className="text-xs font-medium w-fit max-w-full">
                               <span className="truncate">{role}</span>
