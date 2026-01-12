@@ -210,10 +210,11 @@ export type TeamMemberFeedback = {
   feedback: string;
 };
 
-// Team member assignment with project-specific role
+// Team member assignment with project-specific role and hours
 export type TeamMemberAssignment = {
   memberId: string;
   role: string;
+  hours?: string; // Hours per week for this specific project assignment
 };
 
 export type HealthStatus = 'on-track' | 'at-risk' | 'critical';
