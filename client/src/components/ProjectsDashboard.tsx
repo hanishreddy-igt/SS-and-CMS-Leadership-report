@@ -112,9 +112,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [newMember, setNewMember] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberHoursPerWeek, setNewMemberHoursPerWeek] = useState('');
   const [editMemberEmailValue, setEditMemberEmailValue] = useState('');
-  const [editMemberHoursPerWeek, setEditMemberHoursPerWeek] = useState('');
   const [showEditMemberDialog, setShowEditMemberDialog] = useState(false);
   const [memberNameError, setMemberNameError] = useState<string | null>(null);
   const [memberNameWarning, setMemberNameWarning] = useState<string | null>(null);
@@ -270,6 +268,26 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const getMemberIdsFromProject = (project: Project): string[] => {
     const assignments = (project.teamMembers as TeamMemberAssignment[]) || [];
     return assignments.map(a => a.memberId);
+  };
+
+  // Calculate total hours for a team member from all active project assignments
+  const getTotalHoursForMember = (memberId: string): number => {
+    let totalHours = 0;
+    projects.forEach(p => {
+      const status = getProjectStatus(p.endDate);
+      // Only count hours from active or renewal projects (not ended)
+      if (status === 'active' || status === 'renewal') {
+        const assignments = (p.teamMembers as TeamMemberAssignment[]) || [];
+        const assignment = assignments.find(a => a.memberId === memberId);
+        if (assignment?.hours) {
+          const hours = parseFloat(assignment.hours);
+          if (!isNaN(hours)) {
+            totalHours += hours;
+          }
+        }
+      }
+    });
+    return totalHours;
   };
 
   // Get project status based on end date
@@ -1015,15 +1033,14 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
   // Team member mutations
   const createMemberMutation = useMutation({
-    mutationFn: async ({ name, email, hoursPerWeek }: { name: string; email?: string; hoursPerWeek?: string }) => {
-      return await apiRequest('POST', '/api/team-members', { name, email, hoursPerWeek });
+    mutationFn: async ({ name, email }: { name: string; email?: string }) => {
+      return await apiRequest('POST', '/api/team-members', { name, email });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member added' });
       setNewMember('');
       setNewMemberEmail('');
-      setNewMemberHoursPerWeek('');
       setMemberNameError(null);
       setMemberNameWarning(null);
       setShowAddMemberDialog(false);
@@ -1038,8 +1055,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   });
 
   const updateMemberMutation = useMutation({
-    mutationFn: async ({ id, name, email, hoursPerWeek }: { id: string; name: string; email?: string; hoursPerWeek?: string }) => {
-      return await apiRequest('PATCH', `/api/team-members/${id}`, { name, email, hoursPerWeek });
+    mutationFn: async ({ id, name, email }: { id: string; name: string; email?: string }) => {
+      return await apiRequest('PATCH', `/api/team-members/${id}`, { name, email });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
@@ -1261,7 +1278,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     // Strip the domain when loading for editing
     const emailUsername = member.email ? member.email.replace(/@ignitetech\.com$/, '') : '';
     setEditMemberEmailValue(emailUsername);
-    setEditMemberHoursPerWeek(member.hoursPerWeek || '');
     setShowEditMemberDialog(true);
   };
 
@@ -1277,12 +1293,10 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const saveEditMember = () => {
     if (editingMemberId && editMemberValue.trim()) {
       const email = editMemberEmailValue.trim() ? `${editMemberEmailValue.trim()}@ignitetech.com` : undefined;
-      const hoursPerWeek = editMemberHoursPerWeek.trim() || undefined;
       updateMemberMutation.mutate({ 
         id: editingMemberId, 
         name: editMemberValue.trim(), 
-        email,
-        hoursPerWeek
+        email
       });
     }
   };
@@ -1292,7 +1306,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     setEditingMemberId(null);
     setEditMemberValue('');
     setEditMemberEmailValue('');
-    setEditMemberHoursPerWeek('');
   };
 
   const saveEditLead = () => {
@@ -1396,8 +1409,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const handleAddMember = () => {
     if (newMember.trim() && !memberNameError) {
       const email = newMemberEmail.trim() ? `${newMemberEmail.trim()}@ignitetech.com` : undefined;
-      const hoursPerWeek = newMemberHoursPerWeek.trim() || undefined;
-      createMemberMutation.mutate({ name: newMember.trim(), email, hoursPerWeek });
+      createMemberMutation.mutate({ name: newMember.trim(), email });
     }
   };
 
@@ -3805,28 +3817,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-member-hours">Hours per Week (Optional)</Label>
-                    <div className="flex">
-                      <Input
-                        id="new-member-hours"
-                        data-testid="input-member-hours"
-                        type="text"
-                        value={newMemberHoursPerWeek}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9.]/g, '');
-                          if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                            setNewMemberHoursPerWeek(value);
-                          }
-                        }}
-                        placeholder="e.g., 6.5"
-                        className="rounded-r-none max-w-24"
-                      />
-                      <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
-                        hours/week
-                      </span>
-                    </div>
-                  </div>
                   <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
@@ -3834,7 +3824,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                         setShowAddMemberDialog(false);
                         setNewMember('');
                         setNewMemberEmail('');
-                        setNewMemberHoursPerWeek('');
                         setMemberNameError(null);
                         setMemberNameWarning(null);
                       }}
@@ -3929,9 +3918,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       {member.name}
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                      {member.hoursPerWeek && (
+                      {getTotalHoursForMember(member.id) > 0 && (
                         <span className="text-xs text-muted-foreground" data-testid={`text-member-hours-${member.id}`}>
-                          {member.hoursPerWeek} hrs/week
+                          {getTotalHoursForMember(member.id)} hrs/week
                         </span>
                       )}
                       {member.roles?.includes('project-lead') && (
@@ -4470,28 +4459,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 </span>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-member-hours">Hours per Week (Optional)</Label>
-              <div className="flex">
-                <Input
-                  id="edit-member-hours"
-                  data-testid="input-edit-member-hours"
-                  type="text"
-                  value={editMemberHoursPerWeek}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9.]/g, '');
-                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                      setEditMemberHoursPerWeek(value);
-                    }
-                  }}
-                  placeholder="e.g., 6.5"
-                  className="rounded-r-none max-w-24"
-                />
-                <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
-                  hours/week
-                </span>
-              </div>
-            </div>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
@@ -4692,11 +4659,11 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   <p className="text-lg font-semibold" data-testid="text-member-detail-name">
                     {selectedMemberForDetail.name}
                   </p>
-                  {selectedMemberForDetail.hoursPerWeek && (
+                  {getTotalHoursForMember(selectedMemberForDetail.id) > 0 && (
                     <div className="flex items-center gap-1.5 text-muted-foreground text-sm mt-0.5">
                       <Clock className="h-3.5 w-3.5" />
                       <span data-testid="text-member-detail-hours">
-                        {selectedMemberForDetail.hoursPerWeek} hours/week
+                        {getTotalHoursForMember(selectedMemberForDetail.id)} hours/week
                       </span>
                     </div>
                   )}
