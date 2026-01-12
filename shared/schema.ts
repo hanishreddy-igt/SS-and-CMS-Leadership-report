@@ -67,9 +67,11 @@ export const projects = pgTable("projects", {
   startDate: text("start_date"),
   endDate: text("end_date"),
   projectType: text("project_type"),
-  jiraEpic: text("jira_epic"), // Jira Epic link/key
-  googleDriveLink: text("google_drive_link"), // Google Drive folder link
+  jiraEpic: text("jira_epic"), // Jira Epic URL
+  googleDriveLink: text("google_drive_link"), // Google internal folder link
+  googleExternalLink: text("google_external_link"), // Google external folder link (if exists)
   workflowyLink: text("workflowy_link"), // Workflowy link
+  contractFileLink: text("contract_file_link"), // Contract file link
 });
 
 export type ProjectType = 'CMS' | 'SS';

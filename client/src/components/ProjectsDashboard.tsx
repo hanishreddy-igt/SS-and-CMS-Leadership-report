@@ -75,7 +75,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     projectType: '' as string,
     jiraEpic: '',
     googleDriveLink: '',
+    googleExternalLink: '',
     workflowyLink: '',
+    contractFileLink: '',
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -105,7 +107,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     projectType: '' as string,
     jiraEpic: '',
     googleDriveLink: '',
+    googleExternalLink: '',
     workflowyLink: '',
+    contractFileLink: '',
   });
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectFormErrors, setProjectFormErrors] = useState<Record<string, string>>({});
@@ -809,7 +813,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       projectType: project.projectType || '',
       jiraEpic: project.jiraEpic || '',
       googleDriveLink: project.googleDriveLink || '',
+      googleExternalLink: project.googleExternalLink || '',
       workflowyLink: project.workflowyLink || '',
+      contractFileLink: project.contractFileLink || '',
     });
     setEditStartDateInput(formatInputDate(project.startDate));
     setEditEndDateInput(formatInputDate(project.endDate));
@@ -982,7 +988,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           projectType: editFormData.projectType || null,
           jiraEpic: editFormData.jiraEpic || null,
           googleDriveLink: editFormData.googleDriveLink || null,
+          googleExternalLink: editFormData.googleExternalLink || null,
           workflowyLink: editFormData.workflowyLink || null,
+          contractFileLink: editFormData.contractFileLink || null,
         }
       });
     }
@@ -1245,7 +1253,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         projectType: '',
         jiraEpic: '',
         googleDriveLink: '',
+        googleExternalLink: '',
         workflowyLink: '',
+        contractFileLink: '',
       });
       setProjectStartDateInput('');
       setProjectEndDateInput('');
@@ -1670,7 +1680,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         projectType: projectFormData.projectType || null,
         jiraEpic: projectFormData.jiraEpic || null,
         googleDriveLink: projectFormData.googleDriveLink || null,
+        googleExternalLink: projectFormData.googleExternalLink || null,
         workflowyLink: projectFormData.workflowyLink || null,
+        contractFileLink: projectFormData.contractFileLink || null,
       });
     } else {
       toast({
@@ -1992,7 +2004,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     projectType: '',
                     jiraEpic: '',
                     googleDriveLink: '',
+                    googleExternalLink: '',
                     workflowyLink: '',
+                    contractFileLink: '',
                   });
                   setProjectStartDateInput('');
                   setProjectEndDateInput('');
@@ -2459,12 +2473,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
                     {/* External Links Section */}
                     <div className="space-y-3">
-                      <Label className="text-sm font-medium">External Links (Optional)</Label>
+                      <Label className="text-sm font-medium">External Links</Label>
                       <div className="space-y-2">
                         <Input
                           id="new-jira-epic"
                           data-testid="input-jira-epic"
-                          placeholder="Jira Epic URL or Key"
+                          placeholder="Jira Epic URL"
                           value={projectFormData.jiraEpic}
                           onChange={(e) => setProjectFormData({ ...projectFormData, jiraEpic: e.target.value })}
                         />
@@ -2473,9 +2487,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                         <Input
                           id="new-google-drive"
                           data-testid="input-google-drive"
-                          placeholder="Google Drive Folder URL"
+                          placeholder="Google internal folder link"
                           value={projectFormData.googleDriveLink}
                           onChange={(e) => setProjectFormData({ ...projectFormData, googleDriveLink: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Input
+                          id="new-google-external"
+                          data-testid="input-google-external"
+                          placeholder="Google external folder link (if exists)"
+                          value={projectFormData.googleExternalLink}
+                          onChange={(e) => setProjectFormData({ ...projectFormData, googleExternalLink: e.target.value })}
                         />
                       </div>
                       <div className="space-y-2">
@@ -2485,6 +2508,15 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                           placeholder="Workflowy URL"
                           value={projectFormData.workflowyLink}
                           onChange={(e) => setProjectFormData({ ...projectFormData, workflowyLink: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Input
+                          id="new-contract-file"
+                          data-testid="input-contract-file"
+                          placeholder="Contract file link"
+                          value={projectFormData.contractFileLink}
+                          onChange={(e) => setProjectFormData({ ...projectFormData, contractFileLink: e.target.value })}
                         />
                       </div>
                     </div>
@@ -3498,12 +3530,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
             {/* External Links Section */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">External Links (Optional)</Label>
+              <Label className="text-sm font-medium">External Links</Label>
               <div className="space-y-2">
                 <Input
                   id="edit-jira-epic"
                   data-testid="input-edit-jira-epic"
-                  placeholder="Jira Epic URL or Key"
+                  placeholder="Jira Epic URL"
                   value={editFormData.jiraEpic}
                   onChange={(e) => setEditFormData({ ...editFormData, jiraEpic: e.target.value })}
                 />
@@ -3512,9 +3544,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 <Input
                   id="edit-google-drive"
                   data-testid="input-edit-google-drive"
-                  placeholder="Google Drive Folder URL"
+                  placeholder="Google internal folder link"
                   value={editFormData.googleDriveLink}
                   onChange={(e) => setEditFormData({ ...editFormData, googleDriveLink: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  id="edit-google-external"
+                  data-testid="input-edit-google-external"
+                  placeholder="Google external folder link (if exists)"
+                  value={editFormData.googleExternalLink}
+                  onChange={(e) => setEditFormData({ ...editFormData, googleExternalLink: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -3524,6 +3565,15 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   placeholder="Workflowy URL"
                   value={editFormData.workflowyLink}
                   onChange={(e) => setEditFormData({ ...editFormData, workflowyLink: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  id="edit-contract-file"
+                  data-testid="input-edit-contract-file"
+                  placeholder="Contract file link"
+                  value={editFormData.contractFileLink}
+                  onChange={(e) => setEditFormData({ ...editFormData, contractFileLink: e.target.value })}
                 />
               </div>
             </div>
@@ -3596,7 +3646,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
               )}
 
               {/* External Links Section */}
-              {(selectedProject.jiraEpic || selectedProject.googleDriveLink || selectedProject.workflowyLink) && (
+              {(selectedProject.jiraEpic || selectedProject.googleDriveLink || selectedProject.googleExternalLink || selectedProject.workflowyLink || selectedProject.contractFileLink) && (
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-lg bg-muted">
                     <Briefcase className="h-5 w-5 text-muted-foreground" />
@@ -3623,7 +3673,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
                           data-testid="link-google-drive"
                         >
-                          Google Drive
+                          Google Internal
+                        </a>
+                      )}
+                      {selectedProject.googleExternalLink && (
+                        <a 
+                          href={selectedProject.googleExternalLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+                          data-testid="link-google-external"
+                        >
+                          Google External
                         </a>
                       )}
                       {selectedProject.workflowyLink && (
@@ -3635,6 +3696,17 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                           data-testid="link-workflowy"
                         >
                           Workflowy
+                        </a>
+                      )}
+                      {selectedProject.contractFileLink && (
+                        <a 
+                          href={selectedProject.contractFileLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 text-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+                          data-testid="link-contract-file"
+                        >
+                          Contract File
                         </a>
                       )}
                     </div>
