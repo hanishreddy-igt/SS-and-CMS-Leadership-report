@@ -33,8 +33,8 @@ This project provides a comprehensive tracking system for Strategic Services (SS
 - **Database Schema (PostgreSQL with Drizzle ORM)**:
     - **Users**: Authentication data.
     - **Sessions**: Session storage.
-    - **People**: Unified table for team members and project leads. Each person has a `roles` array that can contain `['team-member']`, `['project-lead']`, or both. API endpoints automatically detect existing people by email to prevent duplicates.
-    - **Projects**: Project details including customer, lead, team member assignments with roles, and dates. Team members are stored as JSONB array: `[{memberId: string, role: string}]`.
+    - **People**: Unified table for team members and project leads. Each person has a `roles` array that can contain `['team-member']`, `['project-lead']`, or both. Includes optional `hoursPerWeek` field (stored as decimal string, displayed as "X.X hours/week"). API endpoints automatically detect existing people by email to prevent duplicates.
+    - **Projects**: Project details including customer, lead, team member assignments with roles, dates, and external links (jiraEpic, googleDriveLink, workflowyLink). Team members are stored as JSONB array: `[{memberId: string, role: string}]`.
     - **Weekly Reports**: Stores progress, health status, and team feedback.
     - **Saved Reports**: Archived weekly report snapshots with PDF/CSV data, AI summary, and health counts.
 - **Unified Person Management**:

@@ -112,7 +112,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [newMember, setNewMember] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberHoursPerWeek, setNewMemberHoursPerWeek] = useState('');
   const [editMemberEmailValue, setEditMemberEmailValue] = useState('');
+  const [editMemberHoursPerWeek, setEditMemberHoursPerWeek] = useState('');
   const [showEditMemberDialog, setShowEditMemberDialog] = useState(false);
   const [memberNameError, setMemberNameError] = useState<string | null>(null);
   const [memberNameWarning, setMemberNameWarning] = useState<string | null>(null);
@@ -758,6 +760,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       startDate: project.startDate || '',
       endDate: project.endDate || '',
       projectType: project.projectType || '',
+      jiraEpic: project.jiraEpic || '',
+      googleDriveLink: project.googleDriveLink || '',
+      workflowyLink: project.workflowyLink || '',
     });
     setEditStartDateInput(formatInputDate(project.startDate));
     setEditEndDateInput(formatInputDate(project.endDate));
@@ -927,6 +932,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           startDate: startDateParsed || '2025-08-30',
           endDate: endDateParsed || null,
           projectType: editFormData.projectType || null,
+          jiraEpic: editFormData.jiraEpic || null,
+          googleDriveLink: editFormData.googleDriveLink || null,
+          workflowyLink: editFormData.workflowyLink || null,
         }
       });
     }
@@ -997,14 +1005,15 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
   // Team member mutations
   const createMemberMutation = useMutation({
-    mutationFn: async ({ name, email }: { name: string; email?: string }) => {
-      return await apiRequest('POST', '/api/team-members', { name, email });
+    mutationFn: async ({ name, email, hoursPerWeek }: { name: string; email?: string; hoursPerWeek?: string }) => {
+      return await apiRequest('POST', '/api/team-members', { name, email, hoursPerWeek });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member added' });
       setNewMember('');
       setNewMemberEmail('');
+      setNewMemberHoursPerWeek('');
       setMemberNameError(null);
       setMemberNameWarning(null);
       setShowAddMemberDialog(false);
@@ -1019,8 +1028,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   });
 
   const updateMemberMutation = useMutation({
-    mutationFn: async ({ id, name, email }: { id: string; name: string; email?: string }) => {
-      return await apiRequest('PATCH', `/api/team-members/${id}`, { name, email });
+    mutationFn: async ({ id, name, email, hoursPerWeek }: { id: string; name: string; email?: string; hoursPerWeek?: string }) => {
+      return await apiRequest('PATCH', `/api/team-members/${id}`, { name, email, hoursPerWeek });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
@@ -1242,6 +1251,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     // Strip the domain when loading for editing
     const emailUsername = member.email ? member.email.replace(/@ignitetech\.com$/, '') : '';
     setEditMemberEmailValue(emailUsername);
+    setEditMemberHoursPerWeek(member.hoursPerWeek || '');
     setShowEditMemberDialog(true);
   };
 
@@ -1257,10 +1267,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const saveEditMember = () => {
     if (editingMemberId && editMemberValue.trim()) {
       const email = editMemberEmailValue.trim() ? `${editMemberEmailValue.trim()}@ignitetech.com` : undefined;
+      const hoursPerWeek = editMemberHoursPerWeek.trim() || undefined;
       updateMemberMutation.mutate({ 
         id: editingMemberId, 
         name: editMemberValue.trim(), 
-        email
+        email,
+        hoursPerWeek
       });
     }
   };
@@ -1270,6 +1282,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     setEditingMemberId(null);
     setEditMemberValue('');
     setEditMemberEmailValue('');
+    setEditMemberHoursPerWeek('');
   };
 
   const saveEditLead = () => {
@@ -1373,7 +1386,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const handleAddMember = () => {
     if (newMember.trim() && !memberNameError) {
       const email = newMemberEmail.trim() ? `${newMemberEmail.trim()}@ignitetech.com` : undefined;
-      createMemberMutation.mutate({ name: newMember.trim(), email });
+      const hoursPerWeek = newMemberHoursPerWeek.trim() || undefined;
+      createMemberMutation.mutate({ name: newMember.trim(), email, hoursPerWeek });
     }
   };
 
@@ -1596,6 +1610,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         startDate: startDateParsed || '2025-08-30',
         endDate: endDateParsed || null,
         projectType: projectFormData.projectType || null,
+        jiraEpic: projectFormData.jiraEpic || null,
+        googleDriveLink: projectFormData.googleDriveLink || null,
+        workflowyLink: projectFormData.workflowyLink || null,
       });
     } else {
       toast({
@@ -2313,6 +2330,38 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       {projectFormErrors.projectType && (
                         <p className="text-xs text-red-500">{projectFormErrors.projectType}</p>
                       )}
+                    </div>
+
+                    {/* External Links Section */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">External Links (Optional)</Label>
+                      <div className="space-y-2">
+                        <Input
+                          id="new-jira-epic"
+                          data-testid="input-jira-epic"
+                          placeholder="Jira Epic URL or Key"
+                          value={projectFormData.jiraEpic}
+                          onChange={(e) => setProjectFormData({ ...projectFormData, jiraEpic: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Input
+                          id="new-google-drive"
+                          data-testid="input-google-drive"
+                          placeholder="Google Drive Folder URL"
+                          value={projectFormData.googleDriveLink}
+                          onChange={(e) => setProjectFormData({ ...projectFormData, googleDriveLink: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Input
+                          id="new-workflowy"
+                          data-testid="input-workflowy"
+                          placeholder="Workflowy URL"
+                          value={projectFormData.workflowyLink}
+                          onChange={(e) => setProjectFormData({ ...projectFormData, workflowyLink: e.target.value })}
+                        />
+                      </div>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-4">
@@ -3268,6 +3317,39 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 <p className="text-xs text-red-500">Project type is required</p>
               )}
             </div>
+
+            {/* External Links Section */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">External Links (Optional)</Label>
+              <div className="space-y-2">
+                <Input
+                  id="edit-jira-epic"
+                  data-testid="input-edit-jira-epic"
+                  placeholder="Jira Epic URL or Key"
+                  value={editFormData.jiraEpic}
+                  onChange={(e) => setEditFormData({ ...editFormData, jiraEpic: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  id="edit-google-drive"
+                  data-testid="input-edit-google-drive"
+                  placeholder="Google Drive Folder URL"
+                  value={editFormData.googleDriveLink}
+                  onChange={(e) => setEditFormData({ ...editFormData, googleDriveLink: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  id="edit-workflowy"
+                  data-testid="input-edit-workflowy"
+                  placeholder="Workflowy URL"
+                  value={editFormData.workflowyLink}
+                  onChange={(e) => setEditFormData({ ...editFormData, workflowyLink: e.target.value })}
+                />
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
@@ -3331,6 +3413,53 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Total Contractual Time</p>
                     <p className="text-lg font-semibold" data-testid="text-project-detail-hours">{formatContractualTime(selectedProject.totalContractualHours)}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* External Links Section */}
+              {(selectedProject.jiraEpic || selectedProject.googleDriveLink || selectedProject.workflowyLink) && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Briefcase className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">External Links</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProject.jiraEpic && (
+                        <a 
+                          href={selectedProject.jiraEpic.startsWith('http') ? selectedProject.jiraEpic : `https://ignitetech.atlassian.net/browse/${selectedProject.jiraEpic}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                          data-testid="link-jira-epic"
+                        >
+                          Jira Epic
+                        </a>
+                      )}
+                      {selectedProject.googleDriveLink && (
+                        <a 
+                          href={selectedProject.googleDriveLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                          data-testid="link-google-drive"
+                        >
+                          Google Drive
+                        </a>
+                      )}
+                      {selectedProject.workflowyLink && (
+                        <a 
+                          href={selectedProject.workflowyLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                          data-testid="link-workflowy"
+                        >
+                          Workflowy
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -3615,6 +3744,28 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       </span>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-member-hours">Hours per Week (Optional)</Label>
+                    <div className="flex">
+                      <Input
+                        id="new-member-hours"
+                        data-testid="input-member-hours"
+                        type="text"
+                        value={newMemberHoursPerWeek}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                          if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                            setNewMemberHoursPerWeek(value);
+                          }
+                        }}
+                        placeholder="e.g., 6.5"
+                        className="rounded-r-none max-w-24"
+                      />
+                      <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
+                        hours/week
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
@@ -3622,6 +3773,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                         setShowAddMemberDialog(false);
                         setNewMember('');
                         setNewMemberEmail('');
+                        setNewMemberHoursPerWeek('');
                         setMemberNameError(null);
                         setMemberNameWarning(null);
                       }}
@@ -3715,11 +3867,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     <span data-testid={`text-member-${member.id}`} className="font-medium block truncate">
                       {member.name}
                     </span>
-                    {member.roles?.includes('project-lead') && (
-                      <Badge variant="outline" className="text-xs mt-0.5" data-testid={`badge-also-lead-${member.id}`}>
-                        Also Lead
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      {member.hoursPerWeek && (
+                        <span className="text-xs text-muted-foreground" data-testid={`text-member-hours-${member.id}`}>
+                          {member.hoursPerWeek} hrs/week
+                        </span>
+                      )}
+                      {member.roles?.includes('project-lead') && (
+                        <Badge variant="outline" className="text-xs" data-testid={`badge-also-lead-${member.id}`}>
+                          Also Lead
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {!selectionModeMembers && (permissions.canEditTeamMembers || permissions.canDeletePeople) && (
@@ -4250,6 +4409,28 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 </span>
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-member-hours">Hours per Week (Optional)</Label>
+              <div className="flex">
+                <Input
+                  id="edit-member-hours"
+                  data-testid="input-edit-member-hours"
+                  type="text"
+                  value={editMemberHoursPerWeek}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9.]/g, '');
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setEditMemberHoursPerWeek(value);
+                    }
+                  }}
+                  placeholder="e.g., 6.5"
+                  className="rounded-r-none max-w-24"
+                />
+                <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
+                  hours/week
+                </span>
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
@@ -4446,10 +4627,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-lg font-semibold" data-testid="text-member-detail-name">
                     {selectedMemberForDetail.name}
                   </p>
+                  {selectedMemberForDetail.hoursPerWeek && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground text-sm mt-0.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span data-testid="text-member-detail-hours">
+                        {selectedMemberForDetail.hoursPerWeek} hours/week
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               
