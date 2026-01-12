@@ -51,6 +51,7 @@ export const people = pgTable("people", {
   email: text("email"),
   roles: text("roles").array().notNull().default(sql`'{}'`),
   feedback: text("feedback"), // General feedback/notes about this person
+  hoursPerWeek: text("hours_per_week"), // Hours per week (stored as decimal string, e.g., "6.5")
 });
 
 export const projects = pgTable("projects", {
@@ -65,6 +66,9 @@ export const projects = pgTable("projects", {
   startDate: text("start_date"),
   endDate: text("end_date"),
   projectType: text("project_type"),
+  jiraEpic: text("jira_epic"), // Jira Epic link/key
+  googleDriveLink: text("google_drive_link"), // Google Drive folder link
+  workflowyLink: text("workflowy_link"), // Workflowy link
 });
 
 export type ProjectType = 'CMS' | 'SS';

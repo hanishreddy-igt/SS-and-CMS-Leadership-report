@@ -72,6 +72,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     startDate: '',
     endDate: '',
     projectType: '' as string,
+    jiraEpic: '',
+    googleDriveLink: '',
+    workflowyLink: '',
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -98,6 +101,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     startDate: '',
     endDate: '',
     projectType: '' as string,
+    jiraEpic: '',
+    googleDriveLink: '',
+    workflowyLink: '',
   });
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectFormErrors, setProjectFormErrors] = useState<Record<string, string>>({});
