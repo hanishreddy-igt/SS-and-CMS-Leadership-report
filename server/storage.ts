@@ -1296,8 +1296,9 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
-  async mergeDuplicatePeople(): Promise<{ mergedCount: number; details: { email: string; mergedIds: string[]; keepId: string }[] }> {
+  async mergeDuplicatePeople(): Promise<{ mergedCount: number; projectsUpdated: number; details: { email: string; mergedIds: string[]; keepId: string }[] }> {
     const allPeople = await this.getAllPeople();
+    const allProjects = await this.getProjects();
     const emailMap = new Map<string, Person[]>();
     
     for (const person of allPeople) {
@@ -1309,7 +1310,11 @@ export class DatabaseStorage implements IStorage {
     }
     
     let mergedCount = 0;
+    let projectsUpdated = 0;
     const details: { email: string; mergedIds: string[]; keepId: string }[] = [];
+    
+    // Build a map of old IDs to new (primary) IDs for all duplicates
+    const idRemapMap = new Map<string, string>();
     
     const entries = Array.from(emailMap.entries());
     for (const [email, duplicates] of entries) {
@@ -1317,26 +1322,104 @@ export class DatabaseStorage implements IStorage {
       
       const primary = duplicates[0];
       const mergedRoles = new Set<string>(primary.roles);
+      const duplicateIds: string[] = [];
       
       for (let i = 1; i < duplicates.length; i++) {
         const dup = duplicates[i];
         for (const role of dup.roles) {
           mergedRoles.add(role);
         }
-        await this.deletePerson(dup.id);
-        mergedCount++;
+        idRemapMap.set(dup.id, primary.id);
+        duplicateIds.push(dup.id);
       }
       
+      // Update the primary person with merged roles
       await this.updatePerson(primary.id, { roles: Array.from(mergedRoles) as string[] });
       
       details.push({
         email,
-        mergedIds: duplicates.slice(1).map((d: Person) => d.id),
+        mergedIds: duplicateIds,
         keepId: primary.id
       });
+      
+      mergedCount += duplicateIds.length;
     }
     
-    return { mergedCount, details };
+    // Now update all projects to remap any duplicate IDs to the primary IDs
+    for (const project of allProjects) {
+      let needsUpdate = false;
+      const updates: any = {};
+      
+      // Remap leadId
+      if (project.leadId && idRemapMap.has(project.leadId)) {
+        updates.leadId = idRemapMap.get(project.leadId);
+        needsUpdate = true;
+      }
+      
+      // Remap leadIds array
+      if (project.leadIds && project.leadIds.length > 0) {
+        const newLeadIds = project.leadIds.map((id: string) => idRemapMap.get(id) || id);
+        // Remove duplicates that might result from remapping
+        const uniqueLeadIds = Array.from(new Set<string>(newLeadIds));
+        if (JSON.stringify(uniqueLeadIds) !== JSON.stringify(project.leadIds)) {
+          updates.leadIds = uniqueLeadIds;
+          needsUpdate = true;
+        }
+      }
+      
+      // Remap leadAssignments
+      if (project.leadAssignments && Array.isArray(project.leadAssignments)) {
+        const leadAssignments = project.leadAssignments as { leadId: string; hours?: string }[];
+        const remappedAssignments: { leadId: string; hours?: string }[] = [];
+        const seenLeadIds = new Set<string>();
+        
+        for (const assignment of leadAssignments) {
+          const newLeadId = idRemapMap.get(assignment.leadId) || assignment.leadId;
+          if (!seenLeadIds.has(newLeadId)) {
+            seenLeadIds.add(newLeadId);
+            remappedAssignments.push({ ...assignment, leadId: newLeadId });
+          }
+        }
+        
+        if (JSON.stringify(remappedAssignments) !== JSON.stringify(leadAssignments)) {
+          updates.leadAssignments = remappedAssignments;
+          needsUpdate = true;
+        }
+      }
+      
+      // Remap teamMembers
+      if (project.teamMembers && Array.isArray(project.teamMembers)) {
+        const teamMembers = project.teamMembers as { memberId: string; role?: string; hours?: string }[];
+        const remappedMembers: { memberId: string; role?: string; hours?: string }[] = [];
+        const seenMemberIds = new Set<string>();
+        
+        for (const member of teamMembers) {
+          const newMemberId = idRemapMap.get(member.memberId) || member.memberId;
+          if (!seenMemberIds.has(newMemberId)) {
+            seenMemberIds.add(newMemberId);
+            remappedMembers.push({ ...member, memberId: newMemberId });
+          }
+        }
+        
+        if (JSON.stringify(remappedMembers) !== JSON.stringify(teamMembers)) {
+          updates.teamMembers = remappedMembers;
+          needsUpdate = true;
+        }
+      }
+      
+      if (needsUpdate) {
+        await this.updateProject(project.id, updates);
+        projectsUpdated++;
+      }
+    }
+    
+    // Now safely delete the duplicate people (after project references are updated)
+    const idsToDelete = Array.from(idRemapMap.keys());
+    for (const oldId of idsToDelete) {
+      await this.deletePerson(oldId);
+    }
+    
+    return { mergedCount, projectsUpdated, details };
   }
 }
 
