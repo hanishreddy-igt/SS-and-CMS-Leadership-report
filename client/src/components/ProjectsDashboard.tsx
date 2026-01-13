@@ -3933,8 +3933,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </DialogHeader>
           
           {selectedProject && (
-            <div className="relative flex-1 min-h-0">
-              <div className="space-y-6 py-4 overflow-y-auto h-full scrollbar-visible">
+            <div className="relative flex-1 min-h-0 overflow-hidden">
+              <div className="space-y-6 py-4 pb-10 overflow-y-auto h-full scrollbar-visible">
               {/* Customer Section */}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-muted">
@@ -5094,8 +5094,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedLeadForDetail && (
-            <div className="relative flex-1 min-h-0">
-              <div className="space-y-4 py-2 overflow-y-auto h-full scrollbar-visible">
+            <div className="relative flex-1 min-h-0 overflow-hidden">
+              <div className="space-y-4 py-2 pb-10 overflow-y-auto h-full scrollbar-visible">
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCog className="h-6 w-6 text-primary" />
@@ -5291,8 +5291,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedMemberForDetail && (
-            <div className="relative flex-1 min-h-0">
-              <div className="space-y-4 py-2 overflow-y-auto h-full scrollbar-visible">
+            <div className="relative flex-1 min-h-0 overflow-hidden">
+              <div className="space-y-4 py-2 pb-10 overflow-y-auto h-full scrollbar-visible">
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary" />
