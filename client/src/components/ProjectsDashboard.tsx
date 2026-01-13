@@ -5115,7 +5115,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
       {/* Lead Detail Modal */}
       <Dialog open={showLeadDetailModal} onOpenChange={(open) => !open && closeLeadDetailModal()}>
-        <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col" data-testid="dialog-lead-detail">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col" data-testid="dialog-lead-detail">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <UserCog className="h-5 w-5" />
@@ -5314,7 +5314,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
       {/* Team Member Detail Modal */}
       <Dialog open={showMemberDetailModal} onOpenChange={(open) => !open && closeMemberDetailModal()}>
-        <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col" data-testid="dialog-member-detail">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col" data-testid="dialog-member-detail">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
