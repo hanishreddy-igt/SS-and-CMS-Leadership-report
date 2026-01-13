@@ -1956,6 +1956,35 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     }
   });
 
+  const cleanupOrphanedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/projects/cleanup-orphaned');
+      return response.json();
+    },
+    onSuccess: (data: { projectsUpdated: number; orphanedLeadsRemoved: number; orphanedMembersRemoved: number }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      const totalRemoved = data.orphanedLeadsRemoved + data.orphanedMembersRemoved;
+      if (totalRemoved === 0) {
+        toast({ 
+          title: 'No Orphaned References', 
+          description: 'All project references are valid.' 
+        });
+      } else {
+        toast({ 
+          title: 'Cleanup Complete', 
+          description: `Updated ${data.projectsUpdated} project(s): removed ${data.orphanedLeadsRemoved} lead and ${data.orphanedMembersRemoved} member orphaned references.` 
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to cleanup orphaned references',
+        variant: 'destructive'
+      });
+    }
+  });
+
   // Long-term active projects = green status (active with no renewal soon)
   const longTermActiveProjects = projects.filter(p => getProjectStatus(p.endDate) === 'active');
   const longTermActiveCMS = longTermActiveProjects.filter(p => p.projectType === 'CMS').length;
@@ -4159,31 +4188,60 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       {permissions.role === 'admin' && (
         <Card className="mb-6" data-testid="section-admin-tools">
           <CardHeader className="pb-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-lg">Admin Tools</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Merge duplicate people records (same email) into single entries with combined roles.
-                </p>
+            <div className="flex flex-col gap-4">
+              <CardTitle className="text-lg">Admin Tools</CardTitle>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 p-3 border rounded-lg">
+                  <p className="text-sm font-medium mb-2">Merge Duplicates</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Combine people with same email into single entries with merged roles and update project references.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => mergeDuplicatesMutation.mutate()}
+                    disabled={mergeDuplicatesMutation.isPending}
+                    data-testid="button-merge-duplicates"
+                  >
+                    {mergeDuplicatesMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Merging...
+                      </>
+                    ) : (
+                      <>
+                        <Users className="h-4 w-4 mr-2" />
+                        Merge Duplicates
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="flex-1 p-3 border rounded-lg">
+                  <p className="text-sm font-medium mb-2">Cleanup Orphaned References</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Remove references to deleted team members or leads from contracts.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => cleanupOrphanedMutation.mutate()}
+                    disabled={cleanupOrphanedMutation.isPending}
+                    data-testid="button-cleanup-orphaned"
+                  >
+                    {cleanupOrphanedMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Cleaning...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Cleanup References
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => mergeDuplicatesMutation.mutate()}
-                disabled={mergeDuplicatesMutation.isPending}
-                data-testid="button-merge-duplicates"
-              >
-                {mergeDuplicatesMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Merging...
-                  </>
-                ) : (
-                  <>
-                    <Users className="h-4 w-4 mr-2" />
-                    Merge Duplicates
-                  </>
-                )}
-              </Button>
             </div>
           </CardHeader>
         </Card>

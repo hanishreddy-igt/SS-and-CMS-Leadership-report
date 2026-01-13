@@ -734,57 +734,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Merge duplicate people by email (admin only)
+  // Merge duplicate people by email (admin only) - also updates all project references
   app.post('/api/people/merge-duplicates', isAuthenticated, requirePermission('canManageUsers'), async (req, res) => {
     try {
-      const allPeople = await storage.getAllPeople();
-      const emailMap = new Map<string, typeof allPeople>();
-      
-      // Group people by email (case-insensitive)
-      for (const person of allPeople) {
-        if (!person.email) continue;
-        const normalizedEmail = person.email.toLowerCase();
-        const existing = emailMap.get(normalizedEmail) || [];
-        existing.push(person);
-        emailMap.set(normalizedEmail, existing);
-      }
-      
-      let mergeCount = 0;
-      const mergedResults: { email: string; mergedIds: string[]; keepId: string }[] = [];
-      
-      // Merge duplicates
-      for (const [email, duplicates] of emailMap.entries()) {
-        if (duplicates.length <= 1) continue;
-        
-        // Keep the first one, merge roles from others
-        const primary = duplicates[0];
-        const mergedRoles = new Set(primary.roles);
-        
-        for (let i = 1; i < duplicates.length; i++) {
-          const dup = duplicates[i];
-          // Add all roles from duplicate
-          for (const role of dup.roles) {
-            mergedRoles.add(role);
-          }
-          // Delete the duplicate
-          await storage.deletePerson(dup.id);
-          mergeCount++;
-        }
-        
-        // Update primary with merged roles
-        await storage.updatePerson(primary.id, { roles: Array.from(mergedRoles) });
-        
-        mergedResults.push({
-          email,
-          mergedIds: duplicates.slice(1).map(d => d.id),
-          keepId: primary.id
-        });
-      }
-      
+      const result = await storage.mergeDuplicatePeople();
       res.json({ 
-        message: `Merged ${mergeCount} duplicate entries`, 
-        mergedCount: mergeCount,
-        details: mergedResults
+        message: `Merged ${result.mergedCount} duplicate entries, updated ${result.projectsUpdated} projects`, 
+        mergedCount: result.mergedCount,
+        projectsUpdated: result.projectsUpdated,
+        details: result.details
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Cleanup orphaned references in projects (admin only)
+  app.post('/api/projects/cleanup-orphaned', isAuthenticated, requirePermission('canManageUsers'), async (req, res) => {
+    try {
+      const result = await storage.cleanupOrphanedReferences();
+      res.json({ 
+        message: `Cleaned up ${result.projectsUpdated} projects: removed ${result.orphanedLeadsRemoved} orphaned lead references and ${result.orphanedMembersRemoved} orphaned member references`, 
+        projectsUpdated: result.projectsUpdated,
+        orphanedLeadsRemoved: result.orphanedLeadsRemoved,
+        orphanedMembersRemoved: result.orphanedMembersRemoved
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

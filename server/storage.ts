@@ -1421,6 +1421,70 @@ export class DatabaseStorage implements IStorage {
     
     return { mergedCount, projectsUpdated, details };
   }
+
+  async cleanupOrphanedReferences(): Promise<{ projectsUpdated: number; orphanedLeadsRemoved: number; orphanedMembersRemoved: number }> {
+    const allProjects = await this.getProjects();
+    const allPeople = await this.getAllPeople();
+    const validPersonIds = new Set(allPeople.map(p => p.id));
+    
+    let projectsUpdated = 0;
+    let orphanedLeadsRemoved = 0;
+    let orphanedMembersRemoved = 0;
+    
+    for (const project of allProjects) {
+      let needsUpdate = false;
+      const updates: any = {};
+      
+      // Clean up leadId - set to first valid leadId or null
+      if (project.leadId && !validPersonIds.has(project.leadId)) {
+        updates.leadId = null;
+        needsUpdate = true;
+        orphanedLeadsRemoved++;
+      }
+      
+      // Clean up leadIds array
+      if (project.leadIds && project.leadIds.length > 0) {
+        const validLeadIds = project.leadIds.filter((id: string) => validPersonIds.has(id));
+        if (validLeadIds.length !== project.leadIds.length) {
+          orphanedLeadsRemoved += project.leadIds.length - validLeadIds.length;
+          updates.leadIds = validLeadIds;
+          // Also update leadId to first valid lead if current is invalid
+          if (!updates.leadId && validLeadIds.length > 0) {
+            updates.leadId = validLeadIds[0];
+          }
+          needsUpdate = true;
+        }
+      }
+      
+      // Clean up leadAssignments
+      if (project.leadAssignments && Array.isArray(project.leadAssignments)) {
+        const leadAssignments = project.leadAssignments as { leadId: string; hours?: string }[];
+        const validAssignments = leadAssignments.filter(a => validPersonIds.has(a.leadId));
+        if (validAssignments.length !== leadAssignments.length) {
+          updates.leadAssignments = validAssignments;
+          needsUpdate = true;
+        }
+      }
+      
+      // Clean up teamMembers
+      if (project.teamMembers && Array.isArray(project.teamMembers)) {
+        const teamMembers = project.teamMembers as { memberId: string; role?: string; hours?: string }[];
+        const validMembers = teamMembers.filter(m => validPersonIds.has(m.memberId));
+        if (validMembers.length !== teamMembers.length) {
+          orphanedMembersRemoved += teamMembers.length - validMembers.length;
+          updates.teamMembers = validMembers;
+          needsUpdate = true;
+        }
+      }
+      
+      if (needsUpdate) {
+        await this.updateProject(project.id, updates);
+        projectsUpdated++;
+      }
+    }
+    
+    return { projectsUpdated, orphanedLeadsRemoved, orphanedMembersRemoved };
+  }
 }
 
 export const storage = new DatabaseStorage();
