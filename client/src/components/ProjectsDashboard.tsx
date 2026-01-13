@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon, Loader2 } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon, Loader2, ChevronsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -3933,7 +3933,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </DialogHeader>
           
           {selectedProject && (
-            <div className="space-y-6 py-4 overflow-y-auto flex-1 scrollbar-visible">
+            <div className="relative flex-1 min-h-0">
+              <div className="space-y-6 py-4 overflow-y-auto h-full scrollbar-visible">
               {/* Customer Section */}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-muted">
@@ -4187,6 +4188,14 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       );
                     }
                   })()}
+                </div>
+              </div>
+              </div>
+              {/* Scroll indicator */}
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center py-2 bg-gradient-to-t from-background to-transparent pointer-events-none">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <ChevronsDown className="h-4 w-4 animate-bounce" />
+                  <span>Scroll</span>
                 </div>
               </div>
             </div>
@@ -5085,7 +5094,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedLeadForDetail && (
-            <div className="space-y-4 py-2 overflow-y-auto flex-1 scrollbar-visible">
+            <div className="relative flex-1 min-h-0">
+              <div className="space-y-4 py-2 overflow-y-auto h-full scrollbar-visible">
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCog className="h-6 w-6 text-primary" />
@@ -5255,6 +5265,14 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   </div>
                 </div>
               )}
+              </div>
+              {/* Scroll indicator */}
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center py-2 bg-gradient-to-t from-background to-transparent pointer-events-none">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <ChevronsDown className="h-4 w-4 animate-bounce" />
+                  <span>Scroll</span>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -5273,7 +5291,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedMemberForDetail && (
-            <div className="space-y-4 py-2 overflow-y-auto flex-1 scrollbar-visible">
+            <div className="relative flex-1 min-h-0">
+              <div className="space-y-4 py-2 overflow-y-auto h-full scrollbar-visible">
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary" />
@@ -5428,6 +5447,14 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   </div>
                 </div>
               )}
+              </div>
+              {/* Scroll indicator */}
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center py-2 bg-gradient-to-t from-background to-transparent pointer-events-none">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <ChevronsDown className="h-4 w-4 animate-bounce" />
+                  <span>Scroll</span>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
