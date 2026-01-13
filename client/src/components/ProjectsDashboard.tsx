@@ -3933,7 +3933,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </DialogHeader>
           
           {selectedProject && (
-            <div className="space-y-6 py-4 overflow-y-auto flex-1">
+            <div className="space-y-6 py-4 overflow-y-auto flex-1 scrollbar-visible">
               {/* Customer Section */}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-muted">
