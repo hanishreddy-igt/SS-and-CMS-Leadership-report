@@ -5074,8 +5074,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
       {/* Lead Detail Modal */}
       <Dialog open={showLeadDetailModal} onOpenChange={(open) => !open && closeLeadDetailModal()}>
-        <DialogContent className="sm:max-w-md" data-testid="dialog-lead-detail">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col" data-testid="dialog-lead-detail">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <UserCog className="h-5 w-5" />
               Team Lead Details
@@ -5085,7 +5085,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedLeadForDetail && (
-            <div className="space-y-4 py-2">
+            <div className="space-y-4 py-2 overflow-y-auto flex-1">
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCog className="h-6 w-6 text-primary" />
@@ -5262,8 +5262,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
       {/* Team Member Detail Modal */}
       <Dialog open={showMemberDetailModal} onOpenChange={(open) => !open && closeMemberDetailModal()}>
-        <DialogContent className="sm:max-w-md" data-testid="dialog-member-detail">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col" data-testid="dialog-member-detail">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
               Team Member Details
@@ -5273,7 +5273,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedMemberForDetail && (
-            <div className="space-y-4 py-2">
+            <div className="space-y-4 py-2 overflow-y-auto flex-1">
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary" />
