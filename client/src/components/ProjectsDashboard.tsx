@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -1921,6 +1921,36 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       toast({ 
         title: 'Error', 
         description: error.message || 'Failed to delete project leads',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const mergeDuplicatesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/people/merge-duplicates');
+      return response.json();
+    },
+    onSuccess: (data: { mergedCount: number; projectsUpdated: number; details: any[] }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      if (data.mergedCount === 0) {
+        toast({ 
+          title: 'No Duplicates Found', 
+          description: 'All people records are already unique by email.' 
+        });
+      } else {
+        toast({ 
+          title: 'Duplicates Merged', 
+          description: `Merged ${data.mergedCount} duplicate(s), updated ${data.projectsUpdated} project(s).` 
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to merge duplicates',
         variant: 'destructive'
       });
     }
@@ -4125,6 +4155,40 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       {/* Team Tab Content */}
       {activeTab === 'team' && (
       <>
+      {/* Admin Tools Section */}
+      {permissions.canAddTeamMembers && permissions.canAddProjectLeads && (
+        <Card className="mb-6" data-testid="section-admin-tools">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg">Admin Tools</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Merge duplicate people records (same email) into single entries with combined roles.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => mergeDuplicatesMutation.mutate()}
+                disabled={mergeDuplicatesMutation.isPending}
+                data-testid="button-merge-duplicates"
+              >
+                {mergeDuplicatesMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Merging...
+                  </>
+                ) : (
+                  <>
+                    <Users className="h-4 w-4 mr-2" />
+                    Merge Duplicates
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+      
       {/* Team Members Section */}
       <Card data-testid="section-team-members">
         <CardHeader>
