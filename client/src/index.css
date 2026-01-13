@@ -336,8 +336,9 @@
   @apply text-foreground bg-white/5;
 }
 
-/* Visible scrollbar styling - white and prominent */
+/* Visible scrollbar styling - white and prominent, always shown */
 .scrollbar-visible {
+  overflow-y: scroll !important;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.6) rgba(128, 128, 128, 0.2);
 }
