@@ -4155,8 +4155,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       {/* Team Tab Content */}
       {activeTab === 'team' && (
       <>
-      {/* Admin Tools Section */}
-      {permissions.canAddTeamMembers && permissions.canAddProjectLeads && (
+      {/* Admin Tools Section - Only visible to admins */}
+      {permissions.role === 'admin' && (
         <Card className="mb-6" data-testid="section-admin-tools">
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
