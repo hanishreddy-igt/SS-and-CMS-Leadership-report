@@ -1435,25 +1435,27 @@ export class DatabaseStorage implements IStorage {
       let needsUpdate = false;
       const updates: any = {};
       
-      // Clean up leadId - set to first valid leadId or null
-      if (project.leadId && !validPersonIds.has(project.leadId)) {
-        updates.leadId = null;
-        needsUpdate = true;
-        orphanedLeadsRemoved++;
-      }
-      
-      // Clean up leadIds array
+      // First, clean up leadIds array to get valid leads
+      let validLeadIds: string[] = [];
       if (project.leadIds && project.leadIds.length > 0) {
-        const validLeadIds = project.leadIds.filter((id: string) => validPersonIds.has(id));
+        validLeadIds = project.leadIds.filter((id: string) => validPersonIds.has(id));
         if (validLeadIds.length !== project.leadIds.length) {
           orphanedLeadsRemoved += project.leadIds.length - validLeadIds.length;
           updates.leadIds = validLeadIds;
-          // Also update leadId to first valid lead if current is invalid
-          if (!updates.leadId && validLeadIds.length > 0) {
-            updates.leadId = validLeadIds[0];
-          }
           needsUpdate = true;
         }
+      }
+      
+      // Clean up leadId - if orphaned, replace with first valid lead from leadIds
+      // IMPORTANT: Never set leadId to null due to NOT NULL constraint
+      if (project.leadId && !validPersonIds.has(project.leadId)) {
+        orphanedLeadsRemoved++;
+        if (validLeadIds.length > 0) {
+          updates.leadId = validLeadIds[0];
+          needsUpdate = true;
+        }
+        // If no valid leads exist, we cannot update leadId (NOT NULL constraint)
+        // The orphaned leadId will remain until a valid lead is manually assigned
       }
       
       // Clean up leadAssignments
