@@ -5085,7 +5085,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedLeadForDetail && (
-            <div className="space-y-4 py-2 overflow-y-auto flex-1">
+            <div className="space-y-4 py-2 overflow-y-auto flex-1 scrollbar-visible">
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCog className="h-6 w-6 text-primary" />
@@ -5273,7 +5273,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedMemberForDetail && (
-            <div className="space-y-4 py-2 overflow-y-auto flex-1">
+            <div className="space-y-4 py-2 overflow-y-auto flex-1 scrollbar-visible">
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary" />
