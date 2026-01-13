@@ -3951,6 +3951,19 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 </div>
               </div>
 
+              {/* Account Owner Section */}
+              {selectedProject.accountOwner && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <UserCog className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Account Owner</p>
+                    <p className="text-lg font-semibold" data-testid="text-project-detail-account-owner">{selectedProject.accountOwner}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Contractual Time Section */}
               {selectedProject.totalContractualHours && (
                 <div className="flex items-start gap-3">
