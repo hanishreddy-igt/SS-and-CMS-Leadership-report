@@ -3933,8 +3933,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </DialogHeader>
           
           {selectedProject && (
-            <div className="relative flex-1 min-h-0 overflow-hidden">
-              <div className="space-y-6 py-4 pb-10 overflow-y-auto h-full scrollbar-visible">
+            <>
+              <div className="space-y-6 py-4 pb-8 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               {/* Customer Section */}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-muted">
@@ -4192,13 +4192,13 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
               </div>
               </div>
               {/* Scroll indicator */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center py-2 bg-gradient-to-t from-background to-transparent pointer-events-none">
+              <div className="flex justify-center items-center py-2 border-t">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <ChevronsDown className="h-4 w-4 animate-bounce" />
-                  <span>Scroll</span>
+                  <span>Scroll for more</span>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -5094,8 +5094,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedLeadForDetail && (
-            <div className="relative flex-1 min-h-0 overflow-hidden">
-              <div className="space-y-4 py-2 pb-10 overflow-y-auto h-full scrollbar-visible">
+            <>
+              <div className="space-y-4 py-2 pb-8 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCog className="h-6 w-6 text-primary" />
@@ -5267,13 +5267,13 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
               )}
               </div>
               {/* Scroll indicator */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center py-2 bg-gradient-to-t from-background to-transparent pointer-events-none">
+              <div className="flex justify-center items-center py-2 border-t">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <ChevronsDown className="h-4 w-4 animate-bounce" />
-                  <span>Scroll</span>
+                  <span>Scroll for more</span>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -5291,8 +5291,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
             </DialogDescription>
           </DialogHeader>
           {selectedMemberForDetail && (
-            <div className="relative flex-1 min-h-0 overflow-hidden">
-              <div className="space-y-4 py-2 pb-10 overflow-y-auto h-full scrollbar-visible">
+            <>
+              <div className="space-y-4 py-2 pb-8 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary" />
@@ -5449,13 +5449,13 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
               )}
               </div>
               {/* Scroll indicator */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-center items-center py-2 bg-gradient-to-t from-background to-transparent pointer-events-none">
+              <div className="flex justify-center items-center py-2 border-t">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <ChevronsDown className="h-4 w-4 animate-bounce" />
-                  <span>Scroll</span>
+                  <span>Scroll for more</span>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
