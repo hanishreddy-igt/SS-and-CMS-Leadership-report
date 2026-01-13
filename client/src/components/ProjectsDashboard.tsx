@@ -187,6 +187,36 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showProjectDetailModal, setShowProjectDetailModal] = useState(false);
 
+  // Scroll state for modals - track if content is scrollable
+  const projectDetailScrollRef = useRef<HTMLDivElement>(null);
+  const leadDetailScrollRef = useRef<HTMLDivElement>(null);
+  const memberDetailScrollRef = useRef<HTMLDivElement>(null);
+  const [projectDetailScrollable, setProjectDetailScrollable] = useState(false);
+  const [leadDetailScrollable, setLeadDetailScrollable] = useState(false);
+  const [memberDetailScrollable, setMemberDetailScrollable] = useState(false);
+
+  // Check if content is scrollable when modal opens or content changes
+  useEffect(() => {
+    if (showProjectDetailModal && projectDetailScrollRef.current) {
+      const el = projectDetailScrollRef.current;
+      setProjectDetailScrollable(el.scrollHeight > el.clientHeight);
+    }
+  }, [showProjectDetailModal, selectedProject]);
+
+  useEffect(() => {
+    if (showLeadDetailModal && leadDetailScrollRef.current) {
+      const el = leadDetailScrollRef.current;
+      setLeadDetailScrollable(el.scrollHeight > el.clientHeight);
+    }
+  }, [showLeadDetailModal, selectedLeadForDetail, showAllLeadContracts]);
+
+  useEffect(() => {
+    if (showMemberDetailModal && memberDetailScrollRef.current) {
+      const el = memberDetailScrollRef.current;
+      setMemberDetailScrollable(el.scrollHeight > el.clientHeight);
+    }
+  }, [showMemberDetailModal, selectedMemberForDetail, showAllMemberContracts]);
+
   // Email display toggle state - track which leads' emails are visible (supports multiple)
   const [visibleLeadEmails, setVisibleLeadEmails] = useState<Set<string>>(new Set());
 
@@ -3934,7 +3964,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           
           {selectedProject && (
             <>
-              <div className="space-y-6 py-4 pb-8 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+              <div ref={projectDetailScrollRef} className="space-y-6 py-4 pb-4 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               {/* Customer Section */}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-muted">
@@ -4191,13 +4221,15 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 </div>
               </div>
               </div>
-              {/* Scroll indicator */}
-              <div className="flex justify-center items-center py-2 border-t">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <ChevronsDown className="h-4 w-4 animate-bounce" />
-                  <span>Scroll for more</span>
+              {/* Scroll indicator - only show when content overflows */}
+              {projectDetailScrollable && (
+                <div className="flex justify-center items-center py-2 border-t">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <ChevronsDown className="h-4 w-4 animate-bounce" />
+                    <span>Scroll for more</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </DialogContent>
@@ -5095,7 +5127,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </DialogHeader>
           {selectedLeadForDetail && (
             <>
-              <div className="space-y-4 py-2 pb-8 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+              <div ref={leadDetailScrollRef} className="space-y-4 py-2 pb-4 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCog className="h-6 w-6 text-primary" />
@@ -5266,13 +5298,15 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 </div>
               )}
               </div>
-              {/* Scroll indicator */}
-              <div className="flex justify-center items-center py-2 border-t">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <ChevronsDown className="h-4 w-4 animate-bounce" />
-                  <span>Scroll for more</span>
+              {/* Scroll indicator - only show when content overflows */}
+              {leadDetailScrollable && (
+                <div className="flex justify-center items-center py-2 border-t">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <ChevronsDown className="h-4 w-4 animate-bounce" />
+                    <span>Scroll for more</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </DialogContent>
@@ -5292,7 +5326,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </DialogHeader>
           {selectedMemberForDetail && (
             <>
-              <div className="space-y-4 py-2 pb-8 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+              <div ref={memberDetailScrollRef} className="space-y-4 py-2 pb-4 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary" />
@@ -5448,13 +5482,15 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 </div>
               )}
               </div>
-              {/* Scroll indicator */}
-              <div className="flex justify-center items-center py-2 border-t">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <ChevronsDown className="h-4 w-4 animate-bounce" />
-                  <span>Scroll for more</span>
+              {/* Scroll indicator - only show when content overflows */}
+              {memberDetailScrollable && (
+                <div className="flex justify-center items-center py-2 border-t">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <ChevronsDown className="h-4 w-4 animate-bounce" />
+                    <span>Scroll for more</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </DialogContent>
