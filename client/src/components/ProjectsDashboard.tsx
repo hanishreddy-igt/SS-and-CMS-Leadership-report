@@ -3303,6 +3303,30 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                             <span>Contract file link missing</span>
                           </div>
                         )}
+                        {(() => {
+                          const leadAssignments = (project.leadAssignments as LeadAssignment[]) || [];
+                          const leadIdsArray = project.leadIds && project.leadIds.length > 0 ? project.leadIds : (project.leadId ? [project.leadId] : []);
+                          const leadsWithoutHours = leadIdsArray.filter(leadId => {
+                            const assignment = leadAssignments.find(a => a.leadId === leadId);
+                            return !assignment || !assignment.hours || assignment.hours === '0';
+                          });
+                          return leadsWithoutHours.length > 0 ? (
+                            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-lead-hours-${project.id}`}>
+                              <AlertTriangle className="h-4 w-4" />
+                              <span>Hours missing for {leadsWithoutHours.length} team lead{leadsWithoutHours.length > 1 ? 's' : ''}</span>
+                            </div>
+                          ) : null;
+                        })()}
+                        {(() => {
+                          const teamMembersArray = (project.teamMembers as TeamMemberAssignment[]) || [];
+                          const membersWithoutHours = teamMembersArray.filter(m => !m.hours || m.hours === '0');
+                          return membersWithoutHours.length > 0 ? (
+                            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" data-testid={`text-missing-member-hours-${project.id}`}>
+                              <AlertTriangle className="h-4 w-4" />
+                              <span>Hours missing for {membersWithoutHours.length} team member{membersWithoutHours.length > 1 ? 's' : ''}</span>
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                   </CardContent>
