@@ -3921,8 +3921,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
       {/* Project Detail Modal - Rendered outside of tab conditionals */}
       <Dialog open={showProjectDetailModal} onOpenChange={(open) => !open && closeProjectDetailModal()}>
-        <DialogContent className="max-w-lg" data-testid="dialog-project-detail">
-          <DialogHeader className="pb-4 border-b">
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col" data-testid="dialog-project-detail">
+          <DialogHeader className="pb-4 border-b flex-shrink-0">
             <div className="flex items-center gap-3">
               {selectedProject && <EndDateIndicator endDate={selectedProject.endDate} />}
               <DialogTitle className="text-2xl">{selectedProject?.name}</DialogTitle>
@@ -3933,7 +3933,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </DialogHeader>
           
           {selectedProject && (
-            <div className="space-y-6 py-4">
+            <div className="space-y-6 py-4 overflow-y-auto flex-1">
               {/* Customer Section */}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-muted">
