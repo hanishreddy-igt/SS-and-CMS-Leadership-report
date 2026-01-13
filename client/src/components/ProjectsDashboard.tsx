@@ -3964,7 +3964,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           
           {selectedProject && (
             <>
-              <div ref={projectDetailScrollRef} className="space-y-6 py-4 pb-4 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+              <div ref={projectDetailScrollRef} className="space-y-6 py-4 pb-4 overflow-y-auto overflow-x-hidden flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               {/* Customer Section */}
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-muted">
@@ -5127,13 +5127,13 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </DialogHeader>
           {selectedLeadForDetail && (
             <>
-              <div ref={leadDetailScrollRef} className="space-y-4 py-2 pb-4 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+              <div ref={leadDetailScrollRef} className="space-y-4 py-2 pb-4 overflow-y-auto overflow-x-hidden flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="w-12 h-12 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserCog className="h-6 w-6 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-lg font-semibold" data-testid="text-lead-detail-name">
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate" data-testid="text-lead-detail-name">
                     {selectedLeadForDetail.name}
                   </p>
                   <div className="flex items-center gap-2 text-muted-foreground text-sm mt-0.5">
@@ -5326,13 +5326,13 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </DialogHeader>
           {selectedMemberForDetail && (
             <>
-              <div ref={memberDetailScrollRef} className="space-y-4 py-2 pb-4 overflow-y-auto flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+              <div ref={memberDetailScrollRef} className="space-y-4 py-2 pb-4 overflow-y-auto overflow-x-hidden flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="w-12 h-12 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-lg font-semibold" data-testid="text-member-detail-name">
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate" data-testid="text-member-detail-name">
                     {selectedMemberForDetail.name}
                   </p>
                   {getTotalHoursForMember(selectedMemberForDetail.id) > 0 && (
