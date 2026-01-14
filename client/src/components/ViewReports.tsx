@@ -3119,8 +3119,27 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     setIsForceArchiving(true);
 
     try {
-      // Step 1: Get week dates from the actual reports (not calculated from today)
-      const reportWeekStart = weeklyReports[0].weekStart;
+      // Step 1: Get week dates from the actual submitted reports (not calculated from today)
+      // Use the oldest submitted report's weekStart to ensure we archive the correct week
+      const submittedReportsForWeek = weeklyReports.filter(r => r.status === 'submitted');
+      if (submittedReportsForWeek.length === 0) {
+        toast({
+          title: 'No Submitted Reports',
+          description: 'There are no submitted reports to archive',
+          variant: 'destructive',
+        });
+        setIsForceArchiving(false);
+        return;
+      }
+      
+      // Sort by weekStart to get the oldest week first (in case there are reports from multiple weeks)
+      const sortedByWeek = [...submittedReportsForWeek].sort(
+        (a, b) => new Date(a.weekStart).getTime() - new Date(b.weekStart).getTime()
+      );
+      const reportWeekStart = sortedByWeek[0].weekStart;
+      
+      console.log(`[Force Archive] Archiving reports for week: ${reportWeekStart}`);
+      
       const weekStartDate = new Date(reportWeekStart + 'T00:00:00Z');
       const weekEndDate = new Date(weekStartDate);
       weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
@@ -3151,7 +3170,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         }
       }
 
-      const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
+      // Use the already filtered submittedReportsForWeek
+      const submittedReports = submittedReportsForWeek;
 
       // Step 3: Calculate health counts
       const healthCounts = {
