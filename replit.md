@@ -57,6 +57,11 @@ This project provides a comprehensive tracking system for Strategic Services (SS
       - Tasks support hierarchical nesting via parentTaskId, project linking, multiple assignees, priority levels, tags, and timestamped notes.
     - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI.
     - **Jira Integration**: Functionality to import projects, leads, and team members directly from Jira epics.
+    - **Weekly Archiving System**:
+      - **Auto-Archive**: Client-side trigger that runs when ViewReports page is opened on Wednesday or later. Archives previous week's reports if they exist.
+      - **Force Archive**: Manual admin action to archive current reports immediately.
+      - **Week Progression Logic**: The reporting week only advances when the previous week has been archived. If archive is missed, the system stays on the unarchived week until it's archived (prevents week skipping).
+      - **Gap Detection**: The `/api/reporting-week` endpoint detects gaps between latest archive and current calendar week, returning the next unarchived week instead of jumping to current week.
 
 ### System Design Choices
 - **Authentication**: Secured with Google authentication via Replit Auth, restricted to `@ignitetech.com` email domains. Server-side validation and session management using PostgreSQL.

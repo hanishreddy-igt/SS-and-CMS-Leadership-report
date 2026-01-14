@@ -571,7 +571,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Priority 2: Check archives and compare with current calendar week
+      // Priority 2: Check archives and determine which week should be active
+      // KEY RULE: Only advance to the next week if the previous week was archived
       const savedReports = await storage.getSavedReports();
       const currentCalendarWeek = calculateCurrentWeekStart();
       
@@ -582,26 +583,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         const latestArchivedWeekStart = sortedReports[0].weekStart;
         
-        // Compare dates: use the LATER of (archived week, current calendar week)
-        // This handles:
-        // - Force archive on Dec 6 (Sat): calendar=Dec 1, archived=Dec 1 → stay on Dec 1
-        // - Force archive on Dec 8 (Mon): calendar=Dec 8, archived=Dec 1 → advance to Dec 8
-        // - Auto archive on Dec 10 (Wed): calendar=Dec 8, archived=Dec 1 → advance to Dec 8
-        const archivedDate = new Date(latestArchivedWeekStart + 'T00:00:00');
-        const calendarDate = new Date(currentCalendarWeek + 'T00:00:00');
+        // Calculate the week AFTER the latest archived week
+        const latestArchivedDate = new Date(latestArchivedWeekStart + 'T00:00:00Z');
+        const nextWeekAfterArchive = new Date(latestArchivedDate);
+        nextWeekAfterArchive.setUTCDate(latestArchivedDate.getUTCDate() + 7);
+        const nextWeekStart = `${nextWeekAfterArchive.getUTCFullYear()}-${String(nextWeekAfterArchive.getUTCMonth() + 1).padStart(2, '0')}-${String(nextWeekAfterArchive.getUTCDate()).padStart(2, '0')}`;
         
-        // If calendar week is after the archived week, use calendar week
-        // If calendar week is same as or before archived week, use archived week
-        // (same week = force archive mid-week, should stay on that week)
+        const calendarDate = new Date(currentCalendarWeek + 'T00:00:00Z');
+        const nextWeekDate = new Date(nextWeekStart + 'T00:00:00Z');
+        
         let activeWeekStart: string;
         let source: string;
         
-        if (calendarDate > archivedDate) {
-          // Calendar has moved past the archived week → use current calendar week
-          activeWeekStart = currentCalendarWeek;
-          source = 'calendar-after-archive';
+        // IMPORTANT: Only advance one week at a time after an archive
+        // This prevents skipping weeks if archive was missed
+        if (calendarDate >= nextWeekDate) {
+          // Calendar is at or past the next week after archive
+          // Use the next week after archive (not current calendar!) to ensure no weeks are skipped
+          // Exception: If calendar is same as next week, that's expected progression
+          if (calendarDate.getTime() === nextWeekDate.getTime()) {
+            activeWeekStart = currentCalendarWeek;
+            source = 'calendar-after-archive';
+          } else {
+            // Calendar is AHEAD of next week - there's a gap!
+            // Stay on the next unarchived week (week after last archive) until it gets archived
+            activeWeekStart = nextWeekStart;
+            source = 'next-unarchived-week';
+            console.log(`[reporting-week] Gap detected! Latest archive: ${latestArchivedWeekStart}, Calendar: ${currentCalendarWeek}, Using: ${nextWeekStart}`);
+          }
         } else {
-          // Still in the same week as the archive (or earlier, edge case)
+          // Calendar is still in the same week as archive or before
           // Stay on the archived week so users can continue submitting
           activeWeekStart = latestArchivedWeekStart;
           source = 'archive-same-week';
