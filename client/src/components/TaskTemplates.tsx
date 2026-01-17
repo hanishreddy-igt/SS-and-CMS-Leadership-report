@@ -24,7 +24,7 @@ import {
   Clock,
   Users
 } from 'lucide-react';
-import type { TaskTemplate, Project, Person } from '@shared/schema';
+import type { TaskTemplate, Project, Person, SubTemplateItem } from '@shared/schema';
 
 const recurrenceOptions = [
   { value: 'daily', label: 'Daily' },
@@ -40,6 +40,7 @@ interface TemplateFormData {
   projectId: string;
   assignedTo: string[];
   assignmentMode: 'single' | 'per-person';
+  subTemplates: SubTemplateItem[];
   taskItems: string;
   recurrence: string;
   isActive: boolean;
@@ -61,15 +62,22 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
     projectId: '',
     assignedTo: [],
     assignmentMode: 'single',
+    subTemplates: [],
     taskItems: '',
     recurrence: '',
     isActive: true,
   });
+  const [newSubTaskTitle, setNewSubTaskTitle] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
-    onSubmit(formData);
+    // Filter out empty sub-task titles before submitting
+    const cleanedData = {
+      ...formData,
+      subTemplates: formData.subTemplates.filter(sub => sub.title.trim())
+    };
+    onSubmit(cleanedData);
   };
 
   const togglePerson = (personId: string) => {
@@ -212,6 +220,113 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
             </div>
           </div>
         )}
+      </div>
+
+      {/* Sub-tasks section */}
+      <div className="space-y-2">
+        <Label>Sub-tasks (created as child tasks)</Label>
+        <div className="border rounded-md p-3 space-y-3">
+          {formData.subTemplates.length > 0 && (
+            <div className="space-y-2">
+              {formData.subTemplates.map((sub, index) => (
+                <div key={sub.id} className="flex items-center gap-2 group">
+                  <span className="text-muted-foreground text-sm">{index + 1}.</span>
+                  <Input
+                    value={sub.title}
+                    onChange={(e) => {
+                      const updated = [...formData.subTemplates];
+                      updated[index] = { ...sub, title: e.target.value };
+                      setFormData({ ...formData, subTemplates: updated });
+                    }}
+                    className="flex-1 h-8"
+                    placeholder="Sub-task title"
+                    data-testid={`subtask-input-${index}`}
+                  />
+                  <Select
+                    value={sub.priority || 'medium'}
+                    onValueChange={(v) => {
+                      const updated = [...formData.subTemplates];
+                      updated[index] = { ...sub, priority: v as 'low' | 'medium' | 'high' };
+                      setFormData({ ...formData, subTemplates: updated });
+                    }}
+                  >
+                    <SelectTrigger className="w-24 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        subTemplates: formData.subTemplates.filter((_, i) => i !== index)
+                      });
+                    }}
+                    data-testid={`subtask-delete-${index}`}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Input
+              value={newSubTaskTitle}
+              onChange={(e) => setNewSubTaskTitle(e.target.value)}
+              placeholder="Add a sub-task..."
+              className="flex-1 h-8"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newSubTaskTitle.trim()) {
+                  e.preventDefault();
+                  setFormData({
+                    ...formData,
+                    subTemplates: [
+                      ...formData.subTemplates,
+                      { id: crypto.randomUUID(), title: newSubTaskTitle.trim(), priority: 'medium' }
+                    ]
+                  });
+                  setNewSubTaskTitle('');
+                }
+              }}
+              data-testid="new-subtask-input"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!newSubTaskTitle.trim()}
+              onClick={() => {
+                if (newSubTaskTitle.trim()) {
+                  setFormData({
+                    ...formData,
+                    subTemplates: [
+                      ...formData.subTemplates,
+                      { id: crypto.randomUUID(), title: newSubTaskTitle.trim(), priority: 'medium' }
+                    ]
+                  });
+                  setNewSubTaskTitle('');
+                }
+              }}
+              data-testid="add-subtask-button"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          {formData.subTemplates.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {formData.subTemplates.length} sub-task{formData.subTemplates.length !== 1 ? 's' : ''} will be created under the parent task
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -372,6 +487,7 @@ export default function TaskTemplates() {
         projectId: data.projectId || null,
         assignedTo: data.assignedTo,
         assignmentMode: data.assignmentMode || 'single',
+        subTemplates: data.subTemplates || [],
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
         isActive: data.isActive ? 'true' : 'false',
@@ -396,6 +512,7 @@ export default function TaskTemplates() {
         projectId: data.projectId || null,
         assignedTo: data.assignedTo,
         assignmentMode: data.assignmentMode || 'single',
+        subTemplates: data.subTemplates || [],
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
         isActive: data.isActive ? 'true' : 'false',
@@ -440,12 +557,32 @@ export default function TaskTemplates() {
       
       const assignees = template.assignedTo || [];
       const mode = template.assignmentMode || 'single';
+      const subTemplates = (template.subTemplates as SubTemplateItem[]) || [];
       let tasksCreated = 0;
+      let subTasksCreated = 0;
+      
+      // Helper to create sub-tasks for a parent
+      const createSubTasks = async (parentTaskId: string, parentAssignees: string[]) => {
+        if (subTemplates.length === 0) return 0;
+        const subTaskPromises = subTemplates.map(sub => 
+          apiRequest('POST', '/api/tasks', {
+            title: sub.title,
+            projectId: template.projectId || null,
+            assignedTo: sub.assignedTo && sub.assignedTo.length > 0 ? sub.assignedTo : parentAssignees,
+            parentTaskId,
+            status: 'todo',
+            priority: sub.priority || 'medium',
+            createdBy: user?.email || 'system',
+          })
+        );
+        await Promise.all(subTaskPromises);
+        return subTemplates.length;
+      };
       
       if (mode === 'per-person' && assignees.length > 1) {
         // Create separate task for each assignee
-        const createPromises = assignees.map(personId => 
-          apiRequest('POST', '/api/tasks', {
+        const createPromises = assignees.map(async (personId) => {
+          const res = await apiRequest('POST', '/api/tasks', {
             title: template.name,
             projectId: template.projectId || null,
             assignedTo: [personId],
@@ -453,13 +590,17 @@ export default function TaskTemplates() {
             status: 'todo',
             priority: 'medium',
             createdBy: user?.email || 'system',
-          })
-        );
-        await Promise.all(createPromises);
-        tasksCreated = assignees.length;
+          });
+          const parentTask = await res.json();
+          const subCount = await createSubTasks(parentTask.id, [personId]);
+          return { parent: 1, subs: subCount };
+        });
+        const results = await Promise.all(createPromises);
+        tasksCreated = results.length;
+        subTasksCreated = results.reduce((sum, r) => sum + r.subs, 0);
       } else {
         // Create single task with all assignees (default behavior)
-        await apiRequest('POST', '/api/tasks', {
+        const res = await apiRequest('POST', '/api/tasks', {
           title: template.name,
           projectId: template.projectId || null,
           assignedTo: assignees,
@@ -468,20 +609,27 @@ export default function TaskTemplates() {
           priority: 'medium',
           createdBy: user?.email || 'system',
         });
+        const parentTask = await res.json();
         tasksCreated = 1;
+        subTasksCreated = await createSubTasks(parentTask.id, assignees);
       }
       
       await apiRequest('PATCH', `/api/task-templates/${template.id}`, { 
         lastUsedAt: new Date().toISOString() 
       });
       
-      return { tasksCreated };
+      return { tasksCreated, subTasksCreated };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
-      const count = data?.tasksCreated || 1;
-      toast({ title: count > 1 ? `${count} tasks created from deliverable` : 'Task created from deliverable' });
+      const parentCount = data?.tasksCreated || 1;
+      const subCount = data?.subTasksCreated || 0;
+      let message = parentCount > 1 ? `${parentCount} tasks created` : 'Task created';
+      if (subCount > 0) {
+        message += ` with ${subCount} sub-task${subCount !== 1 ? 's' : ''}`;
+      }
+      toast({ title: message });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -514,6 +662,7 @@ export default function TaskTemplates() {
       projectId: editingTemplate.projectId || '',
       assignedTo: editingTemplate.assignedTo || [],
       assignmentMode: (editingTemplate.assignmentMode as 'single' | 'per-person') || 'single',
+      subTemplates: (editingTemplate.subTemplates as SubTemplateItem[]) || [],
       taskItems: editingTemplate.taskItems || '',
       recurrence: editingTemplate.recurrence || '',
       isActive: editingTemplate.isActive !== 'false',
