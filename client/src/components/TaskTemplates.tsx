@@ -39,6 +39,7 @@ interface TemplateFormData {
   description: string;
   projectId: string;
   assignedTo: string[];
+  assignmentMode: 'single' | 'per-person';
   taskItems: string;
   recurrence: string;
   isActive: boolean;
@@ -59,6 +60,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
     description: '',
     projectId: '',
     assignedTo: [],
+    assignmentMode: 'single',
     taskItems: '',
     recurrence: '',
     isActive: true,
@@ -172,6 +174,43 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           <p className="text-xs text-muted-foreground">
             {formData.assignedTo.length} person(s) selected
           </p>
+        )}
+        {formData.assignedTo.length > 1 && (
+          <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-2">
+            <Label className="text-sm font-medium">Assignment Mode</Label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="mode-single"
+                  name="assignmentMode"
+                  value="single"
+                  checked={formData.assignmentMode === 'single'}
+                  onChange={() => setFormData({ ...formData, assignmentMode: 'single' })}
+                  className="h-4 w-4"
+                />
+                <label htmlFor="mode-single" className="text-sm cursor-pointer">
+                  <span className="font-medium">One task</span>
+                  <span className="text-muted-foreground"> - All {formData.assignedTo.length} people on the same task</span>
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="mode-per-person"
+                  name="assignmentMode"
+                  value="per-person"
+                  checked={formData.assignmentMode === 'per-person'}
+                  onChange={() => setFormData({ ...formData, assignmentMode: 'per-person' })}
+                  className="h-4 w-4"
+                />
+                <label htmlFor="mode-per-person" className="text-sm cursor-pointer">
+                  <span className="font-medium">Separate tasks</span>
+                  <span className="text-muted-foreground"> - Create {formData.assignedTo.length} individual tasks</span>
+                </label>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
@@ -332,6 +371,7 @@ export default function TaskTemplates() {
         description: data.description || null,
         projectId: data.projectId || null,
         assignedTo: data.assignedTo,
+        assignmentMode: data.assignmentMode || 'single',
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
         isActive: data.isActive ? 'true' : 'false',
@@ -355,6 +395,7 @@ export default function TaskTemplates() {
         description: data.description || null,
         projectId: data.projectId || null,
         assignedTo: data.assignedTo,
+        assignmentMode: data.assignmentMode || 'single',
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
         isActive: data.isActive ? 'true' : 'false',
@@ -397,26 +438,50 @@ export default function TaskTemplates() {
         });
       }
       
-      const res = await apiRequest('POST', '/api/tasks', {
-        title: template.name,
-        projectId: template.projectId || null,
-        assignedTo: template.assignedTo || [],
-        notes,
-        status: 'todo',
-        priority: 'medium',
-        createdBy: user?.email || 'system',
-      });
+      const assignees = template.assignedTo || [];
+      const mode = template.assignmentMode || 'single';
+      let tasksCreated = 0;
+      
+      if (mode === 'per-person' && assignees.length > 1) {
+        // Create separate task for each assignee
+        const createPromises = assignees.map(personId => 
+          apiRequest('POST', '/api/tasks', {
+            title: template.name,
+            projectId: template.projectId || null,
+            assignedTo: [personId],
+            notes,
+            status: 'todo',
+            priority: 'medium',
+            createdBy: user?.email || 'system',
+          })
+        );
+        await Promise.all(createPromises);
+        tasksCreated = assignees.length;
+      } else {
+        // Create single task with all assignees (default behavior)
+        await apiRequest('POST', '/api/tasks', {
+          title: template.name,
+          projectId: template.projectId || null,
+          assignedTo: assignees,
+          notes,
+          status: 'todo',
+          priority: 'medium',
+          createdBy: user?.email || 'system',
+        });
+        tasksCreated = 1;
+      }
       
       await apiRequest('PATCH', `/api/task-templates/${template.id}`, { 
         lastUsedAt: new Date().toISOString() 
       });
       
-      return res.json();
+      return { tasksCreated };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
-      toast({ title: 'Task created from deliverable' });
+      const count = data?.tasksCreated || 1;
+      toast({ title: count > 1 ? `${count} tasks created from deliverable` : 'Task created from deliverable' });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -448,6 +513,7 @@ export default function TaskTemplates() {
       description: editingTemplate.description || '',
       projectId: editingTemplate.projectId || '',
       assignedTo: editingTemplate.assignedTo || [],
+      assignmentMode: (editingTemplate.assignmentMode as 'single' | 'per-person') || 'single',
       taskItems: editingTemplate.taskItems || '',
       recurrence: editingTemplate.recurrence || '',
       isActive: editingTemplate.isActive !== 'false',

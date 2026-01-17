@@ -164,6 +164,7 @@ export const taskTemplates = pgTable("task_templates", {
   description: text("description"), // Informational description
   projectId: varchar("project_id"), // Link to specific project
   assignedTo: text("assigned_to").array().notNull().default(sql`'{}'`), // Array of person IDs
+  assignmentMode: text("assignment_mode").default('single'), // 'single' = one task with all assignees, 'per-person' = separate task for each
   taskItems: text("task_items"), // EOS format or details (becomes task note)
   recurrence: text("recurrence"), // weekly, biweekly, monthly - label only for now
   createdBy: text("created_by").notNull(), // Who created the template
