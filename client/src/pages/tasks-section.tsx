@@ -17,7 +17,7 @@ const TASKS_ALLOWED_ROLES = ['admin', 'manager']; // Add 'lead', 'member' to ope
 const tabs = [
   { id: 'workspace', label: 'Working Space', icon: LayoutGrid },
   { id: 'assigned', label: 'Tasks Assigned to You', icon: UserCheck },
-  { id: 'templates', label: 'Task Templates', icon: FileStack },
+  { id: 'templates', label: 'Recurring Deliverables', icon: FileStack },
 ];
 
 export default function TasksSection() {

@@ -82,7 +82,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Template Name (becomes task title)</Label>
+        <Label htmlFor="name">Deliverable Name (becomes task title)</Label>
         <Input
           id="name"
           value={formData.name}
@@ -98,7 +98,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           id="description"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Describe what this template is for..."
+          placeholder="Describe what this deliverable is for..."
           rows={2}
           data-testid="template-description-input"
         />
@@ -203,7 +203,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting || !formData.name.trim()}>
-          {isSubmitting ? 'Saving...' : 'Save Template'}
+          {isSubmitting ? 'Saving...' : 'Save Deliverable'}
         </Button>
       </DialogFooter>
     </form>
@@ -244,11 +244,11 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger 
               variant="default" 
               size="sm"
               onClick={() => onTrigger(template)}
-              title="Trigger template - Create task"
+              title="Create task from deliverable"
               data-testid={`trigger-template-${template.id}`}
             >
               <Play className="h-4 w-4 mr-1" />
-              Trigger
+              Create
             </Button>
             <Button 
               variant="ghost" 
@@ -340,7 +340,7 @@ export default function TaskTemplates() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
-      toast({ title: 'Template created' });
+      toast({ title: 'Deliverable created' });
       setIsDialogOpen(false);
     },
     onError: (error: any) => {
@@ -363,7 +363,7 @@ export default function TaskTemplates() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
-      toast({ title: 'Template updated' });
+      toast({ title: 'Deliverable updated' });
       setIsDialogOpen(false);
       setEditingTemplate(null);
     },
@@ -379,7 +379,7 @@ export default function TaskTemplates() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
-      toast({ title: 'Template deleted' });
+      toast({ title: 'Deliverable deleted' });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -416,7 +416,7 @@ export default function TaskTemplates() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
-      toast({ title: 'Task created from template' });
+      toast({ title: 'Task created from deliverable' });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -467,11 +467,11 @@ export default function TaskTemplates() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <FileStack className="h-5 w-5" />
-          Task Templates
+          Recurring Deliverables
         </h2>
         <Button onClick={() => setIsDialogOpen(true)} data-testid="new-template-btn">
           <Plus className="h-4 w-4 mr-1" />
-          New Template
+          New Deliverable
         </Button>
       </div>
 
@@ -479,13 +479,13 @@ export default function TaskTemplates() {
         <Card>
           <CardContent className="py-12 text-center">
             <FileStack className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-medium mb-2">No Templates Yet</h3>
+            <h3 className="text-lg font-medium mb-2">No Deliverables Yet</h3>
             <p className="text-muted-foreground mb-4">
-              Create templates for recurring tasks like weekly syncs, sprint planning, or EOS updates.
+              Create deliverables for recurring tasks like weekly syncs, sprint planning, or EOS updates.
             </p>
             <Button onClick={() => setIsDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
-              Create First Template
+              Create First Deliverable
             </Button>
           </CardContent>
         </Card>
@@ -509,7 +509,7 @@ export default function TaskTemplates() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingTemplate ? 'Edit Template' : 'Create Template'}
+              {editingTemplate ? 'Edit Deliverable' : 'Create Deliverable'}
             </DialogTitle>
           </DialogHeader>
           <TemplateForm
