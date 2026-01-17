@@ -2174,7 +2174,12 @@ Output valid JSON only.`;
   // Update task template
   app.patch('/api/task-templates/:id', isAuthenticated, async (req, res) => {
     try {
-      const template = await storage.updateTaskTemplate(req.params.id, req.body);
+      const updates = { ...req.body };
+      // Convert lastUsedAt string to Date object for Drizzle timestamp column
+      if (updates.lastUsedAt && typeof updates.lastUsedAt === 'string') {
+        updates.lastUsedAt = new Date(updates.lastUsedAt);
+      }
+      const template = await storage.updateTaskTemplate(req.params.id, updates);
       if (!template) {
         return res.status(404).json({ message: 'Task template not found' });
       }

@@ -139,7 +139,7 @@ export interface IStorage {
   getTaskTemplate(id: string): Promise<TaskTemplate | undefined>;
   getTaskTemplatesByCreator(createdBy: string): Promise<TaskTemplate[]>;
   createTaskTemplate(template: InsertTaskTemplate): Promise<TaskTemplate>;
-  updateTaskTemplate(id: string, template: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined>;
+  updateTaskTemplate(id: string, template: Partial<InsertTaskTemplate> & { lastUsedAt?: Date }): Promise<TaskTemplate | undefined>;
   deleteTaskTemplate(id: string): Promise<boolean>;
 }
 
@@ -760,7 +760,7 @@ export class MemStorage implements IStorage {
     return newTemplate;
   }
 
-  async updateTaskTemplate(id: string, updates: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined> {
+  async updateTaskTemplate(id: string, updates: Partial<InsertTaskTemplate> & { lastUsedAt?: Date }): Promise<TaskTemplate | undefined> {
     const template = this.taskTemplatesStore.get(id);
     if (!template) return undefined;
     const updated: TaskTemplate = { ...template, ...updates };
@@ -1283,7 +1283,7 @@ export class DatabaseStorage implements IStorage {
     return newTemplate;
   }
 
-  async updateTaskTemplate(id: string, updates: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined> {
+  async updateTaskTemplate(id: string, updates: Partial<InsertTaskTemplate> & { lastUsedAt?: Date }): Promise<TaskTemplate | undefined> {
     const [updated] = await db.update(taskTemplates)
       .set(updates)
       .where(eq(taskTemplates.id, id))
