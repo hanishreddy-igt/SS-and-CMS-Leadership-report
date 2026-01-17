@@ -53,7 +53,10 @@ This project provides a comprehensive tracking system for Strategic Services (SS
     - **Work Management Section**: Workflowy-style task management system with three tabs:
       - **Working Space**: Primary task creation area with "Your Workspace" section (create and manage your own tasks) and "All Tasks" section (team-wide view grouped by project with collapsible groups).
       - **Tasks Assigned to You**: Filtered view showing tasks assigned to the current user, grouped by status (To Do, In Progress, Blocked, Done) with quick status updates.
-      - **Task Templates**: Recurring task templates with support for daily/weekly/monthly patterns, EOS update formats (Rocks, Issues, To-dos, Scorecard), and hierarchical task structure creation.
+      - **Recurring Deliverables (Task Templates)**: Recurring task templates with support for daily/weekly/monthly patterns. Features include:
+        - **Sub-tasks**: Define hierarchical sub-tasks that are created as child tasks when deliverable is triggered
+        - **Assignment Mode**: Choose between "One task" (all assignees on same task) or "Separate tasks" (individual task per assignee)
+        - **Priority inheritance**: Sub-tasks can have their own priority (low/medium/high) or inherit from parent
       - Tasks support hierarchical nesting via parentTaskId, project linking, multiple assignees, priority levels, tags, and timestamped notes.
     - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI.
     - **Jira Integration**: Functionality to import projects, leads, and team members directly from Jira epics.
