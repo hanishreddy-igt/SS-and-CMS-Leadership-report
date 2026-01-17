@@ -158,6 +158,14 @@ export const tasks = pgTable("tasks", {
 });
 
 // Task templates table - recurring task templates with EOS update formats
+// Sub-template structure for hierarchical deliverables
+export type SubTemplateItem = {
+  id: string;
+  title: string;
+  assignedTo?: string[]; // Can override parent's assignees
+  priority?: 'low' | 'medium' | 'high';
+};
+
 export const taskTemplates = pgTable("task_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(), // Template name (becomes task title)
@@ -165,6 +173,7 @@ export const taskTemplates = pgTable("task_templates", {
   projectId: varchar("project_id"), // Link to specific project
   assignedTo: text("assigned_to").array().notNull().default(sql`'{}'`), // Array of person IDs
   assignmentMode: text("assignment_mode").default('single'), // 'single' = one task with all assignees, 'per-person' = separate task for each
+  subTemplates: jsonb("sub_templates").default(sql`'[]'`), // Array of SubTemplateItem for sub-tasks
   taskItems: text("task_items"), // EOS format or details (becomes task note)
   recurrence: text("recurrence"), // weekly, biweekly, monthly - label only for now
   createdBy: text("created_by").notNull(), // Who created the template
