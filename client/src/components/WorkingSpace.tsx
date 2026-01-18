@@ -779,6 +779,24 @@ export function TaskRow({
   const subtasks = allTasks.filter(t => t.parentTaskId === task.id);
   const hasSubtasks = subtasks.length > 0;
   
+  // Helper to get all descendant tasks recursively
+  const getAllDescendants = (taskId: string): Task[] => {
+    const children = allTasks.filter(t => t.parentTaskId === taskId);
+    return children.reduce((acc, child) => [...acc, child, ...getAllDescendants(child.id)], [] as Task[]);
+  };
+  
+  // Calculate effective priority: highest priority among task and all descendants
+  // Priority hierarchy: high > medium > normal
+  const priorityRank: Record<string, number> = { normal: 0, medium: 1, high: 2 };
+  const getEffectivePriority = (): string => {
+    if (!hasSubtasks) return task.priority || 'normal';
+    const descendants = getAllDescendants(task.id);
+    const allPriorities = [task.priority || 'normal', ...descendants.map(d => d.priority || 'normal')];
+    const highestRank = Math.max(...allPriorities.map(p => priorityRank[p] ?? 0));
+    return Object.entries(priorityRank).find(([_, rank]) => rank === highestRank)?.[0] || 'normal';
+  };
+  const effectivePriority = getEffectivePriority();
+  
   // For sub-tasks, inherit project from parent if not set
   const parentTask = task.parentTaskId ? allTasks.find(t => t.id === task.parentTaskId) : null;
   const effectiveProjectId = task.projectId || parentTask?.projectId;
@@ -1124,12 +1142,13 @@ export function TaskRow({
               </Badge>
             )}
             
-            {task.priority && task.priority !== 'normal' && (
+            {effectivePriority && effectivePriority !== 'normal' && (
               <Badge 
                 variant="secondary" 
-                className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white ${priorityColors[task.priority] || 'bg-gray-400'}`}
+                className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white ${priorityColors[effectivePriority] || 'bg-gray-400'}`}
+                title={hasSubtasks && effectivePriority !== task.priority ? 'Inherited from sub-task' : undefined}
               >
-                {priorityLabels[task.priority] || task.priority}
+                {priorityLabels[effectivePriority] || effectivePriority}
               </Badge>
             )}
             
