@@ -1532,7 +1532,6 @@ export default function WorkingSpace() {
                   <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <ChevronRight className="h-4 w-4" />
-                      <Circle className="h-4 w-4 text-slate-400" />
                       <Play className="h-4 w-4 text-green-500 fill-green-500" />
                       To-do / In-progress ({myActiveTasks.length})
                     </CardTitle>
