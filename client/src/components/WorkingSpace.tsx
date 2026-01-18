@@ -927,92 +927,155 @@ export function TaskRow({
   return (
     <div data-testid={`task-row-${task.id}`} className={`relative ${isEditing ? 'z-50' : ''}`}>
       <div 
-        className={`group flex items-center gap-2 py-1.5 rounded hover-elevate ${isOverdue ? 'bg-destructive/5' : ''}`}
-        style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px' }}
+        className={`group py-1.5 rounded hover-elevate ${isOverdue ? 'bg-destructive/5' : ''}`}
+        style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px', paddingRight: '8px' }}
       >
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {hasSubtasks ? (
+        {/* Line 1: Toggle, Status, Title, Notes, Menu */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {hasSubtasks ? (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-0.5 hover:bg-accent rounded"
+                data-testid={`toggle-${task.id}`}
+              >
+                {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              </button>
+            ) : (
+              <div className="w-4" />
+            )}
+            <StatusIcon 
+              status={task.status} 
+              onClick={handleCycleStatus}
+              taskId={task.id}
+            />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {isEditing ? (
+              <div className="relative">
+                <Input
+                  ref={inputRef}
+                  value={editValue}
+                  onChange={handleEditChange}
+                  onKeyDown={handleKeyDown}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setSuggestion({ type: null, startIndex: 0, query: '' });
+                      if (editValue.trim() && editValue !== task.title) {
+                        const parsed = parseInlineTags(editValue.trim());
+                        onUpdate(task.id, { title: parsed.text || editValue.trim() });
+                      }
+                      setIsEditing(false);
+                    }, 150);
+                  }}
+                  className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-7 px-1"
+                  data-testid={`edit-input-${task.id}`}
+                />
+                {suggestion.type && editSuggestions.length > 0 && (
+                  <div className="absolute left-0 top-full mt-1 z-50 bg-card border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" style={{ backgroundColor: 'hsl(var(--card))' }} data-testid="edit-suggestion-popover">
+                    {editSuggestions.map((item, index) => (
+                      <div
+                        key={item.id || item.value}
+                        className={`px-2 py-1.5 text-sm rounded cursor-pointer flex items-center gap-2 ${
+                          index === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover-elevate'
+                        }`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          insertEditSuggestion(item);
+                        }}
+                        data-testid={`edit-suggestion-${item.id || item.value}`}
+                      >
+                        {suggestion.type === 'project' && <FolderKanban className="h-3 w-3 text-muted-foreground" />}
+                        {suggestion.type === 'person' && <User className="h-3 w-3 text-muted-foreground" />}
+                        {suggestion.type === 'status' && (
+                          <span className={`h-2 w-2 rounded-full ${statusColors[item.value] || 'bg-gray-400'}`} />
+                        )}
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <span 
+                className={`text-sm cursor-text block ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}
+                onClick={() => setIsEditing(true)}
+                data-testid={`task-title-${task.id}`}
+              >
+                {task.title}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-0.5 flex-shrink-0">
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-0.5 hover:bg-accent rounded"
-              data-testid={`toggle-${task.id}`}
+              ref={notesButtonRef}
+              onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
+              className={`p-1 hover:bg-accent rounded relative ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}
+              title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
+              data-testid={`notes-icon-${task.id}`}
             >
-              {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              <StickyNote className="h-3.5 w-3.5" />
+              {notes.length > 0 && (
+                <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
+                  {notes.length}
+                </span>
+              )}
             </button>
-          ) : (
-            <div className="w-4" />
-          )}
-          <StatusIcon 
-            status={task.status} 
-            onClick={handleCycleStatus}
-            taskId={task.id}
-          />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  ref={menuButtonRef}
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  data-testid={`task-menu-${task.id}`}
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => openPanel('dueDate', 'menu')} data-testid="menu-due-date">
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  Set Due Date
+                  {task.dueDate && <span className="ml-auto text-xs text-muted-foreground">{format(new Date(task.dueDate), 'MMM d')}</span>}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5 text-xs text-muted-foreground space-y-0.5">
+                  <div className="flex justify-between">
+                    <span>Created:</span>
+                    <span>{formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Updated:</span>
+                    <span>{formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}</span>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => onDelete(task.id)} 
+                  className="text-destructive focus:text-destructive"
+                  data-testid={`delete-${task.id}`}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Task
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
-        <div className="flex-1 min-w-0 flex items-center gap-2">
-          {isEditing ? (
-            <div className="relative flex-1">
-              <Input
-                ref={inputRef}
-                value={editValue}
-                onChange={handleEditChange}
-                onKeyDown={handleKeyDown}
-                onBlur={() => {
-                  setTimeout(() => {
-                    setSuggestion({ type: null, startIndex: 0, query: '' });
-                    if (editValue.trim() && editValue !== task.title) {
-                      const parsed = parseInlineTags(editValue.trim());
-                      onUpdate(task.id, { title: parsed.text || editValue.trim() });
-                    }
-                    setIsEditing(false);
-                  }, 150);
-                }}
-                className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-7 px-1"
-                data-testid={`edit-input-${task.id}`}
-              />
-              {suggestion.type && editSuggestions.length > 0 && (
-                <div className="absolute left-0 top-full mt-1 z-50 bg-card border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" style={{ backgroundColor: 'hsl(var(--card))' }} data-testid="edit-suggestion-popover">
-                  {editSuggestions.map((item, index) => (
-                    <div
-                      key={item.id || item.value}
-                      className={`px-2 py-1.5 text-sm rounded cursor-pointer flex items-center gap-2 ${
-                        index === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover-elevate'
-                      }`}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        insertEditSuggestion(item);
-                      }}
-                      data-testid={`edit-suggestion-${item.id || item.value}`}
-                    >
-                      {suggestion.type === 'project' && <FolderKanban className="h-3 w-3 text-muted-foreground" />}
-                      {suggestion.type === 'person' && <User className="h-3 w-3 text-muted-foreground" />}
-                      {suggestion.type === 'status' && (
-                        <span className={`h-2 w-2 rounded-full ${statusColors[item.value] || 'bg-gray-400'}`} />
-                      )}
-                      <span>{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <span 
-              className={`text-sm cursor-text flex-1 ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}
-              onClick={() => setIsEditing(true)}
-              data-testid={`task-title-${task.id}`}
-            >
-              {task.title}
-            </span>
-          )}
-          
+        {/* Line 2: Assignees, Project, Due Date */}
+        <div className="flex items-center gap-2 mt-1 ml-9">
           <button
             ref={assigneeButtonRef}
             onClick={() => activePanel === 'assignee' ? closePanel() : openPanel('assignee', 'assignee')}
-            className="text-xs text-muted-foreground truncate max-w-[150px] hover:text-foreground hover:underline cursor-pointer"
+            className="text-xs text-muted-foreground truncate max-w-[200px] hover:text-foreground hover:underline cursor-pointer"
             title="Click to assign people"
             data-testid={`assignee-trigger-${task.id}`}
           >
-            {displayAssignees.length > 0 ? displayAssignees.map(p => p.name).join(', ') : (assignees.length > 0 ? '' : '+assign')}
+            {displayAssignees.length > 0 ? displayAssignees.map(p => p.name).join(', ') : '+assign'}
           </button>
           
           {project && !hideProjectBadge && (
@@ -1026,7 +1089,6 @@ export function TaskRow({
             </Badge>
           )}
           
-          {/* Only show +project for root tasks or sub-tasks whose parent has no project */}
           {!project && !parentTask?.projectId && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1057,63 +1119,6 @@ export function TaskRow({
               {format(new Date(task.dueDate), 'MMM d')}
             </Badge>
           )}
-        </div>
-
-        <div className="flex items-center gap-0.5">
-          <button
-            ref={notesButtonRef}
-            onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
-            className={`p-1 hover:bg-accent rounded relative ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}
-            title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
-            data-testid={`notes-icon-${task.id}`}
-          >
-            <StickyNote className="h-3.5 w-3.5" />
-            {notes.length > 0 && (
-              <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
-                {notes.length}
-              </span>
-            )}
-          </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                ref={menuButtonRef}
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                data-testid={`task-menu-${task.id}`}
-              >
-                <MoreVertical className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => openPanel('dueDate', 'menu')} data-testid="menu-due-date">
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                Set Due Date
-                {task.dueDate && <span className="ml-auto text-xs text-muted-foreground">{format(new Date(task.dueDate), 'MMM d')}</span>}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1.5 text-xs text-muted-foreground space-y-0.5">
-                <div className="flex justify-between">
-                  <span>Created:</span>
-                  <span>{formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Updated:</span>
-                  <span>{formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}</span>
-                </div>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => onDelete(task.id)} 
-                className="text-destructive focus:text-destructive"
-                data-testid={`delete-${task.id}`}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Task
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
