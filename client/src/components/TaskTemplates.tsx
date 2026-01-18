@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -22,7 +23,9 @@ import {
   FolderKanban,
   RefreshCw,
   Clock,
-  Users
+  Users,
+  UserPlus,
+  Check
 } from 'lucide-react';
 import type { TaskTemplate, Project, Person, SubTemplateItem } from '@shared/schema';
 
@@ -228,54 +231,152 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
         <div className="border rounded-md p-3 space-y-3">
           {formData.subTemplates.length > 0 && (
             <div className="space-y-2">
-              {formData.subTemplates.map((sub, index) => (
-                <div key={sub.id} className="flex items-center gap-2 group">
-                  <span className="text-muted-foreground text-sm">{index + 1}.</span>
-                  <Input
-                    value={sub.title}
-                    onChange={(e) => {
-                      const updated = [...formData.subTemplates];
-                      updated[index] = { ...sub, title: e.target.value };
-                      setFormData({ ...formData, subTemplates: updated });
-                    }}
-                    className="flex-1 h-8"
-                    placeholder="Sub-task title"
-                    data-testid={`subtask-input-${index}`}
-                  />
-                  <Select
-                    value={sub.priority || 'medium'}
-                    onValueChange={(v) => {
-                      const updated = [...formData.subTemplates];
-                      updated[index] = { ...sub, priority: v as 'low' | 'medium' | 'high' };
-                      setFormData({ ...formData, subTemplates: updated });
-                    }}
-                  >
-                    <SelectTrigger className="w-24 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => {
-                      setFormData({
-                        ...formData,
-                        subTemplates: formData.subTemplates.filter((_, i) => i !== index)
-                      });
-                    }}
-                    data-testid={`subtask-delete-${index}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
+              {formData.subTemplates.map((sub, index) => {
+                const parentAssignees = people.filter(p => formData.assignedTo.includes(p.id));
+                const subAssigneeCount = sub.assignedTo?.length || 0;
+                const inheritsFromParent = !sub.assignedTo || sub.assignedTo.length === 0;
+                
+                return (
+                  <div key={sub.id} className="flex items-center gap-2 group">
+                    <span className="text-muted-foreground text-sm">{index + 1}.</span>
+                    <Input
+                      value={sub.title}
+                      onChange={(e) => {
+                        const updated = [...formData.subTemplates];
+                        updated[index] = { ...sub, title: e.target.value };
+                        setFormData({ ...formData, subTemplates: updated });
+                      }}
+                      className="flex-1 h-8"
+                      placeholder="Sub-task title"
+                      data-testid={`subtask-input-${index}`}
+                    />
+                    
+                    {/* Assignee selector popover */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1 min-w-[90px]"
+                          data-testid={`subtask-assignees-${index}`}
+                        >
+                          <Users className="h-3 w-3" />
+                          {inheritsFromParent ? (
+                            <span className="text-muted-foreground">All</span>
+                          ) : (
+                            <span>{subAssigneeCount} of {parentAssignees.length}</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-3" align="end">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Assign to</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs"
+                              onClick={() => {
+                                const updated = [...formData.subTemplates];
+                                updated[index] = { ...sub, assignedTo: undefined };
+                                setFormData({ ...formData, subTemplates: updated });
+                              }}
+                            >
+                              Reset to All
+                            </Button>
+                          </div>
+                          
+                          {parentAssignees.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              No assignees selected for parent task
+                            </p>
+                          ) : (
+                            <div className="space-y-2">
+                              {parentAssignees.map(person => {
+                                const isSelected = sub.assignedTo?.includes(person.id) ?? false;
+                                return (
+                                  <div
+                                    key={person.id}
+                                    className="flex items-center gap-2 p-1 rounded hover-elevate cursor-pointer"
+                                    onClick={() => {
+                                      const updated = [...formData.subTemplates];
+                                      const currentAssigned = sub.assignedTo || [];
+                                      let newAssigned: string[];
+                                      
+                                      if (isSelected) {
+                                        newAssigned = currentAssigned.filter(id => id !== person.id);
+                                      } else {
+                                        newAssigned = [...currentAssigned, person.id];
+                                      }
+                                      
+                                      // If all are selected or none, reset to inherit
+                                      if (newAssigned.length === 0 || newAssigned.length === parentAssignees.length) {
+                                        updated[index] = { ...sub, assignedTo: undefined };
+                                      } else {
+                                        updated[index] = { ...sub, assignedTo: newAssigned };
+                                      }
+                                      setFormData({ ...formData, subTemplates: updated });
+                                    }}
+                                    data-testid={`subtask-${index}-assignee-${person.id}`}
+                                  >
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                      isSelected || inheritsFromParent ? 'bg-primary border-primary' : 'border-muted-foreground'
+                                    }`}>
+                                      {(isSelected || inheritsFromParent) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                    </div>
+                                    <span className="text-sm">{person.name}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          
+                          <p className="text-xs text-muted-foreground">
+                            {inheritsFromParent 
+                              ? "Inheriting all parent assignees" 
+                              : `${subAssigneeCount} specific assignee${subAssigneeCount !== 1 ? 's' : ''}`}
+                          </p>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <Select
+                      value={sub.priority || 'medium'}
+                      onValueChange={(v) => {
+                        const updated = [...formData.subTemplates];
+                        updated[index] = { ...sub, priority: v as 'low' | 'medium' | 'high' };
+                        setFormData({ ...formData, subTemplates: updated });
+                      }}
+                    >
+                      <SelectTrigger className="w-24 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          subTemplates: formData.subTemplates.filter((_, i) => i !== index)
+                        });
+                      }}
+                      data-testid={`subtask-delete-${index}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
           <div className="flex items-center gap-2">
