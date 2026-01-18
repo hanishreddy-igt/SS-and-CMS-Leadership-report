@@ -817,6 +817,10 @@ export function TaskRow({
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
+      if (!inputRef.current.value.endsWith(' ')) {
+        inputRef.current.value = inputRef.current.value + ' ';
+        setEditValue(inputRef.current.value);
+      }
       const len = inputRef.current.value.length;
       inputRef.current.setSelectionRange(len, len);
     }
