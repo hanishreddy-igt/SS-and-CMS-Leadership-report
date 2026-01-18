@@ -182,7 +182,7 @@ export default function AllTasksByProject() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FolderKanban className="h-5 w-5" />
-            All Tasks by Project
+            All Tasks
           </CardTitle>
           <Select value={leadFilter} onValueChange={setLeadFilter}>
             <SelectTrigger className="w-[200px] h-8" data-testid="lead-filter">

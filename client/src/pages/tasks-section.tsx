@@ -16,9 +16,9 @@ import { usePermissions } from '@/hooks/usePermissions';
 const TASKS_ALLOWED_ROLES = ['admin', 'manager']; // Add 'lead', 'member' to open up
 
 const tabs = [
-  { id: 'workspace', label: 'Working Space', icon: LayoutGrid },
-  { id: 'all-tasks', label: 'All Tasks by Project', icon: FolderKanban },
-  { id: 'assigned', label: 'Tasks Assigned to You', icon: UserCheck },
+  { id: 'workspace', label: 'WorkSpace', icon: LayoutGrid },
+  { id: 'assigned', label: 'Assigned Tasks', icon: UserCheck },
+  { id: 'all-tasks', label: 'All Tasks', icon: FolderKanban },
   { id: 'templates', label: 'Recurring Deliverables', icon: FileStack },
 ];
 
