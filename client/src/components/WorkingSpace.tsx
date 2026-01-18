@@ -158,16 +158,35 @@ export interface ParsedTitle {
   projectTag?: string;
   personTags: string[];
   statusTag?: string;
+  priorityTag?: string;
   noteText?: string;
 }
+
+const priorityColors: Record<string, string> = {
+  normal: 'bg-green-500',
+  medium: 'bg-yellow-500',
+  asap: 'bg-red-500',
+};
+
+const priorityLabels: Record<string, string> = {
+  normal: 'Normal',
+  medium: 'Medium',
+  asap: 'ASAP',
+};
+
+const PRIORITY_OPTIONS = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'asap', label: 'ASAP' },
+];
 
 export function parseInlineTags(title: string): ParsedTitle {
   const result: ParsedTitle = { text: title, personTags: [] };
   
-  const noteMatch = title.match(/\/\/(.+?)(?=@@|@(?!@)|#|$)/);
+  const noteMatch = title.match(/\/\/(.+?)(?=@@|@(?!@)|#|\$|$)/);
   if (noteMatch) {
     result.noteText = noteMatch[1].trim();
-    result.text = result.text.replace(/\/\/.+?(?=@@|@(?!@)|#|$)/, '').trim();
+    result.text = result.text.replace(/\/\/.+?(?=@@|@(?!@)|#|\$|$)/, '').trim();
   }
   
   const projectMatch = result.text.match(/@@(\w+)/);
@@ -191,11 +210,19 @@ export function parseInlineTags(title: string): ParsedTitle {
     result.text = result.text.replace(/#(todo|in-progress|blocked|done|inprogress|cancelled)/gi, '').trim();
   }
   
-  // Clean up any orphaned tag prefixes (@@, @, #, //) that weren't matched
+  // Parse priority tag ($normal, $medium, $asap)
+  const priorityMatch = title.match(/\$(normal|medium|asap)/i);
+  if (priorityMatch) {
+    result.priorityTag = priorityMatch[1].toLowerCase();
+    result.text = result.text.replace(/\$(normal|medium|asap)/gi, '').trim();
+  }
+  
+  // Clean up any orphaned tag prefixes (@@, @, #, $, //) that weren't matched
   result.text = result.text
     .replace(/@@\s*/g, '')  // Remove orphaned @@
     .replace(/@\s*/g, '')   // Remove orphaned @
     .replace(/#\s*/g, '')   // Remove orphaned #
+    .replace(/\$\s*/g, '')  // Remove orphaned $
     .replace(/\/\/\s*/g, '') // Remove orphaned //
     .replace(/\s+/g, ' ')   // Normalize multiple spaces
     .trim();
@@ -214,7 +241,7 @@ interface TaskNote {
 }
 
 interface SuggestionState {
-  type: 'project' | 'person' | 'status' | null;
+  type: 'project' | 'person' | 'status' | 'priority' | null;
   startIndex: number;
   query: string;
 }
@@ -233,7 +260,7 @@ interface InlineTaskInputProps {
 
 function InlineTaskInput({ 
   onSubmit, 
-  placeholder = "Type a task... (@@project @person #status //note)", 
+  placeholder = "Type a task... (@@project @person #status $priority //note)", 
   autoFocus = false, 
   depth = 0,
   onIndent,
@@ -269,6 +296,11 @@ function InlineTaskInput({
     const statusMatch = beforeCursor.match(/#(\w*)$/);
     if (statusMatch) {
       return { type: 'status', startIndex: statusMatch.index!, query: statusMatch[1] };
+    }
+    
+    const priorityMatch = beforeCursor.match(/\$(\w*)$/);
+    if (priorityMatch) {
+      return { type: 'priority', startIndex: priorityMatch.index!, query: priorityMatch[1] };
     }
     
     return { type: null, startIndex: 0, query: '' };
@@ -342,13 +374,19 @@ function InlineTaskInput({
         s.value.toLowerCase().includes(suggestion.query.toLowerCase())
       );
     }
+    if (suggestion.type === 'priority') {
+      return PRIORITY_OPTIONS.filter(p => 
+        p.label.toLowerCase().includes(suggestion.query.toLowerCase()) ||
+        p.value.toLowerCase().includes(suggestion.query.toLowerCase())
+      );
+    }
     return [];
   };
 
   const suggestions = getSuggestions();
 
   const insertSuggestion = (item: { value: string; label: string }) => {
-    const prefix = suggestion.type === 'project' ? '@@' : suggestion.type === 'person' ? '@' : '#';
+    const prefix = suggestion.type === 'project' ? '@@' : suggestion.type === 'person' ? '@' : suggestion.type === 'priority' ? '$' : '#';
     const beforeTrigger = value.slice(0, suggestion.startIndex);
     const afterCursor = value.slice(suggestion.startIndex + prefix.length + suggestion.query.length);
     const newValue = beforeTrigger + prefix + item.value + ' ' + afterCursor;
@@ -459,6 +497,9 @@ function InlineTaskInput({
                 {suggestion.type === 'person' && <User className="h-3 w-3 text-muted-foreground" />}
                 {suggestion.type === 'status' && (
                   <span className={`h-2 w-2 rounded-full ${statusColors[item.value] || 'bg-gray-400'}`} />
+                )}
+                {suggestion.type === 'priority' && (
+                  <span className={`h-2 w-2 rounded-full ${priorityColors[item.value] || 'bg-gray-400'}`} />
                 )}
                 <span>{item.label}</span>
               </div>
@@ -769,6 +810,10 @@ export function TaskRow({
     if (statusMatch) {
       return { type: 'status', startIndex: statusMatch.index!, query: statusMatch[1] };
     }
+    const priorityMatch = beforeCursor.match(/\$(\w*)$/);
+    if (priorityMatch) {
+      return { type: 'priority', startIndex: priorityMatch.index!, query: priorityMatch[1] };
+    }
     return { type: null, startIndex: 0, query: '' };
   };
 
@@ -811,13 +856,19 @@ export function TaskRow({
         s.value.toLowerCase().includes(suggestion.query.toLowerCase())
       );
     }
+    if (suggestion.type === 'priority') {
+      return PRIORITY_OPTIONS.filter(p => 
+        p.label.toLowerCase().includes(suggestion.query.toLowerCase()) ||
+        p.value.toLowerCase().includes(suggestion.query.toLowerCase())
+      );
+    }
     return [];
   };
 
   const editSuggestions = getEditSuggestions();
 
   const insertEditSuggestion = (item: { value: string; label: string }) => {
-    const prefix = suggestion.type === 'project' ? '@@' : suggestion.type === 'person' ? '@' : '#';
+    const prefix = suggestion.type === 'project' ? '@@' : suggestion.type === 'person' ? '@' : suggestion.type === 'priority' ? '$' : '#';
     const beforeTrigger = editValue.slice(0, suggestion.startIndex);
     const afterCursor = editValue.slice(suggestion.startIndex + prefix.length + suggestion.query.length);
     const newValue = beforeTrigger + prefix + item.value + ' ' + afterCursor;
@@ -882,6 +933,9 @@ export function TaskRow({
         
         if (parsed.statusTag) {
           updates.status = parsed.statusTag;
+        }
+        if (parsed.priorityTag) {
+          updates.priority = parsed.priorityTag;
         }
         if (parsed.projectTag) {
           const matchedProject = projects.find(p => 
@@ -1013,6 +1067,9 @@ export function TaskRow({
                         {suggestion.type === 'status' && (
                           <span className={`h-2 w-2 rounded-full ${statusColors[item.value] || 'bg-gray-400'}`} />
                         )}
+                        {suggestion.type === 'priority' && (
+                          <span className={`h-2 w-2 rounded-full ${priorityColors[item.value] || 'bg-gray-400'}`} />
+                        )}
                         <span>{item.label}</span>
                       </div>
                     ))}
@@ -1058,12 +1115,21 @@ export function TaskRow({
           </div>
         </div>
 
-        {/* Line 2: Due Date, Project, Assignees, Timestamps, Menu */}
+        {/* Line 2: Due Date, Priority, Project, Assignees, Timestamps, Menu */}
         {showDetails && (
           <div className="flex items-center gap-2 mt-1 ml-9">
             {task.dueDate && (
               <Badge variant={isOverdue ? "destructive" : "secondary"} className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
                 {format(new Date(task.dueDate), 'MMM d')}
+              </Badge>
+            )}
+            
+            {task.priority && task.priority !== 'medium' && (
+              <Badge 
+                variant="secondary" 
+                className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white ${priorityColors[task.priority] || 'bg-gray-400'}`}
+              >
+                {priorityLabels[task.priority] || task.priority}
               </Badge>
             )}
             
@@ -1224,7 +1290,7 @@ export function TaskRow({
         <InlineTaskInput
           onSubmit={handleSubtaskCreate}
           onCancel={() => setShowSubtaskInput(false)}
-          placeholder={project ? `Add sub-task for ${project.name}... (@person #status)` : "Add sub-task... (@@project @person #status)"}
+          placeholder={project ? `Add sub-task for ${project.name}... (@person #status $priority)` : "Add sub-task... (@@project @person #status $priority)"}
           autoFocus
           depth={depth + 1}
           projects={projects}
@@ -1299,7 +1365,7 @@ export default function WorkingSpace() {
       title: parsed.text || title, 
       parentTaskId: parentTaskId || undefined,
       status: parsed.statusTag || 'todo',
-      priority: 'medium',
+      priority: parsed.priorityTag || 'medium',
       assignedTo: [],
     };
     
@@ -1403,14 +1469,14 @@ export default function WorkingSpace() {
             Your Workspace
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Use @@project to link, @name to assign, #status to set status, // for notes. Press TAB on a task to create a sub-task.
+            Use @@project to link, @name to assign, #status to set status, $priority to set priority, // for notes. Press TAB on a task to create a sub-task.
           </p>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg bg-card">
             <InlineTaskInput 
               onSubmit={(title, parsed) => handleCreateTask(title, parsed)} 
-              placeholder="Type a task... (@@project @person #status //note)"
+              placeholder="Type a task... (@@project @person #status $priority //note)"
               autoFocus
               projects={projects}
               people={people}
