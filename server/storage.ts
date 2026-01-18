@@ -702,7 +702,7 @@ export class MemStorage implements IStorage {
       createdBy: task.createdBy,
       updatedBy: null,
       status: task.status ?? 'todo',
-      priority: task.priority ?? 'medium',
+      priority: task.priority ?? 'normal',
       tags: task.tags ?? [],
       notes: task.notes ?? [],
       dueDate: task.dueDate ?? null,

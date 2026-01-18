@@ -175,8 +175,8 @@ const priorityLabels: Record<string, string> = {
 };
 
 const PRIORITY_OPTIONS = [
-  { value: 'medium', label: 'Medium' },
   { value: 'normal', label: 'Normal' },
+  { value: 'medium', label: 'Medium' },
   { value: 'asap', label: 'ASAP' },
 ];
 
@@ -1124,7 +1124,7 @@ export function TaskRow({
               </Badge>
             )}
             
-            {task.priority && task.priority !== 'medium' && (
+            {task.priority && task.priority !== 'normal' && (
               <Badge 
                 variant="secondary" 
                 className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white ${priorityColors[task.priority] || 'bg-gray-400'}`}
@@ -1365,7 +1365,7 @@ export default function WorkingSpace() {
       title: parsed.text || title, 
       parentTaskId: parentTaskId || undefined,
       status: parsed.statusTag || 'todo',
-      priority: parsed.priorityTag || 'medium',
+      priority: parsed.priorityTag || 'normal',
       assignedTo: [],
     };
     
