@@ -1041,50 +1041,10 @@ export function TaskRow({
                 <Info className="h-3.5 w-3.5" />
               </button>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  ref={menuButtonRef}
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                  data-testid={`task-menu-${task.id}`}
-                >
-                  <MoreVertical className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => openPanel('dueDate', 'menu')} data-testid="menu-due-date">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  Set Due Date
-                  {task.dueDate && <span className="ml-auto text-xs text-muted-foreground">{format(new Date(task.dueDate), 'MMM d')}</span>}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1.5 text-xs text-muted-foreground space-y-0.5">
-                  <div className="flex justify-between">
-                    <span>Created:</span>
-                    <span>{formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Updated:</span>
-                    <span>{formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}</span>
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => onDelete(task.id)} 
-                  className="text-destructive focus:text-destructive"
-                  data-testid={`delete-${task.id}`}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Task
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 
-        {/* Line 2: Due Date, Project, Assignees */}
+        {/* Line 2: Due Date, Project, Assignees, Timestamps, Menu */}
         {showDetails && (
           <div className="flex items-center gap-2 mt-1 ml-9">
             {task.dueDate && (
@@ -1140,6 +1100,43 @@ export function TaskRow({
                 ? [...displayAssignees].sort((a, b) => a.name.localeCompare(b.name)).map(p => p.name).join(', ') 
                 : '+assign'}
             </button>
+            
+            <span className="text-[10px] text-muted-foreground flex-shrink-0">
+              Created {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
+            </span>
+            <span className="text-[10px] text-muted-foreground flex-shrink-0">
+              Updated {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
+            </span>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  ref={menuButtonRef}
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 flex-shrink-0"
+                  data-testid={`task-menu-${task.id}`}
+                >
+                  <MoreVertical className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => openPanel('dueDate', 'menu')} data-testid="menu-due-date">
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  Set Due Date
+                  {task.dueDate && <span className="ml-auto text-xs text-muted-foreground">{format(new Date(task.dueDate), 'MMM d')}</span>}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => onDelete(task.id)} 
+                  className="text-destructive focus:text-destructive"
+                  data-testid={`delete-${task.id}`}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Task
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </div>
