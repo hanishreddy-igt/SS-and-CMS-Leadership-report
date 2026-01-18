@@ -4,7 +4,10 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -15,7 +18,8 @@ import {
   Circle,
   Play,
   Check,
-  Ban
+  Ban,
+  Filter
 } from 'lucide-react';
 import type { Task, Project, Person } from '@shared/schema';
 import { TaskRow, ParsedTitle, parseInlineTags } from './WorkingSpace';
@@ -213,41 +217,80 @@ export default function AllTasksByProject() {
             <FolderKanban className="h-5 w-5" />
             All Tasks
           </CardTitle>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Select value={accountFilter} onValueChange={setAccountFilter}>
-              <SelectTrigger className="w-[180px] h-8" data-testid="account-filter">
-                <SelectValue placeholder="Filter by Account" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Accounts</SelectItem>
-                {sortedAccounts.map(account => (
-                  <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={leadFilter} onValueChange={setLeadFilter}>
-              <SelectTrigger className="w-[180px] h-8" data-testid="lead-filter">
-                <SelectValue placeholder="Filter by Lead" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Leads</SelectItem>
-                {projectLeads.map(lead => (
-                  <SelectItem key={lead.id} value={lead.id}>{lead.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={memberFilter} onValueChange={setMemberFilter}>
-              <SelectTrigger className="w-[180px] h-8" data-testid="member-filter">
-                <SelectValue placeholder="Filter by Member" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Members</SelectItem>
-                {teamMembers.map(member => (
-                  <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2" data-testid="filter-button">
+                <Filter className="h-4 w-4" />
+                Filters
+                {(accountFilter !== 'all' || leadFilter !== 'all' || memberFilter !== 'all') && (
+                  <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
+                    {[accountFilter !== 'all', leadFilter !== 'all', memberFilter !== 'all'].filter(Boolean).length}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72" align="end">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Account</Label>
+                  <Select value={accountFilter} onValueChange={setAccountFilter}>
+                    <SelectTrigger className="w-full" data-testid="account-filter">
+                      <SelectValue placeholder="All Accounts" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Accounts</SelectItem>
+                      {sortedAccounts.map(account => (
+                        <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Lead</Label>
+                  <Select value={leadFilter} onValueChange={setLeadFilter}>
+                    <SelectTrigger className="w-full" data-testid="lead-filter">
+                      <SelectValue placeholder="All Leads" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Leads</SelectItem>
+                      {projectLeads.map(lead => (
+                        <SelectItem key={lead.id} value={lead.id}>{lead.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Team Member</Label>
+                  <Select value={memberFilter} onValueChange={setMemberFilter}>
+                    <SelectTrigger className="w-full" data-testid="member-filter">
+                      <SelectValue placeholder="All Members" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Members</SelectItem>
+                      {teamMembers.map(member => (
+                        <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(accountFilter !== 'all' || leadFilter !== 'all' || memberFilter !== 'all') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setAccountFilter('all');
+                      setLeadFilter('all');
+                      setMemberFilter('all');
+                    }}
+                    data-testid="clear-filters-button"
+                  >
+                    Clear all filters
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </CardHeader>
       <CardContent>
