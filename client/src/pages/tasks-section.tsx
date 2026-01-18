@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useParams } from 'wouter';
-import { LayoutGrid, UserCheck, FileStack, ShieldAlert } from 'lucide-react';
+import { LayoutGrid, UserCheck, FileStack, ShieldAlert, FolderKanban } from 'lucide-react';
 import SectionLayout from '@/components/SectionLayout';
 import WorkingSpace from '@/components/WorkingSpace';
+import AllTasksByProject from '@/components/AllTasksByProject';
 import AssignedTasks from '@/components/AssignedTasks';
 import TaskTemplates from '@/components/TaskTemplates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +17,7 @@ const TASKS_ALLOWED_ROLES = ['admin', 'manager']; // Add 'lead', 'member' to ope
 
 const tabs = [
   { id: 'workspace', label: 'Working Space', icon: LayoutGrid },
+  { id: 'all-tasks', label: 'All Tasks by Project', icon: FolderKanban },
   { id: 'assigned', label: 'Tasks Assigned to You', icon: UserCheck },
   { id: 'templates', label: 'Recurring Deliverables', icon: FileStack },
 ];
@@ -71,6 +73,7 @@ export default function TasksSection() {
       onTabChange={handleTabChange}
     >
       {activeTab === 'workspace' && <WorkingSpace />}
+      {activeTab === 'all-tasks' && <AllTasksByProject />}
       {activeTab === 'assigned' && <AssignedTasks />}
       {activeTab === 'templates' && <TaskTemplates />}
     </SectionLayout>
