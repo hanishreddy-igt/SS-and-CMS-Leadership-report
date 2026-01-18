@@ -493,7 +493,14 @@ function InlineAssigneePanel({ task, people, onUpdate, onClose, depth }: InlineA
         </Button>
       </div>
       <div className="space-y-1 max-h-48 overflow-auto">
-        {people.map((person, idx) => {
+        {[...people]
+          .sort((a, b) => {
+            const aSelected = task.assignedTo?.includes(a.id) ? 0 : 1;
+            const bSelected = task.assignedTo?.includes(b.id) ? 0 : 1;
+            if (aSelected !== bSelected) return aSelected - bSelected;
+            return a.name.localeCompare(b.name);
+          })
+          .map((person, idx) => {
           const roles = person.roles || [];
           const isLead = roles.includes('lead') || roles.includes('project-lead');
           const isMember = roles.includes('member') || roles.includes('team-member');
