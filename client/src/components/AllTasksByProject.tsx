@@ -25,6 +25,7 @@ export default function AllTasksByProject() {
   const { toast } = useToast();
   const [leadFilter, setLeadFilter] = useState<string>('all');
   const [accountFilter, setAccountFilter] = useState<string>('all');
+  const [memberFilter, setMemberFilter] = useState<string>('all');
 
   const { data: allTasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ['/api/tasks'],
@@ -158,8 +159,18 @@ export default function AllTasksByProject() {
       if (p.leadId) leadIds.add(p.leadId);
       if (p.leadIds) p.leadIds.forEach(id => leadIds.add(id));
     });
-    return people.filter(p => leadIds.has(p.id));
+    return people.filter(p => leadIds.has(p.id)).sort((a, b) => a.name.localeCompare(b.name));
   }, [projects, people]);
+
+  const teamMembers = useMemo(() => {
+    return people
+      .filter(p => p.roles?.includes('team-member'))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [people]);
+
+  const sortedAccounts = useMemo(() => {
+    return [...projects].sort((a, b) => a.name.localeCompare(b.name));
+  }, [projects]);
 
   const accountsWithTasks = projects.filter(p => {
     const hasTasks = allTasks.some(t => t.projectId === p.id);
@@ -169,8 +180,19 @@ export default function AllTasksByProject() {
     if (accountFilter !== 'all' && p.id !== accountFilter) return false;
     
     // Apply lead filter
-    if (leadFilter === 'all') return true;
-    return p.leadId === leadFilter || (p.leadIds && p.leadIds.includes(leadFilter));
+    if (leadFilter !== 'all') {
+      const matchesLead = p.leadId === leadFilter || (p.leadIds && p.leadIds.includes(leadFilter));
+      if (!matchesLead) return false;
+    }
+    
+    // Apply member filter - check if any task in this account is assigned to the member
+    if (memberFilter !== 'all') {
+      const accountTasks = allTasks.filter(t => t.projectId === p.id);
+      const hasTaskWithMember = accountTasks.some(t => t.assignedTo?.includes(memberFilter));
+      if (!hasTaskWithMember) return false;
+    }
+    
+    return true;
   });
 
   const tasksWithoutAccount = allTasks.filter(t => !t.projectId && !t.parentTaskId);
@@ -191,26 +213,37 @@ export default function AllTasksByProject() {
             <FolderKanban className="h-5 w-5" />
             All Tasks
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Select value={accountFilter} onValueChange={setAccountFilter}>
-              <SelectTrigger className="w-[200px] h-8" data-testid="account-filter">
+              <SelectTrigger className="w-[180px] h-8" data-testid="account-filter">
                 <SelectValue placeholder="Filter by Account" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Accounts</SelectItem>
-                {projects.map(account => (
+                {sortedAccounts.map(account => (
                   <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={leadFilter} onValueChange={setLeadFilter}>
-              <SelectTrigger className="w-[200px] h-8" data-testid="lead-filter">
+              <SelectTrigger className="w-[180px] h-8" data-testid="lead-filter">
                 <SelectValue placeholder="Filter by Lead" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Leads</SelectItem>
                 {projectLeads.map(lead => (
                   <SelectItem key={lead.id} value={lead.id}>{lead.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={memberFilter} onValueChange={setMemberFilter}>
+              <SelectTrigger className="w-[180px] h-8" data-testid="member-filter">
+                <SelectValue placeholder="Filter by Member" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Members</SelectItem>
+                {teamMembers.map(member => (
+                  <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
