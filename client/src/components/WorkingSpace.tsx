@@ -16,7 +16,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { format, isPast, isToday, formatDistanceToNow } from 'date-fns';
 import { 
-  Plus, 
+  Plus,
+  Minus,
   ChevronDown, 
   ChevronRight, 
   Trash2,
@@ -1531,7 +1532,8 @@ export default function WorkingSpace() {
                 <CollapsibleTrigger asChild>
                   <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg group">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                      <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+                      <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
                       <Play className="h-4 w-4 text-green-500 fill-green-500" />
                       To-do / In-progress ({myActiveTasks.length})
                     </CardTitle>
@@ -1567,7 +1569,8 @@ export default function WorkingSpace() {
                 <CollapsibleTrigger asChild>
                   <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg group">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                      <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+                      <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
                       <Ban className="h-4 w-4 text-red-500" />
                       Blockers ({myBlockedTasks.length})
                     </CardTitle>
@@ -1603,7 +1606,8 @@ export default function WorkingSpace() {
                 <CollapsibleTrigger asChild>
                   <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg group">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                      <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+                      <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
                       <Check className="h-4 w-4 text-blue-500" />
                       Closed ({myClosedTasks.length})
                     </CardTitle>

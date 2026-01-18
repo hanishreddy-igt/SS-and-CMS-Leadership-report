@@ -9,6 +9,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { 
   ChevronRight, 
+  Plus,
+  Minus,
   FolderKanban,
   Circle,
   Play,
@@ -229,7 +231,8 @@ export default function AllTasksByProject() {
                       {activeTasks.length > 0 && (
                         <Collapsible defaultOpen={true}>
                           <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
-                            <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+                            <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
                             <Play className="h-4 w-4 text-green-500 fill-green-500" />
                             To-do / In-progress ({activeTasks.length})
                           </CollapsibleTrigger>
@@ -260,7 +263,8 @@ export default function AllTasksByProject() {
                       {blockedTasks.length > 0 && (
                         <Collapsible defaultOpen={true}>
                           <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
-                            <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+                            <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
                             <Ban className="h-4 w-4 text-red-500" />
                             Blockers ({blockedTasks.length})
                           </CollapsibleTrigger>
@@ -291,7 +295,8 @@ export default function AllTasksByProject() {
                       {closedTasks.length > 0 && (
                         <Collapsible defaultOpen={false}>
                           <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
-                            <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+                            <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
                             <Check className="h-4 w-4 text-blue-500" />
                             Closed ({closedTasks.length})
                           </CollapsibleTrigger>
@@ -348,7 +353,8 @@ export default function AllTasksByProject() {
                       {activeUnassigned.length > 0 && (
                         <Collapsible defaultOpen={true}>
                           <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
-                            <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+                            <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
                             <Play className="h-4 w-4 text-green-500 fill-green-500" />
                             To-do / In-progress ({activeUnassigned.length})
                           </CollapsibleTrigger>
@@ -379,7 +385,8 @@ export default function AllTasksByProject() {
                       {blockedUnassigned.length > 0 && (
                         <Collapsible defaultOpen={true}>
                           <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
-                            <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+                            <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
                             <Ban className="h-4 w-4 text-red-500" />
                             Blockers ({blockedUnassigned.length})
                           </CollapsibleTrigger>
@@ -410,7 +417,8 @@ export default function AllTasksByProject() {
                       {closedUnassigned.length > 0 && (
                         <Collapsible defaultOpen={false}>
                           <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
-                            <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+                            <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
                             <Check className="h-4 w-4 text-blue-500" />
                             Closed ({closedUnassigned.length})
                           </CollapsibleTrigger>
