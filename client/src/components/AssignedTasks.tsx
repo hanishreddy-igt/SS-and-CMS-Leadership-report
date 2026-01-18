@@ -86,11 +86,15 @@ export default function AssignedTasks() {
     ? allTasks.filter(t => t.assignedTo?.some(id => myPersonIds.includes(id)))
     : [];
 
-  const activeTasks = assignedTasks.filter(t => 
+  const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
+  const sortByPriority = (tasks: Task[]) => 
+    [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
+
+  const activeTasks = sortByPriority(assignedTasks.filter(t => 
     (t.status === 'todo' || t.status === 'in-progress') && !t.parentTaskId
-  );
-  const blockedTasks = assignedTasks.filter(t => t.status === 'blocked' && !t.parentTaskId);
-  const closedTasks = assignedTasks.filter(t => t.status === 'done' && !t.parentTaskId);
+  ));
+  const blockedTasks = sortByPriority(assignedTasks.filter(t => t.status === 'blocked' && !t.parentTaskId));
+  const closedTasks = sortByPriority(assignedTasks.filter(t => t.status === 'done' && !t.parentTaskId));
 
   const handleUpdateTask = (id: string, updates: Partial<Task>) => {
     updateTaskMutation.mutate({ id, updates });
