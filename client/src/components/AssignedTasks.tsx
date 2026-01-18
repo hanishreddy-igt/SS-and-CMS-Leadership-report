@@ -242,7 +242,7 @@ export default function AssignedTasks() {
                     userEmail={userEmail}
                     hiddenAssigneeIds={myPersonIds}
                     showDetailsToggle={true}
-                    isDetailsOpen={openTaskId === task.id}
+                    openTaskId={openTaskId}
                     onOpenDetails={setOpenTaskId}
                   />
                 ))}
@@ -274,7 +274,7 @@ export default function AssignedTasks() {
                     userEmail={userEmail}
                     hiddenAssigneeIds={myPersonIds}
                     showDetailsToggle={true}
-                    isDetailsOpen={openTaskId === task.id}
+                    openTaskId={openTaskId}
                     onOpenDetails={setOpenTaskId}
                   />
                 ))}
@@ -306,7 +306,7 @@ export default function AssignedTasks() {
                     userEmail={userEmail}
                     hiddenAssigneeIds={myPersonIds}
                     showDetailsToggle={true}
-                    isDetailsOpen={openTaskId === task.id}
+                    openTaskId={openTaskId}
                     onOpenDetails={setOpenTaskId}
                   />
                 ))}

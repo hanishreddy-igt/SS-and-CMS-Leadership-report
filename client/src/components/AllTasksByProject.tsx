@@ -361,7 +361,7 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
-                                  isDetailsOpen={openTaskId === task.id}
+                                  openTaskId={openTaskId}
                                   onOpenDetails={setOpenTaskId}
                                 />
                               ))}
@@ -395,7 +395,7 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
-                                  isDetailsOpen={openTaskId === task.id}
+                                  openTaskId={openTaskId}
                                   onOpenDetails={setOpenTaskId}
                                 />
                               ))}
@@ -429,7 +429,7 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
-                                  isDetailsOpen={openTaskId === task.id}
+                                  openTaskId={openTaskId}
                                   onOpenDetails={setOpenTaskId}
                                 />
                               ))}
@@ -489,7 +489,7 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
-                                  isDetailsOpen={openTaskId === task.id}
+                                  openTaskId={openTaskId}
                                   onOpenDetails={setOpenTaskId}
                                 />
                               ))}
@@ -523,7 +523,7 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
-                                  isDetailsOpen={openTaskId === task.id}
+                                  openTaskId={openTaskId}
                                   onOpenDetails={setOpenTaskId}
                                 />
                               ))}
@@ -557,7 +557,7 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
-                                  isDetailsOpen={openTaskId === task.id}
+                                  openTaskId={openTaskId}
                                   onOpenDetails={setOpenTaskId}
                                 />
                               ))}

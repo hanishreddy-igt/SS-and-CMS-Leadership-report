@@ -728,7 +728,7 @@ export interface TaskRowProps {
   hideProjectBadge?: boolean;
   hiddenAssigneeIds?: string[];
   showDetailsToggle?: boolean;
-  isDetailsOpen?: boolean;
+  openTaskId?: string | null;
   onOpenDetails?: (taskId: string) => void;
 }
 
@@ -747,7 +747,7 @@ export function TaskRow({
   hideProjectBadge = false,
   hiddenAssigneeIds = [],
   showDetailsToggle = false,
-  isDetailsOpen,
+  openTaskId,
   onOpenDetails
 }: TaskRowProps) {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -759,8 +759,8 @@ export function TaskRow({
   const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
   const [panelTrigger, setPanelTrigger] = useState<'notes' | 'assignee' | 'menu' | null>(null);
   
-  // Use external control if provided, otherwise fall back to internal state
-  const showDetails = showDetailsToggle ? (isDetailsOpen ?? false) : true;
+  // Use external control if provided, otherwise fall back to always showing details
+  const showDetails = showDetailsToggle ? (openTaskId === task.id) : true;
   const inputRef = useRef<HTMLInputElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const notesButtonRef = useRef<HTMLButtonElement>(null);
@@ -1314,6 +1314,8 @@ export function TaskRow({
               hideProjectBadge={hideProjectBadge}
               hiddenAssigneeIds={hiddenAssigneeIds}
               showDetailsToggle={showDetailsToggle}
+              openTaskId={openTaskId}
+              onOpenDetails={onOpenDetails}
             />
           ))}
         </div>
@@ -1564,7 +1566,7 @@ export default function WorkingSpace() {
                         onOutdent={handleOutdent}
                         userEmail={userEmail}
                         showDetailsToggle={true}
-                        isDetailsOpen={openTaskId === task.id}
+                        openTaskId={openTaskId}
                         onOpenDetails={setOpenTaskId}
                       />
                     ))}
@@ -1597,7 +1599,7 @@ export default function WorkingSpace() {
                         onOutdent={handleOutdent}
                         userEmail={userEmail}
                         showDetailsToggle={true}
-                        isDetailsOpen={openTaskId === task.id}
+                        openTaskId={openTaskId}
                         onOpenDetails={setOpenTaskId}
                       />
                     ))}
@@ -1630,7 +1632,7 @@ export default function WorkingSpace() {
                         onOutdent={handleOutdent}
                         userEmail={userEmail}
                         showDetailsToggle={true}
-                        isDetailsOpen={openTaskId === task.id}
+                        openTaskId={openTaskId}
                         onOpenDetails={setOpenTaskId}
                       />
                     ))}
