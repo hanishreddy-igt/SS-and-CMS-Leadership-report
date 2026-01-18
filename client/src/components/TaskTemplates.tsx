@@ -999,7 +999,11 @@ export default function TaskTemplates() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <Button onClick={() => setIsDialogOpen(true)} data-testid="new-template-btn">
+          <Plus className="h-4 w-4 mr-1" />
+          New Deliverable
+        </Button>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2" data-testid="template-filter-button">
@@ -1039,10 +1043,6 @@ export default function TaskTemplates() {
             </div>
           </PopoverContent>
         </Popover>
-        <Button onClick={() => setIsDialogOpen(true)} data-testid="new-template-btn">
-          <Plus className="h-4 w-4 mr-1" />
-          New Deliverable
-        </Button>
       </div>
 
       {filteredTemplates.length === 0 ? (
