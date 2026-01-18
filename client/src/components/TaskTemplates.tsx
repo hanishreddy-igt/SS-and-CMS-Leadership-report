@@ -129,9 +129,19 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">No project</SelectItem>
-              {projects.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
+              {projects
+                .filter(p => {
+                  // Filter to active projects only (end date in future or no end date)
+                  if (!p.endDate) return true;
+                  const end = new Date(p.endDate);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  return end >= today;
+                })
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -161,24 +171,26 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           {people.length === 0 ? (
             <p className="text-sm text-muted-foreground">No people available</p>
           ) : (
-            people.map(person => (
-              <div key={person.id} className="flex items-center gap-2">
-                <Checkbox
-                  id={`person-${person.id}`}
-                  checked={formData.assignedTo.includes(person.id)}
-                  onCheckedChange={() => togglePerson(person.id)}
-                />
-                <label 
-                  htmlFor={`person-${person.id}`} 
-                  className="text-sm cursor-pointer flex-1"
-                >
-                  {person.name}
-                  {person.email && (
-                    <span className="text-muted-foreground ml-1">({person.email})</span>
-                  )}
-                </label>
-              </div>
-            ))
+            [...people]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(person => (
+                <div key={person.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`person-${person.id}`}
+                    checked={formData.assignedTo.includes(person.id)}
+                    onCheckedChange={() => togglePerson(person.id)}
+                  />
+                  <label 
+                    htmlFor={`person-${person.id}`} 
+                    className="text-sm cursor-pointer flex-1"
+                  >
+                    {person.name}
+                    {person.email && (
+                      <span className="text-muted-foreground ml-1">({person.email})</span>
+                    )}
+                  </label>
+                </div>
+              ))
           )}
         </div>
         {formData.assignedTo.length > 0 && (
@@ -232,7 +244,9 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           {formData.subTemplates.length > 0 && (
             <div className="space-y-2">
               {formData.subTemplates.map((sub, index) => {
-                const parentAssignees = people.filter(p => formData.assignedTo.includes(p.id));
+                const parentAssignees = people
+                  .filter(p => formData.assignedTo.includes(p.id))
+                  .sort((a, b) => a.name.localeCompare(b.name));
                 const subAssigneeCount = sub.assignedTo?.length || 0;
                 const inheritsFromParent = !sub.assignedTo || sub.assignedTo.length === 0;
                 

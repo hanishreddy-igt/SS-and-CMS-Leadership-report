@@ -296,10 +296,20 @@ function InlineTaskInput({
     return person.name;
   };
 
+  // Helper to determine if a project is active
+  const isProjectActive = (endDate: string | null | undefined): boolean => {
+    if (!endDate) return true; // No end date = active
+    const end = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return end >= today;
+  };
+
   const getSuggestions = (): { value: string; label: string; id?: string }[] => {
     if (suggestion.type === 'project') {
       return projects
-        .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .filter(p => isProjectActive(p.endDate) && p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .sort((a, b) => a.name.localeCompare(b.name))
         .slice(0, 8)
         .map(p => ({ value: p.name.replace(/\s+/g, ''), label: p.name, id: p.id }));
     }
@@ -308,6 +318,7 @@ function InlineTaskInput({
       const availablePeople = taggedProject ? getProjectPeople(taggedProject) : people;
       return availablePeople
         .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .sort((a, b) => a.name.localeCompare(b.name))
         .slice(0, 8)
         .map(p => ({ value: p.name.split(' ')[0], label: getPersonRoleLabel(p), id: p.id }));
     }
@@ -737,10 +748,20 @@ export function TaskRow({
     return { type: null, startIndex: 0, query: '' };
   };
 
+  // Helper to determine if a project is active (for edit suggestions)
+  const isEditProjectActive = (endDate: string | null | undefined): boolean => {
+    if (!endDate) return true; // No end date = active
+    const end = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return end >= today;
+  };
+
   const getEditSuggestions = (): { value: string; label: string; id?: string }[] => {
     if (suggestion.type === 'project') {
       return projects
-        .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .filter(p => isEditProjectActive(p.endDate) && p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .sort((a, b) => a.name.localeCompare(b.name))
         .slice(0, 8)
         .map(p => ({ value: p.name.replace(/\s+/g, ''), label: p.name, id: p.id }));
     }
@@ -756,6 +777,7 @@ export function TaskRow({
       };
       return people
         .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
+        .sort((a, b) => a.name.localeCompare(b.name))
         .slice(0, 8)
         .map(p => ({ value: p.name.split(' ')[0], label: getEditPersonRoleLabel(p), id: p.id }));
     }
