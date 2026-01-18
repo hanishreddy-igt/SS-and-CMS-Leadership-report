@@ -32,7 +32,8 @@ import {
   Play,
   Check,
   Ban,
-  MoreVertical
+  MoreVertical,
+  Info
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -671,6 +672,7 @@ export interface TaskRowProps {
   userEmail: string;
   hideProjectBadge?: boolean;
   hiddenAssigneeIds?: string[];
+  showDetailsToggle?: boolean;
 }
 
 export function TaskRow({ 
@@ -686,7 +688,8 @@ export function TaskRow({
   depth = 0,
   userEmail,
   hideProjectBadge = false,
-  hiddenAssigneeIds = []
+  hiddenAssigneeIds = [],
+  showDetailsToggle = false
 }: TaskRowProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -696,6 +699,7 @@ export function TaskRow({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
   const [panelTrigger, setPanelTrigger] = useState<'notes' | 'assignee' | 'menu' | null>(null);
+  const [showDetails, setShowDetails] = useState(!showDetailsToggle);
   const inputRef = useRef<HTMLInputElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const notesButtonRef = useRef<HTMLButtonElement>(null);
@@ -1027,6 +1031,16 @@ export function TaskRow({
                 </span>
               )}
             </button>
+            {showDetailsToggle && (
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className={`p-1 hover:bg-accent rounded ${showDetails ? 'text-primary' : 'text-muted-foreground'}`}
+                title={showDetails ? "Hide details" : "Show details"}
+                data-testid={`info-toggle-${task.id}`}
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -1071,61 +1085,63 @@ export function TaskRow({
         </div>
 
         {/* Line 2: Due Date, Project, Assignees */}
-        <div className="flex items-center gap-2 mt-1 ml-9">
-          {task.dueDate && (
-            <Badge variant={isOverdue ? "destructive" : "secondary"} className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
-              {format(new Date(task.dueDate), 'MMM d')}
-            </Badge>
-          )}
-          
-          {project && !hideProjectBadge && (
-            <Badge 
-              variant="outline" 
-              className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 ${isProjectInherited ? 'opacity-60' : ''}`}
-              title={isProjectInherited ? 'Inherited from parent task' : undefined}
-            >
-              <FolderKanban className="h-2.5 w-2.5" />
-              {project.name}
-            </Badge>
-          )}
-          
-          {!project && !parentTask?.projectId && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
-                  data-testid={`assign-project-${task.id}`}
-                >
-                  +project
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48 max-h-64 overflow-y-auto">
-                {projects.map(p => (
-                  <DropdownMenuItem
-                    key={p.id}
-                    onClick={() => onUpdate(task.id, { projectId: p.id })}
-                    data-testid={`select-project-${p.id}`}
+        {showDetails && (
+          <div className="flex items-center gap-2 mt-1 ml-9">
+            {task.dueDate && (
+              <Badge variant={isOverdue ? "destructive" : "secondary"} className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
+                {format(new Date(task.dueDate), 'MMM d')}
+              </Badge>
+            )}
+            
+            {project && !hideProjectBadge && (
+              <Badge 
+                variant="outline" 
+                className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 ${isProjectInherited ? 'opacity-60' : ''}`}
+                title={isProjectInherited ? 'Inherited from parent task' : undefined}
+              >
+                <FolderKanban className="h-2.5 w-2.5" />
+                {project.name}
+              </Badge>
+            )}
+            
+            {!project && !parentTask?.projectId && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
+                    data-testid={`assign-project-${task.id}`}
                   >
-                    <FolderKanban className="h-3 w-3 mr-2" />
-                    {p.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          
-          <button
-            ref={assigneeButtonRef}
-            onClick={() => activePanel === 'assignee' ? closePanel() : openPanel('assignee', 'assignee')}
-            className="text-xs text-muted-foreground truncate max-w-[200px] hover:text-foreground hover:underline cursor-pointer"
-            title="Click to assign people"
-            data-testid={`assignee-trigger-${task.id}`}
-          >
-            {displayAssignees.length > 0 
-              ? [...displayAssignees].sort((a, b) => a.name.localeCompare(b.name)).map(p => p.name).join(', ') 
-              : '+assign'}
-          </button>
-        </div>
+                    +project
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48 max-h-64 overflow-y-auto">
+                  {projects.map(p => (
+                    <DropdownMenuItem
+                      key={p.id}
+                      onClick={() => onUpdate(task.id, { projectId: p.id })}
+                      data-testid={`select-project-${p.id}`}
+                    >
+                      <FolderKanban className="h-3 w-3 mr-2" />
+                      {p.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            
+            <button
+              ref={assigneeButtonRef}
+              onClick={() => activePanel === 'assignee' ? closePanel() : openPanel('assignee', 'assignee')}
+              className="text-xs text-muted-foreground truncate max-w-[200px] hover:text-foreground hover:underline cursor-pointer"
+              title="Click to assign people"
+              data-testid={`assignee-trigger-${task.id}`}
+            >
+              {displayAssignees.length > 0 
+                ? [...displayAssignees].sort((a, b) => a.name.localeCompare(b.name)).map(p => p.name).join(', ') 
+                : '+assign'}
+            </button>
+          </div>
+        )}
       </div>
 
       {activePanel === 'assignee' && (
@@ -1174,6 +1190,7 @@ export function TaskRow({
               userEmail={userEmail}
               hideProjectBadge={hideProjectBadge}
               hiddenAssigneeIds={hiddenAssigneeIds}
+              showDetailsToggle={showDetailsToggle}
             />
           ))}
         </div>
@@ -1402,6 +1419,7 @@ export default function WorkingSpace() {
                             onIndent={handleIndent}
                             onOutdent={handleOutdent}
                             userEmail={userEmail}
+                            showDetailsToggle={true}
                           />
                         ))}
                       </div>
@@ -1428,6 +1446,7 @@ export default function WorkingSpace() {
                             onIndent={handleIndent}
                             onOutdent={handleOutdent}
                             userEmail={userEmail}
+                            showDetailsToggle={true}
                           />
                         ))}
                       </div>
@@ -1456,6 +1475,7 @@ export default function WorkingSpace() {
                               onIndent={handleIndent}
                               onOutdent={handleOutdent}
                               userEmail={userEmail}
+                              showDetailsToggle={true}
                             />
                           ))}
                         </div>
