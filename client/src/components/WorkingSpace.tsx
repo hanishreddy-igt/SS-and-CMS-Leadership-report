@@ -729,7 +729,7 @@ export interface TaskRowProps {
   hiddenAssigneeIds?: string[];
   showDetailsToggle?: boolean;
   openTaskId?: string | null;
-  onOpenDetails?: (taskId: string) => void;
+  onOpenDetails?: (taskId: string | null) => void;
 }
 
 export function TaskRow({ 
@@ -765,6 +765,66 @@ export function TaskRow({
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const notesButtonRef = useRef<HTMLButtonElement>(null);
   const assigneeButtonRef = useRef<HTMLButtonElement>(null);
+  const taskRowRef = useRef<HTMLDivElement>(null);
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Focus-based expand/collapse: close details when focus leaves the task row
+  useEffect(() => {
+    if (!showDetailsToggle || !onOpenDetails) return;
+    
+    const handleFocusIn = () => {
+      // Cancel any pending close when focus returns to this row
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+      // Open this task's details when any element in the row gets focus
+      if (openTaskId !== task.id) {
+        onOpenDetails(task.id);
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      // Check if the new focus target is still within this task row
+      const relatedTarget = e.relatedTarget as Node | null;
+      const isStillWithinRow = taskRowRef.current?.contains(relatedTarget);
+      
+      // Also check if focus went to a popover/portal (outside DOM but logically part of this row)
+      const isInPopover = relatedTarget && (
+        (relatedTarget as Element).closest?.('[data-radix-popper-content-wrapper]') ||
+        (relatedTarget as Element).closest?.('[role="dialog"]') ||
+        (relatedTarget as Element).closest?.('[role="listbox"]') ||
+        (relatedTarget as Element).closest?.('[role="menu"]')
+      );
+      
+      if (!isStillWithinRow && !isInPopover) {
+        // Debounce the close to avoid flicker during focus transitions
+        blurTimeoutRef.current = setTimeout(() => {
+          // Double-check focus hasn't returned to this row
+          if (!taskRowRef.current?.contains(document.activeElement)) {
+            onOpenDetails(null);
+            setIsEditing(false);
+          }
+        }, 150);
+      }
+    };
+
+    const rowElement = taskRowRef.current;
+    if (rowElement) {
+      rowElement.addEventListener('focusin', handleFocusIn);
+      rowElement.addEventListener('focusout', handleFocusOut);
+    }
+
+    return () => {
+      if (rowElement) {
+        rowElement.removeEventListener('focusin', handleFocusIn);
+        rowElement.removeEventListener('focusout', handleFocusOut);
+      }
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, [showDetailsToggle, onOpenDetails, openTaskId, task.id]);
 
   const openPanel = (panel: 'assignee' | 'dueDate' | 'notes', trigger: 'notes' | 'assignee' | 'menu') => {
     setActivePanel(panel);
@@ -1033,7 +1093,7 @@ export function TaskRow({
   };
 
   return (
-    <div data-testid={`task-row-${task.id}`} className={`relative ${isEditing ? 'z-50' : ''}`}>
+    <div ref={taskRowRef} data-testid={`task-row-${task.id}`} className={`relative ${isEditing ? 'z-50' : ''}`}>
       <div 
         className={`group py-1.5 rounded hover-elevate ${isOverdue ? 'bg-destructive/5' : ''}`}
         style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px', paddingRight: '8px' }}
