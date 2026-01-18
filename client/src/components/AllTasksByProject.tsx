@@ -24,6 +24,7 @@ export default function AllTasksByProject() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [leadFilter, setLeadFilter] = useState<string>('all');
+  const [accountFilter, setAccountFilter] = useState<string>('all');
 
   const { data: allTasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ['/api/tasks'],
@@ -160,14 +161,19 @@ export default function AllTasksByProject() {
     return people.filter(p => leadIds.has(p.id));
   }, [projects, people]);
 
-  const projectsWithTasks = projects.filter(p => {
+  const accountsWithTasks = projects.filter(p => {
     const hasTasks = allTasks.some(t => t.projectId === p.id);
     if (!hasTasks) return false;
+    
+    // Apply account filter
+    if (accountFilter !== 'all' && p.id !== accountFilter) return false;
+    
+    // Apply lead filter
     if (leadFilter === 'all') return true;
     return p.leadId === leadFilter || (p.leadIds && p.leadIds.includes(leadFilter));
   });
 
-  const tasksWithoutProject = allTasks.filter(t => !t.projectId && !t.parentTaskId);
+  const tasksWithoutAccount = allTasks.filter(t => !t.projectId && !t.parentTaskId);
 
   if (tasksLoading) {
     return (
@@ -185,45 +191,58 @@ export default function AllTasksByProject() {
             <FolderKanban className="h-5 w-5" />
             All Tasks
           </CardTitle>
-          <Select value={leadFilter} onValueChange={setLeadFilter}>
-            <SelectTrigger className="w-[200px] h-8" data-testid="lead-filter">
-              <SelectValue placeholder="Filter by Lead" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Leads</SelectItem>
-              {projectLeads.map(lead => (
-                <SelectItem key={lead.id} value={lead.id}>{lead.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={accountFilter} onValueChange={setAccountFilter}>
+              <SelectTrigger className="w-[200px] h-8" data-testid="account-filter">
+                <SelectValue placeholder="Filter by Account" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Accounts</SelectItem>
+                {projects.map(account => (
+                  <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={leadFilter} onValueChange={setLeadFilter}>
+              <SelectTrigger className="w-[200px] h-8" data-testid="lead-filter">
+                <SelectValue placeholder="Filter by Lead" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Leads</SelectItem>
+                {projectLeads.map(lead => (
+                  <SelectItem key={lead.id} value={lead.id}>{lead.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        {projectsWithTasks.length === 0 && tasksWithoutProject.length === 0 ? (
+        {accountsWithTasks.length === 0 && tasksWithoutAccount.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
             <FolderKanban className="h-6 w-6 mx-auto mb-2 opacity-50" />
             <p>No team tasks yet. Tasks from all team members will appear here.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {projectsWithTasks.map(project => {
+            {accountsWithTasks.map(account => {
               const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
               const sortByPriority = (tasks: Task[]) => 
                 [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
               
-              const projectTasks = allTasks.filter(t => t.projectId === project.id && !t.parentTaskId);
-              const activeTasks = sortByPriority(projectTasks.filter(t => t.status === 'todo' || t.status === 'in-progress'));
-              const blockedTasks = sortByPriority(projectTasks.filter(t => t.status === 'blocked'));
-              const closedTasks = sortByPriority(projectTasks.filter(t => t.status === 'done'));
+              const accountTasks = allTasks.filter(t => t.projectId === account.id && !t.parentTaskId);
+              const activeTasks = sortByPriority(accountTasks.filter(t => t.status === 'todo' || t.status === 'in-progress'));
+              const blockedTasks = sortByPriority(accountTasks.filter(t => t.status === 'blocked'));
+              const closedTasks = sortByPriority(accountTasks.filter(t => t.status === 'done'));
               
               return (
-                <Collapsible key={project.id} defaultOpen>
+                <Collapsible key={account.id} defaultOpen>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover-elevate text-left group">
                     <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                     <FolderKanban className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-sm">{project.name}</span>
+                    <span className="font-medium text-sm">{account.name}</span>
                     <Badge variant="secondary" className="ml-auto text-xs">
-                      {projectTasks.length}
+                      {accountTasks.length}
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
@@ -329,23 +348,23 @@ export default function AllTasksByProject() {
               );
             })}
 
-            {tasksWithoutProject.length > 0 && (() => {
+            {tasksWithoutAccount.length > 0 && (() => {
               const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
               const sortByPriority = (tasks: Task[]) => 
                 [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
               
-              const activeUnassigned = sortByPriority(tasksWithoutProject.filter(t => t.status === 'todo' || t.status === 'in-progress'));
-              const blockedUnassigned = sortByPriority(tasksWithoutProject.filter(t => t.status === 'blocked'));
-              const closedUnassigned = sortByPriority(tasksWithoutProject.filter(t => t.status === 'done'));
+              const activeUnassigned = sortByPriority(tasksWithoutAccount.filter(t => t.status === 'todo' || t.status === 'in-progress'));
+              const blockedUnassigned = sortByPriority(tasksWithoutAccount.filter(t => t.status === 'blocked'));
+              const closedUnassigned = sortByPriority(tasksWithoutAccount.filter(t => t.status === 'done'));
               
               return (
                 <Collapsible defaultOpen>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover-elevate text-left group">
                     <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                     <Circle className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-sm text-muted-foreground">Project unassigned/general</span>
+                    <span className="font-medium text-sm text-muted-foreground">Account unassigned/general</span>
                     <Badge variant="secondary" className="ml-auto text-xs">
-                      {tasksWithoutProject.length}
+                      {tasksWithoutAccount.length}
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent>

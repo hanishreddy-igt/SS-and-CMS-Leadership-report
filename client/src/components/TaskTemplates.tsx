@@ -119,16 +119,16 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Project</Label>
+          <Label>Account</Label>
           <Select 
             value={formData.projectId || "none"} 
             onValueChange={(v) => setFormData({ ...formData, projectId: v === "none" ? "" : v })}
           >
-            <SelectTrigger data-testid="template-project-select">
-              <SelectValue placeholder="Select project" />
+            <SelectTrigger data-testid="template-account-select">
+              <SelectValue placeholder="Select account" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">No project</SelectItem>
+              <SelectItem value="none">No account</SelectItem>
               {projects
                 .filter(p => {
                   // Filter to active projects only (end date in future or no end date)
@@ -623,7 +623,7 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">Project</h4>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">Account</h4>
               <div className="flex items-center gap-1">
                 {project ? (
                   <>

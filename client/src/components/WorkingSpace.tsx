@@ -262,7 +262,7 @@ interface InlineTaskInputProps {
 
 function InlineTaskInput({ 
   onSubmit, 
-  placeholder = "Type a task... (@@project @person #status $priority //note)", 
+  placeholder = "Type a task... (@@account @person #status $priority //note)", 
   autoFocus = false, 
   depth = 0,
   onIndent,
@@ -1184,7 +1184,7 @@ export function TaskRow({
                     className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
                     data-testid={`assign-project-${task.id}`}
                   >
-                    +project
+                    +account
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48 max-h-64 overflow-y-auto">
@@ -1323,7 +1323,7 @@ export function TaskRow({
         <InlineTaskInput
           onSubmit={handleSubtaskCreate}
           onCancel={() => setShowSubtaskInput(false)}
-          placeholder={project ? `Add sub-task for ${project.name}... (@person #status $priority)` : "Add sub-task... (@@project @person #status $priority)"}
+          placeholder={project ? `Add sub-task for ${project.name}... (@person #status $priority)` : "Add sub-task... (@@account @person #status $priority)"}
           autoFocus
           depth={depth + 1}
           projects={projects}
@@ -1490,7 +1490,7 @@ export default function WorkingSpace() {
             Create Task
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Use @@project to link, @name to assign, #status, $priority, // for notes
+            Use @@account to link, @name to assign, #status, $priority, // for notes
           </p>
         </CardHeader>
         <CardContent className="pt-0">
