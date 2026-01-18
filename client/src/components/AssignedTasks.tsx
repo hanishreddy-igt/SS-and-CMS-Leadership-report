@@ -22,6 +22,8 @@ import { TaskRow, ParsedTitle, parseInlineTags } from './WorkingSpace';
 export default function AssignedTasks() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [isActiveExpanded, setIsActiveExpanded] = useState(true);
+  const [isBlockedExpanded, setIsBlockedExpanded] = useState(true);
   const [isClosedExpanded, setIsClosedExpanded] = useState(false);
 
   const { data: allTasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
@@ -200,60 +202,82 @@ export default function AssignedTasks() {
       </div>
 
       {activeTasks.length > 0 && (
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Circle className="h-4 w-4 text-slate-400" />
-              <Play className="h-4 w-4 text-green-500 fill-green-500" />
-              To-do / In-progress ({activeTasks.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {activeTasks.map(task => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                allTasks={assignedTasks}
-                projects={projects}
-                people={people}
-                onUpdate={handleUpdateTask}
-                onDelete={handleDeleteTask}
-                onCreateSubtask={handleCreateSubtask}
-                userEmail={userEmail}
-                hiddenAssigneeIds={myPersonIds}
-                showDetailsToggle={true}
-              />
-            ))}
-          </CardContent>
-        </Card>
+        <Collapsible open={isActiveExpanded} onOpenChange={setIsActiveExpanded}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  {isActiveExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                  <Circle className="h-4 w-4 text-slate-400" />
+                  <Play className="h-4 w-4 text-green-500 fill-green-500" />
+                  To-do / In-progress ({activeTasks.length})
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                {activeTasks.map(task => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    allTasks={assignedTasks}
+                    projects={projects}
+                    people={people}
+                    onUpdate={handleUpdateTask}
+                    onDelete={handleDeleteTask}
+                    onCreateSubtask={handleCreateSubtask}
+                    userEmail={userEmail}
+                    hiddenAssigneeIds={myPersonIds}
+                    showDetailsToggle={true}
+                  />
+                ))}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {blockedTasks.length > 0 && (
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Ban className="h-4 w-4 text-red-500" />
-              Blockers ({blockedTasks.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {blockedTasks.map(task => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                allTasks={assignedTasks}
-                projects={projects}
-                people={people}
-                onUpdate={handleUpdateTask}
-                onDelete={handleDeleteTask}
-                onCreateSubtask={handleCreateSubtask}
-                userEmail={userEmail}
-                hiddenAssigneeIds={myPersonIds}
-                showDetailsToggle={true}
-              />
-            ))}
-          </CardContent>
-        </Card>
+        <Collapsible open={isBlockedExpanded} onOpenChange={setIsBlockedExpanded}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  {isBlockedExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                  <Ban className="h-4 w-4 text-red-500" />
+                  Blockers ({blockedTasks.length})
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                {blockedTasks.map(task => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    allTasks={assignedTasks}
+                    projects={projects}
+                    people={people}
+                    onUpdate={handleUpdateTask}
+                    onDelete={handleDeleteTask}
+                    onCreateSubtask={handleCreateSubtask}
+                    userEmail={userEmail}
+                    hiddenAssigneeIds={myPersonIds}
+                    showDetailsToggle={true}
+                  />
+                ))}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {closedTasks.length > 0 && (

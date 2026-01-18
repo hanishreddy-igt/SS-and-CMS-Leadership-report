@@ -1664,59 +1664,65 @@ export default function WorkingSpace() {
                     <CollapsibleContent>
                       <div className="border rounded-lg mt-2 bg-card space-y-2 p-2">
                         {activeTasks.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                          <Collapsible defaultOpen={true}>
+                            <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
+                              <ChevronRight className="h-3 w-3" />
                               <Play className="h-3 w-3" />
                               To-do / In-progress ({activeTasks.length})
-                            </div>
-                            <div className="border rounded-md bg-background">
-                              {activeTasks.map(task => (
-                                <TaskRow
-                                  key={task.id}
-                                  task={task}
-                                  allTasks={allTasks}
-                                  projects={projects}
-                                  people={people}
-                                  onUpdate={handleUpdateTask}
-                                  onDelete={handleDeleteTask}
-                                  onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
-                                  onIndent={handleIndent}
-                                  onOutdent={handleOutdent}
-                                  userEmail={userEmail}
-                                  hideProjectBadge={true}
-                                  showDetailsToggle={true}
-                                />
-                              ))}
-                            </div>
-                          </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="border rounded-md bg-background">
+                                {activeTasks.map(task => (
+                                  <TaskRow
+                                    key={task.id}
+                                    task={task}
+                                    allTasks={allTasks}
+                                    projects={projects}
+                                    people={people}
+                                    onUpdate={handleUpdateTask}
+                                    onDelete={handleDeleteTask}
+                                    onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                                    onIndent={handleIndent}
+                                    onOutdent={handleOutdent}
+                                    userEmail={userEmail}
+                                    hideProjectBadge={true}
+                                    showDetailsToggle={true}
+                                  />
+                                ))}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
                         )}
                         
                         {blockedTasks.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                          <Collapsible defaultOpen={true}>
+                            <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
+                              <ChevronRight className="h-3 w-3" />
                               <Ban className="h-3 w-3 text-red-500" />
                               Blockers ({blockedTasks.length})
-                            </div>
-                            <div className="border rounded-md">
-                              {blockedTasks.map(task => (
-                                <TaskRow
-                                  key={task.id}
-                                  task={task}
-                                  allTasks={allTasks}
-                                  projects={projects}
-                                  people={people}
-                                  onUpdate={handleUpdateTask}
-                                  onDelete={handleDeleteTask}
-                                  onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
-                                  onIndent={handleIndent}
-                                  onOutdent={handleOutdent}
-                                  userEmail={userEmail}
-                                  hideProjectBadge={true}
-                                  showDetailsToggle={true}
-                                />
-                              ))}
-                            </div>
-                          </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="border rounded-md">
+                                {blockedTasks.map(task => (
+                                  <TaskRow
+                                    key={task.id}
+                                    task={task}
+                                    allTasks={allTasks}
+                                    projects={projects}
+                                    people={people}
+                                    onUpdate={handleUpdateTask}
+                                    onDelete={handleDeleteTask}
+                                    onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                                    onIndent={handleIndent}
+                                    onOutdent={handleOutdent}
+                                    userEmail={userEmail}
+                                    hideProjectBadge={true}
+                                    showDetailsToggle={true}
+                                  />
+                                ))}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
                         )}
                         
                         {closedTasks.length > 0 && (
@@ -1773,59 +1779,65 @@ export default function WorkingSpace() {
                     <CollapsibleContent>
                       <div className="border rounded-lg mt-2 bg-card space-y-2 p-2">
                         {activeUnassigned.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                          <Collapsible defaultOpen={true}>
+                            <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
+                              <ChevronRight className="h-3 w-3" />
                               <Play className="h-3 w-3" />
                               To-do / In-progress ({activeUnassigned.length})
-                            </div>
-                            <div className="border rounded-md bg-background">
-                              {activeUnassigned.map(task => (
-                                <TaskRow
-                                  key={task.id}
-                                  task={task}
-                                  allTasks={allTasks}
-                                  projects={projects}
-                                  people={people}
-                                  onUpdate={handleUpdateTask}
-                                  onDelete={handleDeleteTask}
-                                  onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
-                                  onIndent={handleIndent}
-                                  onOutdent={handleOutdent}
-                                  userEmail={userEmail}
-                                  hideProjectBadge={true}
-                                  showDetailsToggle={true}
-                                />
-                              ))}
-                            </div>
-                          </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="border rounded-md bg-background">
+                                {activeUnassigned.map(task => (
+                                  <TaskRow
+                                    key={task.id}
+                                    task={task}
+                                    allTasks={allTasks}
+                                    projects={projects}
+                                    people={people}
+                                    onUpdate={handleUpdateTask}
+                                    onDelete={handleDeleteTask}
+                                    onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                                    onIndent={handleIndent}
+                                    onOutdent={handleOutdent}
+                                    userEmail={userEmail}
+                                    hideProjectBadge={true}
+                                    showDetailsToggle={true}
+                                  />
+                                ))}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
                         )}
                         
                         {blockedUnassigned.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                          <Collapsible defaultOpen={true}>
+                            <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
+                              <ChevronRight className="h-3 w-3" />
                               <Ban className="h-3 w-3 text-red-500" />
                               Blockers ({blockedUnassigned.length})
-                            </div>
-                            <div className="border rounded-md">
-                              {blockedUnassigned.map(task => (
-                                <TaskRow
-                                  key={task.id}
-                                  task={task}
-                                  allTasks={allTasks}
-                                  projects={projects}
-                                  people={people}
-                                  onUpdate={handleUpdateTask}
-                                  onDelete={handleDeleteTask}
-                                  onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
-                                  onIndent={handleIndent}
-                                  onOutdent={handleOutdent}
-                                  userEmail={userEmail}
-                                  hideProjectBadge={true}
-                                  showDetailsToggle={true}
-                                />
-                              ))}
-                            </div>
-                          </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="border rounded-md">
+                                {blockedUnassigned.map(task => (
+                                  <TaskRow
+                                    key={task.id}
+                                    task={task}
+                                    allTasks={allTasks}
+                                    projects={projects}
+                                    people={people}
+                                    onUpdate={handleUpdateTask}
+                                    onDelete={handleDeleteTask}
+                                    onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                                    onIndent={handleIndent}
+                                    onOutdent={handleOutdent}
+                                    userEmail={userEmail}
+                                    hideProjectBadge={true}
+                                    showDetailsToggle={true}
+                                  />
+                                ))}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
                         )}
                         
                         {closedUnassigned.length > 0 && (
