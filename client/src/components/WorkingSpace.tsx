@@ -165,19 +165,19 @@ export interface ParsedTitle {
 const priorityColors: Record<string, string> = {
   normal: 'bg-green-500',
   medium: 'bg-yellow-500',
-  asap: 'bg-red-500',
+  high: 'bg-red-500',
 };
 
 const priorityLabels: Record<string, string> = {
   normal: 'Normal',
   medium: 'Medium',
-  asap: 'ASAP',
+  high: 'High',
 };
 
 const PRIORITY_OPTIONS = [
   { value: 'normal', label: 'Normal' },
   { value: 'medium', label: 'Medium' },
-  { value: 'asap', label: 'ASAP' },
+  { value: 'high', label: 'High' },
 ];
 
 export function parseInlineTags(title: string): ParsedTitle {
@@ -210,11 +210,11 @@ export function parseInlineTags(title: string): ParsedTitle {
     result.text = result.text.replace(/#(todo|in-progress|blocked|done|inprogress|cancelled)/gi, '').trim();
   }
   
-  // Parse priority tag ($normal, $medium, $asap)
-  const priorityMatch = title.match(/\$(normal|medium|asap)/i);
+  // Parse priority tag ($normal, $medium, $high)
+  const priorityMatch = title.match(/\$(normal|medium|high)/i);
   if (priorityMatch) {
     result.priorityTag = priorityMatch[1].toLowerCase();
-    result.text = result.text.replace(/\$(normal|medium|asap)/gi, '').trim();
+    result.text = result.text.replace(/\$(normal|medium|high)/gi, '').trim();
   }
   
   // Clean up any orphaned tag prefixes (@@, @, #, $, //) that weren't matched
