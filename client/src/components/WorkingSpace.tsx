@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar } from '@/components/ui/calendar';
@@ -1470,132 +1471,182 @@ export default function WorkingSpace() {
     );
   }
 
+  const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
+  const sortByPriority = (tasks: Task[]) => 
+    [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
+  
+  const myActiveTasks = sortByPriority(myRootTasks.filter(t => t.status === 'todo' || t.status === 'in-progress'));
+  const myBlockedTasks = sortByPriority(myRootTasks.filter(t => t.status === 'blocked'));
+  const myClosedTasks = sortByPriority(myRootTasks.filter(t => t.status === 'done'));
+
   return (
-    <div className="space-y-4 pt-2" data-testid="your-workspace-section">
-      <p className="text-xs text-muted-foreground">
-        Use @@project to link, @name to assign, #status to set status, $priority to set priority, // for notes. Press TAB on a task to create a sub-task.
-      </p>
-      
-      <div className="border rounded-lg bg-card">
-        <InlineTaskInput 
-          onSubmit={(title, parsed) => handleCreateTask(title, parsed)} 
-          placeholder="Type a task... (@@project @person #status $priority //note)"
-          autoFocus
-          projects={projects}
-          people={people}
-        />
-            
-            {myRootTasks.length > 0 && (() => {
-              const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
-              const sortByPriority = (tasks: Task[]) => 
-                [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
-              
-              const myActiveTasks = sortByPriority(myRootTasks.filter(t => t.status === 'todo' || t.status === 'in-progress'));
-              const myBlockedTasks = sortByPriority(myRootTasks.filter(t => t.status === 'blocked'));
-              const myClosedTasks = sortByPriority(myRootTasks.filter(t => t.status === 'done'));
-              
-              return (
-                <div className="border-t space-y-2 p-2">
-                  {myActiveTasks.length > 0 && (
-                    <Collapsible defaultOpen={true}>
-                      <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
-                        <ChevronRight className="h-3 w-3" />
-                        <Play className="h-3 w-3" />
-                        To-do / In-progress ({myActiveTasks.length})
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="border rounded-md bg-background">
-                          {myActiveTasks.map(task => (
-                            <TaskRow
-                              key={task.id}
-                              task={task}
-                              allTasks={myTasks}
-                              projects={projects}
-                              people={people}
-                              onUpdate={handleUpdateTask}
-                              onDelete={handleDeleteTask}
-                              onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
-                              onIndent={handleIndent}
-                              onOutdent={handleOutdent}
-                              userEmail={userEmail}
-                              showDetailsToggle={true}
-                            />
-                          ))}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-                  
-                  {myBlockedTasks.length > 0 && (
-                    <Collapsible defaultOpen={true}>
-                      <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
-                        <ChevronRight className="h-3 w-3" />
-                        <Ban className="h-3 w-3 text-red-500" />
-                        Blockers ({myBlockedTasks.length})
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="border rounded-md">
-                          {myBlockedTasks.map(task => (
-                            <TaskRow
-                              key={task.id}
-                              task={task}
-                              allTasks={myTasks}
-                              projects={projects}
-                              people={people}
-                              onUpdate={handleUpdateTask}
-                              onDelete={handleDeleteTask}
-                              onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
-                              onIndent={handleIndent}
-                              onOutdent={handleOutdent}
-                              userEmail={userEmail}
-                              showDetailsToggle={true}
-                            />
-                          ))}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-                  
-                  {myClosedTasks.length > 0 && (
-                    <Collapsible defaultOpen={false}>
-                      <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
-                        <ChevronRight className="h-3 w-3" />
-                        <Check className="h-3 w-3" />
-                        Closed ({myClosedTasks.length})
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="border rounded-md bg-muted/30">
-                          {myClosedTasks.map(task => (
-                            <TaskRow
-                              key={task.id}
-                              task={task}
-                              allTasks={myTasks}
-                              projects={projects}
-                              people={people}
-                              onUpdate={handleUpdateTask}
-                              onDelete={handleDeleteTask}
-                              onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
-                              onIndent={handleIndent}
-                              onOutdent={handleOutdent}
-                              userEmail={userEmail}
-                              showDetailsToggle={true}
-                            />
-                          ))}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-                </div>
-              );
-            })()}
-            
-            {myRootTasks.length === 0 && (
-              <div className="text-center py-6 text-muted-foreground text-sm border-t">
-                <MessageSquare className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                <p>No tasks yet. Type above to create your first task.</p>
-              </div>
-            )}
+    <div className="space-y-6" data-testid="your-workspace-section">
+      {/* Create Task Section */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Task
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Use @@project to link, @name to assign, #status, $priority, // for notes
+          </p>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <InlineTaskInput 
+            onSubmit={(title, parsed) => handleCreateTask(title, parsed)} 
+            placeholder="Type a task and press Enter..."
+            autoFocus
+            projects={projects}
+            people={people}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Your Tasks Section */}
+      {myRootTasks.length > 0 && (
+        <>
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-sm font-medium">Your Tasks</span>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <Circle className="h-3 w-3 text-slate-400" />
+                <Play className="h-3 w-3 text-green-500 fill-green-500" />
+                Active: {myActiveTasks.length}
+              </Badge>
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <Ban className="h-3 w-3 text-red-500" />
+                Blocked: {myBlockedTasks.length}
+              </Badge>
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <Check className="h-3 w-3 text-blue-500" />
+                Closed: {myClosedTasks.length}
+              </Badge>
+            </div>
           </div>
+
+          {myActiveTasks.length > 0 && (
+            <Collapsible defaultOpen={true}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <ChevronRight className="h-4 w-4" />
+                      <Circle className="h-4 w-4 text-slate-400" />
+                      <Play className="h-4 w-4 text-green-500 fill-green-500" />
+                      To-do / In-progress ({myActiveTasks.length})
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    {myActiveTasks.map(task => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        allTasks={myTasks}
+                        projects={projects}
+                        people={people}
+                        onUpdate={handleUpdateTask}
+                        onDelete={handleDeleteTask}
+                        onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                        onIndent={handleIndent}
+                        onOutdent={handleOutdent}
+                        userEmail={userEmail}
+                        showDetailsToggle={true}
+                      />
+                    ))}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          )}
+
+          {myBlockedTasks.length > 0 && (
+            <Collapsible defaultOpen={true}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <ChevronRight className="h-4 w-4" />
+                      <Ban className="h-4 w-4 text-red-500" />
+                      Blockers ({myBlockedTasks.length})
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    {myBlockedTasks.map(task => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        allTasks={myTasks}
+                        projects={projects}
+                        people={people}
+                        onUpdate={handleUpdateTask}
+                        onDelete={handleDeleteTask}
+                        onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                        onIndent={handleIndent}
+                        onOutdent={handleOutdent}
+                        userEmail={userEmail}
+                        showDetailsToggle={true}
+                      />
+                    ))}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          )}
+
+          {myClosedTasks.length > 0 && (
+            <Collapsible defaultOpen={false}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <ChevronRight className="h-4 w-4" />
+                      <Check className="h-4 w-4 text-blue-500" />
+                      Closed ({myClosedTasks.length})
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    {myClosedTasks.map(task => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        allTasks={myTasks}
+                        projects={projects}
+                        people={people}
+                        onUpdate={handleUpdateTask}
+                        onDelete={handleDeleteTask}
+                        onCreateSubtask={(parentId, title, parsed) => handleCreateTask(title, parsed, parentId)}
+                        onIndent={handleIndent}
+                        onOutdent={handleOutdent}
+                        userEmail={userEmail}
+                        showDetailsToggle={true}
+                      />
+                    ))}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          )}
+        </>
+      )}
+
+      {myRootTasks.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No Tasks Yet</h3>
+            <p className="text-muted-foreground">
+              Create your first task using the form above.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
