@@ -1209,7 +1209,7 @@ export function TaskRow({
               </Badge>
             )}
             
-            {/* Show effective priority for parent tasks, own priority for leaf tasks */}
+            {/* Show effective priority for parent tasks (read-only), editable for leaf tasks */}
             {hasSubtasks ? (
               effectivePriority && effectivePriority !== 'normal' && (
                 <Badge 
@@ -1221,14 +1221,54 @@ export function TaskRow({
                 </Badge>
               )
             ) : (
-              task.priority && task.priority !== 'normal' && (
-                <Badge 
-                  variant="secondary" 
-                  className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white ${priorityColors[task.priority] || 'bg-gray-400'}`}
-                >
-                  {priorityLabels[task.priority] || task.priority}
-                </Badge>
-              )
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  {task.priority && task.priority !== 'normal' ? (
+                    <button
+                      className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white rounded-full inline-flex items-center cursor-pointer hover:opacity-80 ${priorityColors[task.priority] || 'bg-gray-400'}`}
+                      data-testid={`priority-trigger-${task.id}`}
+                    >
+                      {priorityLabels[task.priority] || task.priority}
+                    </button>
+                  ) : (
+                    <button
+                      className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
+                      data-testid={`priority-trigger-${task.id}`}
+                    >
+                      +priority
+                    </button>
+                  )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-32">
+                  <DropdownMenuItem
+                    onClick={() => onUpdate(task.id, { priority: 'high' })}
+                    className="gap-2"
+                    data-testid={`select-priority-high-${task.id}`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${priorityColors['high']}`} />
+                    High
+                    {task.priority === 'high' && <Check className="h-3 w-3 ml-auto" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onUpdate(task.id, { priority: 'medium' })}
+                    className="gap-2"
+                    data-testid={`select-priority-medium-${task.id}`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${priorityColors['medium']}`} />
+                    Medium
+                    {task.priority === 'medium' && <Check className="h-3 w-3 ml-auto" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onUpdate(task.id, { priority: 'normal' })}
+                    className="gap-2"
+                    data-testid={`select-priority-normal-${task.id}`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-gray-400" />
+                    Normal
+                    {(!task.priority || task.priority === 'normal') && <Check className="h-3 w-3 ml-auto" />}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             
             {project && !hideProjectBadge && (
