@@ -229,13 +229,13 @@ export default function AllTasksByProject() {
                     <div className="border rounded-lg mt-2 bg-card space-y-2 p-2">
                       {activeTasks.length > 0 && (
                         <Collapsible defaultOpen={true}>
-                          <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
-                            <ChevronRight className="h-3 w-3" />
-                            <Play className="h-3 w-3" />
+                          <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left">
+                            <ChevronRight className="h-4 w-4" />
+                            <Play className="h-4 w-4 text-green-500 fill-green-500" />
                             To-do / In-progress ({activeTasks.length})
                           </CollapsibleTrigger>
                           <CollapsibleContent>
-                            <div className="border rounded-md bg-background">
+                            <div className="border rounded-md bg-background mt-1">
                               {activeTasks.map(task => (
                                 <TaskRow
                                   key={task.id}
@@ -260,13 +260,13 @@ export default function AllTasksByProject() {
                       
                       {blockedTasks.length > 0 && (
                         <Collapsible defaultOpen={true}>
-                          <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
-                            <ChevronRight className="h-3 w-3" />
-                            <Ban className="h-3 w-3 text-red-500" />
+                          <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left">
+                            <ChevronRight className="h-4 w-4" />
+                            <Ban className="h-4 w-4 text-red-500" />
                             Blockers ({blockedTasks.length})
                           </CollapsibleTrigger>
                           <CollapsibleContent>
-                            <div className="border rounded-md">
+                            <div className="border rounded-md mt-1">
                               {blockedTasks.map(task => (
                                 <TaskRow
                                   key={task.id}
@@ -291,13 +291,13 @@ export default function AllTasksByProject() {
                       
                       {closedTasks.length > 0 && (
                         <Collapsible defaultOpen={false}>
-                          <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
-                            <ChevronRight className="h-3 w-3" />
-                            <Check className="h-3 w-3" />
+                          <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left">
+                            <ChevronRight className="h-4 w-4" />
+                            <Check className="h-4 w-4 text-blue-500" />
                             Closed ({closedTasks.length})
                           </CollapsibleTrigger>
                           <CollapsibleContent>
-                            <div className="border rounded-md bg-muted/30">
+                            <div className="border rounded-md bg-muted/30 mt-1">
                               {closedTasks.map(task => (
                                 <TaskRow
                                   key={task.id}
@@ -348,13 +348,13 @@ export default function AllTasksByProject() {
                     <div className="border rounded-lg mt-2 bg-card space-y-2 p-2">
                       {activeUnassigned.length > 0 && (
                         <Collapsible defaultOpen={true}>
-                          <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
-                            <ChevronRight className="h-3 w-3" />
-                            <Play className="h-3 w-3" />
+                          <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left">
+                            <ChevronRight className="h-4 w-4" />
+                            <Play className="h-4 w-4 text-green-500 fill-green-500" />
                             To-do / In-progress ({activeUnassigned.length})
                           </CollapsibleTrigger>
                           <CollapsibleContent>
-                            <div className="border rounded-md bg-background">
+                            <div className="border rounded-md bg-background mt-1">
                               {activeUnassigned.map(task => (
                                 <TaskRow
                                   key={task.id}
@@ -379,13 +379,13 @@ export default function AllTasksByProject() {
                       
                       {blockedUnassigned.length > 0 && (
                         <Collapsible defaultOpen={true}>
-                          <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
-                            <ChevronRight className="h-3 w-3" />
-                            <Ban className="h-3 w-3 text-red-500" />
+                          <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left">
+                            <ChevronRight className="h-4 w-4" />
+                            <Ban className="h-4 w-4 text-red-500" />
                             Blockers ({blockedUnassigned.length})
                           </CollapsibleTrigger>
                           <CollapsibleContent>
-                            <div className="border rounded-md">
+                            <div className="border rounded-md mt-1">
                               {blockedUnassigned.map(task => (
                                 <TaskRow
                                   key={task.id}
@@ -410,13 +410,13 @@ export default function AllTasksByProject() {
                       
                       {closedUnassigned.length > 0 && (
                         <Collapsible defaultOpen={false}>
-                          <CollapsibleTrigger className="flex items-center gap-2 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left">
-                            <ChevronRight className="h-3 w-3" />
-                            <Check className="h-3 w-3" />
+                          <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left">
+                            <ChevronRight className="h-4 w-4" />
+                            <Check className="h-4 w-4 text-blue-500" />
                             Closed ({closedUnassigned.length})
                           </CollapsibleTrigger>
                           <CollapsibleContent>
-                            <div className="border rounded-md bg-muted/30">
+                            <div className="border rounded-md bg-muted/30 mt-1">
                               {closedUnassigned.map(task => (
                                 <TaskRow
                                   key={task.id}
