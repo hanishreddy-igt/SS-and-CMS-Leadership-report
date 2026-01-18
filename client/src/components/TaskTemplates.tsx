@@ -295,19 +295,25 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
                           ) : (
                             <div className="space-y-2">
                               {parentAssignees.map(person => {
-                                const isSelected = sub.assignedTo?.includes(person.id) ?? false;
+                                // When inheriting, all are conceptually selected
+                                const isSelected = inheritsFromParent || (sub.assignedTo?.includes(person.id) ?? false);
                                 return (
                                   <div
                                     key={person.id}
                                     className="flex items-center gap-2 p-1 rounded hover-elevate cursor-pointer"
                                     onClick={() => {
                                       const updated = [...formData.subTemplates];
-                                      const currentAssigned = sub.assignedTo || [];
+                                      // If inheriting, start from full parent list; otherwise use current
+                                      const currentAssigned = inheritsFromParent 
+                                        ? parentAssignees.map(p => p.id)
+                                        : (sub.assignedTo || []);
                                       let newAssigned: string[];
                                       
                                       if (isSelected) {
+                                        // Deselect this person
                                         newAssigned = currentAssigned.filter(id => id !== person.id);
                                       } else {
+                                        // Select this person
                                         newAssigned = [...currentAssigned, person.id];
                                       }
                                       
@@ -322,9 +328,9 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
                                     data-testid={`subtask-${index}-assignee-${person.id}`}
                                   >
                                     <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                                      isSelected || inheritsFromParent ? 'bg-primary border-primary' : 'border-muted-foreground'
+                                      isSelected ? 'bg-primary border-primary' : 'border-muted-foreground'
                                     }`}>
-                                      {(isSelected || inheritsFromParent) && <Check className="h-3 w-3 text-primary-foreground" />}
+                                      {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                                     </div>
                                     <span className="text-sm">{person.name}</span>
                                   </div>
@@ -665,16 +671,43 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
               <h4 className="text-sm font-medium text-muted-foreground mb-1">
                 Sub-tasks ({subTemplates.length})
               </h4>
-              <div className="space-y-1 p-2 bg-muted/50 rounded">
-                {subTemplates.map((sub, index) => (
-                  <div key={sub.id} className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">{index + 1}.</span>
-                    <span>{sub.title}</span>
-                    <Badge variant="outline" className="text-xs ml-auto">
-                      {sub.priority || 'medium'}
-                    </Badge>
-                  </div>
-                ))}
+              <div className="space-y-2 p-2 bg-muted/50 rounded">
+                {subTemplates.map((sub, index) => {
+                  const hasSpecificAssignees = sub.assignedTo && sub.assignedTo.length > 0;
+                  const subAssignees = hasSpecificAssignees 
+                    ? people.filter(p => sub.assignedTo?.includes(p.id))
+                    : assignedPeople;
+                  
+                  return (
+                    <div key={sub.id} className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">{index + 1}.</span>
+                        <span className="flex-1">{sub.title}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {sub.priority || 'medium'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1 ml-5 flex-wrap">
+                        {hasSpecificAssignees ? (
+                          <>
+                            {subAssignees.map(person => (
+                              <Badge key={person.id} variant="secondary" className="text-xs gap-1">
+                                {person.name}
+                              </Badge>
+                            ))}
+                            <span className="text-xs text-muted-foreground">
+                              ({subAssignees.length} of {assignedPeople.length})
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            All assignees
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
