@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -30,6 +30,19 @@ export default function AllTasksByProject() {
   const [leadFilter, setLeadFilter] = useState<string>('all');
   const [accountFilter, setAccountFilter] = useState<string>('all');
   const [memberFilter, setMemberFilter] = useState<string>('all');
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close task details when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpenTaskId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const { data: allTasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ['/api/tasks'],
@@ -210,7 +223,7 @@ export default function AllTasksByProject() {
   }
 
   return (
-    <Card data-testid="all-tasks-section">
+    <Card ref={containerRef} data-testid="all-tasks-section">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -348,6 +361,8 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
+                                  isDetailsOpen={openTaskId === task.id}
+                                  onOpenDetails={setOpenTaskId}
                                 />
                               ))}
                             </div>
@@ -380,6 +395,8 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
+                                  isDetailsOpen={openTaskId === task.id}
+                                  onOpenDetails={setOpenTaskId}
                                 />
                               ))}
                             </div>
@@ -412,6 +429,8 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
+                                  isDetailsOpen={openTaskId === task.id}
+                                  onOpenDetails={setOpenTaskId}
                                 />
                               ))}
                             </div>
@@ -470,6 +489,8 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
+                                  isDetailsOpen={openTaskId === task.id}
+                                  onOpenDetails={setOpenTaskId}
                                 />
                               ))}
                             </div>
@@ -502,6 +523,8 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
+                                  isDetailsOpen={openTaskId === task.id}
+                                  onOpenDetails={setOpenTaskId}
                                 />
                               ))}
                             </div>
@@ -534,6 +557,8 @@ export default function AllTasksByProject() {
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
                                   showDetailsToggle={true}
+                                  isDetailsOpen={openTaskId === task.id}
+                                  onOpenDetails={setOpenTaskId}
                                 />
                               ))}
                             </div>

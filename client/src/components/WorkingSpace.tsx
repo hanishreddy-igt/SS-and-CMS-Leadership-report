@@ -728,6 +728,8 @@ export interface TaskRowProps {
   hideProjectBadge?: boolean;
   hiddenAssigneeIds?: string[];
   showDetailsToggle?: boolean;
+  isDetailsOpen?: boolean;
+  onOpenDetails?: (taskId: string) => void;
 }
 
 export function TaskRow({ 
@@ -744,7 +746,9 @@ export function TaskRow({
   userEmail,
   hideProjectBadge = false,
   hiddenAssigneeIds = [],
-  showDetailsToggle = false
+  showDetailsToggle = false,
+  isDetailsOpen,
+  onOpenDetails
 }: TaskRowProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -754,7 +758,9 @@ export function TaskRow({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
   const [panelTrigger, setPanelTrigger] = useState<'notes' | 'assignee' | 'menu' | null>(null);
-  const [showDetails, setShowDetails] = useState(!showDetailsToggle);
+  
+  // Use external control if provided, otherwise fall back to internal state
+  const showDetails = showDetailsToggle ? (isDetailsOpen ?? false) : true;
   const inputRef = useRef<HTMLInputElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const notesButtonRef = useRef<HTMLButtonElement>(null);
@@ -1100,7 +1106,9 @@ export function TaskRow({
                 className={`text-sm cursor-text block ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}
                 onClick={() => {
                   setIsEditing(true);
-                  if (showDetailsToggle) setShowDetails(true);
+                  if (showDetailsToggle && onOpenDetails) {
+                    onOpenDetails(task.id);
+                  }
                 }}
                 data-testid={`task-title-${task.id}`}
               >
@@ -1329,6 +1337,19 @@ export function TaskRow({
 export default function WorkingSpace() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const allTasksContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close task details when clicking outside the All Tasks section
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (allTasksContainerRef.current && !allTasksContainerRef.current.contains(event.target as Node)) {
+        setOpenTaskId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const { data: allTasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ['/api/tasks'],
@@ -1498,7 +1519,7 @@ export default function WorkingSpace() {
 
       {/* Your Tasks Section */}
       {myRootTasks.length > 0 && (
-        <>
+        <div ref={allTasksContainerRef}>
           <div className="flex items-center gap-4 flex-wrap">
             <span className="text-sm font-medium">Your Tasks</span>
             <div className="flex items-center gap-2">
@@ -1543,6 +1564,8 @@ export default function WorkingSpace() {
                         onOutdent={handleOutdent}
                         userEmail={userEmail}
                         showDetailsToggle={true}
+                        isDetailsOpen={openTaskId === task.id}
+                        onOpenDetails={setOpenTaskId}
                       />
                     ))}
                   </div>
@@ -1574,6 +1597,8 @@ export default function WorkingSpace() {
                         onOutdent={handleOutdent}
                         userEmail={userEmail}
                         showDetailsToggle={true}
+                        isDetailsOpen={openTaskId === task.id}
+                        onOpenDetails={setOpenTaskId}
                       />
                     ))}
                   </div>
@@ -1605,6 +1630,8 @@ export default function WorkingSpace() {
                         onOutdent={handleOutdent}
                         userEmail={userEmail}
                         showDetailsToggle={true}
+                        isDetailsOpen={openTaskId === task.id}
+                        onOpenDetails={setOpenTaskId}
                       />
                     ))}
                   </div>
@@ -1612,7 +1639,7 @@ export default function WorkingSpace() {
               </Collapsible>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {myRootTasks.length === 0 && (
