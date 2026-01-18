@@ -962,47 +962,7 @@ export function TaskRow({
                   onBlur={() => {
                     setTimeout(() => {
                       setSuggestion({ type: null, startIndex: 0, query: '' });
-                      if (editValue.trim() && editValue !== task.title) {
-                        const parsed = parseInlineTags(editValue.trim());
-                        const updates: Partial<Task> = { title: parsed.text || editValue.trim() };
-                        
-                        if (parsed.statusTag) {
-                          updates.status = parsed.statusTag;
-                        }
-                        if (parsed.projectTag) {
-                          const matchedProject = projects.find(p => 
-                            p.name.toLowerCase().replace(/\s+/g, '').includes(parsed.projectTag!.toLowerCase()) ||
-                            p.name.toLowerCase().includes(parsed.projectTag!.toLowerCase())
-                          );
-                          if (matchedProject) {
-                            updates.projectId = matchedProject.id;
-                          }
-                        }
-                        if (parsed.personTags.length > 0) {
-                          const matchedPeople = people.filter(p => 
-                            parsed.personTags.some(tag => 
-                              p.name.toLowerCase().includes(tag.toLowerCase()) ||
-                              p.name.split(' ')[0].toLowerCase() === tag.toLowerCase()
-                            )
-                          );
-                          if (matchedPeople.length > 0) {
-                            const existingAssignees = task.assignedTo || [];
-                            const newAssigneeIds = matchedPeople.map(p => p.id);
-                            const mergedAssignees = Array.from(new Set([...existingAssignees, ...newAssigneeIds]));
-                            updates.assignedTo = mergedAssignees;
-                          }
-                        }
-                        if (parsed.noteText) {
-                          const newNote: TaskNote = {
-                            content: parsed.noteText,
-                            author: userEmail,
-                            timestamp: new Date().toISOString(),
-                          };
-                          updates.notes = [...notes, newNote];
-                        }
-                        
-                        onUpdate(task.id, updates);
-                      }
+                      setEditValue(task.title);
                       setIsEditing(false);
                     }, 150);
                   }}
