@@ -698,7 +698,12 @@ export function TaskRow({
 
   const subtasks = allTasks.filter(t => t.parentTaskId === task.id);
   const hasSubtasks = subtasks.length > 0;
-  const project = task.projectId ? projects.find(p => p.id === task.projectId) : null;
+  
+  // For sub-tasks, inherit project from parent if not set
+  const parentTask = task.parentTaskId ? allTasks.find(t => t.id === task.parentTaskId) : null;
+  const effectiveProjectId = task.projectId || parentTask?.projectId;
+  const project = effectiveProjectId ? projects.find(p => p.id === effectiveProjectId) : null;
+  const isProjectInherited = !task.projectId && parentTask?.projectId;
   const assignees = people.filter(p => task.assignedTo?.includes(p.id));
   const displayAssignees = assignees.filter(p => !hiddenAssigneeIds.includes(p.id));
   const notes = (task.notes || []) as TaskNote[];
@@ -985,13 +990,18 @@ export function TaskRow({
           </button>
           
           {project && !hideProjectBadge && (
-            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0">
+            <Badge 
+              variant="outline" 
+              className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 ${isProjectInherited ? 'opacity-60' : ''}`}
+              title={isProjectInherited ? 'Inherited from parent task' : undefined}
+            >
               <FolderKanban className="h-2.5 w-2.5" />
               {project.name}
             </Badge>
           )}
           
-          {!project && (
+          {/* Only show +project for root tasks or sub-tasks whose parent has no project */}
+          {!project && !parentTask?.projectId && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
