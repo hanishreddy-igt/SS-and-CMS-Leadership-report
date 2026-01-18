@@ -1471,26 +1471,19 @@ export default function WorkingSpace() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card data-testid="your-workspace-section">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <User className="h-5 w-5" />
-            Your Workspace
-          </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">
-            Use @@project to link, @name to assign, #status to set status, $priority to set priority, // for notes. Press TAB on a task to create a sub-task.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-lg bg-card">
-            <InlineTaskInput 
-              onSubmit={(title, parsed) => handleCreateTask(title, parsed)} 
-              placeholder="Type a task... (@@project @person #status $priority //note)"
-              autoFocus
-              projects={projects}
-              people={people}
-            />
+    <div className="space-y-4 pt-2" data-testid="your-workspace-section">
+      <p className="text-xs text-muted-foreground">
+        Use @@project to link, @name to assign, #status to set status, $priority to set priority, // for notes. Press TAB on a task to create a sub-task.
+      </p>
+      
+      <div className="border rounded-lg bg-card">
+        <InlineTaskInput 
+          onSubmit={(title, parsed) => handleCreateTask(title, parsed)} 
+          placeholder="Type a task... (@@project @person #status $priority //note)"
+          autoFocus
+          projects={projects}
+          people={people}
+        />
             
             {myRootTasks.length > 0 && (() => {
               const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
@@ -1603,8 +1596,6 @@ export default function WorkingSpace() {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
