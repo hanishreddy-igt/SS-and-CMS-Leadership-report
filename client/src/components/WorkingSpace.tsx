@@ -758,20 +758,6 @@ export function TaskRow({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
   const [panelTrigger, setPanelTrigger] = useState<'notes' | 'assignee' | 'menu' | null>(null);
-  const [overlayOpen, setOverlayOpen] = useState(false);
-  
-  // Track when overlays open/close to prevent details from closing
-  const handleOverlayChange = (open: boolean) => {
-    setOverlayOpen(open);
-    // Cancel any pending close when overlay opens
-    if (open && blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
-  };
-  
-  // Combined interaction lock: don't close details when any overlay or panel is open
-  const interactionLock = overlayOpen || activePanel !== null;
   
   // Use external control if provided, otherwise fall back to always showing details
   const showDetails = showDetailsToggle ? (openTaskId === task.id) : true;
@@ -779,72 +765,8 @@ export function TaskRow({
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const notesButtonRef = useRef<HTMLButtonElement>(null);
   const assigneeButtonRef = useRef<HTMLButtonElement>(null);
-  const taskRowRef = useRef<HTMLDivElement>(null);
-  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Focus-based expand/collapse: close details when focus leaves the task row
-  useEffect(() => {
-    if (!showDetailsToggle || !onOpenDetails) return;
-    
-    const handleFocusIn = () => {
-      // Cancel any pending close when focus returns to this row
-      if (blurTimeoutRef.current) {
-        clearTimeout(blurTimeoutRef.current);
-        blurTimeoutRef.current = null;
-      }
-      // Open this task's details when any element in the row gets focus
-      if (openTaskId !== task.id) {
-        onOpenDetails(task.id);
-      }
-    };
-
-    const handleFocusOut = () => {
-      // Debounce the close to avoid flicker during focus transitions
-      blurTimeoutRef.current = setTimeout(() => {
-        // Don't close if any overlay or panel is open
-        if (interactionLock) return;
-        
-        // Double-check focus hasn't returned to this row
-        if (!taskRowRef.current?.contains(document.activeElement)) {
-          // Also check if focus is in a Radix portal
-          const activeEl = document.activeElement as Element | null;
-          const isInPortal = activeEl && (
-            activeEl.closest?.('[data-radix-popper-content-wrapper]') ||
-            activeEl.closest?.('[role="dialog"]') ||
-            activeEl.closest?.('[role="listbox"]') ||
-            activeEl.closest?.('[role="menu"]')
-          );
-          if (!isInPortal) {
-            onOpenDetails(null);
-            setIsEditing(false);
-          }
-        }
-      }, 150);
-    };
-
-    const rowElement = taskRowRef.current;
-    if (rowElement) {
-      rowElement.addEventListener('focusin', handleFocusIn);
-      rowElement.addEventListener('focusout', handleFocusOut);
-    }
-
-    return () => {
-      if (rowElement) {
-        rowElement.removeEventListener('focusin', handleFocusIn);
-        rowElement.removeEventListener('focusout', handleFocusOut);
-      }
-      if (blurTimeoutRef.current) {
-        clearTimeout(blurTimeoutRef.current);
-      }
-    };
-  }, [showDetailsToggle, onOpenDetails, openTaskId, task.id, interactionLock]);
 
   const openPanel = (panel: 'assignee' | 'dueDate' | 'notes', trigger: 'notes' | 'assignee' | 'menu') => {
-    // Cancel any pending close when opening a panel
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
     setActivePanel(panel);
     setPanelTrigger(trigger);
   };
@@ -1111,7 +1033,7 @@ export function TaskRow({
   };
 
   return (
-    <div ref={taskRowRef} data-testid={`task-row-${task.id}`} className={`relative ${isEditing ? 'z-50' : ''}`}>
+    <div data-testid={`task-row-${task.id}`} className={`relative ${isEditing ? 'z-50' : ''}`}>
       <div 
         className={`group py-1.5 rounded hover-elevate ${isOverdue ? 'bg-destructive/5' : ''}`}
         style={{ paddingLeft: depth > 0 ? `${depth * 24 + 8}px` : '8px', paddingRight: '8px' }}
@@ -1239,7 +1161,7 @@ export function TaskRow({
                 </Badge>
               )
             ) : (
-              <DropdownMenu onOpenChange={handleOverlayChange}>
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   {task.priority && task.priority !== 'normal' ? (
                     <button
@@ -1301,7 +1223,7 @@ export function TaskRow({
             )}
             
             {!project && !parentTask?.projectId && (
-              <DropdownMenu onOpenChange={handleOverlayChange}>
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
@@ -1339,7 +1261,7 @@ export function TaskRow({
             
             <div className="flex-1" />
             
-            <DropdownMenu onOpenChange={handleOverlayChange}>
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   ref={menuButtonRef}
