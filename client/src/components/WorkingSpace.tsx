@@ -758,6 +758,12 @@ export function TaskRow({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
   const [panelTrigger, setPanelTrigger] = useState<'notes' | 'assignee' | 'menu' | null>(null);
+  const [overlayOpenCount, setOverlayOpenCount] = useState(0);
+  
+  // Track when overlays open/close to prevent details from closing
+  const handleOverlayChange = (open: boolean) => {
+    setOverlayOpenCount(prev => open ? prev + 1 : Math.max(0, prev - 1));
+  };
   
   // Use external control if provided, otherwise fall back to always showing details
   const showDetails = showDetailsToggle ? (openTaskId === task.id) : true;
@@ -784,29 +790,28 @@ export function TaskRow({
       }
     };
 
-    const handleFocusOut = (e: FocusEvent) => {
-      // Check if the new focus target is still within this task row
-      const relatedTarget = e.relatedTarget as Node | null;
-      const isStillWithinRow = taskRowRef.current?.contains(relatedTarget);
-      
-      // Also check if focus went to a popover/portal (outside DOM but logically part of this row)
-      const isInPopover = relatedTarget && (
-        (relatedTarget as Element).closest?.('[data-radix-popper-content-wrapper]') ||
-        (relatedTarget as Element).closest?.('[role="dialog"]') ||
-        (relatedTarget as Element).closest?.('[role="listbox"]') ||
-        (relatedTarget as Element).closest?.('[role="menu"]')
-      );
-      
-      if (!isStillWithinRow && !isInPopover) {
-        // Debounce the close to avoid flicker during focus transitions
-        blurTimeoutRef.current = setTimeout(() => {
-          // Double-check focus hasn't returned to this row
-          if (!taskRowRef.current?.contains(document.activeElement)) {
+    const handleFocusOut = () => {
+      // Debounce the close to avoid flicker during focus transitions
+      blurTimeoutRef.current = setTimeout(() => {
+        // Don't close if any overlay (dropdown, popover, calendar) is open
+        if (overlayOpenCount > 0) return;
+        
+        // Double-check focus hasn't returned to this row
+        if (!taskRowRef.current?.contains(document.activeElement)) {
+          // Also check if focus is in a Radix portal
+          const activeEl = document.activeElement as Element | null;
+          const isInPortal = activeEl && (
+            activeEl.closest?.('[data-radix-popper-content-wrapper]') ||
+            activeEl.closest?.('[role="dialog"]') ||
+            activeEl.closest?.('[role="listbox"]') ||
+            activeEl.closest?.('[role="menu"]')
+          );
+          if (!isInPortal) {
             onOpenDetails(null);
             setIsEditing(false);
           }
-        }, 150);
-      }
+        }
+      }, 150);
     };
 
     const rowElement = taskRowRef.current;
@@ -824,7 +829,7 @@ export function TaskRow({
         clearTimeout(blurTimeoutRef.current);
       }
     };
-  }, [showDetailsToggle, onOpenDetails, openTaskId, task.id]);
+  }, [showDetailsToggle, onOpenDetails, openTaskId, task.id, overlayOpenCount]);
 
   const openPanel = (panel: 'assignee' | 'dueDate' | 'notes', trigger: 'notes' | 'assignee' | 'menu') => {
     setActivePanel(panel);
@@ -1221,7 +1226,7 @@ export function TaskRow({
                 </Badge>
               )
             ) : (
-              <DropdownMenu>
+              <DropdownMenu onOpenChange={handleOverlayChange}>
                 <DropdownMenuTrigger asChild>
                   {task.priority && task.priority !== 'normal' ? (
                     <button
@@ -1283,7 +1288,7 @@ export function TaskRow({
             )}
             
             {!project && !parentTask?.projectId && (
-              <DropdownMenu>
+              <DropdownMenu onOpenChange={handleOverlayChange}>
                 <DropdownMenuTrigger asChild>
                   <button
                     className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
@@ -1321,7 +1326,7 @@ export function TaskRow({
             
             <div className="flex-1" />
             
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={handleOverlayChange}>
               <DropdownMenuTrigger asChild>
                 <Button
                   ref={menuButtonRef}
