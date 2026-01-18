@@ -175,8 +175,8 @@ const priorityLabels: Record<string, string> = {
 };
 
 const PRIORITY_OPTIONS = [
-  { value: 'normal', label: 'Normal' },
   { value: 'medium', label: 'Medium' },
+  { value: 'normal', label: 'Normal' },
   { value: 'asap', label: 'ASAP' },
 ];
 
