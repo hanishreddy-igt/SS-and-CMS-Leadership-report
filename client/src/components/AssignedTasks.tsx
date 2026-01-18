@@ -205,7 +205,7 @@ export default function AssignedTasks() {
         </Badge>
       </div>
 
-      <div className="border rounded-lg bg-card space-y-4 p-3">
+      <div className="border rounded-lg bg-card space-y-8 p-4">
         {activeTasks.length > 0 && (
           <Collapsible open={isActiveExpanded} onOpenChange={setIsActiveExpanded}>
             <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
