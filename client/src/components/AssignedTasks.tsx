@@ -205,21 +205,17 @@ export default function AssignedTasks() {
         </Badge>
       </div>
 
-      {activeTasks.length > 0 && (
-        <Collapsible open={isActiveExpanded} onOpenChange={setIsActiveExpanded}>
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg group">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
-                  <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
-                  <Play className="h-4 w-4 text-green-500 fill-green-500" />
-                  To-do / In-progress ({activeTasks.length})
-                </CardTitle>
-              </CardHeader>
+      <div className="border rounded-lg bg-card space-y-2 p-2">
+        {activeTasks.length > 0 && (
+          <Collapsible open={isActiveExpanded} onOpenChange={setIsActiveExpanded}>
+            <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
+              <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+              <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
+              <Play className="h-4 w-4 text-green-500 fill-green-500" />
+              To-do / In-progress ({activeTasks.length})
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="pt-0">
+              <div className="border rounded-md bg-background mt-1">
                 {activeTasks.map(task => (
                   <TaskRow
                     key={task.id}
@@ -235,27 +231,21 @@ export default function AssignedTasks() {
                     showDetailsToggle={true}
                   />
                 ))}
-              </CardContent>
+              </div>
             </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
+          </Collapsible>
+        )}
 
-      {blockedTasks.length > 0 && (
-        <Collapsible open={isBlockedExpanded} onOpenChange={setIsBlockedExpanded}>
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg group">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
-                  <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
-                  <Ban className="h-4 w-4 text-red-500" />
-                  Blockers ({blockedTasks.length})
-                </CardTitle>
-              </CardHeader>
+        {blockedTasks.length > 0 && (
+          <Collapsible open={isBlockedExpanded} onOpenChange={setIsBlockedExpanded}>
+            <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
+              <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+              <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
+              <Ban className="h-4 w-4 text-red-500" />
+              Blockers ({blockedTasks.length})
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="pt-0">
+              <div className="border rounded-md mt-1">
                 {blockedTasks.map(task => (
                   <TaskRow
                     key={task.id}
@@ -271,27 +261,21 @@ export default function AssignedTasks() {
                     showDetailsToggle={true}
                   />
                 ))}
-              </CardContent>
+              </div>
             </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
+          </Collapsible>
+        )}
 
-      {closedTasks.length > 0 && (
-        <Collapsible open={isClosedExpanded} onOpenChange={setIsClosedExpanded}>
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="py-3 cursor-pointer hover-elevate rounded-lg group">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
-                  <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
-                  <Check className="h-4 w-4 text-blue-500" />
-                  Closed ({closedTasks.length})
-                </CardTitle>
-              </CardHeader>
+        {closedTasks.length > 0 && (
+          <Collapsible open={isClosedExpanded} onOpenChange={setIsClosedExpanded}>
+            <CollapsibleTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-muted/50 hover:bg-muted w-full text-left group">
+              <Plus className="h-4 w-4 group-data-[state=open]:hidden" />
+              <Minus className="h-4 w-4 hidden group-data-[state=open]:block" />
+              <Check className="h-4 w-4 text-blue-500" />
+              Closed ({closedTasks.length})
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="pt-0">
+              <div className="border rounded-md bg-muted/30 mt-1">
                 {closedTasks.map(task => (
                   <TaskRow
                     key={task.id}
@@ -307,11 +291,11 @@ export default function AssignedTasks() {
                     showDetailsToggle={true}
                   />
                 ))}
-              </CardContent>
+              </div>
             </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
+          </Collapsible>
+        )}
+      </div>
     </div>
   );
 }
