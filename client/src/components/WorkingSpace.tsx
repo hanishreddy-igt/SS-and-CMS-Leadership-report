@@ -380,6 +380,10 @@ function InlineTaskInput({
         setSuggestion({ type: null, startIndex: 0, query: '' });
       }
     }
+    if (e.key === 'Backspace' && value === '' && onCancel) {
+      e.preventDefault();
+      onCancel();
+    }
     if (e.key === 'Tab' && (!suggestion.type || suggestions.length === 0)) {
       e.preventDefault();
       if (e.shiftKey) {
