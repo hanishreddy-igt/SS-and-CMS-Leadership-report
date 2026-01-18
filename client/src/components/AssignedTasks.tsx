@@ -186,7 +186,7 @@ export default function AssignedTasks() {
       <div className="flex items-center gap-4 flex-wrap">
         <Badge variant="secondary" className="gap-1">
           <Circle className="h-3 w-3 text-slate-400" />
-          <Play className="h-3 w-3 text-blue-500 fill-blue-500" />
+          <Play className="h-3 w-3 text-green-500 fill-green-500" />
           Active: {activeTasks.length}
         </Badge>
         <Badge variant="secondary" className="gap-1">
@@ -194,7 +194,7 @@ export default function AssignedTasks() {
           Blockers: {blockedTasks.length}
         </Badge>
         <Badge variant="secondary" className="gap-1">
-          <Check className="h-3 w-3 text-green-500" />
+          <Check className="h-3 w-3 text-blue-500" />
           Closed: {closedTasks.length}
         </Badge>
       </div>
@@ -204,7 +204,7 @@ export default function AssignedTasks() {
           <CardHeader className="py-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <Circle className="h-4 w-4 text-slate-400" />
-              <Play className="h-4 w-4 text-blue-500 fill-blue-500" />
+              <Play className="h-4 w-4 text-green-500 fill-green-500" />
               To-do / In-progress ({activeTasks.length})
             </CardTitle>
           </CardHeader>
@@ -267,7 +267,7 @@ export default function AssignedTasks() {
                   ) : (
                     <ChevronRight className="h-4 w-4" />
                   )}
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-blue-500" />
                   Closed ({closedTasks.length})
                 </CardTitle>
               </CardHeader>

@@ -53,9 +53,9 @@ import type { Task, Project, Person } from '@shared/schema';
 
 const statusColors: Record<string, string> = {
   todo: 'bg-slate-500',
-  'in-progress': 'bg-blue-500',
+  'in-progress': 'bg-green-500',
   blocked: 'bg-red-500',
-  done: 'bg-green-500',
+  done: 'bg-blue-500',
   cancelled: 'bg-gray-400',
 };
 
@@ -101,7 +101,7 @@ function StatusIcon({ status, onClick, taskId, disabled }: { status: string; onC
     case 'in-progress':
       return disabled ? (
         <div className="p-0.5" title={disabledTitle} data-testid={testId}>
-          <Play className={`${iconClass} text-blue-500 fill-blue-500`} />
+          <Play className={`${iconClass} text-green-500 fill-green-500`} />
         </div>
       ) : (
         <button 
@@ -111,7 +111,7 @@ function StatusIcon({ status, onClick, taskId, disabled }: { status: string; onC
           aria-label="Status: In Progress. Click to change to Done"
           data-testid={testId}
         >
-          <Play className={`${iconClass} text-blue-500 fill-blue-500`} />
+          <Play className={`${iconClass} text-green-500 fill-green-500`} />
         </button>
       );
     case 'blocked':
@@ -131,7 +131,7 @@ function StatusIcon({ status, onClick, taskId, disabled }: { status: string; onC
           title={disabled ? disabledTitle : "Done"}
           data-testid={testId}
         >
-          <Check className={`h-4 w-4 text-green-500 ${disabled ? 'opacity-60' : ''}`} />
+          <Check className={`h-4 w-4 text-blue-500 ${disabled ? 'opacity-60' : ''}`} />
         </div>
       );
     default:
