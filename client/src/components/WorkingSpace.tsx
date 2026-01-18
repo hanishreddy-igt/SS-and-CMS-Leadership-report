@@ -1101,12 +1101,7 @@ export function TaskRow({
                 : '+assign'}
             </button>
             
-            <span className="text-[10px] text-muted-foreground flex-shrink-0">
-              Created {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
-            </span>
-            <span className="text-[10px] text-muted-foreground flex-shrink-0">
-              Updated {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
-            </span>
+            <div className="flex-1" />
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1137,6 +1132,24 @@ export function TaskRow({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+        )}
+        
+        {/* Line 3: Created timestamp */}
+        {showDetails && (
+          <div className="ml-9 mt-0.5">
+            <span className="text-[10px] text-muted-foreground">
+              Created {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
+            </span>
+          </div>
+        )}
+        
+        {/* Line 4: Updated timestamp */}
+        {showDetails && (
+          <div className="ml-9 mt-0.5">
+            <span className="text-[10px] text-muted-foreground">
+              Updated {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
+            </span>
           </div>
         )}
       </div>
