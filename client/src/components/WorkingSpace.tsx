@@ -34,8 +34,7 @@ import {
   Play,
   Check,
   Ban,
-  MoreVertical,
-  Info
+  MoreVertical
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -1099,7 +1098,10 @@ export function TaskRow({
             ) : (
               <span 
                 className={`text-sm cursor-text block ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}
-                onClick={() => setIsEditing(true)}
+                onClick={() => {
+                  setIsEditing(true);
+                  if (showDetailsToggle) setShowDetails(true);
+                }}
                 data-testid={`task-title-${task.id}`}
               >
                 {task.title}
@@ -1122,16 +1124,6 @@ export function TaskRow({
                 </span>
               )}
             </button>
-            {showDetailsToggle && (
-              <button
-                onClick={() => setShowDetails(!showDetails)}
-                className={`p-1 hover:bg-accent rounded ${showDetails ? 'text-primary' : 'text-muted-foreground'}`}
-                title={showDetails ? "Hide details" : "Show details"}
-                data-testid={`info-toggle-${task.id}`}
-              >
-                <Info className="h-3.5 w-3.5" />
-              </button>
-            )}
           </div>
         </div>
 
