@@ -1135,7 +1135,7 @@ export function TaskRow({
         <InlineTaskInput
           onSubmit={handleSubtaskCreate}
           onCancel={() => setShowSubtaskInput(false)}
-          placeholder="Add sub-task... (@@project @person #status)"
+          placeholder={project ? `Add sub-task for ${project.name}... (@person #status)` : "Add sub-task... (@@project @person #status)"}
           autoFocus
           depth={depth + 1}
           projects={projects}
