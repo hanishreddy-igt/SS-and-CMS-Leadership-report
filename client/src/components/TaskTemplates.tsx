@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,7 +25,8 @@ import {
   Clock,
   Users,
   UserPlus,
-  Check
+  Check,
+  Filter
 } from 'lucide-react';
 import type { TaskTemplate, Project, Person, SubTemplateItem } from '@shared/schema';
 
@@ -774,6 +775,7 @@ export default function TaskTemplates() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<TaskTemplate | null>(null);
+  const [accountFilter, setAccountFilter] = useState<string>('all');
 
   const { data: templates = [], isLoading } = useQuery<TaskTemplate[]>({
     queryKey: ['/api/task-templates'],
@@ -786,6 +788,16 @@ export default function TaskTemplates() {
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ['/api/people'],
   });
+
+  const sortedAccounts = useMemo(() => {
+    return [...projects].sort((a, b) => a.name.localeCompare(b.name));
+  }, [projects]);
+
+  const filteredTemplates = useMemo(() => {
+    if (accountFilter === 'all') return templates;
+    if (accountFilter === 'none') return templates.filter(t => !t.projectId);
+    return templates.filter(t => t.projectId === accountFilter);
+  }, [templates, accountFilter]);
 
   const createMutation = useMutation({
     mutationFn: async (data: TemplateFormData) => {
@@ -987,34 +999,83 @@ export default function TaskTemplates() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <FileStack className="h-5 w-5" />
-          Recurring Deliverables
-        </h2>
+      <div className="flex items-center justify-end gap-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2" data-testid="template-filter-button">
+              <Filter className="h-4 w-4" />
+              Filter
+              {accountFilter !== 'all' && (
+                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">1</Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64" align="end">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Account</Label>
+              <Select value={accountFilter} onValueChange={setAccountFilter}>
+                <SelectTrigger className="w-full" data-testid="template-account-filter">
+                  <SelectValue placeholder="All Accounts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Accounts</SelectItem>
+                  <SelectItem value="none">No Account</SelectItem>
+                  {sortedAccounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {accountFilter !== 'all' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setAccountFilter('all')}
+                  data-testid="clear-template-filter"
+                >
+                  Clear filter
+                </Button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
         <Button onClick={() => setIsDialogOpen(true)} data-testid="new-template-btn">
           <Plus className="h-4 w-4 mr-1" />
           New Deliverable
         </Button>
       </div>
 
-      {templates.length === 0 ? (
+      {filteredTemplates.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <FileStack className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-medium mb-2">No Deliverables Yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create deliverables for recurring tasks like weekly syncs, sprint planning, or EOS updates.
-            </p>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              Create First Deliverable
-            </Button>
+            {templates.length === 0 ? (
+              <>
+                <h3 className="text-lg font-medium mb-2">No Deliverables Yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Create deliverables for recurring tasks like weekly syncs, sprint planning, or EOS updates.
+                </p>
+                <Button onClick={() => setIsDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create First Deliverable
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-medium mb-2">No Matching Deliverables</h3>
+                <p className="text-muted-foreground mb-4">
+                  No deliverables match the current filter.
+                </p>
+                <Button variant="outline" onClick={() => setAccountFilter('all')}>
+                  Clear Filter
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {templates.map(template => (
+          {filteredTemplates.map(template => (
             <TemplateCard
               key={template.id}
               template={template}
