@@ -1390,9 +1390,17 @@ export default function WorkingSpace() {
   // Close task details when clicking outside the All Tasks section
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (allTasksContainerRef.current && !allTasksContainerRef.current.contains(event.target as Node)) {
-        setOpenTaskId(null);
+      const target = event.target as Element;
+      // Don't close if clicking inside the container
+      if (allTasksContainerRef.current?.contains(target)) return;
+      // Don't close if clicking inside a Radix portal (dropdown, popover, etc.)
+      if (target.closest?.('[data-radix-popper-content-wrapper]') ||
+          target.closest?.('[role="menu"]') ||
+          target.closest?.('[role="dialog"]') ||
+          target.closest?.('[role="listbox"]')) {
+        return;
       }
+      setOpenTaskId(null);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
