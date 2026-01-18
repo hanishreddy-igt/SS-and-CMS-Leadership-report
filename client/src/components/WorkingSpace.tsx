@@ -1142,14 +1142,26 @@ export function TaskRow({
               </Badge>
             )}
             
-            {effectivePriority && effectivePriority !== 'normal' && (
-              <Badge 
-                variant="secondary" 
-                className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white ${priorityColors[effectivePriority] || 'bg-gray-400'}`}
-                title={hasSubtasks && effectivePriority !== task.priority ? 'Inherited from sub-task' : undefined}
-              >
-                {priorityLabels[effectivePriority] || effectivePriority}
-              </Badge>
+            {/* Show effective priority for parent tasks, own priority for leaf tasks */}
+            {hasSubtasks ? (
+              effectivePriority && effectivePriority !== 'normal' && (
+                <Badge 
+                  variant="secondary" 
+                  className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white ${priorityColors[effectivePriority] || 'bg-gray-400'}`}
+                  title={effectivePriority !== task.priority ? 'Inherited from sub-task' : undefined}
+                >
+                  {priorityLabels[effectivePriority] || effectivePriority}
+                </Badge>
+              )
+            ) : (
+              task.priority && task.priority !== 'normal' && (
+                <Badge 
+                  variant="secondary" 
+                  className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white ${priorityColors[task.priority] || 'bg-gray-400'}`}
+                >
+                  {priorityLabels[task.priority] || task.priority}
+                </Badge>
+              )
             )}
             
             {project && !hideProjectBadge && (
