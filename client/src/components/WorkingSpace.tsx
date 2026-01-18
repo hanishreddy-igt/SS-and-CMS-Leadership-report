@@ -1063,17 +1063,13 @@ export function TaskRow({
           </div>
         </div>
 
-        {/* Line 2: Assignees, Project, Due Date */}
+        {/* Line 2: Due Date, Project, Assignees */}
         <div className="flex items-center gap-2 mt-1 ml-9">
-          <button
-            ref={assigneeButtonRef}
-            onClick={() => activePanel === 'assignee' ? closePanel() : openPanel('assignee', 'assignee')}
-            className="text-xs text-muted-foreground truncate max-w-[200px] hover:text-foreground hover:underline cursor-pointer"
-            title="Click to assign people"
-            data-testid={`assignee-trigger-${task.id}`}
-          >
-            {displayAssignees.length > 0 ? displayAssignees.map(p => p.name).join(', ') : '+assign'}
-          </button>
+          {task.dueDate && (
+            <Badge variant={isOverdue ? "destructive" : "secondary"} className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
+              {format(new Date(task.dueDate), 'MMM d')}
+            </Badge>
+          )}
           
           {project && !hideProjectBadge && (
             <Badge 
@@ -1111,11 +1107,17 @@ export function TaskRow({
             </DropdownMenu>
           )}
           
-          {task.dueDate && (
-            <Badge variant={isOverdue ? "destructive" : "secondary"} className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
-              {format(new Date(task.dueDate), 'MMM d')}
-            </Badge>
-          )}
+          <button
+            ref={assigneeButtonRef}
+            onClick={() => activePanel === 'assignee' ? closePanel() : openPanel('assignee', 'assignee')}
+            className="text-xs text-muted-foreground truncate max-w-[200px] hover:text-foreground hover:underline cursor-pointer"
+            title="Click to assign people"
+            data-testid={`assignee-trigger-${task.id}`}
+          >
+            {displayAssignees.length > 0 
+              ? [...displayAssignees].sort((a, b) => a.name.localeCompare(b.name)).map(p => p.name).join(', ') 
+              : '+assign'}
+          </button>
         </div>
       </div>
 
