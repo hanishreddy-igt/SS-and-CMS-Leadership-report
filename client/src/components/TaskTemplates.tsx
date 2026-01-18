@@ -371,16 +371,18 @@ interface TemplateCardProps {
   onEdit: (template: TaskTemplate) => void;
   onDelete: (id: string) => void;
   onTrigger: (template: TaskTemplate) => void;
+  onView: (template: TaskTemplate) => void;
 }
 
-function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger }: TemplateCardProps) {
+function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger, onView }: TemplateCardProps) {
   const project = template.projectId ? projects.find(p => p.id === template.projectId) : null;
   const assignedPeople = people.filter(p => template.assignedTo?.includes(p.id));
   
   return (
     <Card 
-      className={`${template.isActive === 'false' ? 'opacity-60' : ''}`}
+      className={`${template.isActive === 'false' ? 'opacity-60' : ''} cursor-pointer hover-elevate transition-all`}
       data-testid={`template-card-${template.id}`}
+      onClick={() => onView(template)}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
@@ -393,7 +395,7 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger 
               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{template.description}</p>
             )}
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
             <Button 
               variant="default" 
               size="sm"
@@ -461,11 +463,169 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger 
   );
 }
 
+interface TemplateDetailModalProps {
+  template: TaskTemplate | null;
+  projects: Project[];
+  people: Person[];
+  onClose: () => void;
+  onEdit: (template: TaskTemplate) => void;
+  onTrigger: (template: TaskTemplate) => void;
+}
+
+function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTrigger }: TemplateDetailModalProps) {
+  if (!template) return null;
+  
+  const project = template.projectId ? projects.find(p => p.id === template.projectId) : null;
+  const assignedPeople = people.filter(p => template.assignedTo?.includes(p.id));
+  const subTemplates = (template.subTemplates as SubTemplateItem[]) || [];
+  
+  return (
+    <Dialog open={!!template} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileStack className="h-5 w-5 text-primary" />
+            {template.name}
+            {template.isActive === 'false' && (
+              <Badge variant="secondary" className="ml-2">Inactive</Badge>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {template.description && (
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">Description</h4>
+              <p className="text-sm">{template.description}</p>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">Project</h4>
+              <div className="flex items-center gap-1">
+                {project ? (
+                  <>
+                    <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{project.name}</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">None</span>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">Recurrence</h4>
+              <div className="flex items-center gap-1">
+                {template.recurrence ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm capitalize">{template.recurrence}</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">None</span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground mb-1">
+              Assignment Mode
+            </h4>
+            <span className="text-sm">
+              {template.assignmentMode === 'per-person' 
+                ? 'Separate task for each person' 
+                : 'One task with all assignees'}
+            </span>
+          </div>
+          
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground mb-1">
+              Assignees ({assignedPeople.length})
+            </h4>
+            {assignedPeople.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {assignedPeople.map(person => (
+                  <Badge key={person.id} variant="secondary" className="gap-1">
+                    <Users className="h-3 w-3" />
+                    {person.name}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <span className="text-sm text-muted-foreground">No assignees</span>
+            )}
+          </div>
+          
+          {subTemplates.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                Sub-tasks ({subTemplates.length})
+              </h4>
+              <div className="space-y-1 p-2 bg-muted/50 rounded">
+                {subTemplates.map((sub, index) => (
+                  <div key={sub.id} className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">{index + 1}.</span>
+                    <span>{sub.title}</span>
+                    <Badge variant="outline" className="text-xs ml-auto">
+                      {sub.priority || 'medium'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {template.taskItems && (
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">Task Items</h4>
+              <div className="p-2 bg-muted/50 rounded text-sm whitespace-pre-wrap">
+                {template.taskItems}
+              </div>
+            </div>
+          )}
+          
+          {template.lastUsedAt && (
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-1">Last Used</h4>
+              <div className="flex items-center gap-1 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                {new Date(template.lastUsedAt).toLocaleString()}
+              </div>
+            </div>
+          )}
+          
+          <div className="text-xs text-muted-foreground">
+            Created: {new Date(template.createdAt).toLocaleString()}
+          </div>
+        </div>
+        
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          <Button variant="outline" onClick={() => { onClose(); onEdit(template); }}>
+            <Edit2 className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+          <Button onClick={() => { onClose(); onTrigger(template); }}>
+            <Play className="h-4 w-4 mr-1" />
+            Create Task
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function TaskTemplates() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
+  const [viewingTemplate, setViewingTemplate] = useState<TaskTemplate | null>(null);
 
   const { data: templates = [], isLoading } = useQuery<TaskTemplate[]>({
     queryKey: ['/api/task-templates'],
@@ -715,6 +875,7 @@ export default function TaskTemplates() {
               onEdit={handleEdit}
               onDelete={(id) => deleteMutation.mutate(id)}
               onTrigger={(t) => triggerMutation.mutate(t)}
+              onView={(t) => setViewingTemplate(t)}
             />
           ))}
         </div>
@@ -738,6 +899,15 @@ export default function TaskTemplates() {
           />
         </DialogContent>
       </Dialog>
+
+      <TemplateDetailModal
+        template={viewingTemplate}
+        projects={projects}
+        people={people}
+        onClose={() => setViewingTemplate(null)}
+        onEdit={handleEdit}
+        onTrigger={(t) => triggerMutation.mutate(t)}
+      />
     </div>
   );
 }
