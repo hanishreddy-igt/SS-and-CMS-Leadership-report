@@ -146,6 +146,7 @@ export const tasks = pgTable("tasks", {
   parentTaskId: varchar("parent_task_id"), // For sub-tasks (null = top-level task)
   assignedTo: text("assigned_to").array().notNull().default(sql`'{}'`), // Array of person IDs
   createdBy: text("created_by").notNull(), // Email of who created the task
+  updatedBy: text("updated_by"), // Email of who last updated the task
   status: text("status").notNull().default('todo'), // todo, in-progress, done, cancelled
   priority: text("priority").default('medium'), // low, medium, high
   tags: text("tags").array().notNull().default(sql`'{}'`), // Inline tags like #status

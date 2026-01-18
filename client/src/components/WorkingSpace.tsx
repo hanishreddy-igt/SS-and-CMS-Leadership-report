@@ -1148,7 +1148,7 @@ export function TaskRow({
         {showDetails && (
           <div className="ml-9 mt-0.5">
             <span className="text-[10px] text-muted-foreground">
-              Last updated on {format(new Date(task.updatedAt), "do MMMM yyyy 'at' HH:mm:ss")}
+              Last updated {task.updatedBy ? `by ${people.find(p => p.email === task.updatedBy)?.name || task.updatedBy} ` : ''}on {format(new Date(task.updatedAt), "do MMMM yyyy 'at' HH:mm:ss")}
             </span>
           </div>
         )}

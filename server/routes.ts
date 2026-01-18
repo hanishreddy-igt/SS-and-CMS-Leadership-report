@@ -2095,9 +2095,11 @@ Output valid JSON only.`;
   });
 
   // Update task
-  app.patch('/api/tasks/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const task = await storage.updateTask(req.params.id, req.body);
+      const userEmail = req.user?.claims?.email as string;
+      const updates = { ...req.body, updatedBy: userEmail };
+      const task = await storage.updateTask(req.params.id, updates);
       if (!task) {
         return res.status(404).json({ message: 'Task not found' });
       }
