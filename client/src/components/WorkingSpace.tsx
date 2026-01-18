@@ -76,13 +76,18 @@ const STATUS_OPTIONS = [
 
 const STATUS_CYCLE = ['todo', 'in-progress', 'done'];
 
-function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () => void; taskId?: string }) {
-  const iconClass = "h-4 w-4 cursor-pointer transition-colors";
+function StatusIcon({ status, onClick, taskId, disabled }: { status: string; onClick: () => void; taskId?: string; disabled?: boolean }) {
+  const iconClass = disabled ? "h-4 w-4 transition-colors opacity-60" : "h-4 w-4 cursor-pointer transition-colors";
   const testId = taskId ? `status-${taskId}` : 'status-icon';
+  const disabledTitle = "Status auto-managed by sub-tasks";
   
   switch (status) {
     case 'todo':
-      return (
+      return disabled ? (
+        <div className="p-0.5" title={disabledTitle} data-testid={testId}>
+          <Circle className={`${iconClass} text-slate-400`} />
+        </div>
+      ) : (
         <button 
           onClick={onClick} 
           className="p-0.5 hover:bg-accent rounded" 
@@ -94,7 +99,11 @@ function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () =
         </button>
       );
     case 'in-progress':
-      return (
+      return disabled ? (
+        <div className="p-0.5" title={disabledTitle} data-testid={testId}>
+          <Play className={`${iconClass} text-blue-500 fill-blue-500`} />
+        </div>
+      ) : (
         <button 
           onClick={onClick} 
           className="p-0.5 hover:bg-accent rounded" 
@@ -109,24 +118,28 @@ function StatusIcon({ status, onClick, taskId }: { status: string; onClick: () =
       return (
         <div 
           className="p-0.5" 
-          title="Blocked"
+          title={disabled ? disabledTitle : "Blocked"}
           data-testid={testId}
         >
-          <Ban className="h-4 w-4 text-red-500" />
+          <Ban className={`h-4 w-4 text-red-500 ${disabled ? 'opacity-60' : ''}`} />
         </div>
       );
     case 'done':
       return (
         <div 
           className="p-0.5" 
-          title="Done"
+          title={disabled ? disabledTitle : "Done"}
           data-testid={testId}
         >
-          <Check className="h-4 w-4 text-green-500" />
+          <Check className={`h-4 w-4 text-green-500 ${disabled ? 'opacity-60' : ''}`} />
         </div>
       );
     default:
-      return (
+      return disabled ? (
+        <div className="p-0.5" title={disabledTitle} data-testid={testId}>
+          <Circle className={`${iconClass} text-slate-400`} />
+        </div>
+      ) : (
         <button 
           onClick={onClick} 
           className="p-0.5 hover:bg-accent rounded" 
@@ -959,6 +972,7 @@ export function TaskRow({
               status={task.status} 
               onClick={handleCycleStatus}
               taskId={task.id}
+              disabled={hasSubtasks}
             />
           </div>
 

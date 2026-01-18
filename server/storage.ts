@@ -700,6 +700,7 @@ export class MemStorage implements IStorage {
       parentTaskId: task.parentTaskId ?? null,
       assignedTo: task.assignedTo ?? [],
       createdBy: task.createdBy,
+      updatedBy: null,
       status: task.status ?? 'todo',
       priority: task.priority ?? 'medium',
       tags: task.tags ?? [],
@@ -717,9 +718,53 @@ export class MemStorage implements IStorage {
   async updateTask(id: string, updates: Partial<InsertTask>): Promise<Task | undefined> {
     const task = this.tasksStore.get(id);
     if (!task) return undefined;
+
+    // If task has sub-tasks and trying to update status, prevent it
+    if (updates.status !== undefined) {
+      const subTasks = await this.getSubTasks(id);
+      if (subTasks.length > 0) {
+        delete updates.status;
+      }
+    }
+
     const updated: Task = { ...task, ...updates, updatedAt: new Date() };
     this.tasksStore.set(id, updated);
+
+    // If this task has a parent and status was changed, update parent status
+    if (updated.parentTaskId && updates.status !== undefined) {
+      await this.updateParentTaskStatusMem(updated.parentTaskId);
+    }
+
     return updated;
+  }
+
+  private async updateParentTaskStatusMem(parentId: string): Promise<void> {
+    const subTasks = await this.getSubTasks(parentId);
+    if (subTasks.length === 0) return;
+
+    const allDone = subTasks.every(t => t.status === 'done');
+    const anyInProgress = subTasks.some(t => t.status === 'in-progress' || t.status === 'blocked');
+    const anyDone = subTasks.some(t => t.status === 'done');
+
+    let newStatus: string;
+    if (allDone) {
+      newStatus = 'done';
+    } else if (anyInProgress || anyDone) {
+      newStatus = 'in-progress';
+    } else {
+      newStatus = 'todo';
+    }
+
+    const parent = this.tasksStore.get(parentId);
+    if (parent) {
+      parent.status = newStatus;
+      parent.updatedAt = new Date();
+      this.tasksStore.set(parentId, parent);
+
+      if (parent.parentTaskId) {
+        await this.updateParentTaskStatusMem(parent.parentTaskId);
+      }
+    }
   }
 
   async deleteTask(id: string): Promise<boolean> {
@@ -1254,11 +1299,63 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTask(id: string, updates: Partial<InsertTask>): Promise<Task | undefined> {
+    // Get current task first to check relationships
+    const [currentTask] = await db.select().from(tasks).where(eq(tasks.id, id));
+    if (!currentTask) return undefined;
+
+    // If task has sub-tasks and trying to update status, prevent it
+    if (updates.status !== undefined) {
+      const subTasks = await this.getSubTasks(id);
+      if (subTasks.length > 0) {
+        // Remove status from updates - parent status is controlled by sub-tasks
+        delete updates.status;
+      }
+    }
+
+    // Update the task
     const [updated] = await db.update(tasks)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(tasks.id, id))
       .returning();
-    return updated || undefined;
+    
+    if (!updated) return undefined;
+
+    // If this task has a parent and status was changed, update parent status
+    if (updated.parentTaskId && updates.status !== undefined) {
+      await this.updateParentTaskStatus(updated.parentTaskId);
+    }
+
+    return updated;
+  }
+
+  private async updateParentTaskStatus(parentId: string): Promise<void> {
+    const subTasks = await this.getSubTasks(parentId);
+    if (subTasks.length === 0) return;
+
+    // Determine parent status based on sub-task statuses
+    const allDone = subTasks.every(t => t.status === 'done');
+    const anyInProgress = subTasks.some(t => t.status === 'in-progress' || t.status === 'blocked');
+    const anyDone = subTasks.some(t => t.status === 'done');
+
+    let newStatus: string;
+    if (allDone) {
+      newStatus = 'done';
+    } else if (anyInProgress || anyDone) {
+      newStatus = 'in-progress';
+    } else {
+      newStatus = 'todo';
+    }
+
+    // Update parent directly without going through updateTask to avoid infinite recursion
+    await db.update(tasks)
+      .set({ status: newStatus, updatedAt: new Date() })
+      .where(eq(tasks.id, parentId));
+    
+    // Check if parent also has a parent (grandparent) - propagate up the chain
+    const [parent] = await db.select().from(tasks).where(eq(tasks.id, parentId));
+    if (parent?.parentTaskId) {
+      await this.updateParentTaskStatus(parent.parentTaskId);
+    }
   }
 
   async deleteTask(id: string): Promise<boolean> {
