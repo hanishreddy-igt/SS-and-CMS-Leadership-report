@@ -758,12 +758,20 @@ export function TaskRow({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
   const [panelTrigger, setPanelTrigger] = useState<'notes' | 'assignee' | 'menu' | null>(null);
-  const [overlayOpenCount, setOverlayOpenCount] = useState(0);
+  const [overlayOpen, setOverlayOpen] = useState(false);
   
   // Track when overlays open/close to prevent details from closing
   const handleOverlayChange = (open: boolean) => {
-    setOverlayOpenCount(prev => open ? prev + 1 : Math.max(0, prev - 1));
+    setOverlayOpen(open);
+    // Cancel any pending close when overlay opens
+    if (open && blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
   };
+  
+  // Combined interaction lock: don't close details when any overlay or panel is open
+  const interactionLock = overlayOpen || activePanel !== null;
   
   // Use external control if provided, otherwise fall back to always showing details
   const showDetails = showDetailsToggle ? (openTaskId === task.id) : true;
@@ -793,8 +801,8 @@ export function TaskRow({
     const handleFocusOut = () => {
       // Debounce the close to avoid flicker during focus transitions
       blurTimeoutRef.current = setTimeout(() => {
-        // Don't close if any overlay (dropdown, popover, calendar) is open
-        if (overlayOpenCount > 0) return;
+        // Don't close if any overlay or panel is open
+        if (interactionLock) return;
         
         // Double-check focus hasn't returned to this row
         if (!taskRowRef.current?.contains(document.activeElement)) {
@@ -829,9 +837,14 @@ export function TaskRow({
         clearTimeout(blurTimeoutRef.current);
       }
     };
-  }, [showDetailsToggle, onOpenDetails, openTaskId, task.id, overlayOpenCount]);
+  }, [showDetailsToggle, onOpenDetails, openTaskId, task.id, interactionLock]);
 
   const openPanel = (panel: 'assignee' | 'dueDate' | 'notes', trigger: 'notes' | 'assignee' | 'menu') => {
+    // Cancel any pending close when opening a panel
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
     setActivePanel(panel);
     setPanelTrigger(trigger);
   };
