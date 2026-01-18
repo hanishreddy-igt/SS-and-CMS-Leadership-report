@@ -1463,6 +1463,7 @@ export default function WorkingSpace() {
   };
 
   const [leadFilter, setLeadFilter] = useState<string>('all');
+  const [showAllTasksDetails, setShowAllTasksDetails] = useState(false);
 
   // Get unique leads from projects
   const projectLeads = useMemo(() => {
@@ -1623,6 +1624,16 @@ export default function WorkingSpace() {
             <CardTitle className="flex items-center gap-2 text-lg">
               <FolderKanban className="h-5 w-5" />
               All Tasks by Project
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 ml-1"
+                onClick={() => setShowAllTasksDetails(!showAllTasksDetails)}
+                title={showAllTasksDetails ? "Hide details" : "Show details"}
+                data-testid="toggle-all-tasks-details"
+              >
+                <Info className={`h-4 w-4 ${showAllTasksDetails ? 'text-primary' : 'text-muted-foreground'}`} />
+              </Button>
             </CardTitle>
             <Select value={leadFilter} onValueChange={setLeadFilter}>
               <SelectTrigger className="w-[200px] h-8" data-testid="lead-filter">
@@ -1684,6 +1695,7 @@ export default function WorkingSpace() {
                                   onOutdent={handleOutdent}
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
+                                  showDetailsToggle={showAllTasksDetails}
                                 />
                               ))}
                             </div>
@@ -1711,6 +1723,7 @@ export default function WorkingSpace() {
                                   onOutdent={handleOutdent}
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
+                                  showDetailsToggle={showAllTasksDetails}
                                 />
                               ))}
                             </div>
@@ -1740,6 +1753,7 @@ export default function WorkingSpace() {
                                     onOutdent={handleOutdent}
                                     userEmail={userEmail}
                                     hideProjectBadge={true}
+                                    showDetailsToggle={showAllTasksDetails}
                                   />
                                 ))}
                               </div>
@@ -1790,6 +1804,7 @@ export default function WorkingSpace() {
                                   onOutdent={handleOutdent}
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
+                                  showDetailsToggle={showAllTasksDetails}
                                 />
                               ))}
                             </div>
@@ -1817,6 +1832,7 @@ export default function WorkingSpace() {
                                   onOutdent={handleOutdent}
                                   userEmail={userEmail}
                                   hideProjectBadge={true}
+                                  showDetailsToggle={showAllTasksDetails}
                                 />
                               ))}
                             </div>
@@ -1846,6 +1862,7 @@ export default function WorkingSpace() {
                                     onOutdent={handleOutdent}
                                     userEmail={userEmail}
                                     hideProjectBadge={true}
+                                    showDetailsToggle={showAllTasksDetails}
                                   />
                                 ))}
                               </div>
