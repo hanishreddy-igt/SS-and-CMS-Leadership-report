@@ -1139,7 +1139,7 @@ export function TaskRow({
         {showDetails && (
           <div className="ml-9 mt-0.5">
             <span className="text-[10px] text-muted-foreground">
-              Created {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
+              Created by {people.find(p => p.email === task.createdBy)?.name || task.createdBy} on {format(new Date(task.createdAt), "do MMMM yyyy 'at' HH:mm:ss")}
             </span>
           </div>
         )}
@@ -1148,7 +1148,7 @@ export function TaskRow({
         {showDetails && (
           <div className="ml-9 mt-0.5">
             <span className="text-[10px] text-muted-foreground">
-              Updated {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
+              Last updated on {format(new Date(task.updatedAt), "do MMMM yyyy 'at' HH:mm:ss")}
             </span>
           </div>
         )}
