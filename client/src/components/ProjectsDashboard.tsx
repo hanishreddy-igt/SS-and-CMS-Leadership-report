@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon, Loader2, ChevronsDown, ArrowLeft } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon, Loader2, ChevronsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -183,9 +183,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [showAddRolePopover, setShowAddRolePopover] = useState<string | null>(null); // popover id or null
   const hasAttemptedSeed = useRef(false);
 
-  // Project Detail Inline View State (replaces modal)
+  // Project Detail Modal State
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [showProjectDetailView, setShowProjectDetailView] = useState(false);
+  const [showProjectDetailModal, setShowProjectDetailModal] = useState(false);
 
   // Scroll state for modals - track if content is scrollable
   const projectDetailScrollRef = useRef<HTMLDivElement>(null);
@@ -197,11 +197,11 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
   // Check if content is scrollable when modal opens or content changes
   useEffect(() => {
-    if (showProjectDetailView && projectDetailScrollRef.current) {
+    if (showProjectDetailModal && projectDetailScrollRef.current) {
       const el = projectDetailScrollRef.current;
       setProjectDetailScrollable(el.scrollHeight > el.clientHeight);
     }
-  }, [showProjectDetailView, selectedProject]);
+  }, [showProjectDetailModal, selectedProject]);
 
   useEffect(() => {
     if (showLeadDetailModal && leadDetailScrollRef.current) {
@@ -267,8 +267,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     }
   };
 
-  const closeProjectDetailView = () => {
-    setShowProjectDetailView(false);
+  const closeProjectDetailModal = () => {
+    setShowProjectDetailModal(false);
     setSelectedProject(null);
     setVisibleLeadEmails(new Set());
   };
@@ -2106,297 +2106,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       {/* Contracts Tab Content */}
       {activeTab === 'contracts' && (
       <>
-      {/* Inline Contract Detail View */}
-      {showProjectDetailView && selectedProject ? (
-        <Card className="glass-card border-white/10">
-          <CardHeader className="border-b border-white/5">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={closeProjectDetailView}
-                data-testid="button-back-to-contracts"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center gap-3 flex-1">
-                <EndDateIndicator endDate={selectedProject.endDate} />
-                <CardTitle className="text-2xl">{selectedProject.name}</CardTitle>
-              </div>
-              {permissions.canEditContracts && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEditProject(selectedProject)}
-                  data-testid="button-edit-contract-detail"
-                >
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="py-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Column */}
-              <div className="space-y-6">
-                {/* Customer Section */}
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Customer Contact Name</p>
-                    <p className="text-lg font-semibold" data-testid="text-contract-detail-customer">{selectedProject.customer}</p>
-                    {selectedProject.customerContactEmail && (
-                      <p className="text-sm text-primary flex items-center gap-1.5 mt-1" data-testid="text-contract-detail-customer-email">
-                        <Mail className="h-3.5 w-3.5" />
-                        {selectedProject.customerContactEmail}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Account Owner Section */}
-                {selectedProject.accountOwner && (
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <UserCog className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Account Owner</p>
-                      <p className="text-lg font-semibold" data-testid="text-contract-detail-account-owner">{selectedProject.accountOwner}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Contractual Time Section */}
-                {selectedProject.totalContractualHours && (
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <Clock className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Total Contractual Time</p>
-                      <p className="text-lg font-semibold" data-testid="text-contract-detail-hours">{formatContractualTime(selectedProject.totalContractualHours)}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Project Timeline Section */}
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Contract Timeline</p>
-                    <div className="flex items-center gap-2 mt-1" data-testid="text-contract-detail-dates">
-                      <span className="text-base">{selectedProject.startDate ? formatDisplayDate(selectedProject.startDate) : 'Not set'}</span>
-                      <span className="text-muted-foreground">to</span>
-                      <span className="text-base">{selectedProject.endDate ? formatDisplayDate(selectedProject.endDate) : 'Not set'}</span>
-                    </div>
-                    {!selectedProject.endDate && (
-                      <div className="flex items-center gap-1.5 mt-1 text-warning text-sm">
-                        <AlertCircle className="h-3.5 w-3.5" />
-                        <span>End date is missing</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Project Type & Status Section */}
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Briefcase className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Type & Status</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {selectedProject.projectType && (
-                        <Badge variant="outline" data-testid="badge-contract-detail-type">
-                          {selectedProject.projectType === 'CMS' ? 'Community Managed Advisory' : 'Strategic Services'}
-                        </Badge>
-                      )}
-                      {(() => {
-                        const status = getProjectStatus(selectedProject.endDate);
-                        if (status === 'active') {
-                          return (
-                            <Badge className="bg-success/20 text-success border-success/30" data-testid="badge-contract-detail-status">
-                              Long-term Active
-                            </Badge>
-                          );
-                        } else if (status === 'renewal') {
-                          return (
-                            <Badge className="bg-warning/20 text-warning border-warning/30" data-testid="badge-contract-detail-status">
-                              Renewal Soon
-                            </Badge>
-                          );
-                        } else {
-                          return (
-                            <Badge className="bg-destructive/20 text-destructive border-destructive/30" data-testid="badge-contract-detail-status">
-                              Ended
-                            </Badge>
-                          );
-                        }
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-6">
-                {/* Team Lead Section */}
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <UserCog className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {hasCoLeads(selectedProject) ? 'Team Leads (Co-Lead)' : 'Team Lead'}
-                    </p>
-                    <div className="space-y-2 mt-1">
-                      {(selectedProject.leadIds && selectedProject.leadIds.length > 0 
-                        ? selectedProject.leadIds 
-                        : [selectedProject.leadId]
-                      ).map((leadId) => {
-                        const leadAssignments = (selectedProject.leadAssignments as LeadAssignment[]) || [];
-                        const leadAssignment = leadAssignments.find(a => a.leadId === leadId);
-                        return (
-                          <div key={leadId}>
-                            <div 
-                              className="flex items-center gap-2 cursor-pointer group"
-                              onClick={() => toggleLeadEmailVisibility(leadId)}
-                              data-testid={`button-toggle-lead-email-${leadId}`}
-                            >
-                              <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid={`text-contract-detail-lead-${leadId}`}>
-                                {getLeadName(leadId)}
-                              </p>
-                              {leadAssignment?.hours && (
-                                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
-                                  {leadAssignment.hours} hrs/wk
-                                </span>
-                              )}
-                              <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                            </div>
-                            {visibleLeadEmails.has(leadId) && (
-                              <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200">
-                                <Mail className="h-3.5 w-3.5" />
-                                {getLeadById(leadId)?.email || 'No email set'}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Team Members Section */}
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Users className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Team Members</p>
-                    <div className="flex flex-wrap gap-2" data-testid="container-contract-detail-team">
-                      {getTeamMembersWithRoles(selectedProject.teamMembers).map((member, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-sm py-1 flex items-center gap-1.5">
-                          <span>{member.name}</span>
-                          {member.role && (
-                            <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm">
-                              {member.role}
-                            </span>
-                          )}
-                          {member.hours && (
-                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
-                              {member.hours} hrs/wk
-                            </span>
-                          )}
-                        </Badge>
-                      ))}
-                      {(!selectedProject.teamMembers || (selectedProject.teamMembers as TeamMemberAssignment[]).length === 0) && (
-                        <p className="text-sm text-muted-foreground">No team members assigned</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* External Links Section */}
-                {(selectedProject.jiraEpic || selectedProject.googleDriveLink || selectedProject.googleExternalLink || selectedProject.workflowyLink || selectedProject.contractFileLink) && (
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <Briefcase className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-muted-foreground mb-2">External Links</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedProject.jiraEpic && (
-                          <a 
-                            href={selectedProject.jiraEpic.startsWith('http') ? selectedProject.jiraEpic : `https://ignitetech.atlassian.net/browse/${selectedProject.jiraEpic}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                            data-testid="link-jira-epic"
-                          >
-                            Jira Epic
-                          </a>
-                        )}
-                        {selectedProject.googleDriveLink && (
-                          <a 
-                            href={selectedProject.googleDriveLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                            data-testid="link-google-drive"
-                          >
-                            Google Internal
-                          </a>
-                        )}
-                        {selectedProject.googleExternalLink && (
-                          <a 
-                            href={selectedProject.googleExternalLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
-                            data-testid="link-google-external"
-                          >
-                            Google External
-                          </a>
-                        )}
-                        {selectedProject.workflowyLink && (
-                          <a 
-                            href={selectedProject.workflowyLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-                            data-testid="link-workflowy"
-                          >
-                            Workflowy
-                          </a>
-                        )}
-                        {selectedProject.contractFileLink && (
-                          <a 
-                            href={selectedProject.contractFileLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 text-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
-                            data-testid="link-contract-file"
-                          >
-                            Contract File
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-      <>
-      {/* Contracts List View */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div 
           className="metric-card metric-card-success cursor-pointer hover:border-success/30 transition-all"
@@ -4238,10 +3947,293 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         </DialogContent>
       </Dialog>
       </>
-      </>
       )}
-      </>
-      )}
+
+      {/* Project Detail Modal - Rendered outside of tab conditionals */}
+      <Dialog open={showProjectDetailModal} onOpenChange={(open) => !open && closeProjectDetailModal()}>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col" data-testid="dialog-project-detail">
+          <DialogHeader className="pb-4 border-b flex-shrink-0">
+            <div className="flex items-center gap-3">
+              {selectedProject && <EndDateIndicator endDate={selectedProject.endDate} />}
+              <DialogTitle className="text-2xl">{selectedProject?.name}</DialogTitle>
+            </div>
+            <DialogDescription className="sr-only">
+              View detailed information about this project including customer, lead, team members, and timeline.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProject && (
+            <>
+              <div ref={projectDetailScrollRef} className="space-y-6 py-4 pb-4 overflow-y-auto overflow-x-hidden flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+              {/* Customer Section */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Customer Contact Name</p>
+                  <p className="text-lg font-semibold" data-testid="text-project-detail-customer">{selectedProject.customer}</p>
+                  {selectedProject.customerContactEmail && (
+                    <p className="text-sm text-primary flex items-center gap-1.5 mt-1" data-testid="text-project-detail-customer-email">
+                      <Mail className="h-3.5 w-3.5" />
+                      {selectedProject.customerContactEmail}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Account Owner Section */}
+              {selectedProject.accountOwner && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <UserCog className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Account Owner</p>
+                    <p className="text-lg font-semibold" data-testid="text-project-detail-account-owner">{selectedProject.accountOwner}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Contractual Time Section */}
+              {selectedProject.totalContractualHours && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Contractual Time</p>
+                    <p className="text-lg font-semibold" data-testid="text-project-detail-hours">{formatContractualTime(selectedProject.totalContractualHours)}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* External Links Section */}
+              {(selectedProject.jiraEpic || selectedProject.googleDriveLink || selectedProject.googleExternalLink || selectedProject.workflowyLink || selectedProject.contractFileLink) && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Briefcase className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">External Links</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProject.jiraEpic && (
+                        <a 
+                          href={selectedProject.jiraEpic.startsWith('http') ? selectedProject.jiraEpic : `https://ignitetech.atlassian.net/browse/${selectedProject.jiraEpic}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                          data-testid="link-jira-epic"
+                        >
+                          Jira Epic
+                        </a>
+                      )}
+                      {selectedProject.googleDriveLink && (
+                        <a 
+                          href={selectedProject.googleDriveLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                          data-testid="link-google-drive"
+                        >
+                          Google Internal
+                        </a>
+                      )}
+                      {selectedProject.googleExternalLink && (
+                        <a 
+                          href={selectedProject.googleExternalLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+                          data-testid="link-google-external"
+                        >
+                          Google External
+                        </a>
+                      )}
+                      {selectedProject.workflowyLink && (
+                        <a 
+                          href={selectedProject.workflowyLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                          data-testid="link-workflowy"
+                        >
+                          Workflowy
+                        </a>
+                      )}
+                      {selectedProject.contractFileLink && (
+                        <a 
+                          href={selectedProject.contractFileLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 text-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+                          data-testid="link-contract-file"
+                        >
+                          Contract File
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Project Lead Section - with clickable email (supports co-leads) */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <UserCog className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {hasCoLeads(selectedProject) ? 'Team Leads (Co-Lead)' : 'Team Lead'}
+                  </p>
+                  <div className="space-y-2">
+                    {(selectedProject.leadIds && selectedProject.leadIds.length > 0 
+                      ? selectedProject.leadIds 
+                      : [selectedProject.leadId]
+                    ).map((leadId) => {
+                      const leadAssignments = (selectedProject.leadAssignments as LeadAssignment[]) || [];
+                      const leadAssignment = leadAssignments.find(a => a.leadId === leadId);
+                      return (
+                        <div key={leadId}>
+                          <div 
+                            className="flex items-center gap-2 cursor-pointer group"
+                            onClick={() => toggleLeadEmailVisibility(leadId)}
+                            data-testid={`button-toggle-lead-email-${leadId}`}
+                          >
+                            <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid={`text-project-detail-lead-${leadId}`}>
+                              {getLeadName(leadId)}
+                            </p>
+                            {leadAssignment?.hours && (
+                              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm" data-testid={`text-lead-hours-project-${leadId}`}>
+                                {leadAssignment.hours} hrs/wk
+                              </span>
+                            )}
+                            <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                          </div>
+                          {visibleLeadEmails.has(leadId) && (
+                            <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid={`text-lead-email-${leadId}`}>
+                              <Mail className="h-3.5 w-3.5" />
+                              {getLeadById(leadId)?.email || 'No email set'}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Team Members Section */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Team Members</p>
+                  <div className="flex flex-wrap gap-2" data-testid="container-project-detail-team">
+                    {getTeamMembersWithRoles(selectedProject.teamMembers).map((member, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-sm py-1 flex items-center gap-1.5">
+                        <span>{member.name}</span>
+                        {member.role && (
+                          <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm">
+                            {member.role}
+                          </span>
+                        )}
+                        {member.hours && (
+                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
+                            {member.hours} hrs/wk
+                          </span>
+                        )}
+                      </Badge>
+                    ))}
+                    {(!selectedProject.teamMembers || (selectedProject.teamMembers as TeamMemberAssignment[]).length === 0) && (
+                      <p className="text-sm text-muted-foreground">No team members assigned</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dates Section */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Project Timeline</p>
+                  <div className="flex items-center gap-2 mt-1" data-testid="text-project-detail-dates">
+                    <span className="text-base">{selectedProject.startDate ? formatDisplayDate(selectedProject.startDate) : 'Not set'}</span>
+                    <span className="text-muted-foreground">to</span>
+                    <span className="text-base">{selectedProject.endDate ? formatDisplayDate(selectedProject.endDate) : 'Not set'}</span>
+                  </div>
+                  {!selectedProject.endDate && (
+                    <div className="flex items-center gap-1.5 mt-1 text-warning text-sm">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      <span>End date is missing</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Project Type Section */}
+              {selectedProject.projectType && (
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Briefcase className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Project Type</p>
+                    <Badge variant="outline" className="mt-1" data-testid="badge-project-detail-type">
+                      {selectedProject.projectType === 'CMS' ? 'Community Managed Advisory' : 'Strategic Services'}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Indicator */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  {(() => {
+                    const status = getProjectStatus(selectedProject.endDate);
+                    if (status === 'active') {
+                      return (
+                        <Badge className="mt-1 bg-success/20 text-success border-success/30" data-testid="badge-project-detail-status">
+                          Long-term Active
+                        </Badge>
+                      );
+                    } else if (status === 'renewal') {
+                      return (
+                        <Badge className="mt-1 bg-warning/20 text-warning border-warning/30" data-testid="badge-project-detail-status">
+                          Renewal Soon
+                        </Badge>
+                      );
+                    } else {
+                      return (
+                        <Badge className="mt-1 bg-destructive/20 text-destructive border-destructive/30" data-testid="badge-project-detail-status">
+                          Ended
+                        </Badge>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+              </div>
+              {/* Scroll indicator - only show when content overflows */}
+              {projectDetailScrollable && (
+                <div className="flex justify-center items-center py-2 border-t">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <ChevronsDown className="h-4 w-4 animate-bounce" />
+                    <span>Scroll for more</span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Team Tab Content */}
       {activeTab === 'team' && (
