@@ -3775,8 +3775,10 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           )}
         </CardContent>
       </Card>
+      </>
+      )}
 
-      {/* Edit Project Dialog - Standalone outside Card to prevent event propagation issues */}
+      {/* Edit Project Dialog - Rendered outside view conditionals so it works from both list and detail views */}
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -4272,8 +4274,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </div>
         </DialogContent>
       </Dialog>
-      </>
-      )}
       </>
       )}
 
