@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon, Loader2, ChevronsDown } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon, Loader2, ChevronsDown, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -183,9 +183,11 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [showAddRolePopover, setShowAddRolePopover] = useState<string | null>(null); // popover id or null
   const hasAttemptedSeed = useRef(false);
 
-  // Project Detail Modal State
+  // Project Detail State - Inline view (not modal)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showProjectDetailModal, setShowProjectDetailModal] = useState(false);
+  // Track if we're in inline detail view mode for contracts tab
+  const [inlineDetailProject, setInlineDetailProject] = useState<Project | null>(null);
 
   // Scroll state for modals - track if content is scrollable
   const projectDetailScrollRef = useRef<HTMLDivElement>(null);
@@ -261,8 +263,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
   const handleProjectClick = (project: Project) => {
     if (!selectionModeProjects && !editingProject) {
-      setSelectedProject(project);
-      setShowProjectDetailModal(true);
+      // Use inline detail view instead of modal
+      setInlineDetailProject(project);
       setVisibleLeadEmails(new Set());
     }
   };
@@ -270,6 +272,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const closeProjectDetailModal = () => {
     setShowProjectDetailModal(false);
     setSelectedProject(null);
+    setVisibleLeadEmails(new Set());
+  };
+
+  // Close inline detail view and return to list
+  const closeInlineDetailView = () => {
+    setInlineDetailProject(null);
     setVisibleLeadEmails(new Set());
   };
 
@@ -2105,6 +2113,328 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
       {/* Contracts Tab Content */}
       {activeTab === 'contracts' && (
+      <>
+      {/* Inline Account Detail View */}
+      {inlineDetailProject && (
+        <Card className="glass-card border-white/10" data-testid="inline-account-detail">
+          <CardHeader className="border-b border-white/5">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeInlineDetailView}
+                className="gap-2"
+                data-testid="button-back-to-accounts"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Accounts
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {/* Account Header */}
+            <div className="flex items-center gap-4 mb-8">
+              <EndDateIndicator endDate={inlineDetailProject.endDate} />
+              <div>
+                <h2 className="text-3xl font-bold" data-testid="text-inline-account-name">{inlineDetailProject.name}</h2>
+                {inlineDetailProject.projectType && (
+                  <Badge variant="outline" className="mt-2" data-testid="badge-inline-account-type">
+                    {inlineDetailProject.projectType === 'CMS' ? 'Community Managed Advisory' : 'Strategic Services'}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Account Details Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Customer Section */}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Customer Contact Name</p>
+                    <p className="text-lg font-semibold" data-testid="text-inline-customer">{inlineDetailProject.customer}</p>
+                    {inlineDetailProject.customerContactEmail && (
+                      <p className="text-sm text-primary flex items-center gap-1.5 mt-1" data-testid="text-inline-customer-email">
+                        <Mail className="h-3.5 w-3.5" />
+                        {inlineDetailProject.customerContactEmail}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Account Owner Section */}
+                {inlineDetailProject.accountOwner && (
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-muted">
+                      <UserCog className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Account Owner</p>
+                      <p className="text-lg font-semibold" data-testid="text-inline-account-owner">{inlineDetailProject.accountOwner}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Contractual Time Section */}
+                {inlineDetailProject.totalContractualHours && (
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-muted">
+                      <Clock className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Contractual Time</p>
+                      <p className="text-lg font-semibold" data-testid="text-inline-hours">{formatContractualTime(inlineDetailProject.totalContractualHours)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Dates Section */}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Account Timeline</p>
+                    <div className="flex items-center gap-2 mt-1" data-testid="text-inline-dates">
+                      <span className="text-base">{inlineDetailProject.startDate ? formatDisplayDate(inlineDetailProject.startDate) : 'Not set'}</span>
+                      <span className="text-muted-foreground">to</span>
+                      <span className="text-base">{inlineDetailProject.endDate ? formatDisplayDate(inlineDetailProject.endDate) : 'Not set'}</span>
+                    </div>
+                    {!inlineDetailProject.endDate && (
+                      <div className="flex items-center gap-1.5 mt-1 text-warning text-sm">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        <span>End date is missing</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status Indicator */}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Status</p>
+                    {(() => {
+                      const status = getProjectStatus(inlineDetailProject.endDate);
+                      if (status === 'active') {
+                        return (
+                          <Badge className="mt-1 bg-success/20 text-success border-success/30" data-testid="badge-inline-status">
+                            Long-term Active
+                          </Badge>
+                        );
+                      } else if (status === 'renewal') {
+                        return (
+                          <Badge className="mt-1 bg-warning/20 text-warning border-warning/30" data-testid="badge-inline-status">
+                            Renewal Soon
+                          </Badge>
+                        );
+                      } else {
+                        return (
+                          <Badge className="mt-1 bg-destructive/20 text-destructive border-destructive/30" data-testid="badge-inline-status">
+                            Ended
+                          </Badge>
+                        );
+                      }
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Project Lead Section */}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <UserCog className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {hasCoLeads(inlineDetailProject) ? 'Team Leads (Co-Lead)' : 'Team Lead'}
+                    </p>
+                    <div className="space-y-2 mt-1">
+                      {(inlineDetailProject.leadIds && inlineDetailProject.leadIds.length > 0 
+                        ? inlineDetailProject.leadIds 
+                        : [inlineDetailProject.leadId]
+                      ).map((leadId) => {
+                        const leadAssignments = (inlineDetailProject.leadAssignments as LeadAssignment[]) || [];
+                        const leadAssignment = leadAssignments.find(a => a.leadId === leadId);
+                        return (
+                          <div key={leadId}>
+                            <div 
+                              className="flex items-center gap-2 cursor-pointer group"
+                              onClick={() => toggleLeadEmailVisibility(leadId)}
+                              data-testid={`button-inline-toggle-lead-email-${leadId}`}
+                            >
+                              <p className="text-lg font-semibold group-hover:text-primary transition-colors" data-testid={`text-inline-lead-${leadId}`}>
+                                {getLeadName(leadId)}
+                              </p>
+                              {leadAssignment?.hours && (
+                                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
+                                  {leadAssignment.hours} hrs/wk
+                                </span>
+                              )}
+                              <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                            {visibleLeadEmails.has(leadId) && (
+                              <div className="mt-1 flex items-center gap-2 text-sm text-primary animate-in fade-in duration-200" data-testid={`text-inline-lead-email-${leadId}`}>
+                                <Mail className="h-3.5 w-3.5" />
+                                {getLeadById(leadId)?.email || 'No email set'}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Team Members Section */}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Team Members</p>
+                    <div className="flex flex-wrap gap-2" data-testid="container-inline-team">
+                      {getTeamMembersWithRoles(inlineDetailProject.teamMembers).map((member, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-sm py-1 flex items-center gap-1.5">
+                          <span>{member.name}</span>
+                          {member.role && (
+                            <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm">
+                              {member.role}
+                            </span>
+                          )}
+                          {member.hours && (
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
+                              {member.hours} hrs/wk
+                            </span>
+                          )}
+                        </Badge>
+                      ))}
+                      {(!inlineDetailProject.teamMembers || (inlineDetailProject.teamMembers as TeamMemberAssignment[]).length === 0) && (
+                        <p className="text-sm text-muted-foreground">No team members assigned</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* External Links Section */}
+                {(inlineDetailProject.jiraEpic || inlineDetailProject.googleDriveLink || inlineDetailProject.googleExternalLink || inlineDetailProject.workflowyLink || inlineDetailProject.contractFileLink) && (
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-muted">
+                      <Briefcase className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">External Links</p>
+                      <div className="flex flex-wrap gap-2">
+                        {inlineDetailProject.jiraEpic && (
+                          <a 
+                            href={inlineDetailProject.jiraEpic.startsWith('http') ? inlineDetailProject.jiraEpic : `https://ignitetech.atlassian.net/browse/${inlineDetailProject.jiraEpic}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                            data-testid="link-inline-jira"
+                          >
+                            Jira Epic
+                          </a>
+                        )}
+                        {inlineDetailProject.googleDriveLink && (
+                          <a 
+                            href={inlineDetailProject.googleDriveLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                            data-testid="link-inline-google-drive"
+                          >
+                            Google Internal
+                          </a>
+                        )}
+                        {inlineDetailProject.googleExternalLink && (
+                          <a 
+                            href={inlineDetailProject.googleExternalLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+                            data-testid="link-inline-google-external"
+                          >
+                            Google External
+                          </a>
+                        )}
+                        {inlineDetailProject.workflowyLink && (
+                          <a 
+                            href={inlineDetailProject.workflowyLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                            data-testid="link-inline-workflowy"
+                          >
+                            Workflowy
+                          </a>
+                        )}
+                        {inlineDetailProject.contractFileLink && (
+                          <a 
+                            href={inlineDetailProject.contractFileLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 text-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+                            data-testid="link-inline-contract"
+                          >
+                            Contract File
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Edit/Delete Actions */}
+            {(permissions.canEditContracts || permissions.canDeleteContracts) && (
+              <div className="flex gap-2 mt-8 pt-6 border-t">
+                {permissions.canEditContracts && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      startEdit(inlineDetailProject);
+                      closeInlineDetailView();
+                    }}
+                    data-testid="button-inline-edit"
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit Account
+                  </Button>
+                )}
+                {permissions.canDeleteContracts && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDeletingProjectId(inlineDetailProject.id);
+                      closeInlineDetailView();
+                    }}
+                    className="text-destructive hover:text-destructive"
+                    data-testid="button-inline-delete"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Account
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Account List View (hidden when viewing inline details) */}
+      {!inlineDetailProject && (
       <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div 
@@ -3946,6 +4276,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </div>
         </DialogContent>
       </Dialog>
+      </>
+      )}
       </>
       )}
 
