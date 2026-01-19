@@ -2414,7 +2414,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     size="sm"
                     onClick={() => {
                       setDeletingProjectId(inlineDetailProject.id);
-                      closeInlineDetailView();
+                      // Keep inline detail view open while delete confirmation shows
                     }}
                     className="text-destructive hover:text-destructive"
                     data-testid="button-inline-delete"
@@ -4274,6 +4274,61 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Project Confirmation Dialog - inside contracts tab, outside view conditionals */}
+      <Dialog open={!!deletingProjectId} onOpenChange={(open) => !open && setDeletingProjectId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Account</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this account? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeletingProjectId(null)}
+              data-testid="button-cancel-delete-project"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deletingProjectId) {
+                  deleteProjectMutation.mutate(deletingProjectId);
+                }
+              }}
+              disabled={deleteProjectMutation.isPending}
+              data-testid="button-confirm-delete-project"
+            >
+              {deleteProjectMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Projects Confirmation Dialog */}
+      <AlertDialog open={showBulkDeleteProjects} onOpenChange={setShowBulkDeleteProjects}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedProjects.size} Account(s)</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedProjects.size} selected account(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-bulk-delete-projects">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => bulkDeleteProjectsMutation.mutate(Array.from(selectedProjects))}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-bulk-delete-projects"
+            >
+              {bulkDeleteProjectsMutation.isPending ? 'Deleting...' : 'Delete All'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </>
       )}
 
@@ -4937,61 +4992,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           )}
         </CardContent>
       </Card>
-
-      {/* Delete Project Confirmation Dialog */}
-      <Dialog open={!!deletingProjectId} onOpenChange={(open) => !open && setDeletingProjectId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Project</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this project? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setDeletingProjectId(null)}
-              data-testid="button-cancel-delete-project"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (deletingProjectId) {
-                  deleteProjectMutation.mutate(deletingProjectId);
-                }
-              }}
-              disabled={deleteProjectMutation.isPending}
-              data-testid="button-confirm-delete-project"
-            >
-              {deleteProjectMutation.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Delete Projects Confirmation Dialog */}
-      <AlertDialog open={showBulkDeleteProjects} onOpenChange={setShowBulkDeleteProjects}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedProjects.size} Project(s)</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {selectedProjects.size} selected project(s)? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-bulk-delete-projects">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => bulkDeleteProjectsMutation.mutate(Array.from(selectedProjects))}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-testid="button-confirm-bulk-delete-projects"
-            >
-              {bulkDeleteProjectsMutation.isPending ? 'Deleting...' : 'Delete All'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Bulk Delete Members Confirmation Dialog */}
       <AlertDialog open={showBulkDeleteMembers} onOpenChange={setShowBulkDeleteMembers}>
