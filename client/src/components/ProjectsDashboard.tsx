@@ -2400,7 +2400,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     size="sm"
                     onClick={() => {
                       startEdit(inlineDetailProject);
-                      closeInlineDetailView();
+                      // Keep inline detail view open while editing
                     }}
                     data-testid="button-inline-edit"
                   >
