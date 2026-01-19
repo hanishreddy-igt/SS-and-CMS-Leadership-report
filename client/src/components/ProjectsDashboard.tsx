@@ -186,6 +186,20 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   // Track if we're in inline detail view mode for contracts tab
   const [inlineDetailProject, setInlineDetailProject] = useState<Project | null>(null);
 
+  // Keep inline detail project in sync with projects list after edits/refetches
+  useEffect(() => {
+    if (inlineDetailProject) {
+      const updatedProject = projects.find(p => p.id === inlineDetailProject.id);
+      if (updatedProject && updatedProject !== inlineDetailProject) {
+        // Update with fresh data from the projects list
+        setInlineDetailProject(updatedProject);
+      } else if (!updatedProject) {
+        // Project was deleted, close the inline view
+        setInlineDetailProject(null);
+      }
+    }
+  }, [projects, inlineDetailProject]);
+
   // Scroll state for lead and member detail modals - track if content is scrollable
   const leadDetailScrollRef = useRef<HTMLDivElement>(null);
   const memberDetailScrollRef = useRef<HTMLDivElement>(null);
