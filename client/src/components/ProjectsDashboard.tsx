@@ -92,6 +92,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [editLeadEmailValue, setEditLeadEmailValue] = useState('');
   const [showEditLeadDialog, setShowEditLeadDialog] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [deletingMemberId, setDeletingMemberId] = useState<string | null>(null);
+  const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
 
   // Add Project Modal State
   const [showAddProjectDialog, setShowAddProjectDialog] = useState(false);
@@ -4682,8 +4684,10 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       )}
                       {permissions.canDeletePeople && (
                       <DropdownMenuItem 
-                        onClick={() => deleteMemberMutation.mutate(member.id)}
-                        disabled={deleteMemberMutation.isPending}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingMemberId(member.id);
+                        }}
                         className="text-destructive focus:text-destructive"
                         data-testid={`button-delete-member-${member.id}`}
                       >
@@ -4950,8 +4954,10 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       )}
                       {permissions.canDeletePeople && (
                       <DropdownMenuItem 
-                        onClick={(e) => { e.stopPropagation(); deleteLeadMutation.mutate(lead.id); }}
-                        disabled={deleteLeadMutation.isPending}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingLeadId(lead.id);
+                        }}
                         className="text-destructive focus:text-destructive"
                         data-testid={`button-delete-lead-${lead.id}`}
                       >
@@ -5036,6 +5042,74 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete Individual Member Confirmation Dialog */}
+      <Dialog open={!!deletingMemberId} onOpenChange={(open) => !open && setDeletingMemberId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Team Member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this team member? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeletingMemberId(null)}
+              data-testid="button-cancel-delete-member"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deletingMemberId) {
+                  deleteMemberMutation.mutate(deletingMemberId);
+                  setDeletingMemberId(null);
+                }
+              }}
+              disabled={deleteMemberMutation.isPending}
+              data-testid="button-confirm-delete-member"
+            >
+              {deleteMemberMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Individual Lead Confirmation Dialog */}
+      <Dialog open={!!deletingLeadId} onOpenChange={(open) => !open && setDeletingLeadId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Team Lead</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this team lead? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeletingLeadId(null)}
+              data-testid="button-cancel-delete-lead"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deletingLeadId) {
+                  deleteLeadMutation.mutate(deletingLeadId);
+                  setDeletingLeadId(null);
+                }
+              }}
+              disabled={deleteLeadMutation.isPending}
+              data-testid="button-confirm-delete-lead"
+            >
+              {deleteLeadMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Lead Dialog */}
       <Dialog open={showEditLeadDialog} onOpenChange={(open) => !open && cancelEditLead()}>
