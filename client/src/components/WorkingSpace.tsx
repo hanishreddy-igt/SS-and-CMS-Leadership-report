@@ -1572,19 +1572,14 @@ export default function WorkingSpace() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
-      console.log('[deleteTask] Attempting to delete task:', id);
       const res = await apiRequest('DELETE', `/api/tasks/${id}`);
-      const result = await res.json();
-      console.log('[deleteTask] Server response:', result);
-      return result;
+      return res.json();
     },
-    onSuccess: (data, id) => {
-      console.log('[deleteTask] onSuccess - invalidating queries, id:', id);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       toast({ title: 'Task deleted' });
     },
     onError: (error: any) => {
-      console.error('[deleteTask] onError:', error);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
@@ -1642,7 +1637,6 @@ export default function WorkingSpace() {
   };
 
   const handleDeleteTask = (id: string) => {
-    console.log('[handleDeleteTask] Called with id:', id);
     deleteTaskMutation.mutate(id);
   };
 
