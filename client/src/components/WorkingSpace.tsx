@@ -191,6 +191,7 @@ export interface ParsedTitle {
   statusTag?: string;
   priorityTag?: string;
   noteText?: string;
+  dueDate?: string; // ISO date string
 }
 
 const priorityColors: Record<string, string> = {
@@ -248,12 +249,76 @@ export function parseInlineTags(title: string): ParsedTitle {
     result.text = result.text.replace(/\$(normal|medium|high)/gi, '').trim();
   }
   
-  // Clean up any orphaned tag prefixes (@@, @, #, $, //) that weren't matched
+  // Parse due date tag (!date)
+  // Supported formats: !today, !tomorrow, !1/17, !01/17, !Jan17, !Jan 17, !January17, !January 17
+  const monthNames: Record<string, number> = {
+    'jan': 0, 'january': 0, 'feb': 1, 'february': 1, 'mar': 2, 'march': 2,
+    'apr': 3, 'april': 3, 'may': 4, 'jun': 5, 'june': 5,
+    'jul': 6, 'july': 6, 'aug': 7, 'august': 7, 'sep': 8, 'september': 8,
+    'oct': 9, 'october': 9, 'nov': 10, 'november': 10, 'dec': 11, 'december': 11
+  };
+  
+  // Try different date patterns
+  const dueDatePatterns = [
+    // !today, !tomorrow
+    /!(today|tomorrow)\b/i,
+    // !1/17 or !01/17 (m/d or mm/dd)
+    /!(\d{1,2})\/(\d{1,2})\b/,
+    // !Jan17 or !Jan 17 or !January17 or !January 17
+    /!(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s*(\d{1,2})\b/i
+  ];
+  
+  for (const pattern of dueDatePatterns) {
+    const dueDateMatch = title.match(pattern);
+    if (dueDateMatch) {
+      const now = new Date();
+      let targetDate: Date | null = null;
+      
+      if (pattern === dueDatePatterns[0]) {
+        // today/tomorrow
+        const keyword = dueDateMatch[1].toLowerCase();
+        targetDate = new Date(now);
+        if (keyword === 'tomorrow') {
+          targetDate.setDate(targetDate.getDate() + 1);
+        }
+      } else if (pattern === dueDatePatterns[1]) {
+        // m/d format
+        const month = parseInt(dueDateMatch[1], 10) - 1; // 0-indexed
+        const day = parseInt(dueDateMatch[2], 10);
+        targetDate = new Date(now.getFullYear(), month, day);
+        // If the date has passed, assume next year
+        if (targetDate < now) {
+          targetDate.setFullYear(targetDate.getFullYear() + 1);
+        }
+      } else if (pattern === dueDatePatterns[2]) {
+        // Month name + day
+        const monthName = dueDateMatch[1].toLowerCase();
+        const day = parseInt(dueDateMatch[2], 10);
+        const monthIndex = monthNames[monthName.substring(0, 3)];
+        if (monthIndex !== undefined) {
+          targetDate = new Date(now.getFullYear(), monthIndex, day);
+          // If the date has passed, assume next year
+          if (targetDate < now) {
+            targetDate.setFullYear(targetDate.getFullYear() + 1);
+          }
+        }
+      }
+      
+      if (targetDate) {
+        result.dueDate = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        result.text = result.text.replace(pattern, '').trim();
+      }
+      break;
+    }
+  }
+  
+  // Clean up any orphaned tag prefixes (@@, @, #, $, !, //) that weren't matched
   result.text = result.text
     .replace(/@@\s*/g, '')  // Remove orphaned @@
     .replace(/@\s*/g, '')   // Remove orphaned @
     .replace(/#\s*/g, '')   // Remove orphaned #
     .replace(/\$\s*/g, '')  // Remove orphaned $
+    .replace(/!\s*/g, '')   // Remove orphaned !
     .replace(/\/\/\s*/g, '') // Remove orphaned //
     .replace(/\s+/g, ' ')   // Normalize multiple spaces
     .trim();
@@ -291,7 +356,7 @@ interface InlineTaskInputProps {
 
 function InlineTaskInput({ 
   onSubmit, 
-  placeholder = "Type a task... (@@account @person #status $priority //note)", 
+  placeholder = "Type a task... (@@account @person #status $priority !date //note)", 
   autoFocus = false, 
   depth = 0,
   onIndent,
@@ -1028,6 +1093,9 @@ export function TaskRow({
           };
           updates.notes = [...notes, newNote];
         }
+        if (parsed.dueDate) {
+          updates.dueDate = parsed.dueDate;
+        }
         
         onUpdate(task.id, updates);
       }
@@ -1404,7 +1472,7 @@ export function TaskRow({
         <InlineTaskInput
           onSubmit={handleSubtaskCreate}
           onCancel={() => setShowSubtaskInput(false)}
-          placeholder={project ? `Add sub-task for ${project.name}... (@person #status $priority)` : "Add sub-task... (@@account @person #status $priority)"}
+          placeholder={project ? `Add sub-task for ${project.name}... (@person #status $priority !date)` : "Add sub-task... (@@account @person #status $priority !date)"}
           autoFocus
           depth={depth + 1}
           projects={projects}
@@ -1530,6 +1598,10 @@ export default function WorkingSpace() {
         author: userEmail,
         timestamp: new Date().toISOString(),
       }];
+    }
+    
+    if (parsed.dueDate) {
+      taskData.dueDate = parsed.dueDate;
     }
     
     createTaskMutation.mutate(taskData);
