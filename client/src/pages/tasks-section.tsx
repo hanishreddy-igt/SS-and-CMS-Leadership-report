@@ -13,7 +13,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 // TASK ACCESS CONTROL - Change this to allow/restrict access
 // Set to true to allow everyone, or check specific roles
 // ============================================================
-const TASKS_ALLOWED_ROLES = ['admin', 'manager']; // Add 'lead', 'member' to open up
+const TASKS_ALLOWED_ROLES = ['admin', 'manager', 'lead', 'member'];
 
 const tabs = [
   { id: 'workspace', label: 'WorkSpace', icon: LayoutGrid },
