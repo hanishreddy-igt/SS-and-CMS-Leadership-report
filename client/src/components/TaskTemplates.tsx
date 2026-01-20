@@ -41,7 +41,10 @@ const getTimezoneAbbr = (date: Date): string => {
     'GMT+8': 'SGT',
     'GMT+9': 'JST',
     'GMT+10': 'AEST',
+    'GMT+10:30': 'ACDT',
     'GMT+11': 'AEDT',
+    'GMT+8:45': 'ACWST',
+    'GMT+9:30': 'ACST',
     'GMT-8': 'PST',
     'GMT-7': 'MST',
     'GMT-6': 'CST',
@@ -49,7 +52,9 @@ const getTimezoneAbbr = (date: Date): string => {
     'GMT-4': 'EDT',
     'GMT+0': 'GMT',
     'GMT+1': 'CET',
-    'GMT+2': 'EET',
+    'GMT+2': 'SAST',
+    'GMT+3': 'EAT',
+    'GMT+4': 'GST',
   };
   
   return offsetMap[rawTz] || rawTz;
