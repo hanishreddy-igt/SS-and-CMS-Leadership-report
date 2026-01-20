@@ -42,16 +42,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -875,6 +872,7 @@ export function TaskRow({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
   const [panelTrigger, setPanelTrigger] = useState<'notes' | 'assignee' | 'menu' | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Use external control if provided, otherwise fall back to always showing details
   const showDetails = showDetailsToggle ? (openTaskId === task.id) : true;
@@ -1385,37 +1383,49 @@ export function TaskRow({
             
             <div className="flex-1" />
             
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  ref={menuButtonRef}
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 flex-shrink-0 text-muted-foreground hover:text-destructive"
-                  data-testid={`delete-${task.id}`}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Task</AlertDialogTitle>
-                  <AlertDialogDescription>
+            <Button
+              ref={menuButtonRef}
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 flex-shrink-0 text-muted-foreground hover:text-destructive"
+              data-testid={`delete-${task.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(true);
+              }}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+            <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Task</DialogTitle>
+                  <DialogDescription>
                     Are you sure you want to delete "{task.title}"? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={() => onDelete(task.id)}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowDeleteConfirm(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      onDelete(task.id);
+                    }}
                     data-testid={`confirm-delete-${task.id}`}
                   >
                     Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
         
