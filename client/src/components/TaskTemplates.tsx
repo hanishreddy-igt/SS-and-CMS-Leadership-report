@@ -741,13 +741,13 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
               <h4 className="text-sm font-medium text-muted-foreground mb-1">Last Used</h4>
               <div className="flex items-center gap-1 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                {new Date(template.lastUsedAt).toLocaleString()}
+                {new Date(template.lastUsedAt).toLocaleString()} {new Date(template.lastUsedAt).toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop()}
               </div>
             </div>
           )}
           
           <div className="text-xs text-muted-foreground">
-            Created: {new Date(template.createdAt).toLocaleString()}
+            Created: {new Date(template.createdAt).toLocaleString()} {new Date(template.createdAt).toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop()}
           </div>
         </div>
         
