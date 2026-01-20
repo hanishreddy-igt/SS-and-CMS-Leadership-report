@@ -30,6 +30,31 @@ import {
 } from 'lucide-react';
 import type { TaskTemplate, Project, Person, SubTemplateItem } from '@shared/schema';
 
+// Helper to get friendly timezone abbreviation
+const getTimezoneAbbr = (date: Date): string => {
+  const rawTz = date.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop() || '';
+  
+  // Map common GMT offsets to friendly abbreviations
+  const offsetMap: Record<string, string> = {
+    'GMT+5:30': 'IST',
+    'GMT+5': 'PKT',
+    'GMT+8': 'SGT',
+    'GMT+9': 'JST',
+    'GMT+10': 'AEST',
+    'GMT+11': 'AEDT',
+    'GMT-8': 'PST',
+    'GMT-7': 'MST',
+    'GMT-6': 'CST',
+    'GMT-5': 'EST',
+    'GMT-4': 'EDT',
+    'GMT+0': 'GMT',
+    'GMT+1': 'CET',
+    'GMT+2': 'EET',
+  };
+  
+  return offsetMap[rawTz] || rawTz;
+};
+
 const recurrenceOptions = [
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
@@ -741,13 +766,13 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
               <h4 className="text-sm font-medium text-muted-foreground mb-1">Last Used</h4>
               <div className="flex items-center gap-1 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                {new Date(template.lastUsedAt).toLocaleString()} {new Date(template.lastUsedAt).toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop()}
+                {new Date(template.lastUsedAt).toLocaleString()} {getTimezoneAbbr(new Date(template.lastUsedAt))}
               </div>
             </div>
           )}
           
           <div className="text-xs text-muted-foreground">
-            Created: {new Date(template.createdAt).toLocaleString()} {new Date(template.createdAt).toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop()}
+            Created: {new Date(template.createdAt).toLocaleString()} {getTimezoneAbbr(new Date(template.createdAt))}
           </div>
         </div>
         

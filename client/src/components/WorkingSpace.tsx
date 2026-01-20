@@ -52,6 +52,31 @@ import {
 } from '@/components/ui/select';
 import type { Task, Project, Person } from '@shared/schema';
 
+// Helper to get friendly timezone abbreviation
+const getTimezoneAbbr = (date: Date): string => {
+  const rawTz = date.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop() || '';
+  
+  // Map common GMT offsets to friendly abbreviations
+  const offsetMap: Record<string, string> = {
+    'GMT+5:30': 'IST',
+    'GMT+5': 'PKT',
+    'GMT+8': 'SGT',
+    'GMT+9': 'JST',
+    'GMT+10': 'AEST',
+    'GMT+11': 'AEDT',
+    'GMT-8': 'PST',
+    'GMT-7': 'MST',
+    'GMT-6': 'CST',
+    'GMT-5': 'EST',
+    'GMT-4': 'EDT',
+    'GMT+0': 'GMT',
+    'GMT+1': 'CET',
+    'GMT+2': 'EET',
+  };
+  
+  return offsetMap[rawTz] || rawTz;
+};
+
 const statusColors: Record<string, string> = {
   todo: 'bg-slate-500',
   'in-progress': 'bg-green-500',
@@ -1297,7 +1322,7 @@ export function TaskRow({
         {showDetails && (
           <div className="ml-9 mt-0.5">
             <span className="text-[10px] text-muted-foreground">
-              Created by {people.find(p => p.email === task.createdBy)?.name || task.createdBy} on {format(new Date(task.createdAt), "do MMMM yyyy 'at' HH:mm:ss")} {new Date(task.createdAt).toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop()}
+              Created by {people.find(p => p.email === task.createdBy)?.name || task.createdBy} on {format(new Date(task.createdAt), "do MMMM yyyy 'at' HH:mm:ss")} {getTimezoneAbbr(new Date(task.createdAt))}
             </span>
           </div>
         )}
@@ -1306,7 +1331,7 @@ export function TaskRow({
         {showDetails && (
           <div className="ml-9 mt-0.5">
             <span className="text-[10px] text-muted-foreground">
-              Last updated {task.updatedBy ? `by ${people.find(p => p.email === task.updatedBy)?.name || task.updatedBy} ` : ''}on {format(new Date(task.updatedAt), "do MMMM yyyy 'at' HH:mm:ss")} {new Date(task.updatedAt).toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop()}
+              Last updated {task.updatedBy ? `by ${people.find(p => p.email === task.updatedBy)?.name || task.updatedBy} ` : ''}on {format(new Date(task.updatedAt), "do MMMM yyyy 'at' HH:mm:ss")} {getTimezoneAbbr(new Date(task.updatedAt))}
             </span>
           </div>
         )}
