@@ -177,9 +177,18 @@ export const taskTemplates = pgTable("task_templates", {
   subTemplates: jsonb("sub_templates").default(sql`'[]'`), // Array of SubTemplateItem for sub-tasks
   taskItems: text("task_items"), // EOS format or details (becomes task note)
   recurrence: text("recurrence"), // daily, weekly, biweekly, monthly, quarterly
+  // Legacy fields (deprecated - kept for backward compatibility)
   deliveryTime: text("delivery_time"), // Time of day for delivery (e.g., "09:00")
   deliveryDay: text("delivery_day"), // Day of week for weekly/bi-weekly (e.g., "monday")
   deliveryDate: integer("delivery_date"), // Day of month for monthly/quarterly (1-28, 0 = last day)
+  // New scheduling fields
+  startTime: text("start_time"), // Work start time (e.g., "09:00")
+  endTime: text("end_time"), // Due time (e.g., "17:00")
+  startDay: text("start_day"), // Start day of week for weekly/biweekly (e.g., "monday")
+  endDay: text("end_day"), // Due day of week for weekly/biweekly (e.g., "friday")
+  startDate: integer("start_date"), // Start day of month for monthly/quarterly (1-28, 0 = last day)
+  endDate: integer("end_date"), // Due day of month for monthly/quarterly (1-28, 0 = last day)
+  daysOfWeek: text("days_of_week").array().default(sql`'{}'`), // For daily: selected days (e.g., ["monday", "tuesday", ...])
   timezone: text("timezone"), // GMT offset (e.g., "+5:30", "-8", "+0")
   createdBy: text("created_by").notNull(), // Who created the template
   isActive: text("is_active").default('true'), // Whether template is active
