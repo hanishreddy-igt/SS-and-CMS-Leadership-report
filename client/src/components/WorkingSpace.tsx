@@ -33,16 +33,25 @@ import {
   X,
   Play,
   Check,
-  Ban,
-  MoreVertical
+  Ban
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -1376,35 +1385,37 @@ export function TaskRow({
             
             <div className="flex-1" />
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
                 <Button
                   ref={menuButtonRef}
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 flex-shrink-0"
-                  data-testid={`task-menu-${task.id}`}
-                >
-                  <MoreVertical className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => openPanel('dueDate', 'menu')} data-testid="menu-due-date">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  Set Due Date
-                  {task.dueDate && <span className="ml-auto text-xs text-muted-foreground">{format(new Date(task.dueDate), 'MMM d')}</span>}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => onDelete(task.id)} 
-                  className="text-destructive focus:text-destructive"
+                  className="h-5 w-5 flex-shrink-0 text-muted-foreground hover:text-destructive"
                   data-testid={`delete-${task.id}`}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Task
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete "{task.title}"? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={() => onDelete(task.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    data-testid={`confirm-delete-${task.id}`}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
         
