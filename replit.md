@@ -53,10 +53,17 @@ This project provides a comprehensive tracking system for Strategic Services (SS
     - **Work Management Section**: Workflowy-style task management system with three tabs:
       - **Working Space**: Primary task creation area with "Your Workspace" section (create and manage your own tasks) and "All Tasks" section (team-wide view grouped by project with collapsible groups).
       - **Tasks Assigned to You**: Filtered view showing tasks assigned to the current user, grouped by status (To Do, In Progress, Blocked, Done) with quick status updates.
-      - **Recurring Deliverables (Task Templates)**: Recurring task templates with support for daily/weekly/monthly patterns. Features include:
+      - **Recurring Deliverables (Task Templates)**: Recurring task templates with support for daily/weekly/biweekly/monthly/quarterly patterns. Features include:
         - **Sub-tasks**: Define hierarchical sub-tasks that are created as child tasks when deliverable is triggered
         - **Assignment Mode**: Choose between "One task" (all assignees on same task) or "Separate tasks" (individual task per assignee)
         - **Priority inheritance**: Sub-tasks can have their own priority (low/medium/high) or inherit from parent
+        - **Delivery Scheduling (Phase 1)**: Configure when tasks should be due with:
+          - **Delivery Time**: Time of day for delivery (e.g., "09:00", "17:30")
+          - **Delivery Day**: Day of week for weekly/biweekly (Sunday-Saturday)
+          - **Delivery Date**: Day of month for monthly/quarterly (1-28, or 0 for last day)
+          - **Timezone**: GMT offset (+5:30, -8, +0) for timezone-aware scheduling
+          - **Next Scheduled Display**: Template cards show calculated next delivery date/time in template timezone
+          - Tasks created from templates automatically get due date set to next scheduled delivery
       - Tasks support hierarchical nesting via parentTaskId, project linking, multiple assignees, priority levels, tags, and timestamped notes.
     - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI.
     - **Jira Integration**: Functionality to import projects, leads, and team members directly from Jira epics.
