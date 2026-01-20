@@ -268,44 +268,57 @@ export function parseInlineTags(title: string): ParsedTitle {
     /!(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s*(\d{1,2})\b/i
   ];
   
+  // Helper to format date as YYYY-MM-DD without timezone conversion
+  const formatDateString = (year: number, month: number, day: number): string => {
+    const y = year.toString();
+    const m = (month + 1).toString().padStart(2, '0'); // month is 0-indexed
+    const d = day.toString().padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+  
   for (const pattern of dueDatePatterns) {
     const dueDateMatch = title.match(pattern);
     if (dueDateMatch) {
       const now = new Date();
-      let targetDate: Date | null = null;
+      let dateString: string | null = null;
       
       if (pattern === dueDatePatterns[0]) {
         // today/tomorrow
         const keyword = dueDateMatch[1].toLowerCase();
-        targetDate = new Date(now);
+        const targetDate = new Date(now);
         if (keyword === 'tomorrow') {
           targetDate.setDate(targetDate.getDate() + 1);
         }
+        dateString = formatDateString(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
       } else if (pattern === dueDatePatterns[1]) {
         // m/d format
         const month = parseInt(dueDateMatch[1], 10) - 1; // 0-indexed
         const day = parseInt(dueDateMatch[2], 10);
-        targetDate = new Date(now.getFullYear(), month, day);
+        let year = now.getFullYear();
         // If the date has passed, assume next year
+        const targetDate = new Date(year, month, day);
         if (targetDate < now) {
-          targetDate.setFullYear(targetDate.getFullYear() + 1);
+          year++;
         }
+        dateString = formatDateString(year, month, day);
       } else if (pattern === dueDatePatterns[2]) {
         // Month name + day
         const monthName = dueDateMatch[1].toLowerCase();
         const day = parseInt(dueDateMatch[2], 10);
         const monthIndex = monthNames[monthName.substring(0, 3)];
         if (monthIndex !== undefined) {
-          targetDate = new Date(now.getFullYear(), monthIndex, day);
+          let year = now.getFullYear();
           // If the date has passed, assume next year
+          const targetDate = new Date(year, monthIndex, day);
           if (targetDate < now) {
-            targetDate.setFullYear(targetDate.getFullYear() + 1);
+            year++;
           }
+          dateString = formatDateString(year, monthIndex, day);
         }
       }
       
-      if (targetDate) {
-        result.dueDate = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      if (dateString) {
+        result.dueDate = dateString;
         result.text = result.text.replace(pattern, '').trim();
       }
       break;
