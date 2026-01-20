@@ -148,7 +148,7 @@ export const tasks = pgTable("tasks", {
   createdBy: text("created_by").notNull(), // Email of who created the task
   updatedBy: text("updated_by"), // Email of who last updated the task
   status: text("status").notNull().default('todo'), // todo, in-progress, done, cancelled
-  priority: text("priority").default('medium'), // low, medium, high
+  priority: text("priority").default('normal'), // normal, medium, high
   tags: text("tags").array().notNull().default(sql`'{}'`), // Inline tags like #status
   notes: jsonb("notes").notNull().default(sql`'[]'`), // Array of { content, author, timestamp }
   dueDate: text("due_date"), // Optional due date
@@ -164,7 +164,7 @@ export type SubTemplateItem = {
   id: string;
   title: string;
   assignedTo?: string[]; // Can override parent's assignees
-  priority?: 'low' | 'medium' | 'high';
+  priority?: 'normal' | 'medium' | 'high';
 };
 
 export const taskTemplates = pgTable("task_templates", {
@@ -258,7 +258,7 @@ export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
 
 // Task status enum
 export type TaskStatus = 'todo' | 'in-progress' | 'done' | 'cancelled';
-export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskPriority = 'normal' | 'medium' | 'high';
 
 // Task note structure
 export type TaskNote = {

@@ -79,7 +79,7 @@ interface CrossProjectPatterns {
 interface UpcomingFocusItem {
   project: string;
   focus: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'high' | 'medium' | 'normal';
 }
 
 interface LeadershipAction {
@@ -136,7 +136,7 @@ interface TeamConcernItem {
   concern: string;
   affectedMembers: string[] | string;
   project: string;
-  severity: 'high' | 'medium' | 'low';
+  severity: 'high' | 'medium' | 'normal';
 }
 
 interface WorkloadObservation {

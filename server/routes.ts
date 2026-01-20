@@ -1403,7 +1403,7 @@ JSON STRUCTURE TO GENERATE:
   ],
 
   "upcomingFocus": [
-    { "project": "Project Name", "focus": "What the team will focus on next week", "priority": "high" | "medium" | "low" }
+    { "project": "Project Name", "focus": "What the team will focus on next week", "priority": "high" | "medium" | "normal" }
   ],
 
   "recommendedLeadershipActions": [
@@ -1499,7 +1499,7 @@ Generate a comprehensive team insights summary in JSON format:
   ],
   
   "teamConcerns": [
-    { "concern": "Specific concern identified", "affectedMembers": ["Name 1", "Name 2"] or "general", "project": "Project Name or 'Multiple'", "severity": "high" | "medium" | "low" }
+    { "concern": "Specific concern identified", "affectedMembers": ["Name 1", "Name 2"] or "general", "project": "Project Name or 'Multiple'", "severity": "high" | "medium" | "normal" }
   ],
   
   "workloadObservations": [
@@ -1794,7 +1794,7 @@ JSON STRUCTURE TO GENERATE:
   },
   "dependenciesAndCrossTeamNeeds": [],
   "upcomingFocus": [
-    { "project": "Project Name", "focus": "What the team will focus on next week", "priority": "high" | "medium" | "low" }
+    { "project": "Project Name", "focus": "What the team will focus on next week", "priority": "high" | "medium" | "normal" }
   ],
   "recommendedLeadershipActions": [
     { "action": "Specific action leadership should take", "priority": "high" | "medium", "rationale": "Why this matters" }
@@ -1904,7 +1904,7 @@ Generate a comprehensive team insights summary in JSON format:
     { "memberName": "Name", "project": "Project Name", "achievement": "What they did", "suggestedRecognition": "How to recognize" }
   ],
   "teamConcerns": [
-    { "concern": "Specific concern", "affectedMembers": ["Name 1"], "project": "Project Name", "severity": "high" | "medium" | "low" }
+    { "concern": "Specific concern", "affectedMembers": ["Name 1"], "project": "Project Name", "severity": "high" | "medium" | "normal" }
   ],
   "workloadObservations": [],
   "supportNeeded": [

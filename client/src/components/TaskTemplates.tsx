@@ -562,10 +562,10 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
                     </Popover>
                     
                     <Select
-                      value={sub.priority || 'medium'}
+                      value={sub.priority || 'normal'}
                       onValueChange={(v) => {
                         const updated = [...formData.subTemplates];
-                        updated[index] = { ...sub, priority: v as 'low' | 'medium' | 'high' };
+                        updated[index] = { ...sub, priority: v as 'normal' | 'medium' | 'high' };
                         setFormData({ ...formData, subTemplates: updated });
                       }}
                     >
@@ -573,7 +573,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
                         <SelectItem value="medium">Medium</SelectItem>
                         <SelectItem value="high">High</SelectItem>
                       </SelectContent>
@@ -611,7 +611,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
                     ...formData,
                     subTemplates: [
                       ...formData.subTemplates,
-                      { id: crypto.randomUUID(), title: newSubTaskTitle.trim(), priority: 'medium' }
+                      { id: crypto.randomUUID(), title: newSubTaskTitle.trim(), priority: 'normal' }
                     ]
                   });
                   setNewSubTaskTitle('');
@@ -630,7 +630,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
                     ...formData,
                     subTemplates: [
                       ...formData.subTemplates,
-                      { id: crypto.randomUUID(), title: newSubTaskTitle.trim(), priority: 'medium' }
+                      { id: crypto.randomUUID(), title: newSubTaskTitle.trim(), priority: 'normal' }
                     ]
                   });
                   setNewSubTaskTitle('');
@@ -1329,7 +1329,7 @@ export default function TaskTemplates() {
             assignedTo: [personId],
             notes,
             status: 'todo',
-            priority: 'medium',
+            priority: 'normal',
             dueDate: dueDate,
             createdBy: user?.email || 'system',
           });
@@ -1348,7 +1348,7 @@ export default function TaskTemplates() {
           assignedTo: assignees,
           notes,
           status: 'todo',
-          priority: 'medium',
+          priority: 'normal',
           dueDate: dueDate,
           createdBy: user?.email || 'system',
         });

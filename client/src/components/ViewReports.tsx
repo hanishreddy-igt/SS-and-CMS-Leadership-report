@@ -135,7 +135,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
   interface UpcomingFocusItem {
     project: string;
     focus: string;
-    priority: 'high' | 'medium' | 'low';
+    priority: 'high' | 'medium' | 'normal';
   }
   
   interface LeadershipAction {
@@ -193,7 +193,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     concern: string;
     affectedMembers: string[] | string;
     project: string;
-    severity: 'high' | 'medium' | 'low';
+    severity: 'high' | 'medium' | 'normal';
   }
   
   interface WorkloadObservation {
