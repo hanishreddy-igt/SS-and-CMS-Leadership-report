@@ -77,9 +77,18 @@ interface TemplateFormData {
   subTemplates: SubTemplateItem[];
   taskItems: string;
   recurrence: string;
+  // Legacy fields (for backward compatibility)
   deliveryTime: string;
   deliveryDay: string;
   deliveryDate: number | null;
+  // New scheduling fields
+  startTime: string;
+  endTime: string;
+  startDay: string;
+  endDay: string;
+  startDate: number | null;
+  endDate: number | null;
+  daysOfWeek: string[];
   timezone: string;
   isActive: boolean;
 }
@@ -133,18 +142,47 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
     subTemplates: [],
     taskItems: '',
     recurrence: '',
+    // Legacy fields
     deliveryTime: '09:00',
     deliveryDay: 'monday',
     deliveryDate: 1,
+    // New fields
+    startTime: '09:00',
+    endTime: '17:00',
+    startDay: 'monday',
+    endDay: 'friday',
+    startDate: 1,
+    endDate: 5,
+    daysOfWeek: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     timezone: '+5:30',
     isActive: true,
   });
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('');
   
   // Determine which scheduling fields to show based on recurrence
-  const showTimeField = !!formData.recurrence;
-  const showDayField = formData.recurrence === 'weekly' || formData.recurrence === 'biweekly';
-  const showDateField = formData.recurrence === 'monthly' || formData.recurrence === 'quarterly';
+  const isDaily = formData.recurrence === 'daily';
+  const isWeeklyOrBiweekly = formData.recurrence === 'weekly' || formData.recurrence === 'biweekly';
+  const isMonthlyOrQuarterly = formData.recurrence === 'monthly' || formData.recurrence === 'quarterly';
+  const hasRecurrence = !!formData.recurrence;
+  
+  // Toggle day selection for daily recurrence
+  const toggleDayOfWeek = (day: string) => {
+    setFormData(prev => ({
+      ...prev,
+      daysOfWeek: prev.daysOfWeek.includes(day)
+        ? prev.daysOfWeek.filter(d => d !== day)
+        : [...prev.daysOfWeek, day]
+    }));
+  };
+  
+  const toggleAllDays = () => {
+    const allDays = dayOptions.map(d => d.value);
+    const allSelected = allDays.every(d => formData.daysOfWeek.includes(d));
+    setFormData(prev => ({
+      ...prev,
+      daysOfWeek: allSelected ? [] : allDays
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,125 +278,212 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
       </div>
 
       {/* Scheduling fields - shown when recurrence is selected */}
-      {showTimeField && (
+      {hasRecurrence && (
         <div className="p-4 bg-muted/50 rounded-lg space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
-            <Label className="font-medium">Delivery Schedule</Label>
+            <Label className="font-medium">Work Schedule</Label>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            {/* Delivery Time */}
+          {/* Daily recurrence - Day selection */}
+          {isDaily && (
             <div className="space-y-2">
-              <Label htmlFor="deliveryTime">Delivery Time</Label>
-              <Input
-                id="deliveryTime"
-                type="time"
-                value={formData.deliveryTime}
-                onChange={(e) => setFormData({ ...formData, deliveryTime: e.target.value })}
-                data-testid="template-delivery-time"
-              />
-            </div>
-            
-            {/* Timezone - manual entry */}
-            <div className="space-y-2">
-              <Label>Timezone (GMT offset)</Label>
-              <div className="flex items-center gap-1">
-                <Select
-                  value={parseTimezoneToHoursMinutes(formData.timezone).sign}
-                  onValueChange={(sign) => {
-                    const parsed = parseTimezoneToHoursMinutes(formData.timezone);
-                    setFormData({ ...formData, timezone: formatTimezone(sign as '+' | '-', parsed.hours, parsed.minutes) });
-                  }}
+              <div className="flex items-center justify-between">
+                <Label>Days of Week</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleAllDays}
+                  className="h-6 text-xs"
                 >
-                  <SelectTrigger className="w-16" data-testid="template-timezone-sign">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="+">+</SelectItem>
-                    <SelectItem value="-">-</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  min="0"
-                  max="14"
-                  className="w-16 text-center"
-                  placeholder="Hr"
-                  value={parseTimezoneToHoursMinutes(formData.timezone).hours}
-                  onChange={(e) => {
-                    const parsed = parseTimezoneToHoursMinutes(formData.timezone);
-                    const hours = Math.max(0, Math.min(14, parseInt(e.target.value) || 0)).toString();
-                    setFormData({ ...formData, timezone: formatTimezone(parsed.sign, hours, parsed.minutes) });
-                  }}
-                  data-testid="template-timezone-hours"
-                />
-                <span className="text-muted-foreground">:</span>
-                <Input
-                  type="number"
-                  min="0"
-                  max="59"
-                  step="15"
-                  className="w-16 text-center"
-                  placeholder="Min"
-                  value={parseTimezoneToHoursMinutes(formData.timezone).minutes}
-                  onChange={(e) => {
-                    const parsed = parseTimezoneToHoursMinutes(formData.timezone);
-                    const mins = Math.max(0, Math.min(59, parseInt(e.target.value) || 0)).toString().padStart(2, '0');
-                    setFormData({ ...formData, timezone: formatTimezone(parsed.sign, parsed.hours, mins) });
-                  }}
-                  data-testid="template-timezone-minutes"
-                />
+                  {dayOptions.every(d => formData.daysOfWeek.includes(d.value)) ? 'Deselect All' : 'Select All'}
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">e.g., +5:30 for IST, -8:00 for PST</p>
-            </div>
-          </div>
-          
-          {/* Day of week - for weekly/bi-weekly */}
-          {showDayField && (
-            <div className="space-y-2">
-              <Label>Delivery Day</Label>
-              <Select 
-                value={formData.deliveryDay} 
-                onValueChange={(v) => setFormData({ ...formData, deliveryDay: v })}
-              >
-                <SelectTrigger data-testid="template-delivery-day">
-                  <SelectValue placeholder="Select day" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dayOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {dayOptions.map(day => (
+                  <Button
+                    key={day.value}
+                    type="button"
+                    variant={formData.daysOfWeek.includes(day.value) ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => toggleDayOfWeek(day.value)}
+                    className="h-8"
+                    data-testid={`day-${day.value}`}
+                  >
+                    {day.label.slice(0, 3)}
+                  </Button>
+                ))}
+              </div>
             </div>
           )}
           
-          {/* Day of month - for monthly/quarterly */}
-          {showDateField && (
+          {/* Weekly/Bi-weekly - Start and End Day */}
+          {isWeeklyOrBiweekly && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Day</Label>
+                <Select 
+                  value={formData.startDay} 
+                  onValueChange={(v) => setFormData({ ...formData, startDay: v })}
+                >
+                  <SelectTrigger data-testid="template-start-day">
+                    <SelectValue placeholder="Select day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dayOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Due Day</Label>
+                <Select 
+                  value={formData.endDay} 
+                  onValueChange={(v) => setFormData({ ...formData, endDay: v })}
+                >
+                  <SelectTrigger data-testid="template-end-day">
+                    <SelectValue placeholder="Select day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dayOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          
+          {/* Monthly/Quarterly - Start and End Date */}
+          {isMonthlyOrQuarterly && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Date (day of month)</Label>
+                <Select 
+                  value={formData.startDate?.toString() || '1'} 
+                  onValueChange={(v) => setFormData({ ...formData, startDate: parseInt(v) })}
+                >
+                  <SelectTrigger data-testid="template-start-date">
+                    <SelectValue placeholder="Select date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
+                      <SelectItem key={day} value={day.toString()}>{day}</SelectItem>
+                    ))}
+                    <SelectItem value="0">Last day of month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Due Date (day of month)</Label>
+                <Select 
+                  value={formData.endDate?.toString() || '5'} 
+                  onValueChange={(v) => setFormData({ ...formData, endDate: parseInt(v) })}
+                >
+                  <SelectTrigger data-testid="template-end-date">
+                    <SelectValue placeholder="Select date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
+                      <SelectItem key={day} value={day.toString()}>{day}</SelectItem>
+                    ))}
+                    <SelectItem value="0">Last day of month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          
+          {/* Time fields - Start Time and End/Due Time */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Delivery Date (day of month)</Label>
-              <Select 
-                value={formData.deliveryDate?.toString() || '1'} 
-                onValueChange={(v) => setFormData({ ...formData, deliveryDate: parseInt(v) })}
+              <Label htmlFor="startTime">Start Time (task created)</Label>
+              <Input
+                id="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                data-testid="template-start-time"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endTime">Due Time</Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                data-testid="template-end-time"
+              />
+            </div>
+          </div>
+          
+          {/* Timezone - manual entry */}
+          <div className="space-y-2">
+            <Label>Timezone (GMT offset)</Label>
+            <div className="flex items-center gap-1">
+              <Select
+                value={parseTimezoneToHoursMinutes(formData.timezone).sign}
+                onValueChange={(sign) => {
+                  const parsed = parseTimezoneToHoursMinutes(formData.timezone);
+                  setFormData({ ...formData, timezone: formatTimezone(sign as '+' | '-', parsed.hours, parsed.minutes) });
+                }}
               >
-                <SelectTrigger data-testid="template-delivery-date">
-                  <SelectValue placeholder="Select date" />
+                <SelectTrigger className="w-16" data-testid="template-timezone-sign">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
-                    <SelectItem key={day} value={day.toString()}>{day}</SelectItem>
-                  ))}
-                  <SelectItem value="0">Last day of month</SelectItem>
+                  <SelectItem value="+">+</SelectItem>
+                  <SelectItem value="-">-</SelectItem>
                 </SelectContent>
               </Select>
+              <Input
+                type="number"
+                min="0"
+                max="14"
+                className="w-16 text-center"
+                placeholder="Hr"
+                value={parseTimezoneToHoursMinutes(formData.timezone).hours}
+                onChange={(e) => {
+                  const parsed = parseTimezoneToHoursMinutes(formData.timezone);
+                  const hours = Math.max(0, Math.min(14, parseInt(e.target.value) || 0)).toString();
+                  setFormData({ ...formData, timezone: formatTimezone(parsed.sign, hours, parsed.minutes) });
+                }}
+                data-testid="template-timezone-hours"
+              />
+              <span className="text-muted-foreground">:</span>
+              <Input
+                type="number"
+                min="0"
+                max="59"
+                step="15"
+                className="w-16 text-center"
+                placeholder="Min"
+                value={parseTimezoneToHoursMinutes(formData.timezone).minutes}
+                onChange={(e) => {
+                  const parsed = parseTimezoneToHoursMinutes(formData.timezone);
+                  const mins = Math.max(0, Math.min(59, parseInt(e.target.value) || 0)).toString().padStart(2, '0');
+                  setFormData({ ...formData, timezone: formatTimezone(parsed.sign, parsed.hours, mins) });
+                }}
+                data-testid="template-timezone-minutes"
+              />
+              <span className="text-sm text-muted-foreground ml-2">e.g., +5:30 for IST, -8:00 for PST</span>
             </div>
+          </div>
+          
+          {/* Validation for daily: end time must be >= start time */}
+          {isDaily && formData.endTime < formData.startTime && (
+            <p className="text-xs text-amber-600">
+              Note: Due time is earlier than start time. The due date will be set for the same day.
+            </p>
           )}
           
           {/* Manual creation notice */}
           <div className="text-xs text-muted-foreground bg-background/50 p-2 rounded border">
             <p className="font-medium mb-1">How it works:</p>
-            <p>When you click the <strong>Create</strong> button on this deliverable, tasks will be created with due dates set to the next scheduled delivery time above.</p>
+            <p>When you click the <strong>Create</strong> button on this deliverable, tasks will be created at the scheduled start time with due dates set to the scheduled end time.</p>
             <p className="mt-1 text-muted-foreground/80">Note: You need to manually click Create each time you want to generate tasks from this template.</p>
           </div>
         </div>
@@ -696,12 +821,22 @@ const parseTimezoneOffset = (tz: string | null | undefined): number => {
 };
 
 // Consolidated scheduling calculation - all calculations done in UTC
-// Returns { dueDateTime: Date (UTC), dueDateTimeISO: string, displayString: string (in template TZ) }
-const calculateNextScheduledDelivery = (template: TaskTemplate): { dueDateTime: Date; dueDateTimeISO: string; displayString: string } | null => {
-  if (!template.recurrence || !template.deliveryTime) return null;
+// Returns { startDateTime: Date (UTC), dueDateTime: Date (UTC), dueDateTimeISO: string, displayString: string (in template TZ) }
+const calculateNextScheduledDelivery = (template: TaskTemplate): { startDateTime: Date; dueDateTime: Date; dueDateTimeISO: string; displayString: string } | null => {
+  // Use new fields if available, fall back to legacy
+  const startTime = template.startTime || template.deliveryTime;
+  const endTime = template.endTime || startTime;
+  const startDay = template.startDay || template.deliveryDay || 'monday';
+  const endDay = template.endDay || startDay;
+  const startDate = template.startDate ?? template.deliveryDate ?? 1;
+  const endDate = template.endDate ?? startDate;
+  const daysOfWeek: string[] = template.daysOfWeek || [];
+  
+  if (!template.recurrence || !startTime) return null;
   
   const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
-  const [hours, minutes] = template.deliveryTime.split(':').map(Number);
+  const [startHours, startMinutes] = startTime.split(':').map(Number);
+  const [endHours, endMinutes] = endTime.split(':').map(Number);
   
   // Get current UTC time
   const nowUTC = new Date();
@@ -736,112 +871,155 @@ const calculateNextScheduledDelivery = (template: TaskTemplate): { dueDateTime: 
     return inTz.getUTCDay();
   };
   
+  let startDateTimeUTC: Date;
   let dueDateUTC: Date;
   
   if (template.recurrence === 'daily') {
-    // Try today at delivery time
-    dueDateUTC = createDateInTz(targetYear, targetMonth, targetDay, hours, minutes);
-    if (dueDateUTC <= nowUTC) {
-      // Move to tomorrow
-      dueDateUTC = new Date(dueDateUTC.getTime() + 24 * 60 * 60 * 1000);
+    // For daily: find next selected day
+    const selectedDays = daysOfWeek.length > 0 ? daysOfWeek : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const selectedDayNumbers = selectedDays.map(d => dayMap[d]);
+    
+    // Try today first
+    let currentDay = getDayOfWeekInTz(nowUTC);
+    let daysToAdd = 0;
+    
+    // Find the next selected day
+    for (let i = 0; i < 7; i++) {
+      const checkDay = (currentDay + i) % 7;
+      if (selectedDayNumbers.includes(checkDay)) {
+        daysToAdd = i;
+        break;
+      }
     }
-  } else if (template.recurrence === 'weekly') {
-    const targetDayOfWeek = dayMap[template.deliveryDay || 'monday'];
+    
+    const checkDate = new Date(nowInTzMs);
+    checkDate.setUTCDate(checkDate.getUTCDate() + daysToAdd);
+    
+    startDateTimeUTC = createDateInTz(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), checkDate.getUTCDate(), startHours, startMinutes);
+    dueDateUTC = createDateInTz(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), checkDate.getUTCDate(), endHours, endMinutes);
+    
+    // If start time has passed today, move to next selected day
+    if (daysToAdd === 0 && startDateTimeUTC <= nowUTC) {
+      for (let i = 1; i <= 7; i++) {
+        const checkDay = (currentDay + i) % 7;
+        if (selectedDayNumbers.includes(checkDay)) {
+          daysToAdd = i;
+          break;
+        }
+      }
+      const nextDate = new Date(nowInTzMs);
+      nextDate.setUTCDate(nextDate.getUTCDate() + daysToAdd);
+      startDateTimeUTC = createDateInTz(nextDate.getUTCFullYear(), nextDate.getUTCMonth(), nextDate.getUTCDate(), startHours, startMinutes);
+      dueDateUTC = createDateInTz(nextDate.getUTCFullYear(), nextDate.getUTCMonth(), nextDate.getUTCDate(), endHours, endMinutes);
+    }
+  } else if (template.recurrence === 'weekly' || template.recurrence === 'biweekly') {
+    const startDayOfWeek = dayMap[startDay];
+    const endDayOfWeek = dayMap[endDay];
     const currentDayOfWeek = getDayOfWeekInTz(nowUTC);
-    let daysUntil = targetDayOfWeek - currentDayOfWeek;
+    let daysUntilStart = startDayOfWeek - currentDayOfWeek;
+    if (daysUntilStart < 0) daysUntilStart += 7;
     
-    // Calculate target date
-    const targetDate = new Date(nowInTzMs);
-    targetDate.setUTCDate(targetDate.getUTCDate() + daysUntil);
+    // Calculate start date
+    const startDateCalc = new Date(nowInTzMs);
+    startDateCalc.setUTCDate(startDateCalc.getUTCDate() + daysUntilStart);
     
-    dueDateUTC = createDateInTz(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate(), hours, minutes);
+    startDateTimeUTC = createDateInTz(startDateCalc.getUTCFullYear(), startDateCalc.getUTCMonth(), startDateCalc.getUTCDate(), startHours, startMinutes);
     
-    if (daysUntil < 0 || (daysUntil === 0 && dueDateUTC <= nowUTC)) {
-      // Move to next week
-      dueDateUTC = new Date(dueDateUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
-    }
-  } else if (template.recurrence === 'biweekly') {
-    // Anchor to createdAt for proper 14-day cadence
-    const anchorDate = template.lastUsedAt ? new Date(template.lastUsedAt) : new Date(template.createdAt);
-    const targetDayOfWeek = dayMap[template.deliveryDay || 'monday'];
-    const currentDayOfWeek = getDayOfWeekInTz(nowUTC);
-    let daysUntil = targetDayOfWeek - currentDayOfWeek;
-    
-    const targetDate = new Date(nowInTzMs);
-    targetDate.setUTCDate(targetDate.getUTCDate() + daysUntil);
-    
-    dueDateUTC = createDateInTz(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate(), hours, minutes);
-    
-    if (daysUntil < 0 || (daysUntil === 0 && dueDateUTC <= nowUTC)) {
-      dueDateUTC = new Date(dueDateUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
+    // If start time has passed today
+    if (daysUntilStart === 0 && startDateTimeUTC <= nowUTC) {
+      startDateCalc.setUTCDate(startDateCalc.getUTCDate() + 7);
+      startDateTimeUTC = createDateInTz(startDateCalc.getUTCFullYear(), startDateCalc.getUTCMonth(), startDateCalc.getUTCDate(), startHours, startMinutes);
     }
     
-    // Check alignment with biweekly cadence from anchor
-    const daysSinceAnchor = Math.floor((dueDateUTC.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
-    const weeksOffset = Math.floor(daysSinceAnchor / 7) % 2;
-    if (weeksOffset !== 0) {
-      dueDateUTC = new Date(dueDateUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
+    // For biweekly, check cadence
+    if (template.recurrence === 'biweekly') {
+      const anchorDate = template.lastUsedAt ? new Date(template.lastUsedAt) : new Date(template.createdAt);
+      const daysSinceAnchor = Math.floor((startDateTimeUTC.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weeksOffset = Math.floor(daysSinceAnchor / 7) % 2;
+      if (weeksOffset !== 0) {
+        startDateCalc.setUTCDate(startDateCalc.getUTCDate() + 7);
+        startDateTimeUTC = createDateInTz(startDateCalc.getUTCFullYear(), startDateCalc.getUTCMonth(), startDateCalc.getUTCDate(), startHours, startMinutes);
+      }
     }
+    
+    // Calculate due date from start date
+    let daysUntilEnd = endDayOfWeek - startDayOfWeek;
+    if (daysUntilEnd < 0) daysUntilEnd += 7; // End day is next week
+    
+    const endDateCalc = new Date(startDateCalc.getTime());
+    endDateCalc.setUTCDate(endDateCalc.getUTCDate() + daysUntilEnd);
+    dueDateUTC = createDateInTz(endDateCalc.getUTCFullYear(), endDateCalc.getUTCMonth(), endDateCalc.getUTCDate(), endHours, endMinutes);
   } else if (template.recurrence === 'monthly') {
-    const deliveryDate = template.deliveryDate ?? 1;
+    const actualStartDate = startDate === 0 ? new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate() : startDate;
+    const actualEndDate = endDate === 0 ? new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate() : endDate;
     
-    if (deliveryDate === 0) {
-      // Last day of current month
-      const lastDayOfMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
-      dueDateUTC = createDateInTz(targetYear, targetMonth, lastDayOfMonth, hours, minutes);
-      if (dueDateUTC <= nowUTC) {
-        // Move to last day of next month
-        const nextMonth = targetMonth + 1;
-        const nextYear = nextMonth > 11 ? targetYear + 1 : targetYear;
-        const adjMonth = nextMonth > 11 ? 0 : nextMonth;
-        const lastDayNext = new Date(Date.UTC(nextYear, adjMonth + 1, 0)).getUTCDate();
-        dueDateUTC = createDateInTz(nextYear, adjMonth, lastDayNext, hours, minutes);
-      }
-    } else {
-      dueDateUTC = createDateInTz(targetYear, targetMonth, deliveryDate, hours, minutes);
-      if (dueDateUTC <= nowUTC) {
-        // Move to next month
-        const nextMonth = targetMonth + 1;
-        const nextYear = nextMonth > 11 ? targetYear + 1 : targetYear;
-        const adjMonth = nextMonth > 11 ? 0 : nextMonth;
-        dueDateUTC = createDateInTz(nextYear, adjMonth, deliveryDate, hours, minutes);
+    startDateTimeUTC = createDateInTz(targetYear, targetMonth, actualStartDate, startHours, startMinutes);
+    
+    if (startDateTimeUTC <= nowUTC) {
+      // Move to next month
+      const nextMonth = targetMonth + 1;
+      const nextYear = nextMonth > 11 ? targetYear + 1 : targetYear;
+      const adjMonth = nextMonth > 11 ? 0 : nextMonth;
+      const newStartDate = startDate === 0 ? new Date(Date.UTC(nextYear, adjMonth + 1, 0)).getUTCDate() : startDate;
+      startDateTimeUTC = createDateInTz(nextYear, adjMonth, newStartDate, startHours, startMinutes);
+      targetYear = nextYear;
+      targetMonth = adjMonth;
+    }
+    
+    // Calculate due date - if endDate < startDate, it's next month
+    let dueYear = targetYear;
+    let dueMonth = targetMonth;
+    if (actualEndDate < actualStartDate) {
+      dueMonth = targetMonth + 1;
+      if (dueMonth > 11) {
+        dueMonth = 0;
+        dueYear++;
       }
     }
+    const finalEndDate = endDate === 0 ? new Date(Date.UTC(dueYear, dueMonth + 1, 0)).getUTCDate() : endDate;
+    dueDateUTC = createDateInTz(dueYear, dueMonth, finalEndDate, endHours, endMinutes);
   } else if (template.recurrence === 'quarterly') {
-    const deliveryDate = template.deliveryDate ?? 1;
-    const currentQuarterStart = Math.floor(targetMonth / 3) * 3; // 0, 3, 6, 9
+    const currentQuarterStart = Math.floor(targetMonth / 3) * 3;
+    const actualStartDate = startDate === 0 ? new Date(Date.UTC(targetYear, currentQuarterStart + 1, 0)).getUTCDate() : startDate;
     
-    // Quarterly: delivery on specified day of first month of each quarter
-    if (deliveryDate === 0) {
-      // Last day of first month of quarter
-      const lastDay = new Date(Date.UTC(targetYear, currentQuarterStart + 1, 0)).getUTCDate();
-      dueDateUTC = createDateInTz(targetYear, currentQuarterStart, lastDay, hours, minutes);
-    } else {
-      dueDateUTC = createDateInTz(targetYear, currentQuarterStart, deliveryDate, hours, minutes);
-    }
+    startDateTimeUTC = createDateInTz(targetYear, currentQuarterStart, actualStartDate, startHours, startMinutes);
     
-    if (dueDateUTC <= nowUTC) {
+    if (startDateTimeUTC <= nowUTC) {
       // Move to next quarter
       const nextQuarterStart = (currentQuarterStart + 3) % 12;
       const yearOffset = nextQuarterStart < currentQuarterStart ? 1 : 0;
-      if (deliveryDate === 0) {
-        const lastDay = new Date(Date.UTC(targetYear + yearOffset, nextQuarterStart + 1, 0)).getUTCDate();
-        dueDateUTC = createDateInTz(targetYear + yearOffset, nextQuarterStart, lastDay, hours, minutes);
-      } else {
-        dueDateUTC = createDateInTz(targetYear + yearOffset, nextQuarterStart, deliveryDate, hours, minutes);
-      }
+      const newStartDate = startDate === 0 ? new Date(Date.UTC(targetYear + yearOffset, nextQuarterStart + 1, 0)).getUTCDate() : startDate;
+      startDateTimeUTC = createDateInTz(targetYear + yearOffset, nextQuarterStart, newStartDate, startHours, startMinutes);
+      targetYear += yearOffset;
+      targetMonth = nextQuarterStart;
     }
+    
+    // Calculate due date
+    const quarterMonth = Math.floor(targetMonth / 3) * 3;
+    let dueYear = targetYear;
+    let dueMonth = quarterMonth;
+    const actualEndDate = endDate === 0 ? new Date(Date.UTC(dueYear, dueMonth + 1, 0)).getUTCDate() : endDate;
+    if (actualEndDate < (startDate === 0 ? 31 : startDate)) {
+      dueMonth++;
+      if (dueMonth > quarterMonth + 2) dueMonth = quarterMonth + 2; // Stay within quarter
+    }
+    const finalEndDate = endDate === 0 ? new Date(Date.UTC(dueYear, dueMonth + 1, 0)).getUTCDate() : endDate;
+    dueDateUTC = createDateInTz(dueYear, dueMonth, finalEndDate, endHours, endMinutes);
   } else {
     return null;
   }
   
   // Format display string in template timezone
-  const displayInTz = new Date(dueDateUTC.getTime() + tzOffsetMinutes * 60 * 1000);
+  const displayStartInTz = new Date(startDateTimeUTC.getTime() + tzOffsetMinutes * 60 * 1000);
+  const displayDueInTz = new Date(dueDateUTC.getTime() + tzOffsetMinutes * 60 * 1000);
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const displayString = `${dayNames[displayInTz.getUTCDay()]}, ${monthNames[displayInTz.getUTCMonth()]} ${displayInTz.getUTCDate()} at ${template.deliveryTime}`;
   
-  return { dueDateTime: dueDateUTC, dueDateTimeISO: dueDateUTC.toISOString(), displayString };
+  const startStr = `${dayNames[displayStartInTz.getUTCDay()]}, ${monthNames[displayStartInTz.getUTCMonth()]} ${displayStartInTz.getUTCDate()} at ${startTime}`;
+  const dueStr = `${dayNames[displayDueInTz.getUTCDay()]}, ${monthNames[displayDueInTz.getUTCMonth()]} ${displayDueInTz.getUTCDate()} at ${endTime}`;
+  const displayString = `Start: ${startStr} → Due: ${dueStr}`;
+  
+  return { startDateTime: startDateTimeUTC, dueDateTime: dueDateUTC, dueDateTimeISO: dueDateUTC.toISOString(), displayString };
 };
 
 interface TemplateCardProps {
@@ -1019,40 +1197,75 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
             </div>
           </div>
           
-          {/* Delivery Schedule - only show if recurrence is set */}
-          {template.recurrence && template.deliveryTime && (
+          {/* Work Schedule - only show if recurrence is set */}
+          {template.recurrence && (
             <div className="p-3 bg-muted/50 rounded-lg space-y-2">
               <h4 className="text-sm font-medium flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                Delivery Schedule
+                Work Schedule
               </h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
+                {/* Daily: show selected days */}
+                {template.recurrence === 'daily' && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Days: </span>
+                    <span>
+                      {(template.daysOfWeek?.length > 0 
+                        ? template.daysOfWeek.map((d: string) => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')
+                        : 'Mon, Tue, Wed, Thu, Fri')}
+                    </span>
+                  </div>
+                )}
+                {/* Weekly/Biweekly: show start and end day */}
+                {(template.recurrence === 'weekly' || template.recurrence === 'biweekly') && (
+                  <>
+                    <div>
+                      <span className="text-muted-foreground">Start Day: </span>
+                      <span className="capitalize">{template.startDay || template.deliveryDay || 'monday'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Due Day: </span>
+                      <span className="capitalize">{template.endDay || template.deliveryDay || 'monday'}</span>
+                    </div>
+                  </>
+                )}
+                {/* Monthly/Quarterly: show start and end date */}
+                {(template.recurrence === 'monthly' || template.recurrence === 'quarterly') && (
+                  <>
+                    <div>
+                      <span className="text-muted-foreground">Start Date: </span>
+                      <span>
+                        {(() => {
+                          const d = template.startDate ?? template.deliveryDate ?? 1;
+                          if (d === 0) return 'Last day';
+                          return `${d}${['st', 'nd', 'rd'][((d % 100) - 20) % 10] || ['st', 'nd', 'rd'][d % 100] || 'th'}`;
+                        })()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Due Date: </span>
+                      <span>
+                        {(() => {
+                          const d = template.endDate ?? 5;
+                          if (d === 0) return 'Last day';
+                          return `${d}${['st', 'nd', 'rd'][((d % 100) - 20) % 10] || ['st', 'nd', 'rd'][d % 100] || 'th'}`;
+                        })()}
+                      </span>
+                    </div>
+                  </>
+                )}
                 <div>
-                  <span className="text-muted-foreground">Time: </span>
-                  <span>{template.deliveryTime}</span>
+                  <span className="text-muted-foreground">Start Time: </span>
+                  <span>{template.startTime || template.deliveryTime || '09:00'}</span>
                 </div>
                 <div>
+                  <span className="text-muted-foreground">Due Time: </span>
+                  <span>{template.endTime || '17:00'}</span>
+                </div>
+                <div className="col-span-2">
                   <span className="text-muted-foreground">Timezone: </span>
-                  <span>GMT{template.timezone}</span>
+                  <span>GMT{template.timezone || '+0'}</span>
                 </div>
-                {(template.recurrence === 'weekly' || template.recurrence === 'biweekly') && template.deliveryDay && (
-                  <div className="col-span-2">
-                    <span className="text-muted-foreground">Day: </span>
-                    <span className="capitalize">{template.deliveryDay}</span>
-                  </div>
-                )}
-                {(template.recurrence === 'monthly' || template.recurrence === 'quarterly') && template.deliveryDate !== null && (
-                  <div className="col-span-2">
-                    <span className="text-muted-foreground">Date: </span>
-                    <span>{template.deliveryDate === 0 ? 'Last day of month' : `${template.deliveryDate}${['st', 'nd', 'rd'][((template.deliveryDate % 100) - 20) % 10] || ['st', 'nd', 'rd'][template.deliveryDate % 100] || 'th'}`}</span>
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-muted-foreground border-t pt-2 mt-2">
-                {template.recurrence === 'daily' && 'Tasks created 1 hour before delivery time'}
-                {template.recurrence === 'weekly' && 'Tasks created 2 days before delivery'}
-                {template.recurrence === 'biweekly' && 'Tasks created 5 days before delivery'}
-                {(template.recurrence === 'monthly' || template.recurrence === 'quarterly') && 'Tasks created 1 week before delivery'}
               </div>
             </div>
           )}
@@ -1206,6 +1419,10 @@ export default function TaskTemplates() {
 
   const createMutation = useMutation({
     mutationFn: async (data: TemplateFormData) => {
+      const isDaily = data.recurrence === 'daily';
+      const isWeeklyOrBiweekly = data.recurrence === 'weekly' || data.recurrence === 'biweekly';
+      const isMonthlyOrQuarterly = data.recurrence === 'monthly' || data.recurrence === 'quarterly';
+      
       const res = await apiRequest('POST', '/api/task-templates', {
         name: data.name,
         description: data.description || null,
@@ -1215,9 +1432,18 @@ export default function TaskTemplates() {
         subTemplates: data.subTemplates || [],
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
-        deliveryTime: data.recurrence ? data.deliveryTime : null,
-        deliveryDay: (data.recurrence === 'weekly' || data.recurrence === 'biweekly') ? data.deliveryDay : null,
-        deliveryDate: (data.recurrence === 'monthly' || data.recurrence === 'quarterly') ? data.deliveryDate : null,
+        // Legacy fields (for backward compatibility)
+        deliveryTime: data.recurrence ? data.startTime : null,
+        deliveryDay: isWeeklyOrBiweekly ? data.startDay : null,
+        deliveryDate: isMonthlyOrQuarterly ? data.startDate : null,
+        // New fields
+        startTime: data.recurrence ? data.startTime : null,
+        endTime: data.recurrence ? data.endTime : null,
+        startDay: isWeeklyOrBiweekly ? data.startDay : null,
+        endDay: isWeeklyOrBiweekly ? data.endDay : null,
+        startDate: isMonthlyOrQuarterly ? data.startDate : null,
+        endDate: isMonthlyOrQuarterly ? data.endDate : null,
+        daysOfWeek: isDaily ? data.daysOfWeek : [],
         timezone: data.recurrence ? data.timezone : null,
         isActive: data.isActive ? 'true' : 'false',
       });
@@ -1235,6 +1461,10 @@ export default function TaskTemplates() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TemplateFormData }) => {
+      const isDaily = data.recurrence === 'daily';
+      const isWeeklyOrBiweekly = data.recurrence === 'weekly' || data.recurrence === 'biweekly';
+      const isMonthlyOrQuarterly = data.recurrence === 'monthly' || data.recurrence === 'quarterly';
+      
       const res = await apiRequest('PATCH', `/api/task-templates/${id}`, {
         name: data.name,
         description: data.description || null,
@@ -1244,9 +1474,18 @@ export default function TaskTemplates() {
         subTemplates: data.subTemplates || [],
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
-        deliveryTime: data.recurrence ? data.deliveryTime : null,
-        deliveryDay: (data.recurrence === 'weekly' || data.recurrence === 'biweekly') ? data.deliveryDay : null,
-        deliveryDate: (data.recurrence === 'monthly' || data.recurrence === 'quarterly') ? data.deliveryDate : null,
+        // Legacy fields (for backward compatibility)
+        deliveryTime: data.recurrence ? data.startTime : null,
+        deliveryDay: isWeeklyOrBiweekly ? data.startDay : null,
+        deliveryDate: isMonthlyOrQuarterly ? data.startDate : null,
+        // New fields
+        startTime: data.recurrence ? data.startTime : null,
+        endTime: data.recurrence ? data.endTime : null,
+        startDay: isWeeklyOrBiweekly ? data.startDay : null,
+        endDay: isWeeklyOrBiweekly ? data.endDay : null,
+        startDate: isMonthlyOrQuarterly ? data.startDate : null,
+        endDate: isMonthlyOrQuarterly ? data.endDate : null,
+        daysOfWeek: isDaily ? data.daysOfWeek : [],
         timezone: data.recurrence ? data.timezone : null,
         isActive: data.isActive ? 'true' : 'false',
       });
@@ -1399,6 +1638,12 @@ export default function TaskTemplates() {
 
   const getInitialFormData = (): TemplateFormData | undefined => {
     if (!editingTemplate) return undefined;
+    
+    // For backward compatibility: if new fields don't exist, derive from legacy fields
+    const legacyStartTime = editingTemplate.deliveryTime || '09:00';
+    const legacyDay = editingTemplate.deliveryDay || 'monday';
+    const legacyDate = editingTemplate.deliveryDate ?? 1;
+    
     return {
       name: editingTemplate.name,
       description: editingTemplate.description || '',
@@ -1408,9 +1653,18 @@ export default function TaskTemplates() {
       subTemplates: (editingTemplate.subTemplates as SubTemplateItem[]) || [],
       taskItems: editingTemplate.taskItems || '',
       recurrence: editingTemplate.recurrence || '',
-      deliveryTime: editingTemplate.deliveryTime || '09:00',
-      deliveryDay: editingTemplate.deliveryDay || 'monday',
-      deliveryDate: editingTemplate.deliveryDate ?? 1,
+      // Legacy fields
+      deliveryTime: legacyStartTime,
+      deliveryDay: legacyDay,
+      deliveryDate: legacyDate,
+      // New fields - use existing if available, otherwise derive from legacy
+      startTime: (editingTemplate as any).startTime || legacyStartTime,
+      endTime: (editingTemplate as any).endTime || '17:00',
+      startDay: (editingTemplate as any).startDay || legacyDay,
+      endDay: (editingTemplate as any).endDay || 'friday',
+      startDate: (editingTemplate as any).startDate ?? legacyDate,
+      endDate: (editingTemplate as any).endDate ?? 5,
+      daysOfWeek: (editingTemplate as any).daysOfWeek || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
       timezone: editingTemplate.timezone || '+5:30',
       isActive: editingTemplate.isActive !== 'false',
     };

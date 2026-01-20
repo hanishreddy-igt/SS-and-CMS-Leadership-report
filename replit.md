@@ -56,14 +56,16 @@ This project provides a comprehensive tracking system for Strategic Services (SS
       - **Recurring Deliverables (Task Templates)**: Recurring task templates with support for daily/weekly/biweekly/monthly/quarterly patterns. Features include:
         - **Sub-tasks**: Define hierarchical sub-tasks that are created as child tasks when deliverable is triggered
         - **Assignment Mode**: Choose between "One task" (all assignees on same task) or "Separate tasks" (individual task per assignee)
-        - **Priority inheritance**: Sub-tasks can have their own priority (low/medium/high) or inherit from parent
-        - **Delivery Scheduling (Phase 1)**: Configure when tasks should be due with:
-          - **Delivery Time**: Time of day for delivery (e.g., "09:00", "17:30")
-          - **Delivery Day**: Day of week for weekly/biweekly (Sunday-Saturday)
-          - **Delivery Date**: Day of month for monthly/quarterly (1-28, or 0 for last day)
-          - **Timezone**: GMT offset (+5:30, -8, +0) for timezone-aware scheduling
-          - **Next Scheduled Display**: Template cards show calculated next delivery date/time in template timezone
-          - Tasks created from templates automatically get due date set to next scheduled delivery
+        - **Priority inheritance**: Sub-tasks can have their own priority (normal/medium/high) or inherit from parent
+        - **Work Schedule (Phase 1 - Manual Triggering)**: Configure when work starts and is due:
+          - **Daily Recurrence**: Select which days of the week tasks occur (Mon-Sun checkboxes)
+          - **Weekly/Biweekly Recurrence**: Set start day and due day (e.g., work starts Monday, due Friday)
+          - **Monthly/Quarterly Recurrence**: Set start date and due date of month (1-28, or 0 for last day)
+          - **Start/Due Times**: Configure work start time and due time independently (e.g., start at 09:00, due by 17:00)
+          - **Timezone**: Manual GMT offset entry (+5:30, -8, +0) for timezone-aware scheduling
+          - **Next Scheduled Display**: Template cards show calculated next start/due date-times in template timezone
+          - Tasks created from templates use the calculated due date/time based on schedule
+          - **Manual Triggering Only (Phase 1)**: User clicks "Create" button to generate tasks from templates
       - Tasks support hierarchical nesting via parentTaskId, project linking, multiple assignees, priority levels, tags, and timestamped notes.
     - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI.
     - **Jira Integration**: Functionality to import projects, leads, and team members directly from Jira epics.
