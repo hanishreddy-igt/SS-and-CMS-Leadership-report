@@ -1677,7 +1677,7 @@ export default function WorkingSpace() {
             Create Task
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Use @@account to link, @name to assign, #status, $priority, // for notes
+            Use @@account to link, @name to assign, #status, $priority, !date, // for notes
           </p>
         </CardHeader>
         <CardContent className="pt-0">
