@@ -1152,7 +1152,17 @@ export function TaskRow({
             )}
           </div>
 
-          <div className="flex items-center gap-0.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Due date badge - shown inline next to notes */}
+            {task.dueDate && (
+              <Badge 
+                variant={isOverdue ? "destructive" : "secondary"} 
+                className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0"
+                data-testid={`due-date-inline-${task.id}`}
+              >
+                {format(new Date(task.dueDate), 'MMM d')}
+              </Badge>
+            )}
             <button
               ref={notesButtonRef}
               onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
@@ -1170,15 +1180,9 @@ export function TaskRow({
           </div>
         </div>
 
-        {/* Line 2: Due Date, Priority, Project, Assignees, Timestamps, Menu */}
+        {/* Line 2: Priority, Project, Assignees, Timestamps, Menu (Due date moved to line 1) */}
         {showDetails && (
           <div className="flex items-center gap-2 mt-1 ml-9">
-            {task.dueDate && (
-              <Badge variant={isOverdue ? "destructive" : "secondary"} className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
-                {format(new Date(task.dueDate), 'MMM d')}
-              </Badge>
-            )}
-            
             {/* Show effective priority for parent tasks (read-only), editable for leaf tasks */}
             {hasSubtasks ? (
               effectivePriority && effectivePriority !== 'normal' && (
