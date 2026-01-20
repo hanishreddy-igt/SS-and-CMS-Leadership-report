@@ -77,8 +77,52 @@ interface TemplateFormData {
   subTemplates: SubTemplateItem[];
   taskItems: string;
   recurrence: string;
+  deliveryTime: string;
+  deliveryDay: string;
+  deliveryDate: number | null;
+  timezone: string;
   isActive: boolean;
 }
+
+const dayOptions = [
+  { value: 'monday', label: 'Monday' },
+  { value: 'tuesday', label: 'Tuesday' },
+  { value: 'wednesday', label: 'Wednesday' },
+  { value: 'thursday', label: 'Thursday' },
+  { value: 'friday', label: 'Friday' },
+  { value: 'saturday', label: 'Saturday' },
+  { value: 'sunday', label: 'Sunday' },
+];
+
+const timezoneOptions = [
+  { value: '-12', label: 'GMT-12' },
+  { value: '-11', label: 'GMT-11' },
+  { value: '-10', label: 'GMT-10' },
+  { value: '-9', label: 'GMT-9' },
+  { value: '-8', label: 'GMT-8 (PST)' },
+  { value: '-7', label: 'GMT-7 (MST)' },
+  { value: '-6', label: 'GMT-6 (CST)' },
+  { value: '-5', label: 'GMT-5 (EST)' },
+  { value: '-4', label: 'GMT-4 (EDT)' },
+  { value: '-3', label: 'GMT-3' },
+  { value: '-2', label: 'GMT-2' },
+  { value: '-1', label: 'GMT-1' },
+  { value: '+0', label: 'GMT+0 (UTC)' },
+  { value: '+1', label: 'GMT+1 (CET)' },
+  { value: '+2', label: 'GMT+2 (SAST)' },
+  { value: '+3', label: 'GMT+3 (EAT)' },
+  { value: '+4', label: 'GMT+4 (GST/Dubai)' },
+  { value: '+5', label: 'GMT+5 (PKT)' },
+  { value: '+5:30', label: 'GMT+5:30 (IST)' },
+  { value: '+6', label: 'GMT+6' },
+  { value: '+7', label: 'GMT+7' },
+  { value: '+8', label: 'GMT+8 (SGT)' },
+  { value: '+9', label: 'GMT+9 (JST)' },
+  { value: '+9:30', label: 'GMT+9:30 (ACST)' },
+  { value: '+10', label: 'GMT+10 (AEST)' },
+  { value: '+11', label: 'GMT+11 (AEDT)' },
+  { value: '+12', label: 'GMT+12' },
+];
 
 interface TemplateFormProps {
   initialData?: TemplateFormData;
@@ -99,9 +143,18 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
     subTemplates: [],
     taskItems: '',
     recurrence: '',
+    deliveryTime: '09:00',
+    deliveryDay: 'monday',
+    deliveryDate: 1,
+    timezone: '+5:30',
     isActive: true,
   });
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('');
+  
+  // Determine which scheduling fields to show based on recurrence
+  const showTimeField = !!formData.recurrence;
+  const showDayField = formData.recurrence === 'weekly' || formData.recurrence === 'biweekly';
+  const showDateField = formData.recurrence === 'monthly' || formData.recurrence === 'quarterly';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,6 +248,100 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           </Select>
         </div>
       </div>
+
+      {/* Scheduling fields - shown when recurrence is selected */}
+      {showTimeField && (
+        <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Label className="font-medium">Delivery Schedule</Label>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            {/* Delivery Time */}
+            <div className="space-y-2">
+              <Label htmlFor="deliveryTime">Delivery Time</Label>
+              <Input
+                id="deliveryTime"
+                type="time"
+                value={formData.deliveryTime}
+                onChange={(e) => setFormData({ ...formData, deliveryTime: e.target.value })}
+                data-testid="template-delivery-time"
+              />
+            </div>
+            
+            {/* Timezone */}
+            <div className="space-y-2">
+              <Label>Timezone</Label>
+              <Select 
+                value={formData.timezone} 
+                onValueChange={(v) => setFormData({ ...formData, timezone: v })}
+              >
+                <SelectTrigger data-testid="template-timezone-select">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timezoneOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {/* Day of week - for weekly/bi-weekly */}
+          {showDayField && (
+            <div className="space-y-2">
+              <Label>Delivery Day</Label>
+              <Select 
+                value={formData.deliveryDay} 
+                onValueChange={(v) => setFormData({ ...formData, deliveryDay: v })}
+              >
+                <SelectTrigger data-testid="template-delivery-day">
+                  <SelectValue placeholder="Select day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dayOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {/* Day of month - for monthly/quarterly */}
+          {showDateField && (
+            <div className="space-y-2">
+              <Label>Delivery Date (day of month)</Label>
+              <Select 
+                value={formData.deliveryDate?.toString() || '1'} 
+                onValueChange={(v) => setFormData({ ...formData, deliveryDate: parseInt(v) })}
+              >
+                <SelectTrigger data-testid="template-delivery-date">
+                  <SelectValue placeholder="Select date" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map(day => (
+                    <SelectItem key={day} value={day.toString()}>{day}</SelectItem>
+                  ))}
+                  <SelectItem value="0">Last day of month</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {/* Creation timing disclaimer */}
+          <div className="text-xs text-muted-foreground bg-background/50 p-2 rounded border">
+            <p className="font-medium mb-1">Task Creation Timing:</p>
+            {formData.recurrence === 'daily' && <p>Tasks will be created 1 hour before the delivery time.</p>}
+            {formData.recurrence === 'weekly' && <p>Tasks will be created 2 days before the delivery day/time.</p>}
+            {formData.recurrence === 'biweekly' && <p>Tasks will be created 5 days before the delivery day/time.</p>}
+            {(formData.recurrence === 'monthly' || formData.recurrence === 'quarterly') && (
+              <p>Tasks will be created 1 week before the delivery date/time.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label>Assign to People</Label>
@@ -516,6 +663,166 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
   );
 }
 
+// Parse timezone offset string (e.g., "+5:30", "-8", "+0") to minutes offset from UTC
+const parseTimezoneOffset = (tz: string | null | undefined): number => {
+  if (!tz) return 0;
+  const match = tz.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) return 0;
+  const sign = match[1] === '-' ? -1 : 1;
+  const hoursOffset = parseInt(match[2], 10);
+  const minutesOffset = parseInt(match[3] || '0', 10);
+  return sign * (hoursOffset * 60 + minutesOffset);
+};
+
+// Consolidated scheduling calculation - all calculations done in UTC
+// Returns { dueDateTime: Date (UTC), dueDateTimeISO: string, displayString: string (in template TZ) }
+const calculateNextScheduledDelivery = (template: TaskTemplate): { dueDateTime: Date; dueDateTimeISO: string; displayString: string } | null => {
+  if (!template.recurrence || !template.deliveryTime) return null;
+  
+  const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
+  const [hours, minutes] = template.deliveryTime.split(':').map(Number);
+  
+  // Get current UTC time
+  const nowUTC = new Date();
+  
+  // Convert "now" to template timezone for comparison (add tzOffset to UTC)
+  // Template TZ time = UTC + tzOffsetMinutes
+  const nowInTzMs = nowUTC.getTime() + tzOffsetMinutes * 60 * 1000;
+  const nowInTz = new Date(nowInTzMs);
+  
+  // Work with a "virtual" date in template timezone space
+  // We'll calculate dates as if we're in UTC, then adjust
+  const dayMap: Record<string, number> = {
+    'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+    'thursday': 4, 'friday': 5, 'saturday': 6
+  };
+  
+  // Start with today in template timezone
+  let targetYear = nowInTz.getUTCFullYear();
+  let targetMonth = nowInTz.getUTCMonth();
+  let targetDay = nowInTz.getUTCDate();
+  
+  // Create target datetime in template timezone
+  const createDateInTz = (y: number, m: number, d: number, h: number, min: number): Date => {
+    // Create as UTC, then subtract tzOffset to get actual UTC time
+    const dateInTz = Date.UTC(y, m, d, h, min, 0, 0);
+    return new Date(dateInTz - tzOffsetMinutes * 60 * 1000);
+  };
+  
+  // Helper to get day of week in template timezone
+  const getDayOfWeekInTz = (date: Date): number => {
+    const inTz = new Date(date.getTime() + tzOffsetMinutes * 60 * 1000);
+    return inTz.getUTCDay();
+  };
+  
+  let dueDateUTC: Date;
+  
+  if (template.recurrence === 'daily') {
+    // Try today at delivery time
+    dueDateUTC = createDateInTz(targetYear, targetMonth, targetDay, hours, minutes);
+    if (dueDateUTC <= nowUTC) {
+      // Move to tomorrow
+      dueDateUTC = new Date(dueDateUTC.getTime() + 24 * 60 * 60 * 1000);
+    }
+  } else if (template.recurrence === 'weekly') {
+    const targetDayOfWeek = dayMap[template.deliveryDay || 'monday'];
+    const currentDayOfWeek = getDayOfWeekInTz(nowUTC);
+    let daysUntil = targetDayOfWeek - currentDayOfWeek;
+    
+    // Calculate target date
+    const targetDate = new Date(nowInTzMs);
+    targetDate.setUTCDate(targetDate.getUTCDate() + daysUntil);
+    
+    dueDateUTC = createDateInTz(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate(), hours, minutes);
+    
+    if (daysUntil < 0 || (daysUntil === 0 && dueDateUTC <= nowUTC)) {
+      // Move to next week
+      dueDateUTC = new Date(dueDateUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+  } else if (template.recurrence === 'biweekly') {
+    // Anchor to createdAt for proper 14-day cadence
+    const anchorDate = template.lastUsedAt ? new Date(template.lastUsedAt) : new Date(template.createdAt);
+    const targetDayOfWeek = dayMap[template.deliveryDay || 'monday'];
+    const currentDayOfWeek = getDayOfWeekInTz(nowUTC);
+    let daysUntil = targetDayOfWeek - currentDayOfWeek;
+    
+    const targetDate = new Date(nowInTzMs);
+    targetDate.setUTCDate(targetDate.getUTCDate() + daysUntil);
+    
+    dueDateUTC = createDateInTz(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate(), hours, minutes);
+    
+    if (daysUntil < 0 || (daysUntil === 0 && dueDateUTC <= nowUTC)) {
+      dueDateUTC = new Date(dueDateUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+    
+    // Check alignment with biweekly cadence from anchor
+    const daysSinceAnchor = Math.floor((dueDateUTC.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
+    const weeksOffset = Math.floor(daysSinceAnchor / 7) % 2;
+    if (weeksOffset !== 0) {
+      dueDateUTC = new Date(dueDateUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+  } else if (template.recurrence === 'monthly') {
+    const deliveryDate = template.deliveryDate ?? 1;
+    
+    if (deliveryDate === 0) {
+      // Last day of current month
+      const lastDayOfMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+      dueDateUTC = createDateInTz(targetYear, targetMonth, lastDayOfMonth, hours, minutes);
+      if (dueDateUTC <= nowUTC) {
+        // Move to last day of next month
+        const nextMonth = targetMonth + 1;
+        const nextYear = nextMonth > 11 ? targetYear + 1 : targetYear;
+        const adjMonth = nextMonth > 11 ? 0 : nextMonth;
+        const lastDayNext = new Date(Date.UTC(nextYear, adjMonth + 1, 0)).getUTCDate();
+        dueDateUTC = createDateInTz(nextYear, adjMonth, lastDayNext, hours, minutes);
+      }
+    } else {
+      dueDateUTC = createDateInTz(targetYear, targetMonth, deliveryDate, hours, minutes);
+      if (dueDateUTC <= nowUTC) {
+        // Move to next month
+        const nextMonth = targetMonth + 1;
+        const nextYear = nextMonth > 11 ? targetYear + 1 : targetYear;
+        const adjMonth = nextMonth > 11 ? 0 : nextMonth;
+        dueDateUTC = createDateInTz(nextYear, adjMonth, deliveryDate, hours, minutes);
+      }
+    }
+  } else if (template.recurrence === 'quarterly') {
+    const deliveryDate = template.deliveryDate ?? 1;
+    const currentQuarterStart = Math.floor(targetMonth / 3) * 3; // 0, 3, 6, 9
+    
+    // Quarterly: delivery on specified day of first month of each quarter
+    if (deliveryDate === 0) {
+      // Last day of first month of quarter
+      const lastDay = new Date(Date.UTC(targetYear, currentQuarterStart + 1, 0)).getUTCDate();
+      dueDateUTC = createDateInTz(targetYear, currentQuarterStart, lastDay, hours, minutes);
+    } else {
+      dueDateUTC = createDateInTz(targetYear, currentQuarterStart, deliveryDate, hours, minutes);
+    }
+    
+    if (dueDateUTC <= nowUTC) {
+      // Move to next quarter
+      const nextQuarterStart = (currentQuarterStart + 3) % 12;
+      const yearOffset = nextQuarterStart < currentQuarterStart ? 1 : 0;
+      if (deliveryDate === 0) {
+        const lastDay = new Date(Date.UTC(targetYear + yearOffset, nextQuarterStart + 1, 0)).getUTCDate();
+        dueDateUTC = createDateInTz(targetYear + yearOffset, nextQuarterStart, lastDay, hours, minutes);
+      } else {
+        dueDateUTC = createDateInTz(targetYear + yearOffset, nextQuarterStart, deliveryDate, hours, minutes);
+      }
+    }
+  } else {
+    return null;
+  }
+  
+  // Format display string in template timezone
+  const displayInTz = new Date(dueDateUTC.getTime() + tzOffsetMinutes * 60 * 1000);
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const displayString = `${dayNames[displayInTz.getUTCDay()]}, ${monthNames[displayInTz.getUTCMonth()]} ${displayInTz.getUTCDate()} at ${template.deliveryTime}`;
+  
+  return { dueDateTime: dueDateUTC, dueDateTimeISO: dueDateUTC.toISOString(), displayString };
+};
+
 interface TemplateCardProps {
   template: TaskTemplate;
   projects: Project[];
@@ -529,6 +836,8 @@ interface TemplateCardProps {
 function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger, onView }: TemplateCardProps) {
   const project = template.projectId ? projects.find(p => p.id === template.projectId) : null;
   const assignedPeople = people.filter(p => template.assignedTo?.includes(p.id));
+  const nextScheduledData = calculateNextScheduledDelivery(template);
+  const nextScheduled = nextScheduledData?.displayString || null;
   
   return (
     <Card 
@@ -605,6 +914,13 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
             </Badge>
           )}
         </div>
+        {nextScheduled && (
+          <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            <span>Next: {nextScheduled}</span>
+            {template.timezone && <span className="opacity-70">(GMT{template.timezone})</span>}
+          </div>
+        )}
         {template.taskItems && (
           <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground whitespace-pre-wrap line-clamp-3">
             {template.taskItems}
@@ -681,6 +997,44 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
               </div>
             </div>
           </div>
+          
+          {/* Delivery Schedule - only show if recurrence is set */}
+          {template.recurrence && template.deliveryTime && (
+            <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+              <h4 className="text-sm font-medium flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                Delivery Schedule
+              </h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Time: </span>
+                  <span>{template.deliveryTime}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Timezone: </span>
+                  <span>GMT{template.timezone}</span>
+                </div>
+                {(template.recurrence === 'weekly' || template.recurrence === 'biweekly') && template.deliveryDay && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Day: </span>
+                    <span className="capitalize">{template.deliveryDay}</span>
+                  </div>
+                )}
+                {(template.recurrence === 'monthly' || template.recurrence === 'quarterly') && template.deliveryDate !== null && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Date: </span>
+                    <span>{template.deliveryDate === 0 ? 'Last day of month' : `${template.deliveryDate}${['st', 'nd', 'rd'][((template.deliveryDate % 100) - 20) % 10] || ['st', 'nd', 'rd'][template.deliveryDate % 100] || 'th'}`}</span>
+                  </div>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground border-t pt-2 mt-2">
+                {template.recurrence === 'daily' && 'Tasks created 1 hour before delivery time'}
+                {template.recurrence === 'weekly' && 'Tasks created 2 days before delivery'}
+                {template.recurrence === 'biweekly' && 'Tasks created 5 days before delivery'}
+                {(template.recurrence === 'monthly' || template.recurrence === 'quarterly') && 'Tasks created 1 week before delivery'}
+              </div>
+            </div>
+          )}
           
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-1">
@@ -840,6 +1194,10 @@ export default function TaskTemplates() {
         subTemplates: data.subTemplates || [],
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
+        deliveryTime: data.recurrence ? data.deliveryTime : null,
+        deliveryDay: (data.recurrence === 'weekly' || data.recurrence === 'biweekly') ? data.deliveryDay : null,
+        deliveryDate: (data.recurrence === 'monthly' || data.recurrence === 'quarterly') ? data.deliveryDate : null,
+        timezone: data.recurrence ? data.timezone : null,
         isActive: data.isActive ? 'true' : 'false',
       });
       return res.json();
@@ -865,6 +1223,10 @@ export default function TaskTemplates() {
         subTemplates: data.subTemplates || [],
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
+        deliveryTime: data.recurrence ? data.deliveryTime : null,
+        deliveryDay: (data.recurrence === 'weekly' || data.recurrence === 'biweekly') ? data.deliveryDay : null,
+        deliveryDate: (data.recurrence === 'monthly' || data.recurrence === 'quarterly') ? data.deliveryDate : null,
+        timezone: data.recurrence ? data.timezone : null,
         isActive: data.isActive ? 'true' : 'false',
       });
       return res.json();
@@ -894,6 +1256,13 @@ export default function TaskTemplates() {
     },
   });
 
+  // Helper to calculate due date from template delivery schedule using consolidated function
+  // Returns full ISO datetime string to preserve time
+  const calculateDueDate = (template: TaskTemplate): string | null => {
+    const result = calculateNextScheduledDelivery(template);
+    return result ? result.dueDateTimeISO : null;
+  };
+
   const triggerMutation = useMutation({
     mutationFn: async (template: TaskTemplate) => {
       const notes: { content: string; author: string; timestamp: string }[] = [];
@@ -908,6 +1277,7 @@ export default function TaskTemplates() {
       const assignees = template.assignedTo || [];
       const mode = template.assignmentMode || 'single';
       const subTemplates = (template.subTemplates as SubTemplateItem[]) || [];
+      const dueDate = calculateDueDate(template);
       let tasksCreated = 0;
       let subTasksCreated = 0;
       
@@ -939,6 +1309,7 @@ export default function TaskTemplates() {
             notes,
             status: 'todo',
             priority: 'medium',
+            dueDate: dueDate,
             createdBy: user?.email || 'system',
           });
           const parentTask = await res.json();
@@ -957,6 +1328,7 @@ export default function TaskTemplates() {
           notes,
           status: 'todo',
           priority: 'medium',
+          dueDate: dueDate,
           createdBy: user?.email || 'system',
         });
         const parentTask = await res.json();
@@ -1015,6 +1387,10 @@ export default function TaskTemplates() {
       subTemplates: (editingTemplate.subTemplates as SubTemplateItem[]) || [],
       taskItems: editingTemplate.taskItems || '',
       recurrence: editingTemplate.recurrence || '',
+      deliveryTime: editingTemplate.deliveryTime || '09:00',
+      deliveryDay: editingTemplate.deliveryDay || 'monday',
+      deliveryDate: editingTemplate.deliveryDate ?? 1,
+      timezone: editingTemplate.timezone || '+5:30',
       isActive: editingTemplate.isActive !== 'false',
     };
   };
