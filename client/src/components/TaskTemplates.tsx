@@ -94,35 +94,25 @@ const dayOptions = [
   { value: 'sunday', label: 'Sunday' },
 ];
 
-const timezoneOptions = [
-  { value: '-12', label: 'GMT-12' },
-  { value: '-11', label: 'GMT-11' },
-  { value: '-10', label: 'GMT-10' },
-  { value: '-9', label: 'GMT-9' },
-  { value: '-8', label: 'GMT-8 (PST)' },
-  { value: '-7', label: 'GMT-7 (MST)' },
-  { value: '-6', label: 'GMT-6 (CST)' },
-  { value: '-5', label: 'GMT-5 (EST)' },
-  { value: '-4', label: 'GMT-4 (EDT)' },
-  { value: '-3', label: 'GMT-3' },
-  { value: '-2', label: 'GMT-2' },
-  { value: '-1', label: 'GMT-1' },
-  { value: '+0', label: 'GMT+0 (UTC)' },
-  { value: '+1', label: 'GMT+1 (CET)' },
-  { value: '+2', label: 'GMT+2 (SAST)' },
-  { value: '+3', label: 'GMT+3 (EAT)' },
-  { value: '+4', label: 'GMT+4 (GST/Dubai)' },
-  { value: '+5', label: 'GMT+5 (PKT)' },
-  { value: '+5:30', label: 'GMT+5:30 (IST)' },
-  { value: '+6', label: 'GMT+6' },
-  { value: '+7', label: 'GMT+7' },
-  { value: '+8', label: 'GMT+8 (SGT)' },
-  { value: '+9', label: 'GMT+9 (JST)' },
-  { value: '+9:30', label: 'GMT+9:30 (ACST)' },
-  { value: '+10', label: 'GMT+10 (AEST)' },
-  { value: '+11', label: 'GMT+11 (AEDT)' },
-  { value: '+12', label: 'GMT+12' },
-];
+// Helper to parse timezone string to hours and minutes
+const parseTimezoneToHoursMinutes = (tz: string): { sign: '+' | '-', hours: string, minutes: string } => {
+  if (!tz) return { sign: '+', hours: '0', minutes: '00' };
+  const match = tz.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) return { sign: '+', hours: '0', minutes: '00' };
+  return {
+    sign: match[1] === '-' ? '-' : '+',
+    hours: match[2],
+    minutes: match[3] || '00'
+  };
+};
+
+// Helper to format timezone from hours and minutes
+const formatTimezone = (sign: '+' | '-', hours: string, minutes: string): string => {
+  const h = parseInt(hours) || 0;
+  const m = parseInt(minutes) || 0;
+  if (m === 0) return `${sign}${h}`;
+  return `${sign}${h}:${m.toString().padStart(2, '0')}`;
+};
 
 interface TemplateFormProps {
   initialData?: TemplateFormData;
@@ -270,22 +260,57 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
               />
             </div>
             
-            {/* Timezone */}
+            {/* Timezone - manual entry */}
             <div className="space-y-2">
-              <Label>Timezone</Label>
-              <Select 
-                value={formData.timezone} 
-                onValueChange={(v) => setFormData({ ...formData, timezone: v })}
-              >
-                <SelectTrigger data-testid="template-timezone-select">
-                  <SelectValue placeholder="Select timezone" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timezoneOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Timezone (GMT offset)</Label>
+              <div className="flex items-center gap-1">
+                <Select
+                  value={parseTimezoneToHoursMinutes(formData.timezone).sign}
+                  onValueChange={(sign) => {
+                    const parsed = parseTimezoneToHoursMinutes(formData.timezone);
+                    setFormData({ ...formData, timezone: formatTimezone(sign as '+' | '-', parsed.hours, parsed.minutes) });
+                  }}
+                >
+                  <SelectTrigger className="w-16" data-testid="template-timezone-sign">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="+">+</SelectItem>
+                    <SelectItem value="-">-</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min="0"
+                  max="14"
+                  className="w-16 text-center"
+                  placeholder="Hr"
+                  value={parseTimezoneToHoursMinutes(formData.timezone).hours}
+                  onChange={(e) => {
+                    const parsed = parseTimezoneToHoursMinutes(formData.timezone);
+                    const hours = Math.max(0, Math.min(14, parseInt(e.target.value) || 0)).toString();
+                    setFormData({ ...formData, timezone: formatTimezone(parsed.sign, hours, parsed.minutes) });
+                  }}
+                  data-testid="template-timezone-hours"
+                />
+                <span className="text-muted-foreground">:</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  step="15"
+                  className="w-16 text-center"
+                  placeholder="Min"
+                  value={parseTimezoneToHoursMinutes(formData.timezone).minutes}
+                  onChange={(e) => {
+                    const parsed = parseTimezoneToHoursMinutes(formData.timezone);
+                    const mins = Math.max(0, Math.min(59, parseInt(e.target.value) || 0)).toString().padStart(2, '0');
+                    setFormData({ ...formData, timezone: formatTimezone(parsed.sign, parsed.hours, mins) });
+                  }}
+                  data-testid="template-timezone-minutes"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">e.g., +5:30 for IST, -8:00 for PST</p>
             </div>
           </div>
           
@@ -330,15 +355,11 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
             </div>
           )}
           
-          {/* Creation timing disclaimer */}
+          {/* Manual creation notice */}
           <div className="text-xs text-muted-foreground bg-background/50 p-2 rounded border">
-            <p className="font-medium mb-1">Task Creation Timing:</p>
-            {formData.recurrence === 'daily' && <p>Tasks will be created 1 hour before the delivery time.</p>}
-            {formData.recurrence === 'weekly' && <p>Tasks will be created 2 days before the delivery day/time.</p>}
-            {formData.recurrence === 'biweekly' && <p>Tasks will be created 5 days before the delivery day/time.</p>}
-            {(formData.recurrence === 'monthly' || formData.recurrence === 'quarterly') && (
-              <p>Tasks will be created 1 week before the delivery date/time.</p>
-            )}
+            <p className="font-medium mb-1">How it works:</p>
+            <p>When you click the <strong>Create</strong> button on this deliverable, tasks will be created with due dates set to the next scheduled delivery time above.</p>
+            <p className="mt-1 text-muted-foreground/80">Note: You need to manually click Create each time you want to generate tasks from this template.</p>
           </div>
         </div>
       )}
