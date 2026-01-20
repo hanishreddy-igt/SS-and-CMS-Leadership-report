@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, index, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -176,7 +176,11 @@ export const taskTemplates = pgTable("task_templates", {
   assignmentMode: text("assignment_mode").default('single'), // 'single' = one task with all assignees, 'per-person' = separate task for each
   subTemplates: jsonb("sub_templates").default(sql`'[]'`), // Array of SubTemplateItem for sub-tasks
   taskItems: text("task_items"), // EOS format or details (becomes task note)
-  recurrence: text("recurrence"), // weekly, biweekly, monthly - label only for now
+  recurrence: text("recurrence"), // daily, weekly, biweekly, monthly, quarterly
+  deliveryTime: text("delivery_time"), // Time of day for delivery (e.g., "09:00")
+  deliveryDay: text("delivery_day"), // Day of week for weekly/bi-weekly (e.g., "monday")
+  deliveryDate: integer("delivery_date"), // Day of month for monthly/quarterly (1-28, 0 = last day)
+  timezone: text("timezone"), // GMT offset (e.g., "+5:30", "-8", "+0")
   createdBy: text("created_by").notNull(), // Who created the template
   isActive: text("is_active").default('true'), // Whether template is active
   lastUsedAt: timestamp("last_used_at"), // When template was last used
