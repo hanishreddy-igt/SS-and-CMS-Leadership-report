@@ -148,7 +148,7 @@ export const tasks = pgTable("tasks", {
   createdBy: text("created_by").notNull(), // Email of who created the task
   updatedBy: text("updated_by"), // Email of who last updated the task
   status: text("status").notNull().default('todo'), // todo, in-progress, done, cancelled
-  priority: text("priority").default('normal'), // normal, medium, asap
+  priority: text("priority").default('medium'), // low, medium, high
   tags: text("tags").array().notNull().default(sql`'{}'`), // Inline tags like #status
   notes: jsonb("notes").notNull().default(sql`'[]'`), // Array of { content, author, timestamp }
   dueDate: text("due_date"), // Optional due date
