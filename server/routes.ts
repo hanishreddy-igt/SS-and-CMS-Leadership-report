@@ -5,7 +5,7 @@ import { JiraService } from "./services/jiraService";
 import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema, insertTaskSchema, insertTaskTemplateSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
-import { calculateNextScheduledDelivery, createTasksFromTemplate } from "./scheduler-utils";
+import { calculateNextScheduledDelivery, calculateCurrentTriggerWindow, createTasksFromTemplate } from "./scheduler-utils";
 
 // Initialize OpenAI client using Replit AI Integrations
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -2243,40 +2243,42 @@ Output valid JSON only.`;
 
       for (const template of autoTriggerTemplates) {
         try {
-          // Calculate next scheduled time for this template
-          const nextScheduled = calculateNextScheduledDelivery(template);
+          // Calculate if today is a valid trigger day and get today's window
+          const currentWindow = calculateCurrentTriggerWindow(template);
           
-          if (!nextScheduled) {
+          if (!currentWindow) {
+            // Today is not a valid trigger day for this template
+            const nextScheduled = calculateNextScheduledDelivery(template);
             results.push({ 
               templateId: template.id, 
               templateName: template.name,
-              status: 'skipped', 
-              error: 'No valid schedule' 
+              status: 'not-due', 
+              error: nextScheduled ? `Next: ${nextScheduled.start.toISOString()}` : 'No valid schedule'
             });
             continue;
           }
 
-          // Check if we're past the scheduled time and haven't triggered yet this period
+          // Check if we're past the start time and haven't triggered yet today
           const lastTriggered = template.lastTriggeredAt ? new Date(template.lastTriggeredAt) : null;
           
           // Only trigger if:
-          // 1. We're at or past the scheduled time
-          // 2. We haven't triggered since before the current period started
-          const shouldTrigger = now >= nextScheduled.start && 
-            (!lastTriggered || lastTriggered < nextScheduled.start);
+          // 1. We're at or past the scheduled start time
+          // 2. We haven't triggered since before the current window started
+          const shouldTrigger = now >= currentWindow.start && 
+            (!lastTriggered || lastTriggered < currentWindow.start);
 
           if (!shouldTrigger) {
             results.push({ 
               templateId: template.id, 
               templateName: template.name,
               status: 'not-due',
-              error: `Next: ${nextScheduled.start.toISOString()}`
+              error: `Waiting until: ${currentWindow.start.toISOString()}`
             });
             continue;
           }
 
           // Create tasks from template
-          const { tasksCreated, subTasksCreated } = await createTasksFromTemplate(template, storage, nextScheduled.end);
+          const { tasksCreated, subTasksCreated } = await createTasksFromTemplate(template, storage, currentWindow.end);
 
           // Update lastTriggeredAt
           await storage.updateTaskTemplate(template.id, {

@@ -11,6 +11,96 @@ const parseTimezoneOffset = (tz: string | null | undefined): number => {
   return sign * (hoursOffset * 60 + minutesOffset);
 };
 
+// Calculate the current triggerable window (for scheduler triggering)
+// Returns today's window if we're on a valid day, regardless of whether start time has passed
+export function calculateCurrentTriggerWindow(template: TaskTemplate): { start: Date; end: Date } | null {
+  const startTime = template.startTime || template.deliveryTime;
+  const endTime = template.endTime || startTime;
+  const startDay = template.startDay || template.deliveryDay || 'monday';
+  const endDay = template.endDay || startDay;
+  const startDate = template.startDate ?? template.deliveryDate ?? 1;
+  const endDate = template.endDate ?? startDate;
+  const daysOfWeek: string[] = template.daysOfWeek || [];
+  
+  if (!template.recurrence || !startTime) return null;
+  
+  const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
+  const [startHours, startMinutes] = startTime.split(':').map(Number);
+  const [endHours, endMinutes] = (endTime || startTime).split(':').map(Number);
+  
+  const nowUTC = new Date();
+  const nowInTzMs = nowUTC.getTime() + tzOffsetMinutes * 60 * 1000;
+  const nowInTz = new Date(nowInTzMs);
+  
+  const dayMap: Record<string, number> = {
+    'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+    'thursday': 4, 'friday': 5, 'saturday': 6
+  };
+  
+  const createDateInTz = (y: number, m: number, d: number, h: number, min: number): Date => {
+    const dateInTz = Date.UTC(y, m, d, h, min, 0, 0);
+    return new Date(dateInTz - tzOffsetMinutes * 60 * 1000);
+  };
+  
+  const getDayOfWeekInTz = (date: Date): number => {
+    const inTz = new Date(date.getTime() + tzOffsetMinutes * 60 * 1000);
+    return inTz.getUTCDay();
+  };
+  
+  const currentDayOfWeek = getDayOfWeekInTz(nowUTC);
+  
+  // Check if today is a valid trigger day based on recurrence type
+  if (template.recurrence === 'daily') {
+    const selectedDays = daysOfWeek.length > 0 ? daysOfWeek : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const selectedDayNumbers = selectedDays.map(d => dayMap[d]);
+    if (!selectedDayNumbers.includes(currentDayOfWeek)) {
+      return null; // Today is not a valid day
+    }
+  } else if (template.recurrence === 'weekly') {
+    const startDayOfWeek = dayMap[startDay];
+    if (currentDayOfWeek !== startDayOfWeek) {
+      return null; // Today is not the start day
+    }
+  } else if (template.recurrence === 'biweekly') {
+    const startDayOfWeek = dayMap[startDay];
+    if (currentDayOfWeek !== startDayOfWeek) {
+      return null; // Today is not the start day
+    }
+    // Check if this is the right week (every other week)
+    const anchorDate = template.lastUsedAt ? new Date(template.lastUsedAt) : new Date(template.createdAt);
+    const daysSinceAnchor = Math.floor((nowUTC.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
+    const weeksOffset = Math.floor(daysSinceAnchor / 7) % 2;
+    if (weeksOffset !== 0) {
+      return null; // Not the right biweekly period
+    }
+  } else if (template.recurrence === 'monthly') {
+    const dayOfMonth = nowInTz.getUTCDate();
+    const lastDayOfMonth = new Date(Date.UTC(nowInTz.getUTCFullYear(), nowInTz.getUTCMonth() + 1, 0)).getUTCDate();
+    const actualStartDate = startDate === 0 ? lastDayOfMonth : startDate;
+    if (dayOfMonth !== actualStartDate) {
+      return null; // Not the right day of month
+    }
+  } else if (template.recurrence === 'quarterly') {
+    const currentMonth = nowInTz.getUTCMonth();
+    const quarterStartMonths = [0, 3, 6, 9]; // Jan, Apr, Jul, Oct
+    if (!quarterStartMonths.includes(currentMonth)) {
+      return null; // Not a quarter start month
+    }
+    const dayOfMonth = nowInTz.getUTCDate();
+    const lastDayOfMonth = new Date(Date.UTC(nowInTz.getUTCFullYear(), currentMonth + 1, 0)).getUTCDate();
+    const actualStartDate = startDate === 0 ? lastDayOfMonth : startDate;
+    if (dayOfMonth !== actualStartDate) {
+      return null; // Not the right day of month
+    }
+  }
+  
+  // Return today's window
+  const startDateTimeUTC = createDateInTz(nowInTz.getUTCFullYear(), nowInTz.getUTCMonth(), nowInTz.getUTCDate(), startHours, startMinutes);
+  const dueDateUTC = createDateInTz(nowInTz.getUTCFullYear(), nowInTz.getUTCMonth(), nowInTz.getUTCDate(), endHours, endMinutes);
+  
+  return { start: startDateTimeUTC, end: dueDateUTC };
+}
+
 export function calculateNextScheduledDelivery(template: TaskTemplate): { start: Date; end: Date } | null {
   const startTime = template.startTime || template.deliveryTime;
   const endTime = template.endTime || startTime;
@@ -73,7 +163,9 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
     startDateTimeUTC = createDateInTz(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), checkDate.getUTCDate(), startHours, startMinutes);
     dueDateUTC = createDateInTz(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), checkDate.getUTCDate(), endHours, endMinutes);
     
-    if (daysToAdd === 0 && startDateTimeUTC <= nowUTC) {
+    // For "next scheduled" display, only advance if the DUE time has passed (not just start time)
+    // This way, we show today's occurrence until it's completely done
+    if (daysToAdd === 0 && dueDateUTC <= nowUTC) {
       for (let i = 1; i <= 7; i++) {
         const checkDay = (currentDay + i) % 7;
         if (selectedDayNumbers.includes(checkDay)) {
