@@ -192,7 +192,9 @@ export const taskTemplates = pgTable("task_templates", {
   timezone: text("timezone"), // GMT offset (e.g., "+5:30", "-8", "+0")
   createdBy: text("created_by").notNull(), // Who created the template
   isActive: text("is_active").default('true'), // Whether template is active
-  lastUsedAt: timestamp("last_used_at"), // When template was last used
+  autoTriggerEnabled: text("auto_trigger_enabled").default('false'), // Whether auto-triggering is enabled
+  lastUsedAt: timestamp("last_used_at"), // When template was last used (manual or auto)
+  lastTriggeredAt: timestamp("last_triggered_at"), // When scheduler last auto-triggered this template
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

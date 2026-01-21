@@ -5,6 +5,7 @@ import { JiraService } from "./services/jiraService";
 import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema, insertTaskSchema, insertTaskTemplateSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
+import { calculateNextScheduledDelivery, createTasksFromTemplate } from "./scheduler-utils";
 
 // Initialize OpenAI client using Replit AI Integrations
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -2203,6 +2204,243 @@ Output valid JSON only.`;
     } catch (error: any) {
       console.error('Error deleting task template:', error);
       res.status(500).json({ message: 'Failed to delete task template' });
+    }
+  });
+
+  // ============================================
+  // SCHEDULER ENDPOINTS (for platform-agnostic automation)
+  // These can be called by any scheduler: Replit Scheduled Deployments,
+  // Linux cron, cloud schedulers, or manual triggers
+  // ============================================
+
+  // POST /api/scheduler/trigger-deliverables
+  // Checks all auto-trigger enabled templates and creates tasks for due ones
+  app.post('/api/scheduler/trigger-deliverables', async (req, res) => {
+    try {
+      // Optional: API key authentication for external schedulers
+      const authHeader = req.headers['x-scheduler-key'];
+      const schedulerKey = process.env.SCHEDULER_API_KEY;
+      
+      // If SCHEDULER_API_KEY is set, require it. Otherwise allow unauthenticated calls
+      if (schedulerKey && authHeader !== schedulerKey) {
+        return res.status(401).json({ message: 'Invalid scheduler key' });
+      }
+
+      const now = new Date();
+      console.log(`[Scheduler] Trigger deliverables called at ${now.toISOString()}`);
+
+      // Get all templates with auto-trigger enabled
+      const allTemplates = await storage.getTaskTemplates();
+      const autoTriggerTemplates = allTemplates.filter(t => 
+        t.isActive === 'true' && 
+        t.autoTriggerEnabled === 'true' &&
+        t.recurrence // Must have a recurrence pattern
+      );
+
+      console.log(`[Scheduler] Found ${autoTriggerTemplates.length} auto-trigger templates`);
+
+      const results: { templateId: string; templateName: string; status: string; tasksCreated?: number; error?: string }[] = [];
+
+      for (const template of autoTriggerTemplates) {
+        try {
+          // Calculate next scheduled time for this template
+          const nextScheduled = calculateNextScheduledDelivery(template);
+          
+          if (!nextScheduled) {
+            results.push({ 
+              templateId: template.id, 
+              templateName: template.name,
+              status: 'skipped', 
+              error: 'No valid schedule' 
+            });
+            continue;
+          }
+
+          // Check if we're past the scheduled time and haven't triggered yet this period
+          const lastTriggered = template.lastTriggeredAt ? new Date(template.lastTriggeredAt) : null;
+          
+          // Only trigger if:
+          // 1. We're at or past the scheduled time
+          // 2. We haven't triggered since before the current period started
+          const shouldTrigger = now >= nextScheduled.start && 
+            (!lastTriggered || lastTriggered < nextScheduled.start);
+
+          if (!shouldTrigger) {
+            results.push({ 
+              templateId: template.id, 
+              templateName: template.name,
+              status: 'not-due',
+              error: `Next: ${nextScheduled.start.toISOString()}`
+            });
+            continue;
+          }
+
+          // Create tasks from template
+          const { tasksCreated, subTasksCreated } = await createTasksFromTemplate(template, storage, nextScheduled.end);
+
+          // Update lastTriggeredAt
+          await storage.updateTaskTemplate(template.id, {
+            lastTriggeredAt: now,
+            lastUsedAt: now
+          });
+
+          results.push({ 
+            templateId: template.id, 
+            templateName: template.name,
+            status: 'triggered', 
+            tasksCreated: tasksCreated + subTasksCreated 
+          });
+
+          console.log(`[Scheduler] Triggered template "${template.name}": ${tasksCreated} tasks, ${subTasksCreated} sub-tasks`);
+
+        } catch (error: any) {
+          console.error(`[Scheduler] Error triggering template ${template.id}:`, error);
+          results.push({ 
+            templateId: template.id, 
+            templateName: template.name,
+            status: 'error', 
+            error: error.message 
+          });
+        }
+      }
+
+      const triggeredCount = results.filter(r => r.status === 'triggered').length;
+      console.log(`[Scheduler] Completed: ${triggeredCount} templates triggered`);
+
+      res.json({
+        success: true,
+        timestamp: now.toISOString(),
+        templatesChecked: autoTriggerTemplates.length,
+        templatesTriggered: triggeredCount,
+        results
+      });
+
+    } catch (error: any) {
+      console.error('[Scheduler] Error in trigger-deliverables:', error);
+      res.status(500).json({ message: 'Failed to trigger deliverables', error: error.message });
+    }
+  });
+
+  // POST /api/scheduler/auto-archive
+  // Archives weekly reports if it's the appropriate day (Wednesday or later)
+  app.post('/api/scheduler/auto-archive', async (req, res) => {
+    try {
+      // Optional: API key authentication for external schedulers
+      const authHeader = req.headers['x-scheduler-key'];
+      const schedulerKey = process.env.SCHEDULER_API_KEY;
+      
+      if (schedulerKey && authHeader !== schedulerKey) {
+        return res.status(401).json({ message: 'Invalid scheduler key' });
+      }
+
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0 = Sunday, 3 = Wednesday
+      
+      console.log(`[Scheduler] Auto-archive called at ${now.toISOString()}, day of week: ${dayOfWeek}`);
+
+      // Only run on Wednesday (3) or later in the week
+      if (dayOfWeek < 3 && dayOfWeek !== 0) { // 0 is Sunday which comes after Saturday
+        return res.json({
+          success: true,
+          message: 'Not archive day yet (runs Wednesday-Sunday)',
+          archived: false
+        });
+      }
+
+      // Get all submitted weekly reports that haven't been archived yet
+      const weeklyReports = await storage.getWeeklyReports();
+      const submittedReports = weeklyReports.filter(r => r.status === 'submitted');
+      
+      if (submittedReports.length === 0) {
+        return res.json({
+          success: true,
+          message: 'No submitted reports to archive',
+          archived: false
+        });
+      }
+
+      // Get existing archives to find unarchived weeks
+      const existingArchives = await storage.getSavedReports();
+      const archivedWeeks = new Set(existingArchives.map(a => a.weekStart));
+      
+      // Find submitted reports for weeks that haven't been archived
+      const unarchivedReports = submittedReports.filter(r => !archivedWeeks.has(r.weekStart));
+      
+      if (unarchivedReports.length === 0) {
+        return res.json({
+          success: true,
+          message: 'All submitted reports already archived',
+          archived: false
+        });
+      }
+
+      // Group by weekStart and find the oldest unarchived week
+      const weekGroups = unarchivedReports.reduce((acc, r) => {
+        if (!acc[r.weekStart]) acc[r.weekStart] = [];
+        acc[r.weekStart].push(r);
+        return acc;
+      }, {} as Record<string, typeof unarchivedReports>);
+      
+      const oldestWeekStart = Object.keys(weekGroups).sort()[0];
+      const reportsForWeek = weekGroups[oldestWeekStart];
+      
+      // Calculate week end (6 days after start)
+      const weekStartDate = new Date(oldestWeekStart);
+      const weekEndDate = new Date(weekStartDate);
+      weekEndDate.setDate(weekEndDate.getDate() + 6);
+      const weekEnd = weekEndDate.toISOString().split('T')[0];
+
+      // Archive is needed - return info for the caller to handle
+      // The actual archiving logic is complex (PDF generation, AI summary) so we just signal readiness
+      res.json({
+        success: true,
+        message: 'Archive needed',
+        weekStart: oldestWeekStart,
+        weekEnd: weekEnd,
+        reportsCount: reportsForWeek.length,
+        archived: false,
+        needsArchive: true
+      });
+
+    } catch (error: any) {
+      console.error('[Scheduler] Error in auto-archive:', error);
+      res.status(500).json({ message: 'Failed to check archive status', error: error.message });
+    }
+  });
+
+  // GET /api/scheduler/status
+  // Returns scheduler status and next scheduled runs
+  app.get('/api/scheduler/status', async (_req, res) => {
+    try {
+      const allTemplates = await storage.getTaskTemplates();
+      const autoTriggerTemplates = allTemplates.filter(t => 
+        t.isActive === 'true' && 
+        t.autoTriggerEnabled === 'true' &&
+        t.recurrence
+      );
+
+      const templateStatus = autoTriggerTemplates.map(t => {
+        const nextScheduled = calculateNextScheduledDelivery(t);
+        return {
+          id: t.id,
+          name: t.name,
+          recurrence: t.recurrence,
+          lastTriggeredAt: t.lastTriggeredAt,
+          nextScheduledStart: nextScheduled?.start?.toISOString() || null,
+          nextScheduledDue: nextScheduled?.end?.toISOString() || null
+        };
+      });
+
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        autoTriggerTemplatesCount: autoTriggerTemplates.length,
+        templates: templateStatus
+      });
+
+    } catch (error: any) {
+      console.error('[Scheduler] Error getting status:', error);
+      res.status(500).json({ message: 'Failed to get scheduler status', error: error.message });
     }
   });
 

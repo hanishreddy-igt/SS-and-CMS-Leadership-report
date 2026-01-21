@@ -102,6 +102,7 @@ interface TemplateFormData {
   daysOfWeek: string[];
   timezone: string;
   isActive: boolean;
+  autoTriggerEnabled: boolean;
 }
 
 const dayOptions = [
@@ -167,6 +168,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
     daysOfWeek: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     timezone: '+5:30',
     isActive: true,
+    autoTriggerEnabled: false,
   });
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('');
   
@@ -797,7 +799,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
         />
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2">
           <Switch
             id="isActive"
@@ -806,6 +808,18 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           />
           <Label htmlFor="isActive">Active</Label>
         </div>
+        {hasRecurrence && (
+          <div className="flex items-center gap-2">
+            <Switch
+              id="autoTriggerEnabled"
+              checked={formData.autoTriggerEnabled}
+              onCheckedChange={(v) => setFormData({ ...formData, autoTriggerEnabled: v })}
+            />
+            <Label htmlFor="autoTriggerEnabled" className="text-sm">
+              Auto-trigger (scheduled)
+            </Label>
+          </div>
+        )}
       </div>
 
       <DialogFooter>
@@ -847,7 +861,7 @@ const calculateNextScheduledDelivery = (template: TaskTemplate): { startDateTime
   
   const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
   const [startHours, startMinutes] = startTime.split(':').map(Number);
-  const [endHours, endMinutes] = endTime.split(':').map(Number);
+  const [endHours, endMinutes] = (endTime || startTime).split(':').map(Number);
   
   // Get current UTC time
   const nowUTC = new Date();
@@ -1061,6 +1075,11 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
             <CardTitle className="text-base flex items-center gap-2">
               <FileStack className="h-4 w-4 text-primary flex-shrink-0" />
               <span className="truncate">{template.name}</span>
+              {(template as any).autoTriggerEnabled === 'true' && (
+                <Badge variant="outline" className="text-xs text-success border-success">
+                  Auto
+                </Badge>
+              )}
             </CardTitle>
             {template.description && (
               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{template.description}</p>
@@ -1182,13 +1201,21 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
     <Dialog open={!!template} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <FileStack className="h-5 w-5 text-primary" />
             {template.name}
             {template.isActive === 'false' && (
               <Badge variant="secondary" className="ml-2">Inactive</Badge>
             )}
+            {(template as any).autoTriggerEnabled === 'true' && (
+              <Badge variant="outline" className="text-success border-success">Auto-trigger</Badge>
+            )}
           </DialogTitle>
+          {(template as any).lastTriggeredAt && (
+            <p className="text-xs text-muted-foreground">
+              Last auto-triggered: {new Date((template as any).lastTriggeredAt).toLocaleString()}
+            </p>
+          )}
         </DialogHeader>
         
         <div className="space-y-4">
@@ -1242,8 +1269,8 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
                   <div className="col-span-2">
                     <span className="text-muted-foreground">Days: </span>
                     <span>
-                      {(template.daysOfWeek?.length > 0 
-                        ? template.daysOfWeek.map((d: string) => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')
+                      {((template.daysOfWeek || []).length > 0 
+                        ? (template.daysOfWeek || []).map((d: string) => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')
                         : 'Mon, Tue, Wed, Thu, Fri')}
                     </span>
                   </div>
@@ -1478,6 +1505,7 @@ export default function TaskTemplates() {
         daysOfWeek: isDaily ? data.daysOfWeek : [],
         timezone: data.recurrence ? data.timezone : null,
         isActive: data.isActive ? 'true' : 'false',
+        autoTriggerEnabled: data.autoTriggerEnabled ? 'true' : 'false',
       });
       return res.json();
     },
@@ -1520,6 +1548,7 @@ export default function TaskTemplates() {
         daysOfWeek: isDaily ? data.daysOfWeek : [],
         timezone: data.recurrence ? data.timezone : null,
         isActive: data.isActive ? 'true' : 'false',
+        autoTriggerEnabled: data.autoTriggerEnabled ? 'true' : 'false',
       });
       return res.json();
     },
@@ -1699,6 +1728,7 @@ export default function TaskTemplates() {
       daysOfWeek: (editingTemplate as any).daysOfWeek || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
       timezone: editingTemplate.timezone || '+5:30',
       isActive: editingTemplate.isActive !== 'false',
+      autoTriggerEnabled: (editingTemplate as any).autoTriggerEnabled === 'true',
     };
   };
 

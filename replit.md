@@ -57,7 +57,7 @@ This project provides a comprehensive tracking system for Strategic Services (SS
         - **Sub-tasks**: Define hierarchical sub-tasks that are created as child tasks when deliverable is triggered
         - **Assignment Mode**: Choose between "One task" (all assignees on same task) or "Separate tasks" (individual task per assignee)
         - **Priority inheritance**: Sub-tasks can have their own priority (normal/medium/high) or inherit from parent
-        - **Work Schedule (Phase 1 - Manual Triggering)**: Configure when work starts and is due:
+        - **Work Schedule**: Configure when work starts and is due:
           - **Daily Recurrence**: Select which days of the week tasks occur (Mon-Sun checkboxes)
           - **Weekly/Biweekly Recurrence**: Set start day and due day (e.g., work starts Monday, due Friday)
           - **Monthly/Quarterly Recurrence**: Set start date and due date of month (1-28, or 0 for last day)
@@ -65,7 +65,9 @@ This project provides a comprehensive tracking system for Strategic Services (SS
           - **Timezone**: Manual GMT offset entry (+5:30, -8, +0) for timezone-aware scheduling
           - **Next Scheduled Display**: Template cards show calculated next start/due date-times in template timezone
           - Tasks created from templates use the calculated due date/time based on schedule
-          - **Manual Triggering Only (Phase 1)**: User clicks "Create" button to generate tasks from templates
+        - **Triggering Modes**:
+          - **Manual Triggering**: User clicks "Create" button to generate tasks from templates
+          - **Auto-Trigger (Scheduled)**: Enable "Auto-trigger" toggle on templates to allow scheduled automation
       - Tasks support hierarchical nesting via parentTaskId, project linking, multiple assignees, priority levels, tags, and timestamped notes.
     - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI.
     - **Jira Integration**: Functionality to import projects, leads, and team members directly from Jira epics.
@@ -77,8 +79,51 @@ This project provides a comprehensive tracking system for Strategic Services (SS
 
 ### System Design Choices
 - **Authentication**: Secured with Google authentication via Replit Auth, restricted to `@ignitetech.com` email domains. Server-side validation and session management using PostgreSQL.
-- **API Protection**: All API endpoints are protected with authentication middleware.
+- **API Protection**: All API endpoints are protected with authentication middleware, except scheduler endpoints (`/api/scheduler/*`) which are intentionally unauthenticated for external automation access with optional API key authentication via `SCHEDULER_API_KEY`.
 - **Development Environment**: Utilizes Vite for frontend, `tsx` for backend development, and `connect-pg-simple` for session management.
+
+## Scheduler API (Platform-Agnostic Automation)
+
+The application provides scheduler endpoints that can be called by any automation system to trigger recurring deliverables and check archive status. These are platform-agnostic and work with:
+- Replit Scheduled Deployments
+- Linux cron
+- Cloud schedulers (AWS CloudWatch, Google Cloud Scheduler)
+- GitHub Actions scheduled workflows
+
+### Scheduler Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/scheduler/trigger-deliverables` | POST | Creates tasks from due auto-trigger templates |
+| `/api/scheduler/auto-archive` | POST | Checks if weekly reports need archiving (returns `needsArchive: true` if archiving is pending - actual archiving requires opening the Reports page due to PDF generation complexity) |
+| `/api/scheduler/status` | GET | Returns status of all auto-trigger templates |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `APP_URL` | Base URL for API calls (default: http://localhost:5000) |
+| `SCHEDULER_API_KEY` | Optional API key for authentication |
+
+### Standalone Scripts
+
+Run these scripts manually or configure them in your scheduler:
+
+```bash
+# Trigger recurring deliverables
+npx tsx scripts/trigger-deliverables.ts
+
+# Check auto-archive status
+npx tsx scripts/auto-archive.ts
+```
+
+### Template Auto-Trigger Configuration
+
+1. Create or edit a recurring deliverable template
+2. Set a recurrence pattern (daily, weekly, biweekly, monthly, quarterly)
+3. Configure the work schedule (start time, due time, timezone)
+4. Enable the "Auto-trigger (scheduled)" toggle
+5. Configure your external scheduler to call `/api/scheduler/trigger-deliverables` periodically
 
 ## External Dependencies
 - **PostgreSQL (Neon serverless)**: Primary database.
