@@ -120,6 +120,9 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
   const nowInTzMs = nowUTC.getTime() + tzOffsetMinutes * 60 * 1000;
   const nowInTz = new Date(nowInTzMs);
   
+  // Check if template was already triggered for the current period
+  const lastTriggered = template.lastTriggeredAt ? new Date(template.lastTriggeredAt) : null;
+  
   const dayMap: Record<string, number> = {
     'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
     'thursday': 4, 'friday': 5, 'saturday': 6
@@ -137,6 +140,12 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
   const getDayOfWeekInTz = (date: Date): number => {
     const inTz = new Date(date.getTime() + tzOffsetMinutes * 60 * 1000);
     return inTz.getUTCDay();
+  };
+  
+  // Helper to check if lastTriggered is within a period starting at periodStart
+  const wasTriggeredInPeriod = (periodStart: Date): boolean => {
+    if (!lastTriggered) return false;
+    return lastTriggered >= periodStart;
   };
   
   let startDateTimeUTC: Date;
@@ -163,9 +172,12 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
     startDateTimeUTC = createDateInTz(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), checkDate.getUTCDate(), startHours, startMinutes);
     dueDateUTC = createDateInTz(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), checkDate.getUTCDate(), endHours, endMinutes);
     
-    // For "next scheduled" display, only advance if the DUE time has passed (not just start time)
-    // This way, we show today's occurrence until it's completely done
-    if (daysToAdd === 0 && dueDateUTC <= nowUTC) {
+    // Only advance to next day if:
+    // 1. Today is a valid day AND
+    // 2. The template was ALREADY TRIGGERED today (not just because time passed)
+    const alreadyTriggeredToday = daysToAdd === 0 && wasTriggeredInPeriod(startDateTimeUTC);
+    
+    if (alreadyTriggeredToday) {
       for (let i = 1; i <= 7; i++) {
         const checkDay = (currentDay + i) % 7;
         if (selectedDayNumbers.includes(checkDay)) {
@@ -190,7 +202,10 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
     
     startDateTimeUTC = createDateInTz(startDateCalc.getUTCFullYear(), startDateCalc.getUTCMonth(), startDateCalc.getUTCDate(), startHours, startMinutes);
     
-    if (daysUntilStart === 0 && startDateTimeUTC <= nowUTC) {
+    // Only advance to next week if today is the start day AND template was ALREADY TRIGGERED this week
+    const alreadyTriggeredThisWeek = daysUntilStart === 0 && wasTriggeredInPeriod(startDateTimeUTC);
+    
+    if (alreadyTriggeredThisWeek) {
       startDateCalc.setUTCDate(startDateCalc.getUTCDate() + 7);
       startDateTimeUTC = createDateInTz(startDateCalc.getUTCFullYear(), startDateCalc.getUTCMonth(), startDateCalc.getUTCDate(), startHours, startMinutes);
     }
@@ -217,7 +232,10 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
     
     startDateTimeUTC = createDateInTz(targetYear, targetMonth, actualStartDate, startHours, startMinutes);
     
-    if (startDateTimeUTC <= nowUTC) {
+    // Only advance to next month if template was ALREADY TRIGGERED this month
+    const alreadyTriggeredThisMonth = wasTriggeredInPeriod(startDateTimeUTC);
+    
+    if (alreadyTriggeredThisMonth) {
       const nextMonth = targetMonth + 1;
       const nextYear = nextMonth > 11 ? targetYear + 1 : targetYear;
       const adjMonth = nextMonth > 11 ? 0 : nextMonth;
@@ -244,7 +262,10 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
     
     startDateTimeUTC = createDateInTz(targetYear, currentQuarterStart, actualStartDate, startHours, startMinutes);
     
-    if (startDateTimeUTC <= nowUTC) {
+    // Only advance to next quarter if template was ALREADY TRIGGERED this quarter
+    const alreadyTriggeredThisQuarter = wasTriggeredInPeriod(startDateTimeUTC);
+    
+    if (alreadyTriggeredThisQuarter) {
       const nextQuarterStart = (currentQuarterStart + 3) % 12;
       const yearOffset = nextQuarterStart < currentQuarterStart ? 1 : 0;
       const newStartDate = startDate === 0 ? new Date(Date.UTC(targetYear + yearOffset, nextQuarterStart + 1, 0)).getUTCDate() : startDate;
