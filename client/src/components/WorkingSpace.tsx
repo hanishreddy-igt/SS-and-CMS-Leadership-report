@@ -655,33 +655,33 @@ function TaskInputHelper() {
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="space-y-1">
           <p className="font-medium text-muted-foreground">Link to account:</p>
-          <code className="bg-background px-1.5 py-0.5 rounded text-primary">@@ProjectName</code>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">@@AccountName</code>
         </div>
         <div className="space-y-1">
           <p className="font-medium text-muted-foreground">Assign to person:</p>
-          <code className="bg-background px-1.5 py-0.5 rounded text-primary">@JohnDoe</code>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">@PersonName</code>
         </div>
         <div className="space-y-1">
           <p className="font-medium text-muted-foreground">Set status:</p>
-          <code className="bg-background px-1.5 py-0.5 rounded text-primary">#in-progress</code>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">#to-do</code>
         </div>
         <div className="space-y-1">
           <p className="font-medium text-muted-foreground">Set priority:</p>
-          <code className="bg-background px-1.5 py-0.5 rounded text-primary">$high</code>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">$medium</code>
         </div>
         <div className="space-y-1">
           <p className="font-medium text-muted-foreground">Set due date:</p>
-          <code className="bg-background px-1.5 py-0.5 rounded text-primary">!tomorrow</code>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">!today</code> or <code className="bg-background px-1.5 py-0.5 rounded text-primary">!Apr 12</code>
         </div>
         <div className="space-y-1">
           <p className="font-medium text-muted-foreground">Add a note:</p>
-          <code className="bg-background px-1.5 py-0.5 rounded text-primary">//Remember to check</code>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">//testing is done</code>
         </div>
       </div>
       <div className="pt-2 border-t">
         <p className="font-medium text-muted-foreground mb-1">Full example:</p>
         <code className="bg-background px-2 py-1 rounded text-primary block">
-          Review PR @@WebApp @Sarah #in-progress $high !friday //needs testing
+          Reporting for advisory @@SKY UK @Hanish Reddy #to-do $normal !Feb 10 //Template is already in drive (URL)
         </code>
       </div>
     </div>
