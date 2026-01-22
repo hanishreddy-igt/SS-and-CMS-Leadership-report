@@ -33,7 +33,7 @@ function HubCard({ icon: Icon, title, description, onClick, testId }: HubCardPro
 // ============================================================
 // TASK ACCESS CONTROL - Must match tasks-section.tsx
 // ============================================================
-const TASKS_ALLOWED_ROLES = ['admin', 'manager']; // Add 'lead', 'member' to open up
+const TASKS_ALLOWED_ROLES = ['admin', 'manager', 'lead', 'member'];
 
 export default function Hub() {
   const [, setLocation] = useLocation();
