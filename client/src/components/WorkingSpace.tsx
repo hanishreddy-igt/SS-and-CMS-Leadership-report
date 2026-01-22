@@ -645,106 +645,45 @@ function InlineTaskInput({
   );
 }
 
-interface TaskInputHelperProps {
-  onInsertTag: (tag: string) => void;
-}
-
-function TaskInputHelper({ onInsertTag }: TaskInputHelperProps) {
-  const [showHelp, setShowHelp] = useState(false);
-
-  const quickTags = [
-    { tag: '@@', testId: 'account', icon: FolderKanban, label: 'Link Account', tooltip: 'Type @@ then account name', color: 'text-blue-500' },
-    { tag: '@', testId: 'person', icon: User, label: 'Assign Person', tooltip: 'Type @ then person name', color: 'text-green-500' },
-    { tag: '#', testId: 'status', icon: Hash, label: 'Set Status', tooltip: 'Type # then status (todo, in-progress, blocked, done)', color: 'text-purple-500' },
-    { tag: '$', testId: 'priority', icon: Zap, label: 'Set Priority', tooltip: 'Type $ then priority (normal, medium, high)', color: 'text-orange-500' },
-    { tag: '!', testId: 'date', icon: CalendarIcon, label: 'Due Date', tooltip: 'Type ! then date (today, tomorrow, or date)', color: 'text-red-500' },
-    { tag: '//', testId: 'note', icon: StickyNote, label: 'Add Note', tooltip: 'Type // then your note text', color: 'text-yellow-600' },
-  ];
-
+function TaskInputHelper() {
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1 flex-wrap">
-        <span className="text-xs text-muted-foreground mr-1">Quick add:</span>
-        {quickTags.map(({ tag, testId, icon: Icon, label, tooltip, color }) => (
-          <Tooltip key={tag}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs gap-1"
-                onClick={() => onInsertTag(tag)}
-                data-testid={`quick-tag-${testId}`}
-              >
-                <Icon className={`h-3 w-3 ${color}`} />
-                <span className="hidden sm:inline">{label}</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">
-              <p className="font-medium">{label}</p>
-              <p className="text-muted-foreground">{tooltip}</p>
-            </TooltipContent>
-          </Tooltip>
-        ))}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setShowHelp(!showHelp)}
-              data-testid="toggle-task-help"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Show examples & help</p>
-          </TooltipContent>
-        </Tooltip>
+    <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-2 border" data-testid="task-input-help">
+      <div className="font-medium text-sm flex items-center gap-2">
+        <HelpCircle className="h-4 w-4 text-primary" />
+        How to create tasks quickly
       </div>
-
-      <Collapsible open={showHelp} onOpenChange={setShowHelp}>
-        <CollapsibleContent>
-          <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-2 border">
-            <div className="font-medium text-sm flex items-center gap-2">
-              <HelpCircle className="h-4 w-4 text-primary" />
-              How to create tasks quickly
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="space-y-1">
-                <p className="font-medium text-muted-foreground">Link to account:</p>
-                <code className="bg-background px-1.5 py-0.5 rounded text-primary">@@ProjectName</code>
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-muted-foreground">Assign to person:</p>
-                <code className="bg-background px-1.5 py-0.5 rounded text-primary">@JohnDoe</code>
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-muted-foreground">Set status:</p>
-                <code className="bg-background px-1.5 py-0.5 rounded text-primary">#in-progress</code>
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-muted-foreground">Set priority:</p>
-                <code className="bg-background px-1.5 py-0.5 rounded text-primary">$high</code>
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-muted-foreground">Set due date:</p>
-                <code className="bg-background px-1.5 py-0.5 rounded text-primary">!tomorrow</code>
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-muted-foreground">Add a note:</p>
-                <code className="bg-background px-1.5 py-0.5 rounded text-primary">//Remember to check</code>
-              </div>
-            </div>
-            <div className="pt-2 border-t">
-              <p className="font-medium text-muted-foreground mb-1">Full example:</p>
-              <code className="bg-background px-2 py-1 rounded text-primary block">
-                Review PR @@WebApp @Sarah #in-progress $high !friday //needs testing
-              </code>
-            </div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="space-y-1">
+          <p className="font-medium text-muted-foreground">Link to account:</p>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">@@ProjectName</code>
+        </div>
+        <div className="space-y-1">
+          <p className="font-medium text-muted-foreground">Assign to person:</p>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">@JohnDoe</code>
+        </div>
+        <div className="space-y-1">
+          <p className="font-medium text-muted-foreground">Set status:</p>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">#in-progress</code>
+        </div>
+        <div className="space-y-1">
+          <p className="font-medium text-muted-foreground">Set priority:</p>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">$high</code>
+        </div>
+        <div className="space-y-1">
+          <p className="font-medium text-muted-foreground">Set due date:</p>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">!tomorrow</code>
+        </div>
+        <div className="space-y-1">
+          <p className="font-medium text-muted-foreground">Add a note:</p>
+          <code className="bg-background px-1.5 py-0.5 rounded text-primary">//Remember to check</code>
+        </div>
+      </div>
+      <div className="pt-2 border-t">
+        <p className="font-medium text-muted-foreground mb-1">Full example:</p>
+        <code className="bg-background px-2 py-1 rounded text-primary block">
+          Review PR @@WebApp @Sarah #in-progress $high !friday //needs testing
+        </code>
+      </div>
     </div>
   );
 }
@@ -1645,7 +1584,6 @@ export default function WorkingSpace() {
   const { toast } = useToast();
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const allTasksContainerRef = useRef<HTMLDivElement>(null);
-  const mainTaskInputRef = useRef<HTMLInputElement>(null);
 
   // Close task details when clicking outside the All Tasks section
   useEffect(() => {
@@ -1813,31 +1751,6 @@ export default function WorkingSpace() {
   const myBlockedTasks = sortByPriority(myRootTasks.filter(t => t.status === 'blocked'));
   const myClosedTasks = sortByPriority(myRootTasks.filter(t => t.status === 'done'));
 
-  const handleInsertTag = (tag: string) => {
-    if (mainTaskInputRef.current) {
-      const input = mainTaskInputRef.current;
-      const start = input.selectionStart || 0;
-      const end = input.selectionEnd || 0;
-      const currentValue = input.value;
-      const needsSpace = start > 0 && currentValue[start - 1] !== ' ';
-      const insertText = (needsSpace ? ' ' : '') + tag;
-      const newValue = currentValue.slice(0, start) + insertText + currentValue.slice(end);
-      
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-      if (nativeInputValueSetter) {
-        nativeInputValueSetter.call(input, newValue);
-        const event = new Event('input', { bubbles: true });
-        input.dispatchEvent(event);
-      }
-      
-      const newCursorPos = start + insertText.length;
-      setTimeout(() => {
-        input.focus();
-        input.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
-    }
-  };
-
   return (
     <div className="space-y-6" data-testid="your-workspace-section">
       {/* Create Task Section */}
@@ -1855,9 +1768,8 @@ export default function WorkingSpace() {
             autoFocus
             projects={projects}
             people={people}
-            inputRef={mainTaskInputRef}
           />
-          <TaskInputHelper onInsertTag={handleInsertTag} />
+          <TaskInputHelper />
         </CardContent>
       </Card>
 
