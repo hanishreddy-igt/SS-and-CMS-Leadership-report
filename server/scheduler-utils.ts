@@ -49,6 +49,16 @@ export function calculateCurrentTriggerWindow(template: TaskTemplate): { start: 
   
   const currentDayOfWeek = getDayOfWeekInTz(nowUTC);
   
+  // Helper to check if a day is within a range (handles week wraparound)
+  const isDayInRange = (current: number, start: number, end: number): boolean => {
+    if (start <= end) {
+      return current >= start && current <= end;
+    } else {
+      // Wraps around (e.g., Friday to Monday)
+      return current >= start || current <= end;
+    }
+  };
+  
   // Check if today is a valid trigger day based on recurrence type
   if (template.recurrence === 'daily') {
     const selectedDays = daysOfWeek.length > 0 ? daysOfWeek : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
@@ -58,17 +68,24 @@ export function calculateCurrentTriggerWindow(template: TaskTemplate): { start: 
     }
   } else if (template.recurrence === 'weekly') {
     const startDayOfWeek = dayMap[startDay];
-    if (currentDayOfWeek !== startDayOfWeek) {
-      return null; // Today is not the start day
+    const endDayOfWeek = dayMap[endDay];
+    // Allow triggering any day from start day through end day
+    if (!isDayInRange(currentDayOfWeek, startDayOfWeek, endDayOfWeek)) {
+      return null; // Today is not within the valid window
     }
   } else if (template.recurrence === 'biweekly') {
     const startDayOfWeek = dayMap[startDay];
-    if (currentDayOfWeek !== startDayOfWeek) {
-      return null; // Today is not the start day
+    const endDayOfWeek = dayMap[endDay];
+    // Allow triggering any day from start day through end day
+    if (!isDayInRange(currentDayOfWeek, startDayOfWeek, endDayOfWeek)) {
+      return null; // Today is not within the valid window
     }
     // Check if this is the right week (every other week)
+    // Calculate which week we're in based on the START of this week's window
+    const daysFromStart = (currentDayOfWeek - startDayOfWeek + 7) % 7;
+    const windowStartDate = new Date(nowInTzMs - daysFromStart * 24 * 60 * 60 * 1000);
     const anchorDate = template.lastUsedAt ? new Date(template.lastUsedAt) : new Date(template.createdAt);
-    const daysSinceAnchor = Math.floor((nowUTC.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceAnchor = Math.floor((windowStartDate.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
     const weeksOffset = Math.floor(daysSinceAnchor / 7) % 2;
     if (weeksOffset !== 0) {
       return null; // Not the right biweekly period
@@ -76,25 +93,51 @@ export function calculateCurrentTriggerWindow(template: TaskTemplate): { start: 
   } else if (template.recurrence === 'monthly') {
     const dayOfMonth = nowInTz.getUTCDate();
     const lastDayOfMonth = new Date(Date.UTC(nowInTz.getUTCFullYear(), nowInTz.getUTCMonth() + 1, 0)).getUTCDate();
-    const actualStartDate = startDate === 0 ? lastDayOfMonth : startDate;
-    if (dayOfMonth !== actualStartDate) {
-      return null; // Not the right day of month
+    const actualStartDate = startDate === 0 ? lastDayOfMonth : Math.min(startDate, lastDayOfMonth);
+    const actualEndDate = endDate === 0 ? lastDayOfMonth : Math.min(endDate, lastDayOfMonth);
+    // Allow triggering any day from start date through end date
+    if (actualStartDate <= actualEndDate) {
+      if (dayOfMonth < actualStartDate || dayOfMonth > actualEndDate) {
+        return null; // Not within the valid window
+      }
+    } else {
+      // End date wraps to next month - only check start date in current month
+      if (dayOfMonth < actualStartDate) {
+        return null; // Not within the valid window
+      }
     }
   } else if (template.recurrence === 'quarterly') {
     const currentMonth = nowInTz.getUTCMonth();
-    const quarterStartMonths = [0, 3, 6, 9]; // Jan, Apr, Jul, Oct
-    if (!quarterStartMonths.includes(currentMonth)) {
-      return null; // Not a quarter start month
-    }
     const dayOfMonth = nowInTz.getUTCDate();
+    // Determine current quarter (0=Q1, 1=Q2, 2=Q3, 3=Q4)
+    const currentQuarter = Math.floor(currentMonth / 3);
+    const quarterStartMonth = currentQuarter * 3; // 0, 3, 6, or 9
+    const quarterEndMonth = quarterStartMonth + 2; // 2, 5, 8, or 11
+    
     const lastDayOfMonth = new Date(Date.UTC(nowInTz.getUTCFullYear(), currentMonth + 1, 0)).getUTCDate();
-    const actualStartDate = startDate === 0 ? lastDayOfMonth : startDate;
-    if (dayOfMonth !== actualStartDate) {
-      return null; // Not the right day of month
+    const actualStartDate = startDate === 0 ? new Date(Date.UTC(nowInTz.getUTCFullYear(), quarterStartMonth + 1, 0)).getUTCDate() : startDate;
+    const actualEndDate = endDate === 0 ? lastDayOfMonth : endDate;
+    
+    // Check if we're within the quarter's valid window
+    // Start date is in the first month of quarter, end date can extend into later months
+    if (currentMonth === quarterStartMonth) {
+      // In first month of quarter - must be on or after start date
+      if (dayOfMonth < actualStartDate) {
+        return null;
+      }
+    } else if (currentMonth > quarterStartMonth && currentMonth <= quarterEndMonth) {
+      // In later months of quarter - check if we're before end date
+      // If end date is in first month and we're past it, not valid
+      if (endDate !== 0 && endDate < 28 && currentMonth > quarterStartMonth) {
+        // End date was likely in first month, we've passed it
+        return null;
+      }
+    } else {
+      return null; // Not in this quarter
     }
   }
   
-  // Return today's window
+  // Return today's window with the original start time (even if in past)
   const startDateTimeUTC = createDateInTz(nowInTz.getUTCFullYear(), nowInTz.getUTCMonth(), nowInTz.getUTCDate(), startHours, startMinutes);
   const dueDateUTC = createDateInTz(nowInTz.getUTCFullYear(), nowInTz.getUTCMonth(), nowInTz.getUTCDate(), endHours, endMinutes);
   
@@ -194,20 +237,36 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
     const startDayOfWeek = dayMap[startDay];
     const endDayOfWeek = dayMap[endDay];
     const currentDayOfWeek = getDayOfWeekInTz(nowUTC);
-    let daysUntilStart = startDayOfWeek - currentDayOfWeek;
-    if (daysUntilStart < 0) daysUntilStart += 7;
     
-    const startDateCalc = new Date(nowInTzMs);
-    startDateCalc.setUTCDate(startDateCalc.getUTCDate() + daysUntilStart);
+    // Helper to check if we're within the window (handles week wraparound)
+    const isInWindow = (current: number, start: number, end: number): boolean => {
+      if (start <= end) {
+        return current >= start && current <= end;
+      } else {
+        return current >= start || current <= end;
+      }
+    };
     
-    startDateTimeUTC = createDateInTz(startDateCalc.getUTCFullYear(), startDateCalc.getUTCMonth(), startDateCalc.getUTCDate(), startHours, startMinutes);
+    // Calculate days back to this week's start day
+    let daysBackToStart = currentDayOfWeek - startDayOfWeek;
+    if (daysBackToStart < 0) daysBackToStart += 7;
     
-    // Only advance to next week if today is the start day AND template was ALREADY TRIGGERED this week
-    const alreadyTriggeredThisWeek = daysUntilStart === 0 && wasTriggeredInPeriod(startDateTimeUTC);
+    // Calculate this week's start date
+    const thisWeekStart = new Date(nowInTzMs);
+    thisWeekStart.setUTCDate(thisWeekStart.getUTCDate() - daysBackToStart);
     
-    if (alreadyTriggeredThisWeek) {
-      startDateCalc.setUTCDate(startDateCalc.getUTCDate() + 7);
-      startDateTimeUTC = createDateInTz(startDateCalc.getUTCFullYear(), startDateCalc.getUTCMonth(), startDateCalc.getUTCDate(), startHours, startMinutes);
+    startDateTimeUTC = createDateInTz(thisWeekStart.getUTCFullYear(), thisWeekStart.getUTCMonth(), thisWeekStart.getUTCDate(), startHours, startMinutes);
+    
+    // Check if already triggered this week
+    const alreadyTriggeredThisWeek = wasTriggeredInPeriod(startDateTimeUTC);
+    
+    // If triggered this week, or not in window anymore, advance to next week
+    const inWindow = isInWindow(currentDayOfWeek, startDayOfWeek, endDayOfWeek);
+    
+    if (alreadyTriggeredThisWeek || !inWindow) {
+      // Move to next week's start
+      thisWeekStart.setUTCDate(thisWeekStart.getUTCDate() + 7);
+      startDateTimeUTC = createDateInTz(thisWeekStart.getUTCFullYear(), thisWeekStart.getUTCMonth(), thisWeekStart.getUTCDate(), startHours, startMinutes);
     }
     
     if (template.recurrence === 'biweekly') {
@@ -215,15 +274,15 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
       const daysSinceAnchor = Math.floor((startDateTimeUTC.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
       const weeksOffset = Math.floor(daysSinceAnchor / 7) % 2;
       if (weeksOffset !== 0) {
-        startDateCalc.setUTCDate(startDateCalc.getUTCDate() + 7);
-        startDateTimeUTC = createDateInTz(startDateCalc.getUTCFullYear(), startDateCalc.getUTCMonth(), startDateCalc.getUTCDate(), startHours, startMinutes);
+        thisWeekStart.setUTCDate(thisWeekStart.getUTCDate() + 7);
+        startDateTimeUTC = createDateInTz(thisWeekStart.getUTCFullYear(), thisWeekStart.getUTCMonth(), thisWeekStart.getUTCDate(), startHours, startMinutes);
       }
     }
     
     let daysUntilEnd = endDayOfWeek - startDayOfWeek;
     if (daysUntilEnd < 0) daysUntilEnd += 7;
     
-    const endDateCalc = new Date(startDateCalc.getTime());
+    const endDateCalc = new Date(thisWeekStart.getTime());
     endDateCalc.setUTCDate(endDateCalc.getUTCDate() + daysUntilEnd);
     dueDateUTC = createDateInTz(endDateCalc.getUTCFullYear(), endDateCalc.getUTCMonth(), endDateCalc.getUTCDate(), endHours, endMinutes);
   } else if (template.recurrence === 'monthly') {
