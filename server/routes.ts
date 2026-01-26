@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     member: [
       'canViewAllReports', 'canViewAISummary', 'canViewFeedback', 'canSubmitFeedback',
       'canAddTeamMembers', 'canEditTeamMembers', 'canEditContracts',
-      'canEditReports', 'canSubmitReports'
+      'canEditReports'
     ]
   };
 
