@@ -50,8 +50,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper to check user role
+  // Admin role switching (temporary override for testing)
+  // This is stored in session/memory, not in database
+  const adminRoleOverrides = new Map<string, string>(); // userId -> overrideRole
+
+  // Helper to check user role (uses effective role if admin has switched)
   const getUserRole = async (userId: string): Promise<string> => {
+    // Check if admin has an active role override
+    const overrideRole = adminRoleOverrides.get(userId);
+    if (overrideRole) {
+      return overrideRole;
+    }
     const user = await storage.getUser(userId);
     return user?.role || 'member';
   };
@@ -321,10 +330,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message });
     }
   });
-
-  // Admin role switching (temporary override for testing)
-  // This is stored in session/memory, not in database
-  const adminRoleOverrides = new Map<string, string>(); // userId -> overrideRole
 
   app.post('/api/users/switch-role', isAuthenticated, async (req: any, res) => {
     try {
