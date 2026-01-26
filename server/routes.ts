@@ -1158,7 +1158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/weekly-reports', isAuthenticated, requirePermission('canSubmitReports'), async (req, res) => {
+  app.post('/api/weekly-reports', isAuthenticated, requirePermission('canEditReports'), async (req, res) => {
     try {
       const data = insertWeeklyReportSchema.parse(req.body);
       const report = await storage.createWeeklyReport(data);
