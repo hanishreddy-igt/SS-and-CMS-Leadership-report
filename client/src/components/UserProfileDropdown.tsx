@@ -103,7 +103,7 @@ export function UserProfileDropdown() {
   });
 
   const handleLogout = () => {
-    window.location.href = "/api/auth/logout";
+    window.location.href = "/api/logout";
   };
 
   const displayEmail = user?.email || "Unknown";
