@@ -845,27 +845,41 @@ function formatDueDateTime(date: Date, hour: string, minute: string, timezone: s
   return `${dateStr}T${hourPadded}:${minutePadded}${tzFormatted}`;
 }
 
-// Format due date for display: show time if not 11:59 PM
+// Format due date for display - converts from stored timezone to viewer's local timezone
 function formatDueDateDisplay(dueDate: string | null | undefined): string {
   if (!dueDate) return '';
   
   const parsed = parseDueDateTime(dueDate);
   if (!parsed.date) return '';
   
-  const dateStr = format(parsed.date, 'MMM d');
+  // Build the full datetime in UTC, then convert to local
+  const tzParsed = parseTimezoneOffset(parsed.timezone);
+  const tzOffsetMinutes = (tzParsed.sign === '+' ? 1 : -1) * (tzParsed.hours * 60 + tzParsed.minutes);
   
-  // If time is 23:59, just show date
-  if (parsed.hour === '23' && parsed.minute === '59') {
+  const year = parsed.date.getFullYear();
+  const month = parsed.date.getMonth();
+  const day = parsed.date.getDate();
+  const hour = parseInt(parsed.hour, 10);
+  const minute = parseInt(parsed.minute, 10);
+  
+  // Create UTC timestamp, then convert to local Date
+  const dueDateTimeUTC = Date.UTC(year, month, day, hour, minute, 0, 0) - tzOffsetMinutes * 60 * 1000;
+  const localDate = new Date(dueDateTimeUTC);
+  
+  const dateStr = format(localDate, 'MMM d');
+  const localHour = localDate.getHours();
+  const localMinute = localDate.getMinutes();
+  
+  // If time is 23:59 in local time, just show date
+  if (localHour === 23 && localMinute === 59) {
     return dateStr;
   }
   
   // Format time as 12-hour with AM/PM
-  const hourNum = parseInt(parsed.hour, 10);
-  const minuteNum = parseInt(parsed.minute, 10);
-  const ampm = hourNum >= 12 ? 'PM' : 'AM';
-  const hour12 = hourNum % 12 || 12;
-  const timeStr = minuteNum > 0 
-    ? `${hour12}:${String(minuteNum).padStart(2, '0')} ${ampm}`
+  const ampm = localHour >= 12 ? 'PM' : 'AM';
+  const hour12 = localHour % 12 || 12;
+  const timeStr = localMinute > 0 
+    ? `${hour12}:${String(localMinute).padStart(2, '0')} ${ampm}`
     : `${hour12} ${ampm}`;
   
   return `${dateStr}, ${timeStr}`;
@@ -899,28 +913,49 @@ function isDueDateOverdue(dueDate: string | null | undefined, status: string): b
 
 function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePanelProps) {
   const parsed = parseDueDateTime(task.dueDate);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(parsed.date);
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  // Initialize date state from parsed or defaults
+  const [year, setYear] = useState(parsed.date?.getFullYear() || currentYear);
+  const [month, setMonth] = useState(parsed.date?.getMonth() || now.getMonth());
+  const [day, setDay] = useState(parsed.date?.getDate() || now.getDate());
   const [hour, setHour] = useState(parsed.hour);
   const [minute, setMinute] = useState(parsed.minute);
   const [timezone, setTimezone] = useState(parsed.timezone);
   
   const tzParsed = parseTimezoneOffset(timezone);
+  
+  // Generate year options (current year + 5 years)
+  const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear + i);
+  
+  // Month names
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  // Days in the selected month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const dayOptions = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  
+  // Clamp day when month/year changes (useEffect to avoid setState during render)
+  useEffect(() => {
+    if (day > daysInMonth) {
+      setDay(daysInMonth);
+    }
+  }, [year, month, daysInMonth, day]);
+  
+  // Use clamped day for display and save
+  const effectiveDay = Math.min(day, daysInMonth);
 
   const handleSave = () => {
-    if (selectedDate) {
-      const formattedDueDate = formatDueDateTime(selectedDate, hour, minute, timezone);
-      onUpdate(task.id, { dueDate: formattedDueDate });
-    }
+    const selectedDate = new Date(year, month, effectiveDay);
+    const formattedDueDate = formatDueDateTime(selectedDate, hour, minute, timezone);
+    onUpdate(task.id, { dueDate: formattedDueDate });
     onClose();
-  };
-
-  const handleDateSelect = (d: Date | undefined) => {
-    setSelectedDate(d);
   };
 
   return (
     <div 
-      className="ml-8 p-3 border-l-2 border-primary/20 bg-muted/30 rounded-r"
+      className="ml-8 p-2 border-l-2 border-primary/20 bg-muted/30 rounded-r max-w-xs"
       style={{ marginLeft: depth > 0 ? `${depth * 24 + 32}px` : '32px' }}
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
@@ -929,11 +964,11 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
       }}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium">Set Due Date & Time</span>
+        <span className="text-xs font-medium">Due Date</span>
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-5 w-5"
+          className="h-4 w-4"
           onClick={onClose}
           data-testid="close-due-date-panel"
         >
@@ -941,97 +976,116 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
         </Button>
       </div>
       
-      <Calendar
-        mode="single"
-        selected={selectedDate}
-        onSelect={handleDateSelect}
-        initialFocus
-        data-testid="due-date-calendar"
-      />
-      
-      <div className="mt-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground w-12">Time:</span>
-          <Input
-            type="number"
-            min="0"
-            max="23"
-            value={hour}
-            onChange={(e) => {
-              const val = Math.max(0, Math.min(23, parseInt(e.target.value) || 0));
-              setHour(String(val));
-            }}
-            className="w-16 text-center"
-            data-testid="due-time-hour"
-          />
-          <span>:</span>
-          <Input
-            type="number"
-            min="0"
-            max="59"
-            value={minute}
-            onChange={(e) => {
-              const val = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
-              setMinute(String(val));
-            }}
-            className="w-16 text-center"
-            data-testid="due-time-minute"
-          />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground w-12">GMT:</span>
-          <Select
-            value={tzParsed.sign}
-            onValueChange={(sign) => setTimezone(formatTimezoneOffset(sign as '+' | '-', tzParsed.hours, tzParsed.minutes))}
-          >
-            <SelectTrigger className="w-14" data-testid="due-tz-sign">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="+">+</SelectItem>
-              <SelectItem value="-">-</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input
-            type="number"
-            min="0"
-            max="14"
-            value={tzParsed.hours}
-            onChange={(e) => {
-              const maxHours = tzParsed.sign === '-' ? 12 : 14; // UTC-12 to UTC+14
-              const val = Math.max(0, Math.min(maxHours, parseInt(e.target.value) || 0));
-              setTimezone(formatTimezoneOffset(tzParsed.sign, val, tzParsed.minutes));
-            }}
-            className="w-14 text-center"
-            data-testid="due-tz-hours"
-          />
-          <span>:</span>
-          <Input
-            type="number"
-            min="0"
-            max="45"
-            step="15"
-            value={tzParsed.minutes}
-            onChange={(e) => {
-              // Clamp to valid offset minutes (0, 30, 45)
-              const raw = parseInt(e.target.value) || 0;
-              const val = raw >= 45 ? 45 : (raw >= 30 ? 30 : 0);
-              setTimezone(formatTimezoneOffset(tzParsed.sign, tzParsed.hours, val));
-            }}
-            className="w-14 text-center"
-            data-testid="due-tz-minutes"
-          />
-        </div>
+      {/* Compact date dropdowns */}
+      <div className="flex items-center gap-1 mb-2">
+        <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
+          <SelectTrigger className="w-[70px] h-7 text-xs" data-testid="due-date-year">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {yearOptions.map(y => (
+              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={monthNames[month]} onValueChange={(v) => setMonth(monthNames.indexOf(v))}>
+          <SelectTrigger className="w-[60px] h-7 text-xs" data-testid="due-date-month">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {monthNames.map((m) => (
+              <SelectItem key={m} value={m}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={String(effectiveDay)} onValueChange={(v) => setDay(parseInt(v))}>
+          <SelectTrigger className="w-[50px] h-7 text-xs" data-testid="due-date-day">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {dayOptions.map(d => (
+              <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       
-      <div className="flex gap-2 mt-3">
+      {/* Time and timezone in one row */}
+      <div className="flex items-center gap-1 mb-2 text-xs">
+        <Input
+          type="number"
+          min="0"
+          max="23"
+          value={hour}
+          onChange={(e) => {
+            const val = Math.max(0, Math.min(23, parseInt(e.target.value) || 0));
+            setHour(String(val));
+          }}
+          className="w-10 h-7 text-xs text-center p-1"
+          data-testid="due-time-hour"
+        />
+        <span>:</span>
+        <Input
+          type="number"
+          min="0"
+          max="59"
+          value={minute}
+          onChange={(e) => {
+            const val = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+            setMinute(String(val));
+          }}
+          className="w-10 h-7 text-xs text-center p-1"
+          data-testid="due-time-minute"
+        />
+        <span className="text-muted-foreground ml-1">GMT</span>
+        <Select
+          value={tzParsed.sign}
+          onValueChange={(sign) => setTimezone(formatTimezoneOffset(sign as '+' | '-', tzParsed.hours, tzParsed.minutes))}
+        >
+          <SelectTrigger className="w-10 h-7 text-xs" data-testid="due-tz-sign">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="+">+</SelectItem>
+            <SelectItem value="-">-</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          type="number"
+          min="0"
+          max="14"
+          value={tzParsed.hours}
+          onChange={(e) => {
+            const maxHours = tzParsed.sign === '-' ? 12 : 14;
+            const val = Math.max(0, Math.min(maxHours, parseInt(e.target.value) || 0));
+            setTimezone(formatTimezoneOffset(tzParsed.sign, val, tzParsed.minutes));
+          }}
+          className="w-8 h-7 text-xs text-center p-1"
+          data-testid="due-tz-hours"
+        />
+        <span>:</span>
+        <Input
+          type="number"
+          min="0"
+          max="45"
+          step="15"
+          value={tzParsed.minutes}
+          onChange={(e) => {
+            const raw = parseInt(e.target.value) || 0;
+            const val = raw >= 45 ? 45 : (raw >= 30 ? 30 : 0);
+            setTimezone(formatTimezoneOffset(tzParsed.sign, tzParsed.hours, val));
+          }}
+          className="w-8 h-7 text-xs text-center p-1"
+          data-testid="due-tz-minutes"
+        />
+      </div>
+      
+      <div className="flex gap-1">
         <Button 
           variant="default" 
           size="sm" 
-          className="flex-1"
+          className="flex-1 h-7 text-xs"
           onClick={handleSave}
-          disabled={!selectedDate}
           data-testid="save-due-date"
         >
           Save
@@ -1040,7 +1094,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-destructive"
+            className="text-destructive h-7 text-xs"
             onClick={() => { onUpdate(task.id, { dueDate: null }); onClose(); }}
             data-testid="clear-due-date"
           >
@@ -1539,8 +1593,8 @@ export function TaskRow({
           </div>
 
           <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Due date badge and calendar button */}
-            {task.dueDate && (
+            {/* Due date - badge when set, text link when not */}
+            {task.dueDate ? (
               <Badge 
                 variant={isOverdue ? "destructive" : "secondary"} 
                 className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 cursor-pointer"
@@ -1550,15 +1604,16 @@ export function TaskRow({
               >
                 {formatDueDateDisplay(task.dueDate)}
               </Badge>
+            ) : (
+              <button
+                onClick={() => activePanel === 'dueDate' ? closePanel() : openPanel('dueDate', 'menu')}
+                className="text-[10px] text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
+                title="Set due date"
+                data-testid={`due-date-btn-${task.id}`}
+              >
+                +due
+              </button>
             )}
-            <button
-              onClick={() => activePanel === 'dueDate' ? closePanel() : openPanel('dueDate', 'menu')}
-              className={`p-1 hover:bg-accent rounded ${task.dueDate ? 'text-primary' : 'text-muted-foreground'}`}
-              title={task.dueDate ? "Edit due date" : "Set due date"}
-              data-testid={`due-date-btn-${task.id}`}
-            >
-              <CalendarIcon className="h-3.5 w-3.5" />
-            </button>
             <button
               ref={notesButtonRef}
               onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
