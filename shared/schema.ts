@@ -198,6 +198,17 @@ export const taskTemplates = pgTable("task_templates", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Task activity/history table - tracks all changes to tasks for EOS updates and audit trail
+export const taskActivity = pgTable("task_activity", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull(), // Foreign key to tasks table
+  changedBy: text("changed_by").notNull(), // Email of who made the change
+  changedAt: timestamp("changed_at").notNull().defaultNow(), // When the change occurred
+  changeType: text("change_type").notNull(), // created, status_change, note_added, assignee_added, assignee_removed, priority_change, due_date_change, title_edit
+  previousValue: jsonb("previous_value"), // Previous state (null for created, note_added)
+  newValue: jsonb("new_value"), // New state
+});
+
 export const insertCurrentAiSummarySchema = createInsertSchema(currentAiSummary).omit({ id: true, generatedAt: true });
 export type CurrentAiSummary = typeof currentAiSummary.$inferSelect;
 export type InsertCurrentAiSummary = z.infer<typeof insertCurrentAiSummarySchema>;
@@ -266,6 +277,22 @@ export type InsertTask = z.infer<typeof insertTaskSchema>;
 export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).omit({ id: true, createdAt: true, lastUsedAt: true });
 export type TaskTemplate = typeof taskTemplates.$inferSelect;
 export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
+
+// Task activity schemas and types
+export const insertTaskActivitySchema = createInsertSchema(taskActivity).omit({ id: true, changedAt: true });
+export type TaskActivity = typeof taskActivity.$inferSelect;
+export type InsertTaskActivity = z.infer<typeof insertTaskActivitySchema>;
+
+// Task activity change types
+export type TaskActivityChangeType = 
+  | 'created'
+  | 'status_change'
+  | 'note_added'
+  | 'assignee_added'
+  | 'assignee_removed'
+  | 'priority_change'
+  | 'due_date_change'
+  | 'title_edit';
 
 // Task status enum
 export type TaskStatus = 'todo' | 'in-progress' | 'done' | 'cancelled';
