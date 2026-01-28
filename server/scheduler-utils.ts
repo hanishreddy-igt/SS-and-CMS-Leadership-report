@@ -350,6 +350,31 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
   return { start: startDateTimeUTC, end: dueDateUTC };
 }
 
+// Format due date with time and timezone offset for task storage
+function formatDueDateWithTimezone(dueDate: Date, template: TaskTemplate): string {
+  const endTime = template.endTime || template.deliveryTime || '23:59';
+  const timezone = template.timezone || '+0';
+  
+  // Get date parts from the due date
+  const year = dueDate.getUTCFullYear();
+  const month = String(dueDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dueDate.getUTCDate()).padStart(2, '0');
+  
+  // Parse the end time
+  const [hours, minutes] = endTime.split(':').map(Number);
+  const hourStr = String(hours).padStart(2, '0');
+  const minStr = String(minutes).padStart(2, '0');
+  
+  // Normalize timezone format (ensure it has proper format like +5:30 or -6)
+  let tzStr = timezone;
+  if (!tzStr.startsWith('+') && !tzStr.startsWith('-')) {
+    tzStr = '+' + tzStr;
+  }
+  
+  // Format: YYYY-MM-DDTHH:MM±HH:MM
+  return `${year}-${month}-${day}T${hourStr}:${minStr}${tzStr}`;
+}
+
 export async function createTasksFromTemplate(
   template: TaskTemplate,
   storage: IStorage,
@@ -358,7 +383,7 @@ export async function createTasksFromTemplate(
   const assignees = template.assignedTo || [];
   const mode = template.assignmentMode || 'single';
   const subTemplates = (template.subTemplates as SubTemplateItem[]) || [];
-  const dueDateStr = dueDate.toISOString().split('T')[0];
+  const dueDateStr = formatDueDateWithTimezone(dueDate, template);
   
   let tasksCreated = 0;
   let subTasksCreated = 0;
