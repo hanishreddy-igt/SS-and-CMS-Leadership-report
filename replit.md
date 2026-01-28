@@ -37,6 +37,12 @@ This project provides a comprehensive tracking system for Strategic Services (SS
     - **Projects**: Project details including customer, lead, team member assignments with roles, dates, and external links (jiraEpic, googleDriveLink, workflowyLink). Team members are stored as JSONB array: `[{memberId: string, role: string}]`.
     - **Weekly Reports**: Stores progress, health status, and team feedback.
     - **Saved Reports**: Archived weekly report snapshots with PDF/CSV data, AI summary, and health counts.
+    - **Task Activity**: Audit trail for all task changes, enabling EOS updates and activity tracking. Each record captures:
+      - `taskId`: Links to the task (one-to-many relationship)
+      - `changedBy`: Email of who made the change
+      - `changedAt`: Timestamp of the change
+      - `changeType`: Type of change (created, status_change, note_added, assignee_added, assignee_removed, priority_change, due_date_change, title_edit)
+      - `previousValue` / `newValue`: JSONB storing the before/after state
 - **Unified Person Management**:
     - People can have multiple roles (team-member, project-lead) simultaneously
     - When adding a team member or project lead, the system checks if a person with that email already exists

@@ -2094,6 +2094,16 @@ Output valid JSON only.`;
       }
       
       const task = await storage.createTask(parsed.data);
+      
+      // Log task creation activity
+      await storage.createTaskActivity({
+        taskId: task.id,
+        changedBy: userEmail,
+        changeType: 'created',
+        previousValue: null,
+        newValue: { title: task.title, status: task.status, priority: task.priority },
+      });
+      
       res.status(201).json(task);
     } catch (error: any) {
       console.error('Error creating task:', error);
@@ -2105,11 +2115,115 @@ Output valid JSON only.`;
   app.patch('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
     try {
       const userEmail = req.user?.claims?.email as string;
+      const taskId = req.params.id;
+      
+      // Get the existing task to detect changes
+      const existingTask = await storage.getTask(taskId);
+      if (!existingTask) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
       const updates = { ...req.body, updatedBy: userEmail };
-      const task = await storage.updateTask(req.params.id, updates);
+      const task = await storage.updateTask(taskId, updates);
       if (!task) {
         return res.status(404).json({ message: 'Task not found' });
       }
+      
+      // Log activity for each type of change
+      const activityPromises: Promise<any>[] = [];
+      
+      // Status change
+      if (updates.status !== undefined && updates.status !== existingTask.status) {
+        activityPromises.push(storage.createTaskActivity({
+          taskId,
+          changedBy: userEmail,
+          changeType: 'status_change',
+          previousValue: { status: existingTask.status },
+          newValue: { status: updates.status },
+        }));
+      }
+      
+      // Priority change
+      if (updates.priority !== undefined && updates.priority !== existingTask.priority) {
+        activityPromises.push(storage.createTaskActivity({
+          taskId,
+          changedBy: userEmail,
+          changeType: 'priority_change',
+          previousValue: { priority: existingTask.priority },
+          newValue: { priority: updates.priority },
+        }));
+      }
+      
+      // Title change
+      if (updates.title !== undefined && updates.title !== existingTask.title) {
+        activityPromises.push(storage.createTaskActivity({
+          taskId,
+          changedBy: userEmail,
+          changeType: 'title_edit',
+          previousValue: { title: existingTask.title },
+          newValue: { title: updates.title },
+        }));
+      }
+      
+      // Due date change
+      if (updates.dueDate !== undefined && updates.dueDate !== existingTask.dueDate) {
+        activityPromises.push(storage.createTaskActivity({
+          taskId,
+          changedBy: userEmail,
+          changeType: 'due_date_change',
+          previousValue: { dueDate: existingTask.dueDate },
+          newValue: { dueDate: updates.dueDate },
+        }));
+      }
+      
+      // Notes added (compare array lengths - new notes are appended)
+      const existingNotes = (existingTask.notes as any[]) || [];
+      const updatedNotes = (updates.notes as any[]) || [];
+      if (updatedNotes.length > existingNotes.length) {
+        // New notes were added
+        const newNotes = updatedNotes.slice(existingNotes.length);
+        for (const note of newNotes) {
+          activityPromises.push(storage.createTaskActivity({
+            taskId,
+            changedBy: userEmail,
+            changeType: 'note_added',
+            previousValue: null,
+            newValue: { content: note.content, author: note.author },
+          }));
+        }
+      }
+      
+      // Assignee changes
+      const existingAssignees = existingTask.assignedTo || [];
+      const updatedAssignees = updates.assignedTo || [];
+      if (updates.assignedTo !== undefined) {
+        const added = updatedAssignees.filter((id: string) => !existingAssignees.includes(id));
+        const removed = existingAssignees.filter((id: string) => !updatedAssignees.includes(id));
+        
+        for (const assigneeId of added) {
+          activityPromises.push(storage.createTaskActivity({
+            taskId,
+            changedBy: userEmail,
+            changeType: 'assignee_added',
+            previousValue: null,
+            newValue: { assigneeId },
+          }));
+        }
+        
+        for (const assigneeId of removed) {
+          activityPromises.push(storage.createTaskActivity({
+            taskId,
+            changedBy: userEmail,
+            changeType: 'assignee_removed',
+            previousValue: { assigneeId },
+            newValue: null,
+          }));
+        }
+      }
+      
+      // Execute all activity logging in parallel
+      await Promise.all(activityPromises);
+      
       res.json(task);
     } catch (error: any) {
       console.error('Error updating task:', error);

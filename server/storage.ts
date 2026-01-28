@@ -28,8 +28,10 @@ import type {
   InsertTask,
   TaskTemplate,
   InsertTaskTemplate,
+  TaskActivity,
+  InsertTaskActivity,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries, tasks, taskTemplates } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries, tasks, taskTemplates, taskActivity } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -141,6 +143,11 @@ export interface IStorage {
   createTaskTemplate(template: InsertTaskTemplate): Promise<TaskTemplate>;
   updateTaskTemplate(id: string, template: Partial<InsertTaskTemplate> & { lastUsedAt?: Date }): Promise<TaskTemplate | undefined>;
   deleteTaskTemplate(id: string): Promise<boolean>;
+
+  // Task activity operations
+  createTaskActivity(activity: InsertTaskActivity): Promise<TaskActivity>;
+  getTaskActivities(taskId: string): Promise<TaskActivity[]>;
+  getActivitiesByUser(userEmail: string, startDate?: Date, endDate?: Date): Promise<TaskActivity[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1585,6 +1592,29 @@ export class DatabaseStorage implements IStorage {
     }
     
     return { projectsUpdated, orphanedLeadsRemoved, orphanedMembersRemoved };
+  }
+
+  // Task activity operations
+  async createTaskActivity(activity: InsertTaskActivity): Promise<TaskActivity> {
+    const [created] = await db.insert(taskActivity).values(activity).returning();
+    return created;
+  }
+
+  async getTaskActivities(taskId: string): Promise<TaskActivity[]> {
+    return await db.select().from(taskActivity).where(eq(taskActivity.taskId, taskId));
+  }
+
+  async getActivitiesByUser(userEmail: string, startDate?: Date, endDate?: Date): Promise<TaskActivity[]> {
+    const conditions = [eq(taskActivity.changedBy, userEmail)];
+    
+    if (startDate && endDate) {
+      // For date range queries, we'll need to import gte and lte
+      const { gte, lte } = await import('drizzle-orm');
+      conditions.push(gte(taskActivity.changedAt, startDate));
+      conditions.push(lte(taskActivity.changedAt, endDate));
+    }
+    
+    return await db.select().from(taskActivity).where(and(...conditions));
   }
 }
 
