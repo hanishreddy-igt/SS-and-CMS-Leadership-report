@@ -69,6 +69,13 @@ This project provides a comprehensive tracking system for Strategic Services (SS
           - **Manual Triggering**: User clicks "Create" button to generate tasks from templates
           - **Auto-Trigger (Scheduled)**: Enable "Auto-trigger" toggle on templates to allow scheduled automation
       - Tasks support hierarchical nesting via parentTaskId, project linking, multiple assignees, priority levels, tags, and timestamped notes.
+      - **Due Date with Time & Timezone**: Tasks can have due dates with specific times and timezone offsets:
+        - Click the calendar icon on any task to open the due date picker
+        - Set date, time (hour:minute), and timezone offset (GMT±HH:MM)
+        - Defaults: current day, 11:59 PM, browser's local timezone
+        - Display: shows "Jan 29" if time is 11:59 PM (default), or "Jan 29, 2:30 PM" if custom time
+        - Storage format: `YYYY-MM-DDTHH:MM±HH:MM` (e.g., `2024-01-29T14:30+05:30`)
+        - Overdue calculation uses full datetime with timezone for accuracy
     - **Regenerate AI Summary**: For archived reports missing AI summaries, admins can trigger regeneration by parsing the archived CSV data and generating new AI insights via OpenAI.
     - **Jira Integration**: Functionality to import projects, leads, and team members directly from Jira epics.
     - **Weekly Archiving System**:
