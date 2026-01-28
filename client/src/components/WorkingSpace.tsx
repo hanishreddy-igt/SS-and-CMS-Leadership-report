@@ -797,6 +797,16 @@ function formatTimezoneOffset(sign: '+' | '-', hours: number, minutes: number): 
   return minutes > 0 ? `${sign}${hours}:${String(minutes).padStart(2, '0')}` : `${sign}${hours}`;
 }
 
+// Generate default due date: today at 11:59 PM in user's timezone
+function getDefaultDueDate(): string {
+  const now = new Date();
+  const tz = getLocalTimezoneOffset();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}T23:59${tz}`;
+}
+
 // Parse existing dueDate to extract date, time, and offset
 function parseDueDateTime(dueDate: string | null | undefined): { date: Date | undefined; hour: string; minute: string; timezone: string } {
   const defaults = {
@@ -955,7 +965,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
 
   return (
     <div 
-      className="ml-8 p-2 border-l-2 border-primary/20 bg-muted/30 rounded-r max-w-xs"
+      className="ml-8 p-2 border-l-2 border-primary/20 bg-muted/30 rounded-r"
       style={{ marginLeft: depth > 0 ? `${depth * 24 + 32}px` : '32px' }}
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
@@ -976,10 +986,10 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
         </Button>
       </div>
       
-      {/* Compact date dropdowns */}
-      <div className="flex items-center gap-1 mb-2">
+      {/* All controls on one line: Year, Month, Day, Time, Timezone */}
+      <div className="flex items-center gap-1 mb-2 flex-wrap">
         <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
-          <SelectTrigger className="w-[70px] h-7 text-xs" data-testid="due-date-year">
+          <SelectTrigger className="w-[72px] h-7 text-xs" data-testid="due-date-year">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -989,7 +999,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
           </SelectContent>
         </Select>
         <Select value={monthNames[month]} onValueChange={(v) => setMonth(monthNames.indexOf(v))}>
-          <SelectTrigger className="w-[60px] h-7 text-xs" data-testid="due-date-month">
+          <SelectTrigger className="w-[68px] h-7 text-xs" data-testid="due-date-month">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -999,7 +1009,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
           </SelectContent>
         </Select>
         <Select value={String(effectiveDay)} onValueChange={(v) => setDay(parseInt(v))}>
-          <SelectTrigger className="w-[50px] h-7 text-xs" data-testid="due-date-day">
+          <SelectTrigger className="w-[56px] h-7 text-xs" data-testid="due-date-day">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1008,10 +1018,6 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             ))}
           </SelectContent>
         </Select>
-      </div>
-      
-      {/* Time and timezone in one row */}
-      <div className="flex items-center gap-1 mb-2 text-xs">
         <Input
           type="number"
           min="0"
@@ -1021,10 +1027,10 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             const val = Math.max(0, Math.min(23, parseInt(e.target.value) || 0));
             setHour(String(val));
           }}
-          className="w-10 h-7 text-xs text-center p-1"
+          className="w-11 h-7 text-xs text-center p-1"
           data-testid="due-time-hour"
         />
-        <span>:</span>
+        <span className="text-xs">:</span>
         <Input
           type="number"
           min="0"
@@ -1034,15 +1040,15 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             const val = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
             setMinute(String(val));
           }}
-          className="w-10 h-7 text-xs text-center p-1"
+          className="w-11 h-7 text-xs text-center p-1"
           data-testid="due-time-minute"
         />
-        <span className="text-muted-foreground ml-1">GMT</span>
+        <span className="text-xs text-muted-foreground">GMT</span>
         <Select
           value={tzParsed.sign}
           onValueChange={(sign) => setTimezone(formatTimezoneOffset(sign as '+' | '-', tzParsed.hours, tzParsed.minutes))}
         >
-          <SelectTrigger className="w-10 h-7 text-xs" data-testid="due-tz-sign">
+          <SelectTrigger className="w-[48px] h-7 text-xs" data-testid="due-tz-sign">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1060,10 +1066,10 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             const val = Math.max(0, Math.min(maxHours, parseInt(e.target.value) || 0));
             setTimezone(formatTimezoneOffset(tzParsed.sign, val, tzParsed.minutes));
           }}
-          className="w-8 h-7 text-xs text-center p-1"
+          className="w-10 h-7 text-xs text-center p-1"
           data-testid="due-tz-hours"
         />
-        <span>:</span>
+        <span className="text-xs">:</span>
         <Input
           type="number"
           min="0"
@@ -1075,7 +1081,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             const val = raw >= 45 ? 45 : (raw >= 30 ? 30 : 0);
             setTimezone(formatTimezoneOffset(tzParsed.sign, tzParsed.hours, val));
           }}
-          className="w-8 h-7 text-xs text-center p-1"
+          className="w-10 h-7 text-xs text-center p-1"
           data-testid="due-tz-minutes"
         />
       </div>
@@ -1998,9 +2004,8 @@ export default function WorkingSpace() {
       }];
     }
     
-    if (parsed.dueDate) {
-      taskData.dueDate = parsed.dueDate;
-    }
+    // Set due date: use parsed date if provided, otherwise default to today 11:59 PM
+    taskData.dueDate = parsed.dueDate || getDefaultDueDate();
     
     createTaskMutation.mutate(taskData);
   };
