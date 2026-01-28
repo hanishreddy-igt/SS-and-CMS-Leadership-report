@@ -1592,7 +1592,7 @@ export function TaskRow({
               onClick={() => activePanel === 'dueDate' ? closePanel() : openPanel('dueDate', 'menu')}
               title="Click to edit due date"
             >
-              {task.dueDate ? formatDueDateDisplay(task.dueDate) : 'Today'}
+              {task.dueDate ? formatDueDateDisplay(task.dueDate) : formatDueDateDisplay(getDefaultDueDate())}
             </Badge>
             <button
               ref={notesButtonRef}
