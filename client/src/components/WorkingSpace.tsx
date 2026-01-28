@@ -986,8 +986,8 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
         </Button>
       </div>
       
-      {/* All controls on one line: Year, Month, Day, Time, Timezone */}
-      <div className="flex items-center gap-1 mb-2 flex-wrap">
+      {/* All controls on one line: Year, Month, Day, Time, Timezone, Save */}
+      <div className="flex items-center gap-2 flex-wrap">
         <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
           <SelectTrigger className="w-[72px] h-7 text-xs" data-testid="due-date-year">
             <SelectValue />
@@ -1018,95 +1018,80 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             ))}
           </SelectContent>
         </Select>
-        <Input
-          type="number"
-          min="0"
-          max="23"
-          value={hour}
-          onChange={(e) => {
-            const val = Math.max(0, Math.min(23, parseInt(e.target.value) || 0));
-            setHour(String(val));
-          }}
-          className="w-11 h-7 text-xs text-center p-1"
-          data-testid="due-time-hour"
-        />
-        <span className="text-xs">:</span>
-        <Input
-          type="number"
-          min="0"
-          max="59"
-          value={minute}
-          onChange={(e) => {
-            const val = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
-            setMinute(String(val));
-          }}
-          className="w-11 h-7 text-xs text-center p-1"
-          data-testid="due-time-minute"
-        />
-        <span className="text-xs text-muted-foreground">GMT</span>
-        <Select
-          value={tzParsed.sign}
-          onValueChange={(sign) => setTimezone(formatTimezoneOffset(sign as '+' | '-', tzParsed.hours, tzParsed.minutes))}
-        >
-          <SelectTrigger className="w-[48px] h-7 text-xs" data-testid="due-tz-sign">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="+">+</SelectItem>
-            <SelectItem value="-">-</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input
-          type="number"
-          min="0"
-          max="14"
-          value={tzParsed.hours}
-          onChange={(e) => {
-            const maxHours = tzParsed.sign === '-' ? 12 : 14;
-            const val = Math.max(0, Math.min(maxHours, parseInt(e.target.value) || 0));
-            setTimezone(formatTimezoneOffset(tzParsed.sign, val, tzParsed.minutes));
-          }}
-          className="w-10 h-7 text-xs text-center p-1"
-          data-testid="due-tz-hours"
-        />
-        <span className="text-xs">:</span>
-        <Input
-          type="number"
-          min="0"
-          max="45"
-          step="15"
-          value={tzParsed.minutes}
-          onChange={(e) => {
-            const raw = parseInt(e.target.value) || 0;
-            const val = raw >= 45 ? 45 : (raw >= 30 ? 30 : 0);
-            setTimezone(formatTimezoneOffset(tzParsed.sign, tzParsed.hours, val));
-          }}
-          className="w-10 h-7 text-xs text-center p-1"
-          data-testid="due-tz-minutes"
-        />
-      </div>
-      
-      <div className="flex gap-1">
+        <div className="flex items-center gap-0.5">
+          <Select value={hour} onValueChange={(v) => setHour(v)}>
+            <SelectTrigger className="w-[52px] h-7 text-xs" data-testid="due-time-hour">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 24 }, (_, i) => (
+                <SelectItem key={i} value={String(i)}>{String(i).padStart(2, '0')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-xs">:</span>
+          <Select value={minute} onValueChange={(v) => setMinute(v)}>
+            <SelectTrigger className="w-[52px] h-7 text-xs" data-testid="due-time-minute">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 60 }, (_, i) => (
+                <SelectItem key={i} value={String(i)}>{String(i).padStart(2, '0')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-0.5">
+          <span className="text-xs text-muted-foreground">GMT</span>
+          <Select
+            value={tzParsed.sign}
+            onValueChange={(sign) => setTimezone(formatTimezoneOffset(sign as '+' | '-', tzParsed.hours, tzParsed.minutes))}
+          >
+            <SelectTrigger className="w-[48px] h-7 text-xs" data-testid="due-tz-sign">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="+">+</SelectItem>
+              <SelectItem value="-">-</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select 
+            value={String(tzParsed.hours)} 
+            onValueChange={(v) => setTimezone(formatTimezoneOffset(tzParsed.sign, parseInt(v), tzParsed.minutes))}
+          >
+            <SelectTrigger className="w-[48px] h-7 text-xs" data-testid="due-tz-hours">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 15 }, (_, i) => (
+                <SelectItem key={i} value={String(i)}>{String(i).padStart(2, '0')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-xs">:</span>
+          <Select 
+            value={String(tzParsed.minutes)} 
+            onValueChange={(v) => setTimezone(formatTimezoneOffset(tzParsed.sign, tzParsed.hours, parseInt(v)))}
+          >
+            <SelectTrigger className="w-[48px] h-7 text-xs" data-testid="due-tz-minutes">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">00</SelectItem>
+              <SelectItem value="30">30</SelectItem>
+              <SelectItem value="45">45</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Button 
           variant="default" 
           size="sm" 
-          className="flex-1 h-7 text-xs"
+          className="h-7 text-xs px-3"
           onClick={handleSave}
           data-testid="save-due-date"
         >
           Save
         </Button>
-        {task.dueDate && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-destructive h-7 text-xs"
-            onClick={() => { onUpdate(task.id, { dueDate: null }); onClose(); }}
-            data-testid="clear-due-date"
-          >
-            Clear
-          </Button>
-        )}
       </div>
     </div>
   );
