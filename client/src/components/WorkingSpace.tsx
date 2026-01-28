@@ -1628,21 +1628,12 @@ export function TaskRow({
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  {task.priority && task.priority !== 'normal' ? (
-                    <button
-                      className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white rounded-full inline-flex items-center cursor-pointer hover:opacity-80 ${priorityColors[task.priority] || 'bg-gray-400'}`}
-                      data-testid={`priority-trigger-${task.id}`}
-                    >
-                      {priorityLabels[task.priority] || task.priority}
-                    </button>
-                  ) : (
-                    <button
-                      className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
-                      data-testid={`priority-trigger-${task.id}`}
-                    >
-                      +priority
-                    </button>
-                  )}
+                  <button
+                    className={`text-xs px-1.5 py-0 h-5 gap-1 flex-shrink-0 text-white rounded-full inline-flex items-center cursor-pointer hover:opacity-80 ${priorityColors[task.priority || 'normal'] || 'bg-green-500'}`}
+                    data-testid={`priority-trigger-${task.id}`}
+                  >
+                    {priorityLabels[task.priority || 'normal'] || 'Normal'}
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-32">
                   <DropdownMenuItem
