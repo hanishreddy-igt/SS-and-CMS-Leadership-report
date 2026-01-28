@@ -35,6 +35,7 @@ import {
   RefreshCw,
   Clock,
   Users,
+  User,
   UserPlus,
   Check,
   Filter
@@ -1062,6 +1063,8 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
   const assignedPeople = people.filter(p => template.assignedTo?.includes(p.id));
   const nextScheduledData = calculateNextScheduledDelivery(template);
   const nextScheduled = nextScheduledData?.displayString || null;
+  const owner = people.find(p => p.email === template.createdBy);
+  const ownerDisplay = owner?.name || template.createdBy?.split('@')[0] || 'Unknown';
   
   return (
     <Card 
@@ -1157,6 +1160,10 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
               {assignedPeople.length} assignee{assignedPeople.length !== 1 ? 's' : ''}
             </Badge>
           )}
+          <Badge variant="outline" className="gap-1">
+            <User className="h-3 w-3" />
+            {ownerDisplay}
+          </Badge>
           {template.lastUsedAt && (
             <Badge variant="outline" className="gap-1">
               <Clock className="h-3 w-3" />
