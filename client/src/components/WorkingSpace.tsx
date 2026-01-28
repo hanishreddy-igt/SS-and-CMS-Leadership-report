@@ -1584,27 +1584,16 @@ export function TaskRow({
           </div>
 
           <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Due date - badge when set, text link when not */}
-            {task.dueDate ? (
-              <Badge 
-                variant={isOverdue ? "destructive" : "secondary"} 
-                className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 cursor-pointer"
-                data-testid={`due-date-inline-${task.id}`}
-                onClick={() => activePanel === 'dueDate' ? closePanel() : openPanel('dueDate', 'menu')}
-                title="Click to edit due date"
-              >
-                {formatDueDateDisplay(task.dueDate)}
-              </Badge>
-            ) : (
-              <button
-                onClick={() => activePanel === 'dueDate' ? closePanel() : openPanel('dueDate', 'menu')}
-                className="text-[10px] text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
-                title="Set due date"
-                data-testid={`due-date-btn-${task.id}`}
-              >
-                +due
-              </button>
-            )}
+            {/* Due date - always show badge */}
+            <Badge 
+              variant={isOverdue ? "destructive" : "secondary"} 
+              className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 cursor-pointer"
+              data-testid={`due-date-inline-${task.id}`}
+              onClick={() => activePanel === 'dueDate' ? closePanel() : openPanel('dueDate', 'menu')}
+              title="Click to edit due date"
+            >
+              {task.dueDate ? formatDueDateDisplay(task.dueDate) : 'Today'}
+            </Badge>
             <button
               ref={notesButtonRef}
               onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
