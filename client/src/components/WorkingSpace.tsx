@@ -989,7 +989,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
       {/* All controls on one line: Year, Month, Day, Time, Timezone, Save */}
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
-          <SelectTrigger className="w-[72px] h-7 text-xs" data-testid="due-date-year">
+          <SelectTrigger className="w-[80px] h-7 text-xs" data-testid="due-date-year">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -999,7 +999,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
           </SelectContent>
         </Select>
         <Select value={monthNames[month]} onValueChange={(v) => setMonth(monthNames.indexOf(v))}>
-          <SelectTrigger className="w-[68px] h-7 text-xs" data-testid="due-date-month">
+          <SelectTrigger className="w-[75px] h-7 text-xs" data-testid="due-date-month">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1009,7 +1009,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
           </SelectContent>
         </Select>
         <Select value={String(effectiveDay)} onValueChange={(v) => setDay(parseInt(v))}>
-          <SelectTrigger className="w-[56px] h-7 text-xs" data-testid="due-date-day">
+          <SelectTrigger className="w-[60px] h-7 text-xs" data-testid="due-date-day">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1018,9 +1018,9 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             ))}
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           <Select value={hour} onValueChange={(v) => setHour(v)}>
-            <SelectTrigger className="w-[52px] h-7 text-xs" data-testid="due-time-hour">
+            <SelectTrigger className="w-[58px] h-7 text-xs" data-testid="due-time-hour">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1031,7 +1031,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
           </Select>
           <span className="text-xs">:</span>
           <Select value={minute} onValueChange={(v) => setMinute(v)}>
-            <SelectTrigger className="w-[52px] h-7 text-xs" data-testid="due-time-minute">
+            <SelectTrigger className="w-[58px] h-7 text-xs" data-testid="due-time-minute">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1041,13 +1041,13 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground">GMT</span>
           <Select
             value={tzParsed.sign}
             onValueChange={(sign) => setTimezone(formatTimezoneOffset(sign as '+' | '-', tzParsed.hours, tzParsed.minutes))}
           >
-            <SelectTrigger className="w-[48px] h-7 text-xs" data-testid="due-tz-sign">
+            <SelectTrigger className="w-[52px] h-7 text-xs" data-testid="due-tz-sign">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1059,7 +1059,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             value={String(tzParsed.hours)} 
             onValueChange={(v) => setTimezone(formatTimezoneOffset(tzParsed.sign, parseInt(v), tzParsed.minutes))}
           >
-            <SelectTrigger className="w-[48px] h-7 text-xs" data-testid="due-tz-hours">
+            <SelectTrigger className="w-[56px] h-7 text-xs" data-testid="due-tz-hours">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1073,7 +1073,7 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
             value={String(tzParsed.minutes)} 
             onValueChange={(v) => setTimezone(formatTimezoneOffset(tzParsed.sign, tzParsed.hours, parseInt(v)))}
           >
-            <SelectTrigger className="w-[48px] h-7 text-xs" data-testid="due-tz-minutes">
+            <SelectTrigger className="w-[56px] h-7 text-xs" data-testid="due-tz-minutes">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
