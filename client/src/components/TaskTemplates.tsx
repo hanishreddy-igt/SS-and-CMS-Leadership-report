@@ -1164,21 +1164,16 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
             <User className="h-3 w-3" />
             {ownerDisplay}
           </Badge>
-          {template.lastUsedAt && (
-            <Badge variant="outline" className="gap-1">
-              <Play className="h-3 w-3" />
-              Last triggered: {new Date(template.lastUsedAt).toLocaleDateString()}
-            </Badge>
-          )}
-          {(template as any).lastTriggeredAt && (
-            <Badge variant="outline" className="gap-1 text-success border-success">
-              <RefreshCw className="h-3 w-3" />
-              Auto: {new Date((template as any).lastTriggeredAt).toLocaleDateString()}
-            </Badge>
-          )}
         </div>
-        {nextScheduled && (
+        {template.lastUsedAt && (
           <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+            <Play className="h-3 w-3" />
+            <span>Last: {new Date(template.lastUsedAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+            {template.timezone && <span className="opacity-70">(GMT{template.timezone})</span>}
+          </div>
+        )}
+        {nextScheduled && (
+          <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" />
             <span>Next: {nextScheduled}</span>
             {template.timezone && <span className="opacity-70">(GMT{template.timezone})</span>}
