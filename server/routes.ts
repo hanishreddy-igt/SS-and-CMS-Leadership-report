@@ -2245,6 +2245,33 @@ Output valid JSON only.`;
     }
   });
 
+  // ====== TASK ACTIVITY ROUTES ======
+
+  // Get task activities with optional filters
+  app.get('/api/task-activity', isAuthenticated, async (req: any, res) => {
+    try {
+      const { taskId, changedBy, startDate, endDate } = req.query;
+      
+      const filters: {
+        taskId?: string;
+        changedBy?: string;
+        startDate?: Date;
+        endDate?: Date;
+      } = {};
+      
+      if (taskId) filters.taskId = taskId as string;
+      if (changedBy) filters.changedBy = changedBy as string;
+      if (startDate) filters.startDate = new Date(startDate as string);
+      if (endDate) filters.endDate = new Date(endDate as string);
+      
+      const activities = await storage.getTaskActivities(filters);
+      res.json(activities);
+    } catch (error: any) {
+      console.error('Error fetching task activities:', error);
+      res.status(500).json({ message: 'Failed to fetch task activities' });
+    }
+  });
+
   // ====== TASK TEMPLATE ROUTES ======
 
   // Get all task templates
