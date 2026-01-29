@@ -269,7 +269,15 @@ export type HealthStatus = 'on-track' | 'at-risk' | 'critical';
 export type ReportStatus = 'draft' | 'submitted';
 
 // Task schemas and types
-export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true });
+export const taskStatusEnum = z.enum(['todo', 'in-progress', 'blocked', 'done', 'cancelled']);
+export const taskPriorityEnum = z.enum(['normal', 'medium', 'high']);
+
+export const insertTaskSchema = createInsertSchema(tasks)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    status: taskStatusEnum.default('todo'),
+    priority: taskPriorityEnum.default('normal'),
+  });
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 
