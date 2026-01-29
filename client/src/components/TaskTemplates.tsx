@@ -1166,8 +1166,14 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
           </Badge>
           {template.lastUsedAt && (
             <Badge variant="outline" className="gap-1">
-              <Clock className="h-3 w-3" />
-              Last: {new Date(template.lastUsedAt).toLocaleDateString()}
+              <Play className="h-3 w-3" />
+              Last triggered: {new Date(template.lastUsedAt).toLocaleDateString()}
+            </Badge>
+          )}
+          {(template as any).lastTriggeredAt && (
+            <Badge variant="outline" className="gap-1 text-success border-success">
+              <RefreshCw className="h-3 w-3" />
+              Auto: {new Date((template as any).lastTriggeredAt).toLocaleDateString()}
             </Badge>
           )}
         </div>
