@@ -2406,11 +2406,19 @@ Output valid JSON only.`;
             parts.push(`Notes: ${task.notes.join(' | ')}`);
           }
           
-          // Add final status if changed
+          // Add status changes to show progression (started, progressed, completed, blocked)
           if (task.statusChanges.length > 0) {
-            const lastChange = task.statusChanges[task.statusChanges.length - 1];
-            const finalStatus = lastChange.split(' → ')[1];
-            parts.push(`Status: ${finalStatus}`);
+            // Show all transitions to understand the journey
+            const transitions = task.statusChanges.map(change => {
+              const [from, to] = change.split(' → ');
+              if (from === 'todo' && to === 'in-progress') return 'Started';
+              if (to === 'done') return 'Completed';
+              if (to === 'blocked') return 'Blocked';
+              if (from === 'blocked' && to === 'in-progress') return 'Unblocked';
+              if (to === 'cancelled') return 'Cancelled';
+              return `${from} → ${to}`;
+            });
+            parts.push(`Progress: ${transitions.join(', ')}`);
           }
           
           // Add other significant changes
