@@ -2272,6 +2272,159 @@ Output valid JSON only.`;
     }
   });
 
+  // ====== EOD REPORT ROUTES ======
+
+  // Generate EOD (End of Day) report with AI summary
+  app.get('/api/eod-report', isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = req.user.claims.email;
+      const { startUtc, endUtc } = req.query;
+
+      if (!startUtc || !endUtc) {
+        return res.status(400).json({ message: 'startUtc and endUtc query parameters are required' });
+      }
+
+      const startDate = new Date(startUtc as string);
+      const endDate = new Date(endUtc as string);
+
+      // Validate dates
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ message: 'Invalid date format. Use ISO 8601 format.' });
+      }
+
+      // Get activities for the user within the date range
+      const activities = await storage.getActivitiesByUser(userEmail, startDate, endDate);
+
+      if (activities.length === 0) {
+        return res.json({
+          startDate: startUtc,
+          endDate: endUtc,
+          user: userEmail,
+          summary: '',
+          activityCount: 0,
+          accountsWorked: [],
+          rawActivities: []
+        });
+      }
+
+      // Get all tasks and projects for context
+      const allTasks = await storage.getTasks();
+      const allProjects = await storage.getProjects();
+
+      // Create lookup maps
+      const taskMap = new Map(allTasks.map(t => [t.id, t]));
+      const projectMap = new Map(allProjects.map(p => [p.id, p]));
+
+      // Group activities by account/project
+      const accountActivities: Record<string, { 
+        accountName: string; 
+        activities: Array<{
+          taskTitle: string;
+          changeType: string;
+          previousValue: any;
+          newValue: any;
+          timestamp: Date;
+        }> 
+      }> = {};
+
+      for (const activity of activities) {
+        const task = taskMap.get(activity.taskId);
+        const taskTitle = task?.title || 'Unknown Task';
+        const projectId = task?.projectId;
+        const project = projectId ? projectMap.get(projectId) : null;
+        const accountName = project?.name || 'No Account';
+        const accountKey = project?.id || 'no-account';
+
+        if (!accountActivities[accountKey]) {
+          accountActivities[accountKey] = {
+            accountName,
+            activities: []
+          };
+        }
+
+        accountActivities[accountKey].activities.push({
+          taskTitle,
+          changeType: activity.changeType,
+          previousValue: activity.previousValue,
+          newValue: activity.newValue,
+          timestamp: activity.changedAt
+        });
+      }
+
+      // Format activities for AI prompt
+      const formattedActivities = Object.values(accountActivities).map(account => {
+        const activitySummaries = account.activities.map(a => {
+          switch (a.changeType) {
+            case 'created':
+              return `Created task: "${a.taskTitle}"`;
+            case 'status_change':
+              const prevStatus = (a.previousValue as any)?.status || 'unknown';
+              const newStatus = (a.newValue as any)?.status || 'unknown';
+              return `"${a.taskTitle}": ${prevStatus} → ${newStatus}`;
+            case 'note_added':
+              return `Added note to "${a.taskTitle}"`;
+            case 'assignee_added':
+              return `Assigned someone to "${a.taskTitle}"`;
+            case 'assignee_removed':
+              return `Unassigned someone from "${a.taskTitle}"`;
+            case 'priority_change':
+              const prevPriority = (a.previousValue as any)?.priority || 'unknown';
+              const newPriority = (a.newValue as any)?.priority || 'unknown';
+              return `Changed priority of "${a.taskTitle}": ${prevPriority} → ${newPriority}`;
+            case 'due_date_change':
+              return `Updated due date for "${a.taskTitle}"`;
+            case 'title_edit':
+              return `Renamed task to "${a.taskTitle}"`;
+            default:
+              return `Updated "${a.taskTitle}"`;
+          }
+        });
+
+        return `**${account.accountName}**\n${activitySummaries.map(s => `- ${s}`).join('\n')}`;
+      }).join('\n\n');
+
+      // Determine report type based on date range
+      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const reportType = daysDiff <= 1 ? 'End of Day Update' : `Activity Summary (${daysDiff} days)`;
+
+      // Generate AI summary
+      const aiPrompt = `Generate a professional ${reportType} for a team member. 
+Summarize the following work activities grouped by account/project.
+Be concise but informative. Use bullet points.
+Focus on accomplishments and progress made.
+
+Activities:
+${formattedActivities}
+
+Format the response as a brief professional update that could be shared with the team.
+Start with a one-line summary, then list key accomplishments by account.`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-5.2',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant that generates professional work summaries. Be concise and focus on accomplishments.' },
+          { role: 'user', content: aiPrompt }
+        ],
+        max_completion_tokens: 1000,
+      });
+
+      const summary = completion.choices[0]?.message?.content || '';
+
+      res.json({
+        startDate: startUtc,
+        endDate: endUtc,
+        user: userEmail,
+        summary,
+        activityCount: activities.length,
+        accountsWorked: Object.values(accountActivities).map(a => a.accountName),
+        rawActivities: formattedActivities
+      });
+    } catch (error: any) {
+      console.error('Error generating EOD report:', error);
+      res.status(500).json({ message: 'Failed to generate EOD report' });
+    }
+  });
+
   // ====== TASK TEMPLATE ROUTES ======
 
   // Get all task templates
