@@ -2351,39 +2351,77 @@ Output valid JSON only.`;
         });
       }
 
-      // Format activities for AI prompt - prioritize note content as the key information
+      // Step 1: Group activities by task within each account
       const formattedActivities = Object.values(accountActivities).map(account => {
-        const activitySummaries = account.activities.map(a => {
+        // Group activities by task within this account
+        const taskGroups: Record<string, {
+          taskTitle: string;
+          notes: string[];
+          statusChanges: string[];
+          otherChanges: string[];
+        }> = {};
+
+        for (const a of account.activities) {
+          const taskKey = a.taskTitle;
+          if (!taskGroups[taskKey]) {
+            taskGroups[taskKey] = {
+              taskTitle: a.taskTitle,
+              notes: [],
+              statusChanges: [],
+              otherChanges: []
+            };
+          }
+
           switch (a.changeType) {
             case 'created':
-              return `[Task: "${a.taskTitle}"] Created`;
+              taskGroups[taskKey].otherChanges.push('Created');
+              break;
             case 'status_change':
               const prevStatus = (a.previousValue as any)?.status || 'unknown';
               const newStatus = (a.newValue as any)?.status || 'unknown';
-              return `[Task: "${a.taskTitle}"] Status: ${prevStatus} → ${newStatus}`;
+              taskGroups[taskKey].statusChanges.push(`${prevStatus} → ${newStatus}`);
+              break;
             case 'note_added':
               const noteContent = (a.newValue as any)?.content || '';
-              return `[Task: "${a.taskTitle}"] Update: ${noteContent}`;
-            case 'assignee_added':
-              const addedAssignee = (a.newValue as any)?.assignee || 'someone';
-              return `[Task: "${a.taskTitle}"] Assigned to ${addedAssignee}`;
-            case 'assignee_removed':
-              return `[Task: "${a.taskTitle}"] Unassigned`;
+              if (noteContent) taskGroups[taskKey].notes.push(noteContent);
+              break;
             case 'priority_change':
-              const prevPriority = (a.previousValue as any)?.priority || 'unknown';
               const newPriority = (a.newValue as any)?.priority || 'unknown';
-              return `[Task: "${a.taskTitle}"] Priority: ${prevPriority} → ${newPriority}`;
+              taskGroups[taskKey].otherChanges.push(`Priority set to ${newPriority}`);
+              break;
             case 'due_date_change':
-              return `[Task: "${a.taskTitle}"] Due date updated`;
-            case 'title_edit':
-              const oldTitle = (a.previousValue as any)?.title || 'unknown';
-              return `[Task: "${a.taskTitle}"] Renamed from "${oldTitle}"`;
+              taskGroups[taskKey].otherChanges.push('Due date updated');
+              break;
             default:
-              return `[Task: "${a.taskTitle}"] Updated`;
+              break;
           }
+        }
+
+        // Step 2: Format each task's combined activities
+        const taskSummaries = Object.values(taskGroups).map(task => {
+          const parts: string[] = [];
+          
+          // Add notes (most important - the actual updates)
+          if (task.notes.length > 0) {
+            parts.push(`Notes: ${task.notes.join(' | ')}`);
+          }
+          
+          // Add final status if changed
+          if (task.statusChanges.length > 0) {
+            const lastChange = task.statusChanges[task.statusChanges.length - 1];
+            const finalStatus = lastChange.split(' → ')[1];
+            parts.push(`Status: ${finalStatus}`);
+          }
+          
+          // Add other significant changes
+          if (task.otherChanges.includes('Created')) {
+            parts.push('Newly created');
+          }
+
+          return `  - Task: "${task.taskTitle}"\n    ${parts.join('\n    ')}`;
         });
 
-        return `**${account.accountName}**\n${activitySummaries.map(s => `- ${s}`).join('\n')}`;
+        return `**${account.accountName}**\n${taskSummaries.join('\n')}`;
       }).join('\n\n');
 
       // Generate AI summary
