@@ -2351,32 +2351,35 @@ Output valid JSON only.`;
         });
       }
 
-      // Format activities for AI prompt
+      // Format activities for AI prompt - prioritize note content as the key information
       const formattedActivities = Object.values(accountActivities).map(account => {
         const activitySummaries = account.activities.map(a => {
           switch (a.changeType) {
             case 'created':
-              return `Created task: "${a.taskTitle}"`;
+              return `[Task: "${a.taskTitle}"] Created`;
             case 'status_change':
               const prevStatus = (a.previousValue as any)?.status || 'unknown';
               const newStatus = (a.newValue as any)?.status || 'unknown';
-              return `"${a.taskTitle}": ${prevStatus} → ${newStatus}`;
+              return `[Task: "${a.taskTitle}"] Status: ${prevStatus} → ${newStatus}`;
             case 'note_added':
-              return `Added note to "${a.taskTitle}"`;
+              const noteContent = (a.newValue as any)?.content || '';
+              return `[Task: "${a.taskTitle}"] Update: ${noteContent}`;
             case 'assignee_added':
-              return `Assigned someone to "${a.taskTitle}"`;
+              const addedAssignee = (a.newValue as any)?.assignee || 'someone';
+              return `[Task: "${a.taskTitle}"] Assigned to ${addedAssignee}`;
             case 'assignee_removed':
-              return `Unassigned someone from "${a.taskTitle}"`;
+              return `[Task: "${a.taskTitle}"] Unassigned`;
             case 'priority_change':
               const prevPriority = (a.previousValue as any)?.priority || 'unknown';
               const newPriority = (a.newValue as any)?.priority || 'unknown';
-              return `Changed priority of "${a.taskTitle}": ${prevPriority} → ${newPriority}`;
+              return `[Task: "${a.taskTitle}"] Priority: ${prevPriority} → ${newPriority}`;
             case 'due_date_change':
-              return `Updated due date for "${a.taskTitle}"`;
+              return `[Task: "${a.taskTitle}"] Due date updated`;
             case 'title_edit':
-              return `Renamed task to "${a.taskTitle}"`;
+              const oldTitle = (a.previousValue as any)?.title || 'unknown';
+              return `[Task: "${a.taskTitle}"] Renamed from "${oldTitle}"`;
             default:
-              return `Updated "${a.taskTitle}"`;
+              return `[Task: "${a.taskTitle}"] Updated`;
           }
         });
 
