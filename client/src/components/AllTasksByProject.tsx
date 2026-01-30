@@ -198,8 +198,9 @@ export default function AllTasksByProject() {
   }, [projects]);
 
   const accountsWithTasks = projects.filter(p => {
-    const hasTasks = allTasks.some(t => t.projectId === p.id);
-    if (!hasTasks) return false;
+    // Only show accounts that have root tasks (not just orphaned subtasks)
+    const hasRootTasks = allTasks.some(t => t.projectId === p.id && !t.parentTaskId);
+    if (!hasRootTasks) return false;
     
     // Apply account filter
     if (accountFilter !== 'all' && p.id !== accountFilter) return false;
