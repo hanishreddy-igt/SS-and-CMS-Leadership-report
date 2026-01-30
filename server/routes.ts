@@ -2383,27 +2383,45 @@ Output valid JSON only.`;
         return `**${account.accountName}**\n${activitySummaries.map(s => `- ${s}`).join('\n')}`;
       }).join('\n\n');
 
-      // Determine report type based on date range
-      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      const reportType = daysDiff <= 1 ? 'End of Day Update' : `Activity Summary (${daysDiff} days)`;
-
       // Generate AI summary
-      const aiPrompt = `Generate a professional ${reportType} for a team member. 
-Summarize the following work activities grouped by account/project.
-Be concise but informative. Use bullet points.
-Focus on accomplishments and progress made.
+      const systemPrompt = `You are a senior team member writing a concise End of Day work update.
+Your goal is to explain meaningful progress and outcomes, not list actions.
+Think like a human reporting to a manager.`;
 
-Activities:
-${formattedActivities}
+      const userPrompt = `Generate a professional End of Day update grouped by account/project.
 
-Format the response as a brief professional update that could be shared with the team.
-Start with a one-line summary, then list key accomplishments by account.`;
+Guidelines:
+- Group the update by account/project.
+- Within each account, summarize meaningful work in plain language.
+- Do NOT list task names or individual actions.
+- Combine all activity related to the same task into a single concise line.
+- Use note content to infer outcomes, blockers resolved, communication done, or progress made.
+- Focus on WHAT was accomplished or progressed, not HOW the system changed.
+- Prefer outcomes like:
+  - completed
+  - progressed
+  - unblocked
+  - blocked
+  - started
+  - communicated
+- Ignore low-signal actions unless they add context.
+- Use past tense for completed work and present tense for ongoing work.
+
+Formatting rules:
+- Start with one high-level summary sentence.
+- For each account:
+  - Use the account name as a header.
+  - Use 1–3 bullet points maximum.
+  - Each bullet should describe a meaningful outcome in one sentence.
+
+Activities (grouped by account and task):
+${formattedActivities}`;
 
       const completion = await openai.chat.completions.create({
         model: 'gpt-5.2',
         messages: [
-          { role: 'system', content: 'You are a helpful assistant that generates professional work summaries. Be concise and focus on accomplishments.' },
-          { role: 'user', content: aiPrompt }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
         max_completion_tokens: 1000,
       });
