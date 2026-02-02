@@ -239,6 +239,8 @@ export default function AllTasksByProject() {
   });
 
   const tasksWithoutAccount = allTasks.filter(t => !t.projectId && !t.parentTaskId);
+  // Apply member filter to unassigned tasks
+  const filteredTasksWithoutAccount = getFilteredTasks(tasksWithoutAccount);
 
   if (tasksLoading) {
     return (
@@ -382,7 +384,7 @@ export default function AllTasksByProject() {
         </div>
       </CardHeader>
       <CardContent>
-        {accountsWithTasks.length === 0 && tasksWithoutAccount.length === 0 ? (
+        {accountsWithTasks.length === 0 && filteredTasksWithoutAccount.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
             <FolderKanban className="h-6 w-6 mx-auto mb-2 opacity-50" />
             <p>No team tasks yet. Tasks from all team members will appear here.</p>
@@ -520,14 +522,14 @@ export default function AllTasksByProject() {
               );
             })}
 
-            {tasksWithoutAccount.length > 0 && (() => {
+            {filteredTasksWithoutAccount.length > 0 && (() => {
               const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
               const sortByPriority = (tasks: Task[]) => 
                 [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
               
-              const activeUnassigned = sortByPriority(tasksWithoutAccount.filter(t => t.status === 'todo' || t.status === 'in-progress'));
-              const blockedUnassigned = sortByPriority(tasksWithoutAccount.filter(t => t.status === 'blocked'));
-              const closedUnassigned = sortByPriority(tasksWithoutAccount.filter(t => t.status === 'done'));
+              const activeUnassigned = sortByPriority(filteredTasksWithoutAccount.filter(t => t.status === 'todo' || t.status === 'in-progress'));
+              const blockedUnassigned = sortByPriority(filteredTasksWithoutAccount.filter(t => t.status === 'blocked'));
+              const closedUnassigned = sortByPriority(filteredTasksWithoutAccount.filter(t => t.status === 'done'));
               
               return (
                 <Collapsible defaultOpen>
@@ -536,7 +538,7 @@ export default function AllTasksByProject() {
                     <Circle className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium text-sm text-muted-foreground">Account unassigned/general</span>
                     <Badge variant="secondary" className="ml-auto text-xs">
-                      {tasksWithoutAccount.length}
+                      {filteredTasksWithoutAccount.length}
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
