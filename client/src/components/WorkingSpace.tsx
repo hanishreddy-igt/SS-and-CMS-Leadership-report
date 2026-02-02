@@ -235,10 +235,11 @@ export function parseInlineTags(title: string): ParsedTitle {
     result.text = result.text.replace(/\/\/.+?(?=@@|@(?!@)|#|\$|$)/, '').trim();
   }
   
-  const projectMatch = result.text.match(/@@(\w+)/);
+  // Match project tags that can include hyphens and alphanumeric chars (e.g., @@ExxonMobil-GlobalListening)
+  const projectMatch = result.text.match(/@@([\w-]+)/);
   if (projectMatch) {
     result.projectTag = projectMatch[1];
-    result.text = result.text.replace(/@@\w+/g, '').trim();
+    result.text = result.text.replace(/@@[\w-]+/g, '').trim();
   }
   
   const textAfterProject = result.text;
@@ -417,14 +418,14 @@ function InlineTaskInput({
   const detectTrigger = (text: string, cursorPos: number): SuggestionState => {
     const beforeCursor = text.slice(0, cursorPos);
     
-    const projectMatch = beforeCursor.match(/@@(\w*)$/);
+    const projectMatch = beforeCursor.match(/@@([\w-]*)$/);
     if (projectMatch) {
       return { type: 'project', startIndex: projectMatch.index!, query: projectMatch[1] };
     }
     
-    const personMatch = beforeCursor.match(/(?<![@@])@(\w*)$/);
+    const personMatch = beforeCursor.match(/(?<!@@)(?<![\w-])@(\w*)$|(?<!@)@(\w*)$/);
     if (personMatch) {
-      return { type: 'person', startIndex: personMatch.index!, query: personMatch[1] };
+      return { type: 'person', startIndex: personMatch.index!, query: personMatch[1] || personMatch[2] || '' };
     }
     
     const statusMatch = beforeCursor.match(/#(\w*)$/);
@@ -441,13 +442,14 @@ function InlineTaskInput({
   };
 
   const getTaggedProject = (): Project | undefined => {
-    const projectMatch = value.match(/@@(\w+)/);
+    const projectMatch = value.match(/@@([\w-]+)/);
     if (projectMatch) {
       const projectTag = projectMatch[1].toLowerCase();
-      return projects.find(p => 
-        p.name.toLowerCase().replace(/\s+/g, '').includes(projectTag) ||
-        p.name.toLowerCase().includes(projectTag)
-      );
+      // Match against normalized project name (spaces removed, hyphens preserved)
+      return projects.find(p => {
+        const normalizedName = p.name.toLowerCase().replace(/\s+/g, '');
+        return normalizedName === projectTag || normalizedName.startsWith(projectTag);
+      });
     }
     return undefined;
   };
@@ -1286,13 +1288,13 @@ export function TaskRow({
 
   const detectTrigger = (text: string, cursorPos: number): SuggestionState => {
     const beforeCursor = text.slice(0, cursorPos);
-    const projectMatch = beforeCursor.match(/@@(\w*)$/);
+    const projectMatch = beforeCursor.match(/@@([\w-]*)$/);
     if (projectMatch) {
       return { type: 'project', startIndex: projectMatch.index!, query: projectMatch[1] };
     }
-    const personMatch = beforeCursor.match(/(?<![@@])@(\w*)$/);
+    const personMatch = beforeCursor.match(/(?<!@@)(?<![\w-])@(\w*)$|(?<!@)@(\w*)$/);
     if (personMatch) {
-      return { type: 'person', startIndex: personMatch.index!, query: personMatch[1] };
+      return { type: 'person', startIndex: personMatch.index!, query: personMatch[1] || personMatch[2] || '' };
     }
     const statusMatch = beforeCursor.match(/#(\w*)$/);
     if (statusMatch) {
@@ -1426,10 +1428,11 @@ export function TaskRow({
           updates.priority = parsed.priorityTag;
         }
         if (parsed.projectTag) {
-          const matchedProject = projects.find(p => 
-            p.name.toLowerCase().replace(/\s+/g, '').includes(parsed.projectTag!.toLowerCase()) ||
-            p.name.toLowerCase().includes(parsed.projectTag!.toLowerCase())
-          );
+          const projectTag = parsed.projectTag.toLowerCase();
+          const matchedProject = projects.find(p => {
+            const normalizedName = p.name.toLowerCase().replace(/\s+/g, '');
+            return normalizedName === projectTag || normalizedName.startsWith(projectTag);
+          });
           if (matchedProject) {
             updates.projectId = matchedProject.id;
           }
@@ -1942,10 +1945,11 @@ export default function WorkingSpace() {
     };
     
     if (parsed.projectTag) {
-      const matchedProject = projects.find(p => 
-        p.name.toLowerCase().replace(/\s+/g, '').includes(parsed.projectTag!.toLowerCase()) ||
-        p.name.toLowerCase().includes(parsed.projectTag!.toLowerCase())
-      );
+      const projectTag = parsed.projectTag.toLowerCase();
+      const matchedProject = projects.find(p => {
+        const normalizedName = p.name.toLowerCase().replace(/\s+/g, '');
+        return normalizedName === projectTag || normalizedName.startsWith(projectTag);
+      });
       if (matchedProject) taskData.projectId = matchedProject.id;
     }
     

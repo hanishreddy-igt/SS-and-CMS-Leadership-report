@@ -124,10 +124,11 @@ export default function AllTasksByProject() {
     };
     
     if (parsed.projectTag) {
-      const matchedProject = projects.find(p => 
-        p.name.toLowerCase().replace(/\s+/g, '').includes(parsed.projectTag!.toLowerCase()) ||
-        p.name.toLowerCase().includes(parsed.projectTag!.toLowerCase())
-      );
+      const projectTag = parsed.projectTag.toLowerCase();
+      const matchedProject = projects.find(p => {
+        const normalizedName = p.name.toLowerCase().replace(/\s+/g, '');
+        return normalizedName === projectTag || normalizedName.startsWith(projectTag);
+      });
       if (matchedProject) taskData.projectId = matchedProject.id;
     }
     
