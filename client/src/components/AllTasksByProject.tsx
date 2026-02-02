@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ChevronRight, 
@@ -19,7 +20,8 @@ import {
   Play,
   Check,
   Ban,
-  Filter
+  Filter,
+  X
 } from 'lucide-react';
 import type { Task, Project, Person } from '@shared/schema';
 import { TaskRow, ParsedTitle, parseInlineTags } from './WorkingSpace';
@@ -28,7 +30,7 @@ export default function AllTasksByProject() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [leadFilter, setLeadFilter] = useState<string>('all');
-  const [accountFilter, setAccountFilter] = useState<string>('all');
+  const [accountFilters, setAccountFilters] = useState<string[]>([]);
   const [memberFilter, setMemberFilter] = useState<string>('all');
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -198,13 +200,27 @@ export default function AllTasksByProject() {
     return [...projects].sort((a, b) => a.name.localeCompare(b.name));
   }, [projects]);
 
+  // Helper to check if a task or any of its subtasks match the member filter
+  const taskMatchesMemberFilter = (task: Task, memberId: string): boolean => {
+    if (task.assignedTo?.includes(memberId)) return true;
+    // Check subtasks recursively
+    const subtasks = allTasks.filter(t => t.parentTaskId === task.id);
+    return subtasks.some(st => taskMatchesMemberFilter(st, memberId));
+  };
+
+  // Filter tasks by member - returns tasks where the task or any subtask is assigned to the member
+  const getFilteredTasks = (tasks: Task[]): Task[] => {
+    if (memberFilter === 'all') return tasks;
+    return tasks.filter(task => taskMatchesMemberFilter(task, memberFilter));
+  };
+
   const accountsWithTasks = projects.filter(p => {
     // Only show accounts that have root tasks (not just orphaned subtasks)
     const hasRootTasks = allTasks.some(t => t.projectId === p.id && !t.parentTaskId);
     if (!hasRootTasks) return false;
     
-    // Apply account filter
-    if (accountFilter !== 'all' && p.id !== accountFilter) return false;
+    // Apply account filter (multi-select)
+    if (accountFilters.length > 0 && !accountFilters.includes(p.id)) return false;
     
     // Apply lead filter
     if (leadFilter !== 'all') {
@@ -215,7 +231,7 @@ export default function AllTasksByProject() {
     // Apply member filter - check if any task in this account is assigned to the member
     if (memberFilter !== 'all') {
       const accountTasks = allTasks.filter(t => t.projectId === p.id);
-      const hasTaskWithMember = accountTasks.some(t => t.assignedTo?.includes(memberFilter));
+      const hasTaskWithMember = accountTasks.some(t => taskMatchesMemberFilter(t, memberFilter));
       if (!hasTaskWithMember) return false;
     }
     
@@ -245,28 +261,77 @@ export default function AllTasksByProject() {
               <Button variant="outline" size="sm" className="gap-2" data-testid="filter-button">
                 <Filter className="h-4 w-4" />
                 Filters
-                {(accountFilter !== 'all' || leadFilter !== 'all' || memberFilter !== 'all') && (
+                {(accountFilters.length > 0 || leadFilter !== 'all' || memberFilter !== 'all') && (
                   <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
-                    {[accountFilter !== 'all', leadFilter !== 'all', memberFilter !== 'all'].filter(Boolean).length}
+                    {[accountFilters.length > 0, leadFilter !== 'all', memberFilter !== 'all'].filter(Boolean).length}
                   </Badge>
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-72" align="end">
+            <PopoverContent className="w-80" align="end">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Account</Label>
-                  <Select value={accountFilter} onValueChange={setAccountFilter}>
-                    <SelectTrigger className="w-full" data-testid="account-filter">
-                      <SelectValue placeholder="All Accounts" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Accounts</SelectItem>
-                      {sortedAccounts.map(account => (
-                        <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Accounts</Label>
+                    {accountFilters.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setAccountFilters([])}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  {accountFilters.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {accountFilters.map(id => {
+                        const account = sortedAccounts.find(a => a.id === id);
+                        return (
+                          <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                            {account?.name || id}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-4 w-4 p-0 hover:bg-transparent"
+                              onClick={() => setAccountFilters(prev => prev.filter(a => a !== id))}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-1">
+                    {sortedAccounts.map(account => (
+                      <div 
+                        key={account.id} 
+                        className="flex items-center gap-2 py-1 px-1 rounded hover:bg-muted cursor-pointer"
+                        onClick={() => {
+                          setAccountFilters(prev => 
+                            prev.includes(account.id) 
+                              ? prev.filter(id => id !== account.id)
+                              : [...prev, account.id]
+                          );
+                        }}
+                      >
+                        <Checkbox 
+                          checked={accountFilters.includes(account.id)}
+                          onCheckedChange={(checked) => {
+                            setAccountFilters(prev => 
+                              checked 
+                                ? [...prev, account.id]
+                                : prev.filter(id => id !== account.id)
+                            );
+                          }}
+                          data-testid={`account-filter-${account.id}`}
+                        />
+                        <span className="text-sm">{account.name}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Lead</Label>
@@ -296,13 +361,13 @@ export default function AllTasksByProject() {
                     </SelectContent>
                   </Select>
                 </div>
-                {(accountFilter !== 'all' || leadFilter !== 'all' || memberFilter !== 'all') && (
+                {(accountFilters.length > 0 || leadFilter !== 'all' || memberFilter !== 'all') && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="w-full"
                     onClick={() => {
-                      setAccountFilter('all');
+                      setAccountFilters([]);
                       setLeadFilter('all');
                       setMemberFilter('all');
                     }}
@@ -330,9 +395,11 @@ export default function AllTasksByProject() {
                 [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
               
               const accountTasks = allTasks.filter(t => t.projectId === account.id && !t.parentTaskId);
-              const activeTasks = sortByPriority(accountTasks.filter(t => t.status === 'todo' || t.status === 'in-progress'));
-              const blockedTasks = sortByPriority(accountTasks.filter(t => t.status === 'blocked'));
-              const closedTasks = sortByPriority(accountTasks.filter(t => t.status === 'done'));
+              // Apply member filter to only show tasks assigned to the selected member
+              const filteredAccountTasks = getFilteredTasks(accountTasks);
+              const activeTasks = sortByPriority(filteredAccountTasks.filter(t => t.status === 'todo' || t.status === 'in-progress'));
+              const blockedTasks = sortByPriority(filteredAccountTasks.filter(t => t.status === 'blocked'));
+              const closedTasks = sortByPriority(filteredAccountTasks.filter(t => t.status === 'done'));
               
               return (
                 <Collapsible key={account.id} defaultOpen>
@@ -341,7 +408,7 @@ export default function AllTasksByProject() {
                     <FolderKanban className="h-4 w-4 text-primary" />
                     <span className="font-medium text-sm">{account.name}</span>
                     <Badge variant="secondary" className="ml-auto text-xs">
-                      {accountTasks.length}
+                      {filteredAccountTasks.length}
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
