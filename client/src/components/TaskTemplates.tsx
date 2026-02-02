@@ -38,7 +38,8 @@ import {
   User,
   UserPlus,
   Check,
-  Filter
+  Filter,
+  CalendarOff
 } from 'lucide-react';
 import type { TaskTemplate, Project, Person, SubTemplateItem } from '@shared/schema';
 
@@ -101,8 +102,7 @@ interface TemplateFormData {
   endDate: number | null;
   daysOfWeek: string[];
   timezone: string;
-  isActive: boolean;
-  autoTriggerEnabled: boolean;
+  enabled: boolean; // Combined toggle for active + auto-trigger
 }
 
 const dayOptions = [
@@ -166,8 +166,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
     endDate: 5,
     daysOfWeek: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     timezone: '+5:30',
-    isActive: true,
-    autoTriggerEnabled: false,
+    enabled: true,
   });
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('');
   
@@ -766,27 +765,16 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
         />
       </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="isActive"
-            checked={formData.isActive}
-            onCheckedChange={(v) => setFormData({ ...formData, isActive: v })}
-          />
-          <Label htmlFor="isActive">Active</Label>
-        </div>
-        {hasRecurrence && (
-          <div className="flex items-center gap-2">
-            <Switch
-              id="autoTriggerEnabled"
-              checked={formData.autoTriggerEnabled}
-              onCheckedChange={(v) => setFormData({ ...formData, autoTriggerEnabled: v })}
-            />
-            <Label htmlFor="autoTriggerEnabled" className="text-sm">
-              Auto-trigger (scheduled)
-            </Label>
-          </div>
-        )}
+      <div className="flex items-center gap-2">
+        <Switch
+          id="enabled"
+          checked={formData.enabled}
+          onCheckedChange={(v) => setFormData({ ...formData, enabled: v })}
+        />
+        <Label htmlFor="enabled">Enabled</Label>
+        <span className="text-xs text-muted-foreground">
+          {formData.enabled ? '(Active and auto-triggered when scheduled)' : '(Disabled - will not auto-trigger)'}
+        </span>
       </div>
 
       <DialogFooter>
@@ -1032,9 +1020,12 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
   const owner = people.find(p => p.email === template.createdBy);
   const ownerDisplay = owner?.name || template.createdBy?.split('@')[0] || 'Unknown';
   
+  // Enabled means both active AND auto-trigger enabled
+  const isEnabled = template.isActive === 'true' && (template as any).autoTriggerEnabled === 'true';
+  
   return (
     <Card 
-      className={`${template.isActive === 'false' ? 'opacity-60' : ''} cursor-pointer hover-elevate transition-all`}
+      className={`${!isEnabled ? 'opacity-60' : ''} cursor-pointer hover-elevate transition-all`}
       data-testid={`template-card-${template.id}`}
       onClick={() => onView(template)}
     >
@@ -1044,9 +1035,13 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
             <CardTitle className="text-base flex items-center gap-2">
               <FileStack className="h-4 w-4 text-primary flex-shrink-0" />
               <span className="truncate">{template.name}</span>
-              {(template as any).autoTriggerEnabled === 'true' && (
+              {isEnabled ? (
                 <Badge variant="outline" className="text-xs text-success border-success">
-                  Auto
+                  Enabled
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-xs">
+                  Disabled
                 </Badge>
               )}
             </CardTitle>
@@ -1145,6 +1140,12 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
             {template.timezone && <span className="opacity-70">(GMT{template.timezone})</span>}
           </div>
         )}
+        {project?.endDate && (
+          <div className="mt-1 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <CalendarOff className="h-3 w-3" />
+            <span>Auto-disables after {new Date(project.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          </div>
+        )}
         {template.taskItems && (
           <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground whitespace-pre-wrap line-clamp-3">
             {template.taskItems}
@@ -1178,16 +1179,21 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <FileStack className="h-5 w-5 text-primary" />
             {template.name}
-            {template.isActive === 'false' && (
-              <Badge variant="secondary" className="ml-2">Inactive</Badge>
-            )}
-            {(template as any).autoTriggerEnabled === 'true' && (
-              <Badge variant="outline" className="text-success border-success">Auto-trigger</Badge>
+            {(template.isActive === 'true' && (template as any).autoTriggerEnabled === 'true') ? (
+              <Badge variant="outline" className="text-success border-success">Enabled</Badge>
+            ) : (
+              <Badge variant="secondary">Disabled</Badge>
             )}
           </DialogTitle>
           {(template as any).lastTriggeredAt && (
             <p className="text-xs text-muted-foreground">
               Last auto-triggered: {new Date((template as any).lastTriggeredAt).toLocaleString()}
+            </p>
+          )}
+          {project?.endDate && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              <CalendarOff className="h-3 w-3 inline mr-1" />
+              Auto-disables after {new Date(project.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           )}
         </DialogHeader>
@@ -1467,8 +1473,8 @@ export default function TaskTemplates() {
         endDate: isMonthlyOrQuarterly ? data.endDate : null,
         daysOfWeek: isDaily ? data.daysOfWeek : [],
         timezone: data.recurrence ? data.timezone : null,
-        isActive: data.isActive ? 'true' : 'false',
-        autoTriggerEnabled: data.autoTriggerEnabled ? 'true' : 'false',
+        isActive: data.enabled ? 'true' : 'false',
+        autoTriggerEnabled: data.enabled ? 'true' : 'false',
       });
       return res.json();
     },
@@ -1509,8 +1515,8 @@ export default function TaskTemplates() {
         endDate: isMonthlyOrQuarterly ? data.endDate : null,
         daysOfWeek: isDaily ? data.daysOfWeek : [],
         timezone: data.recurrence ? data.timezone : null,
-        isActive: data.isActive ? 'true' : 'false',
-        autoTriggerEnabled: data.autoTriggerEnabled ? 'true' : 'false',
+        isActive: data.enabled ? 'true' : 'false',
+        autoTriggerEnabled: data.enabled ? 'true' : 'false',
       });
       return res.json();
     },
@@ -1691,8 +1697,8 @@ export default function TaskTemplates() {
       endDate: (editingTemplate as any).endDate ?? 5,
       daysOfWeek: (editingTemplate as any).daysOfWeek || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
       timezone: editingTemplate.timezone || '+5:30',
-      isActive: editingTemplate.isActive !== 'false',
-      autoTriggerEnabled: (editingTemplate as any).autoTriggerEnabled === 'true',
+      // Enabled means both active AND auto-trigger enabled
+      enabled: editingTemplate.isActive === 'true' && (editingTemplate as any).autoTriggerEnabled === 'true',
     };
   };
 

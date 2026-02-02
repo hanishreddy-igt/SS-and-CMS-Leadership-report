@@ -2594,21 +2594,65 @@ ${formattedActivities}`;
       }
 
       const now = new Date();
+      // Use UTC date for comparison to avoid timezone issues
+      const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
       console.log(`[Scheduler] Trigger deliverables called at ${now.toISOString()}`);
 
       // Get all templates with auto-trigger enabled
       const allTemplates = await storage.getTaskTemplates();
+      const allProjects = await storage.getProjects();
+      const projectMap = new Map(allProjects.map(p => [p.id, p]));
+      
       const autoTriggerTemplates = allTemplates.filter(t => 
         t.isActive === 'true' && 
         t.autoTriggerEnabled === 'true' &&
         t.recurrence // Must have a recurrence pattern
       );
 
-      console.log(`[Scheduler] Found ${autoTriggerTemplates.length} auto-trigger templates`);
+      // Filter out templates whose linked project has expired
+      const activeTemplates: typeof autoTriggerTemplates = [];
+      const expiredTemplates: { template: typeof autoTriggerTemplates[0]; projectEndDate: string }[] = [];
+      
+      for (const template of autoTriggerTemplates) {
+        if (template.projectId) {
+          const project = projectMap.get(template.projectId);
+          if (project?.endDate) {
+            // Parse endDate as UTC and compare with UTC today (inclusive - disable after end date)
+            const endDateParts = project.endDate.split('-').map(Number);
+            const endDateUTC = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
+            if (endDateUTC < todayUTC) {
+              expiredTemplates.push({ template, projectEndDate: project.endDate });
+              continue;
+            }
+          }
+        }
+        activeTemplates.push(template);
+      }
+      
+      // Auto-disable templates whose linked projects have expired
+      for (const { template, projectEndDate } of expiredTemplates) {
+        await storage.updateTaskTemplate(template.id, { 
+          isActive: 'false',
+          autoTriggerEnabled: 'false'
+        });
+        console.log(`[Scheduler] Auto-disabled template "${template.name}" - project ended ${projectEndDate}`);
+      }
+
+      console.log(`[Scheduler] Found ${activeTemplates.length} active auto-trigger templates (${expiredTemplates.length} auto-disabled due to expired projects)`);
 
       const results: { templateId: string; templateName: string; status: string; tasksCreated?: number; error?: string }[] = [];
+      
+      // Add auto-disabled templates to results
+      for (const { template, projectEndDate } of expiredTemplates) {
+        results.push({
+          templateId: template.id,
+          templateName: template.name,
+          status: 'auto-disabled',
+          error: `Project ended ${projectEndDate}`
+        });
+      }
 
-      for (const template of autoTriggerTemplates) {
+      for (const template of activeTemplates) {
         try {
           // Calculate if today is a valid trigger day and get today's window
           const currentWindow = calculateCurrentTriggerWindow(template);
