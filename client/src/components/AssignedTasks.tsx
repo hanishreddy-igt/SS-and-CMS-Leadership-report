@@ -557,7 +557,7 @@ export default function AssignedTasks() {
                     onDelete={handleDeleteTask}
                     onCreateSubtask={handleCreateSubtask}
                     userEmail={userEmail}
-                    hiddenAssigneeIds={myPersonIds}
+                    hiddenAssigneeIds={[]}
                     showDetailsToggle={true}
                     openTaskId={openTaskId}
                     onOpenDetails={setOpenTaskId}
@@ -589,7 +589,7 @@ export default function AssignedTasks() {
                     onDelete={handleDeleteTask}
                     onCreateSubtask={handleCreateSubtask}
                     userEmail={userEmail}
-                    hiddenAssigneeIds={myPersonIds}
+                    hiddenAssigneeIds={[]}
                     showDetailsToggle={true}
                     openTaskId={openTaskId}
                     onOpenDetails={setOpenTaskId}
@@ -621,7 +621,7 @@ export default function AssignedTasks() {
                     onDelete={handleDeleteTask}
                     onCreateSubtask={handleCreateSubtask}
                     userEmail={userEmail}
-                    hiddenAssigneeIds={myPersonIds}
+                    hiddenAssigneeIds={[]}
                     showDetailsToggle={true}
                     openTaskId={openTaskId}
                     onOpenDetails={setOpenTaskId}
