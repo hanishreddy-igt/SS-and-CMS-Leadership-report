@@ -381,14 +381,14 @@ export async function createTasksFromTemplate(
   dueDate: Date
 ): Promise<{ tasksCreated: number; subTasksCreated: number }> {
   const assignees = template.assignedTo || [];
-  const mode = template.assignmentMode || 'single';
   const subTemplates = (template.subTemplates as SubTemplateItem[]) || [];
   const dueDateStr = formatDueDateWithTimezone(dueDate, template);
   
   let tasksCreated = 0;
   let subTasksCreated = 0;
   
-  const createSubTasks = async (parentTaskId: string, parentAssignees: string[]) => {
+  // Create subtasks from template sub-templates
+  const createSubTasksFromTemplates = async (parentTaskId: string, parentAssignees: string[]) => {
     for (const sub of subTemplates) {
       const subAssignees = sub.assignedTo && sub.assignedTo.length > 0 ? sub.assignedTo : parentAssignees;
       
@@ -411,66 +411,62 @@ export async function createTasksFromTemplate(
     }
   };
   
-  if (mode === 'per-person' && assignees.length > 0) {
-    for (const assigneeId of assignees) {
-      const notes: { content: string; author: string; timestamp: string }[] = [];
-      if (template.taskItems) {
-        notes.push({
-          content: template.taskItems,
-          author: 'scheduler@system',
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      const taskData: InsertTask = {
+  // Create per-assignee subtasks (when multiple assignees)
+  const createPerAssigneeSubtasks = async (parentTaskId: string, assigneeIds: string[]) => {
+    for (const assigneeId of assigneeIds) {
+      const subTaskData: InsertTask = {
         title: template.name,
         projectId: template.projectId || null,
+        parentTaskId: parentTaskId,
         assignedTo: [assigneeId],
         createdBy: 'scheduler@system',
         status: 'todo',
         priority: 'normal',
         dueDate: dueDateStr,
         sortOrder: '0',
-        notes: notes,
+        notes: [],
         tags: []
       };
       
-      const createdTask = await storage.createTask(taskData);
-      tasksCreated++;
-      
-      if (subTemplates.length > 0) {
-        await createSubTasks(createdTask.id, [assigneeId]);
-      }
+      await storage.createTask(subTaskData);
+      subTasksCreated++;
     }
-  } else {
-    const notes: { content: string; author: string; timestamp: string }[] = [];
-    if (template.taskItems) {
-      notes.push({
-        content: template.taskItems,
-        author: 'scheduler@system',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    const taskData: InsertTask = {
-      title: template.name,
-      projectId: template.projectId || null,
-      assignedTo: assignees,
-      createdBy: 'scheduler@system',
-      status: 'todo',
-      priority: 'normal',
-      dueDate: dueDateStr,
-      sortOrder: '0',
-      notes: notes,
-      tags: []
-    };
-    
-    const createdTask = await storage.createTask(taskData);
-    tasksCreated++;
-    
-    if (subTemplates.length > 0) {
-      await createSubTasks(createdTask.id, assignees);
-    }
+  };
+  
+  // Always create ONE parent task with ALL assignees
+  const notes: { content: string; author: string; timestamp: string }[] = [];
+  if (template.taskItems) {
+    notes.push({
+      content: template.taskItems,
+      author: 'scheduler@system',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  const taskData: InsertTask = {
+    title: template.name,
+    projectId: template.projectId || null,
+    assignedTo: assignees,
+    createdBy: 'scheduler@system',
+    status: 'todo',
+    priority: 'normal',
+    dueDate: dueDateStr,
+    sortOrder: '0',
+    notes: notes,
+    tags: []
+  };
+  
+  const createdTask = await storage.createTask(taskData);
+  tasksCreated++;
+  
+  // If multiple assignees, create a subtask for each person
+  if (assignees.length > 1) {
+    await createPerAssigneeSubtasks(createdTask.id, assignees);
+  }
+  
+  // Create any defined sub-templates as subtasks
+  if (subTemplates.length > 0) {
+    await createSubTasksFromTemplates(createdTask.id, assignees);
   }
   
   return { tasksCreated, subTasksCreated };

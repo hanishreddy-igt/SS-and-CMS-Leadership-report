@@ -85,7 +85,6 @@ interface TemplateFormData {
   description: string;
   projectId: string;
   assignedTo: string[];
-  assignmentMode: 'single' | 'per-person';
   subTemplates: SubTemplateItem[];
   taskItems: string;
   recurrence: string;
@@ -151,7 +150,6 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
     description: '',
     projectId: '',
     assignedTo: [],
-    assignmentMode: 'single',
     subTemplates: [],
     taskItems: '',
     recurrence: '',
@@ -537,41 +535,9 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           </p>
         )}
         {formData.assignedTo.length > 1 && (
-          <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-2">
-            <Label className="text-sm font-medium">Assignment Mode</Label>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  id="mode-single"
-                  name="assignmentMode"
-                  value="single"
-                  checked={formData.assignmentMode === 'single'}
-                  onChange={() => setFormData({ ...formData, assignmentMode: 'single' })}
-                  className="h-4 w-4"
-                />
-                <label htmlFor="mode-single" className="text-sm cursor-pointer">
-                  <span className="font-medium">One task</span>
-                  <span className="text-muted-foreground"> - All {formData.assignedTo.length} people on the same task</span>
-                </label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  id="mode-per-person"
-                  name="assignmentMode"
-                  value="per-person"
-                  checked={formData.assignmentMode === 'per-person'}
-                  onChange={() => setFormData({ ...formData, assignmentMode: 'per-person' })}
-                  className="h-4 w-4"
-                />
-                <label htmlFor="mode-per-person" className="text-sm cursor-pointer">
-                  <span className="font-medium">Separate tasks</span>
-                  <span className="text-muted-foreground"> - Create {formData.assignedTo.length} individual tasks</span>
-                </label>
-              </div>
-            </div>
-          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            When triggered, one parent task will be created with a subtask for each assignee.
+          </p>
         )}
       </div>
 
@@ -1337,16 +1303,6 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
             </div>
           )}
           
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">
-              Assignment Mode
-            </h4>
-            <span className="text-sm">
-              {template.assignmentMode === 'per-person' 
-                ? 'Separate task for each person' 
-                : 'One task with all assignees'}
-            </span>
-          </div>
           
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-1">
@@ -1495,7 +1451,6 @@ export default function TaskTemplates() {
         description: data.description || null,
         projectId: data.projectId || null,
         assignedTo: data.assignedTo,
-        assignmentMode: data.assignmentMode || 'single',
         subTemplates: data.subTemplates || [],
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
@@ -1538,7 +1493,6 @@ export default function TaskTemplates() {
         description: data.description || null,
         projectId: data.projectId || null,
         assignedTo: data.assignedTo,
-        assignmentMode: data.assignmentMode || 'single',
         subTemplates: data.subTemplates || [],
         taskItems: data.taskItems || null,
         recurrence: data.recurrence || null,
@@ -1604,14 +1558,13 @@ export default function TaskTemplates() {
       }
       
       const assignees = template.assignedTo || [];
-      const mode = template.assignmentMode || 'single';
       const subTemplates = (template.subTemplates as SubTemplateItem[]) || [];
       const dueDate = calculateDueDate(template);
       let tasksCreated = 0;
       let subTasksCreated = 0;
       
-      // Helper to create sub-tasks for a parent
-      const createSubTasks = async (parentTaskId: string, parentAssignees: string[]) => {
+      // Helper to create sub-tasks from templates
+      const createSubTasksFromTemplates = async (parentTaskId: string, parentAssignees: string[]) => {
         if (subTemplates.length === 0) return 0;
         const subTaskPromises = subTemplates.map(sub => 
           apiRequest('POST', '/api/tasks', {
@@ -1621,6 +1574,7 @@ export default function TaskTemplates() {
             parentTaskId,
             status: 'todo',
             priority: sub.priority || 'medium',
+            dueDate: dueDate,
             createdBy: user?.email || 'system',
           })
         );
@@ -1628,42 +1582,45 @@ export default function TaskTemplates() {
         return subTemplates.length;
       };
       
-      if (mode === 'per-person' && assignees.length > 1) {
-        // Create separate task for each assignee
-        const createPromises = assignees.map(async (personId) => {
-          const res = await apiRequest('POST', '/api/tasks', {
+      // Helper to create per-assignee subtasks
+      const createPerAssigneeSubtasks = async (parentTaskId: string, assigneeIds: string[]) => {
+        const subTaskPromises = assigneeIds.map(personId => 
+          apiRequest('POST', '/api/tasks', {
             title: template.name,
             projectId: template.projectId || null,
             assignedTo: [personId],
-            notes,
+            parentTaskId,
             status: 'todo',
             priority: 'normal',
             dueDate: dueDate,
             createdBy: user?.email || 'system',
-          });
-          const parentTask = await res.json();
-          const subCount = await createSubTasks(parentTask.id, [personId]);
-          return { parent: 1, subs: subCount };
-        });
-        const results = await Promise.all(createPromises);
-        tasksCreated = results.length;
-        subTasksCreated = results.reduce((sum, r) => sum + r.subs, 0);
-      } else {
-        // Create single task with all assignees (default behavior)
-        const res = await apiRequest('POST', '/api/tasks', {
-          title: template.name,
-          projectId: template.projectId || null,
-          assignedTo: assignees,
-          notes,
-          status: 'todo',
-          priority: 'normal',
-          dueDate: dueDate,
-          createdBy: user?.email || 'system',
-        });
-        const parentTask = await res.json();
-        tasksCreated = 1;
-        subTasksCreated = await createSubTasks(parentTask.id, assignees);
+          })
+        );
+        await Promise.all(subTaskPromises);
+        return assigneeIds.length;
+      };
+      
+      // Always create ONE parent task with ALL assignees
+      const res = await apiRequest('POST', '/api/tasks', {
+        title: template.name,
+        projectId: template.projectId || null,
+        assignedTo: assignees,
+        notes,
+        status: 'todo',
+        priority: 'normal',
+        dueDate: dueDate,
+        createdBy: user?.email || 'system',
+      });
+      const parentTask = await res.json();
+      tasksCreated = 1;
+      
+      // If multiple assignees, create a subtask for each person
+      if (assignees.length > 1) {
+        subTasksCreated += await createPerAssigneeSubtasks(parentTask.id, assignees);
       }
+      
+      // Create any defined sub-templates as subtasks
+      subTasksCreated += await createSubTasksFromTemplates(parentTask.id, assignees);
       
       await apiRequest('PATCH', `/api/task-templates/${template.id}`, { 
         lastUsedAt: new Date().toISOString() 
@@ -1718,7 +1675,6 @@ export default function TaskTemplates() {
       description: editingTemplate.description || '',
       projectId: editingTemplate.projectId || '',
       assignedTo: editingTemplate.assignedTo || [],
-      assignmentMode: (editingTemplate.assignmentMode as 'single' | 'per-person') || 'single',
       subTemplates: (editingTemplate.subTemplates as SubTemplateItem[]) || [],
       taskItems: editingTemplate.taskItems || '',
       recurrence: editingTemplate.recurrence || '',
