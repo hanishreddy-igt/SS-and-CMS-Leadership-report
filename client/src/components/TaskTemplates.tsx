@@ -1083,7 +1083,20 @@ const calculateNextScheduledDelivery = (template: TaskTemplate): { startDateTime
   const dueStr = `${dayNames[displayDueInTz.getUTCDay()]}, ${monthNames[displayDueInTz.getUTCMonth()]} ${displayDueInTz.getUTCDate()} at ${endTime}`;
   const displayString = `Start: ${startStr} → Due: ${dueStr}`;
   
-  return { startDateTime: startDateTimeUTC, dueDateTime: dueDateUTC, dueDateTimeISO: dueDateUTC.toISOString(), displayString };
+  // Format due date with timezone in the expected format: YYYY-MM-DDTHH:MM±HH:MM
+  const year = displayDueInTz.getUTCFullYear();
+  const month = String(displayDueInTz.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(displayDueInTz.getUTCDate()).padStart(2, '0');
+  const [dueHours, dueMinutes] = (endTime || startTime).split(':').map(Number);
+  const hourStr = String(dueHours).padStart(2, '0');
+  const minStr = String(dueMinutes).padStart(2, '0');
+  let tzStr = template.timezone || '+0';
+  if (!tzStr.startsWith('+') && !tzStr.startsWith('-')) {
+    tzStr = '+' + tzStr;
+  }
+  const dueDateTimeISO = `${year}-${month}-${day}T${hourStr}:${minStr}${tzStr}`;
+  
+  return { startDateTime: startDateTimeUTC, dueDateTime: dueDateUTC, dueDateTimeISO, displayString };
 };
 
 interface TemplateCardProps {
