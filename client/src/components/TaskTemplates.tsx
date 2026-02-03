@@ -1347,7 +1347,7 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
                     <span className="text-muted-foreground">Days: </span>
                     <span>
                       {((template.daysOfWeek || []).length > 0 
-                        ? (template.daysOfWeek || []).map((d: string) => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')
+                        ? (template.daysOfWeek || []).filter(Boolean).map((d: string) => d ? d.charAt(0).toUpperCase() + d.slice(1, 3) : '').join(', ')
                         : 'Mon, Tue, Wed, Thu, Fri')}
                     </span>
                   </div>
@@ -1673,22 +1673,27 @@ export default function TaskTemplates() {
       
       // Get the target day from scheduled delivery date (in template's timezone)
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      let targetDay = dayNames[new Date().getDay()]; // Default to today
+      let targetDay = dayNames[new Date().getDay()] || 'monday'; // Default to today, fallback to monday
       
       if (dueDate) {
-        // Parse the due date and extract day in template's timezone
-        const dueDateObj = new Date(dueDate);
-        // Parse timezone from template
-        const tz = template.timezone || '+0';
-        const tzMatch = tz.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
-        const tzSign = tzMatch?.[1] === '-' ? -1 : 1;
-        const tzHours = parseInt(tzMatch?.[2] || '0', 10);
-        const tzMinutes = parseInt(tzMatch?.[3] || '0', 10);
-        const tzOffsetMs = tzSign * (tzHours * 60 + tzMinutes) * 60 * 1000;
-        
-        // Convert to template's timezone
-        const dueDateInTz = new Date(dueDateObj.getTime() + tzOffsetMs);
-        targetDay = dayNames[dueDateInTz.getUTCDay()];
+        try {
+          // Parse the due date and extract day in template's timezone
+          const dueDateObj = new Date(dueDate);
+          // Parse timezone from template
+          const tz = template.timezone || '+0';
+          const tzMatch = tz.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
+          const tzSign = tzMatch?.[1] === '-' ? -1 : 1;
+          const tzHours = parseInt(tzMatch?.[2] || '0', 10);
+          const tzMinutes = parseInt(tzMatch?.[3] || '0', 10);
+          const tzOffsetMs = tzSign * (tzHours * 60 + tzMinutes) * 60 * 1000;
+          
+          // Convert to template's timezone
+          const dueDateInTz = new Date(dueDateObj.getTime() + tzOffsetMs);
+          const dayIndex = dueDateInTz.getUTCDay();
+          targetDay = dayNames[dayIndex] || 'monday';
+        } catch (e) {
+          // Keep default targetDay if parsing fails
+        }
       }
       
       // For daily recurrence, filter assignees based on their per-assignee day selections
@@ -1704,7 +1709,8 @@ export default function TaskTemplates() {
       
       // If no assignees are active for the target day in daily recurrence, inform user
       if (isDaily && assignees.length === 0 && allAssignees.length > 0) {
-        throw new Error(`No assignees are scheduled for ${targetDay.charAt(0).toUpperCase() + targetDay.slice(1)}. Check per-assignee day settings.`);
+        const dayDisplay = targetDay ? targetDay.charAt(0).toUpperCase() + targetDay.slice(1) : 'today';
+        throw new Error(`No assignees are scheduled for ${dayDisplay}. Check per-assignee day settings.`);
       }
       
       // Use a fallback due date if calculateDueDate returns null
