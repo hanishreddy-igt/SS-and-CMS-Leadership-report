@@ -1,6 +1,14 @@
 import type { TaskTemplate, Task, InsertTask, SubTemplateItem } from '@shared/schema';
 import type { IStorage } from './storage';
 
+const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+// Convert Date to day of week string in a specific timezone offset
+export function getDayOfWeekString(date: Date, tzOffsetMinutes: number = 0): string {
+  const dateInTz = new Date(date.getTime() + tzOffsetMinutes * 60 * 1000);
+  return dayNames[dateInTz.getUTCDay()];
+}
+
 const parseTimezoneOffset = (tz: string | null | undefined): number => {
   if (!tz) return 0;
   const match = tz.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
@@ -380,9 +388,34 @@ export async function createTasksFromTemplate(
   storage: IStorage,
   dueDate: Date
 ): Promise<{ tasksCreated: number; subTasksCreated: number }> {
-  const assignees = template.assignedTo || [];
+  const allAssignees = template.assignedTo || [];
   const subTemplates = (template.subTemplates as SubTemplateItem[]) || [];
   const dueDateStr = formatDueDateWithTimezone(dueDate, template);
+  const assigneeDays = (template as any).assigneeDays as Record<string, string[]> || {};
+  
+  // Use template's timezone to determine day of week
+  const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
+  const dayOfWeek = getDayOfWeekString(dueDate, tzOffsetMinutes);
+  const templateDays = template.daysOfWeek || [];
+  const isDaily = template.recurrence === 'daily';
+  
+  // Filter assignees: only include those whose day selection includes today
+  const assignees = isDaily && allAssignees.length > 0
+    ? allAssignees.filter(personId => {
+        // If person has specific days, check if today is in their selection
+        const personDays = assigneeDays[personId];
+        if (personDays && personDays.length > 0) {
+          return personDays.includes(dayOfWeek);
+        }
+        // If no specific days, use template's daysOfWeek (already validated by caller)
+        return templateDays.length === 0 || templateDays.includes(dayOfWeek);
+      })
+    : allAssignees;
+  
+  // If no assignees are active for today, don't create any tasks
+  if (isDaily && assignees.length === 0) {
+    return { tasksCreated: 0, subTasksCreated: 0 };
+  }
   
   let tasksCreated = 0;
   let subTasksCreated = 0;

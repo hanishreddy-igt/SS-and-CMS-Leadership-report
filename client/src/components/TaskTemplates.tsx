@@ -1649,9 +1649,50 @@ export default function TaskTemplates() {
         });
       }
       
-      const assignees = template.assignedTo || [];
+      const allAssignees = template.assignedTo || [];
       const subTemplates = (template.subTemplates as SubTemplateItem[]) || [];
+      const assigneeDays = (template as any).assigneeDays as Record<string, string[]> || {};
+      const isDaily = template.recurrence === 'daily';
+      const templateDays: string[] = (template as any).daysOfWeek || [];
+      
+      // Calculate due date first to determine target day
       const dueDate = calculateDueDate(template);
+      
+      // Get the target day from scheduled delivery date (in template's timezone)
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      let targetDay = dayNames[new Date().getDay()]; // Default to today
+      
+      if (dueDate) {
+        // Parse the due date and extract day in template's timezone
+        const dueDateObj = new Date(dueDate);
+        // Parse timezone from template
+        const tz = template.timezone || '+0';
+        const tzMatch = tz.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
+        const tzSign = tzMatch?.[1] === '-' ? -1 : 1;
+        const tzHours = parseInt(tzMatch?.[2] || '0', 10);
+        const tzMinutes = parseInt(tzMatch?.[3] || '0', 10);
+        const tzOffsetMs = tzSign * (tzHours * 60 + tzMinutes) * 60 * 1000;
+        
+        // Convert to template's timezone
+        const dueDateInTz = new Date(dueDateObj.getTime() + tzOffsetMs);
+        targetDay = dayNames[dueDateInTz.getUTCDay()];
+      }
+      
+      // For daily recurrence, filter assignees based on their per-assignee day selections
+      const assignees = isDaily && allAssignees.length > 0
+        ? allAssignees.filter(personId => {
+            const personDays = assigneeDays[personId];
+            if (personDays && personDays.length > 0) {
+              return personDays.includes(targetDay);
+            }
+            return templateDays.length === 0 || templateDays.includes(targetDay);
+          })
+        : allAssignees;
+      
+      // If no assignees are active for the target day in daily recurrence, inform user
+      if (isDaily && assignees.length === 0 && allAssignees.length > 0) {
+        throw new Error(`No assignees are scheduled for ${targetDay.charAt(0).toUpperCase() + targetDay.slice(1)}. Check per-assignee day settings.`);
+      }
       let tasksCreated = 0;
       let subTasksCreated = 0;
       
