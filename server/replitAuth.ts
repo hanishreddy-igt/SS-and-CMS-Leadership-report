@@ -150,22 +150,27 @@ export async function setupAuth(app: Express) {
   app.get("/api/callback", (req, res, next) => {
     ensureStrategy(req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
       failureRedirect: "/api/login?error=unauthorized",
     })((req as any), res, (err?: any) => {
-      if (err) return next(err);
+      if (err) {
+        console.error("[auth] Callback error:", err);
+        return next(err);
+      }
       
-      // Regenerate session after successful login to prevent session fixation
-      const oldSession = req.session;
-      req.session.regenerate((regenerateErr) => {
-        if (regenerateErr) return next(regenerateErr);
-        
-        // Restore user data and passport session
-        Object.assign(req.session, oldSession);
-        req.session.save((saveErr) => {
-          if (saveErr) return next(saveErr);
-          res.redirect("/");
-        });
+      // Check if user was authenticated
+      if (!req.user) {
+        console.error("[auth] No user after authentication");
+        return res.redirect("/api/login?error=unauthorized");
+      }
+      
+      // Save session and redirect
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("[auth] Session save error:", saveErr);
+          return next(saveErr);
+        }
+        console.log("[auth] Login successful for:", (req.user as any)?.email);
+        res.redirect("/");
       });
     });
   });
