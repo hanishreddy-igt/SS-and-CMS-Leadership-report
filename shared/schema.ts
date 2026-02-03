@@ -189,6 +189,7 @@ export const taskTemplates = pgTable("task_templates", {
   startDate: integer("start_date"), // Start day of month for monthly/quarterly (1-28, 0 = last day)
   endDate: integer("end_date"), // Due day of month for monthly/quarterly (1-28, 0 = last day)
   daysOfWeek: text("days_of_week").array().default(sql`'{}'`), // For daily: selected days (e.g., ["monday", "tuesday", ...])
+  assigneeDays: jsonb("assignee_days").default(sql`'{}'`), // Per-assignee day selections: { "email": ["monday", "tuesday"], ... }
   timezone: text("timezone"), // GMT offset (e.g., "+5:30", "-8", "+0")
   createdBy: text("created_by").notNull(), // Who created the template
   isActive: text("is_active").default('true'), // Whether template is active

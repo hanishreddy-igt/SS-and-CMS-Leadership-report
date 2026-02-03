@@ -86,6 +86,7 @@ interface TemplateFormData {
   description: string;
   projectId: string;
   assignedTo: string[];
+  assigneeDays: Record<string, string[]>; // Per-assignee day selections for daily recurrence
   subTemplates: SubTemplateItem[];
   taskItems: string;
   recurrence: string;
@@ -150,6 +151,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
     description: '',
     projectId: '',
     assignedTo: [],
+    assigneeDays: {},
     subTemplates: [],
     taskItems: '',
     recurrence: '',
@@ -539,6 +541,88 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           </p>
         )}
       </div>
+
+      {/* Per-assignee day selection for daily recurrence */}
+      {isDaily && formData.assignedTo.length > 0 && (
+        <div className="space-y-2">
+          <Label>Per-Assignee Days</Label>
+          <p className="text-xs text-muted-foreground">
+            Each assignee can have their own days. Only on their selected days will they get a subtask.
+          </p>
+          <div className="border rounded-lg p-3 space-y-3">
+            {[...people]
+              .filter(p => formData.assignedTo.includes(p.id))
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(person => {
+                const personDays = formData.assigneeDays[person.id] || formData.daysOfWeek;
+                const allSelected = formData.daysOfWeek.every(d => personDays.includes(d));
+                
+                return (
+                  <div key={person.id} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{person.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => {
+                          const newAssigneeDays = { ...formData.assigneeDays };
+                          if (allSelected) {
+                            delete newAssigneeDays[person.id];
+                          } else {
+                            newAssigneeDays[person.id] = [...formData.daysOfWeek];
+                          }
+                          setFormData({ ...formData, assigneeDays: newAssigneeDays });
+                        }}
+                        data-testid={`toggle-all-days-${person.id}`}
+                      >
+                        {allSelected ? 'Using all days' : 'Select all'}
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {dayOptions
+                        .filter(day => formData.daysOfWeek.includes(day.value))
+                        .map(day => {
+                          const isSelected = personDays.includes(day.value);
+                          return (
+                            <Button
+                              key={day.value}
+                              type="button"
+                              variant={isSelected ? "default" : "outline"}
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                const currentDays = formData.assigneeDays[person.id] || [...formData.daysOfWeek];
+                                let newDays: string[];
+                                if (isSelected) {
+                                  newDays = currentDays.filter(d => d !== day.value);
+                                } else {
+                                  newDays = [...currentDays, day.value];
+                                }
+                                const newAssigneeDays = { ...formData.assigneeDays };
+                                if (newDays.length === 0 || 
+                                    (newDays.length === formData.daysOfWeek.length && 
+                                     formData.daysOfWeek.every(d => newDays.includes(d)))) {
+                                  delete newAssigneeDays[person.id];
+                                } else {
+                                  newAssigneeDays[person.id] = newDays;
+                                }
+                                setFormData({ ...formData, assigneeDays: newAssigneeDays });
+                              }}
+                              data-testid={`day-${person.id}-${day.value}`}
+                            >
+                              {day.label.slice(0, 3)}
+                            </Button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* Sub-tasks section */}
       <div className="space-y-2">
@@ -1472,6 +1556,7 @@ export default function TaskTemplates() {
         startDate: isMonthlyOrQuarterly ? data.startDate : null,
         endDate: isMonthlyOrQuarterly ? data.endDate : null,
         daysOfWeek: isDaily ? data.daysOfWeek : [],
+        assigneeDays: isDaily ? data.assigneeDays : {},
         timezone: data.recurrence ? data.timezone : null,
         isActive: data.enabled ? 'true' : 'false',
         autoTriggerEnabled: data.enabled ? 'true' : 'false',
@@ -1514,6 +1599,7 @@ export default function TaskTemplates() {
         startDate: isMonthlyOrQuarterly ? data.startDate : null,
         endDate: isMonthlyOrQuarterly ? data.endDate : null,
         daysOfWeek: isDaily ? data.daysOfWeek : [],
+        assigneeDays: isDaily ? data.assigneeDays : {},
         timezone: data.recurrence ? data.timezone : null,
         isActive: data.enabled ? 'true' : 'false',
         autoTriggerEnabled: data.enabled ? 'true' : 'false',
@@ -1696,6 +1782,7 @@ export default function TaskTemplates() {
       startDate: (editingTemplate as any).startDate ?? legacyDate,
       endDate: (editingTemplate as any).endDate ?? 5,
       daysOfWeek: (editingTemplate as any).daysOfWeek || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      assigneeDays: (editingTemplate as any).assigneeDays || {},
       timezone: editingTemplate.timezone || '+5:30',
       // Enabled means both active AND auto-trigger enabled
       enabled: editingTemplate.isActive === 'true' && (editingTemplate as any).autoTriggerEnabled === 'true',
