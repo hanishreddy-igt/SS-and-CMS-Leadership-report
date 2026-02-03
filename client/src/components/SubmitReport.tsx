@@ -1174,7 +1174,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="modal-progress">Progress This Week <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="modal-progress">Progress in Previous Week <span className="text-red-500">*</span></Label>
                     <Textarea
                       id="modal-progress"
                       data-testid="modal-textarea-progress"
@@ -1198,7 +1198,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="modal-next-week">Plans for Next Week <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="modal-next-week">Plans for Current Week <span className="text-red-500">*</span></Label>
                     <Textarea
                       id="modal-next-week"
                       data-testid="modal-textarea-next-week"

@@ -4761,7 +4761,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label>Progress This Week</Label>
+                            <Label>Progress in Previous Week</Label>
                             <Textarea
                               data-testid={`textarea-edit-progress-${report.id}`}
                               value={editData.progress}
@@ -4783,7 +4783,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label>Plans for Next Week</Label>
+                            <Label>Plans for Current Week</Label>
                             <Textarea
                               data-testid={`textarea-edit-next-week-${report.id}`}
                               value={editData.nextWeek}
@@ -4821,7 +4821,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
                               <div className="h-2 w-2 rounded-full bg-success" />
-                              <h4 className="font-medium text-sm">Progress This Week</h4>
+                              <h4 className="font-medium text-sm">Progress in Previous Week</h4>
                             </div>
                             <div className="pl-4 border-l-2 border-success/30">
                               <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
@@ -4849,7 +4849,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
                               <div className="h-2 w-2 rounded-full bg-primary" />
-                              <h4 className="font-medium text-sm">Plans for Next Week</h4>
+                              <h4 className="font-medium text-sm">Plans for Current Week</h4>
                             </div>
                             <div className="pl-4 border-l-2 border-primary/30">
                               <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
@@ -5025,7 +5025,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-2 rounded-full bg-success" />
-                      <h3 className="font-semibold text-lg">Progress This Week</h3>
+                      <h3 className="font-semibold text-lg">Progress in Previous Week</h3>
                     </div>
                     <div className="pl-4 border-l-2 border-success/30">
                       <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
@@ -5053,7 +5053,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-2 rounded-full bg-primary" />
-                      <h3 className="font-semibold text-lg">Plans for Next Week</h3>
+                      <h3 className="font-semibold text-lg">Plans for Current Week</h3>
                     </div>
                     <div className="pl-4 border-l-2 border-primary/30">
                       <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
