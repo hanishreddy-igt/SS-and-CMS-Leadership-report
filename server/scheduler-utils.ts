@@ -492,8 +492,8 @@ export async function createTasksFromTemplate(
   const createdTask = await storage.createTask(taskData);
   tasksCreated++;
   
-  // If multiple assignees, create a subtask for each person
-  if (assignees.length > 1) {
+  // If template has multiple assignees, create per-assignee subtasks (even if only 1 is active today)
+  if (allAssignees.length > 1 && assignees.length > 0) {
     await createPerAssigneeSubtasks(createdTask.id, assignees);
   }
   

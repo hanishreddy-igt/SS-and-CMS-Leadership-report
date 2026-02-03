@@ -1693,6 +1693,10 @@ export default function TaskTemplates() {
       if (isDaily && assignees.length === 0 && allAssignees.length > 0) {
         throw new Error(`No assignees are scheduled for ${targetDay.charAt(0).toUpperCase() + targetDay.slice(1)}. Check per-assignee day settings.`);
       }
+      
+      // Use a fallback due date if calculateDueDate returns null
+      const effectiveDueDate = dueDate || new Date().toISOString();
+      
       let tasksCreated = 0;
       let subTasksCreated = 0;
       
@@ -1707,7 +1711,7 @@ export default function TaskTemplates() {
             parentTaskId,
             status: 'todo',
             priority: sub.priority || 'medium',
-            dueDate: dueDate,
+            dueDate: effectiveDueDate,
             createdBy: user?.email || 'system',
           })
         );
@@ -1725,7 +1729,7 @@ export default function TaskTemplates() {
             parentTaskId,
             status: 'todo',
             priority: 'normal',
-            dueDate: dueDate,
+            dueDate: effectiveDueDate,
             createdBy: user?.email || 'system',
           })
         );
@@ -1733,7 +1737,7 @@ export default function TaskTemplates() {
         return assigneeIds.length;
       };
       
-      // Always create ONE parent task with ALL assignees
+      // Always create ONE parent task with active assignees for the day
       const res = await apiRequest('POST', '/api/tasks', {
         title: template.name,
         projectId: template.projectId || null,
@@ -1741,14 +1745,14 @@ export default function TaskTemplates() {
         notes,
         status: 'todo',
         priority: 'normal',
-        dueDate: dueDate,
+        dueDate: effectiveDueDate,
         createdBy: user?.email || 'system',
       });
       const parentTask = await res.json();
       tasksCreated = 1;
       
-      // If multiple assignees, create a subtask for each person
-      if (assignees.length > 1) {
+      // If template has multiple assignees, create per-assignee subtasks (even if only 1 is active today)
+      if (allAssignees.length > 1 && assignees.length > 0) {
         subTasksCreated += await createPerAssigneeSubtasks(parentTask.id, assignees);
       }
       
