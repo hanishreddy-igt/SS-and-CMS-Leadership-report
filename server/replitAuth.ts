@@ -185,10 +185,10 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return;
   }
 
-  // Verify user still exists in database
-  if (user.userId) {
+  // Verify user still exists in database (lookup by email for reliability)
+  if (user.email) {
     try {
-      const dbUser = await storage.getUser(user.userId);
+      const dbUser = await storage.getUserByEmail(user.email);
       if (!dbUser || !isAllowedDomain(dbUser.email)) {
         req.logout(() => {
           res.status(403).json({ message: "User account not found or domain not authorized." });
