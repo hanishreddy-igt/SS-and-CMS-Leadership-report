@@ -60,7 +60,7 @@ export default function Landing() {
               
               <div className="flex items-center justify-center gap-2 mt-6 text-sm text-muted-foreground">
                 <Lock className="h-4 w-4 text-muted-foreground" />
-                <span>Restricted to @ignitetech.com email addresses</span>
+                <span>Restricted to @ignitetech.com and @khoros.com email addresses</span>
               </div>
             </div>
 
@@ -156,11 +156,11 @@ export default function Landing() {
                 <div className="space-y-4 text-center">
                   <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-white/5 border border-white/10">
                     <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-medium">@ignitetech.com</span>
+                    <span className="font-medium">@ignitetech.com / @khoros.com</span>
                   </div>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
                     Sign in with your corporate Google account to access the application.
-                    Only authorized IgniteTech employees can view project data.
+                    Only authorized IgniteTech and Khoros employees can view project data.
                   </p>
                 </div>
               </CardContent>

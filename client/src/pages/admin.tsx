@@ -283,8 +283,11 @@ export default function AdminPanel() {
   });
 
   // Add User dialog state
+  const ALLOWED_DOMAINS = ['ignitetech.com', 'khoros.com'] as const;
+  type EmailDomain = typeof ALLOWED_DOMAINS[number];
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserDomain, setNewUserDomain] = useState<EmailDomain>("ignitetech.com");
   const [newUserFirstName, setNewUserFirstName] = useState("");
   const [newUserLastName, setNewUserLastName] = useState("");
   const [newUserRole, setNewUserRole] = useState<UserRole>("member");
@@ -298,6 +301,7 @@ export default function AdminPanel() {
       toast({ title: "User Created", description: "User has been added successfully." });
       setShowAddUserDialog(false);
       setNewUserEmail("");
+      setNewUserDomain("ignitetech.com");
       setNewUserFirstName("");
       setNewUserLastName("");
       setNewUserRole("member");
@@ -313,7 +317,7 @@ export default function AdminPanel() {
       toast({ title: "Error", description: "Username is required.", variant: "destructive" });
       return;
     }
-    const fullEmail = `${newUserEmail.trim()}@ignitetech.com`;
+    const fullEmail = `${newUserEmail.trim()}@${newUserDomain}`;
     createUserMutation.mutate({
       email: fullEmail,
       firstName: newUserFirstName.trim() || undefined,
@@ -468,7 +472,7 @@ export default function AdminPanel() {
                   <DialogHeader>
                     <DialogTitle>Add New User</DialogTitle>
                     <DialogDescription>
-                      Pre-configure a user before they log in. Email must be from @ignitetech.com domain.
+                      Pre-configure a user before they log in. Email must be from @ignitetech.com or @khoros.com domain.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -481,12 +485,19 @@ export default function AdminPanel() {
                           placeholder="username"
                           value={newUserEmail}
                           onChange={(e) => setNewUserEmail(e.target.value.replace(/@.*$/, ''))}
-                          className="rounded-r-none"
+                          className="rounded-r-none flex-1"
                           data-testid="input-new-user-email"
                         />
-                        <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
-                          @ignitetech.com
-                        </span>
+                        <Select value={newUserDomain} onValueChange={(v) => setNewUserDomain(v as EmailDomain)}>
+                          <SelectTrigger className="w-[160px] rounded-l-none border-l-0" data-testid="select-new-user-domain">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ALLOWED_DOMAINS.map(domain => (
+                              <SelectItem key={domain} value={domain}>@{domain}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">

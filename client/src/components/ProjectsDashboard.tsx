@@ -120,11 +120,17 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectFormErrors, setProjectFormErrors] = useState<Record<string, string>>({});
 
+  // Allowed email domains
+  const ALLOWED_DOMAINS = ['ignitetech.com', 'khoros.com'] as const;
+  type EmailDomain = typeof ALLOWED_DOMAINS[number];
+
   // Add Team Member Modal State
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [newMember, setNewMember] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberDomain, setNewMemberDomain] = useState<EmailDomain>('ignitetech.com');
   const [editMemberEmailValue, setEditMemberEmailValue] = useState('');
+  const [editMemberDomain, setEditMemberDomain] = useState<EmailDomain>('ignitetech.com');
   const [showEditMemberDialog, setShowEditMemberDialog] = useState(false);
   const [memberNameError, setMemberNameError] = useState<string | null>(null);
   const [memberNameWarning, setMemberNameWarning] = useState<string | null>(null);
@@ -133,6 +139,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [showAddLeadDialog, setShowAddLeadDialog] = useState(false);
   const [newLead, setNewLead] = useState('');
   const [newLeadEmail, setNewLeadEmail] = useState('');
+  const [newLeadDomain, setNewLeadDomain] = useState<EmailDomain>('ignitetech.com');
+  const [editLeadDomain, setEditLeadDomain] = useState<EmailDomain>('ignitetech.com');
   const [leadNameError, setLeadNameError] = useState<string | null>(null);
   const [leadNameWarning, setLeadNameWarning] = useState<string | null>(null);
 
@@ -1429,24 +1437,38 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const startEditMember = (member: TeamMember) => {
     setEditingMemberId(member.id);
     setEditMemberValue(member.name);
-    // Strip the domain when loading for editing
-    const emailUsername = member.email ? member.email.replace(/@ignitetech\.com$/, '') : '';
-    setEditMemberEmailValue(emailUsername);
+    // Detect domain and strip it when loading for editing
+    if (member.email) {
+      const domain = ALLOWED_DOMAINS.find(d => member.email?.endsWith(`@${d}`));
+      setEditMemberDomain(domain || 'ignitetech.com');
+      const emailUsername = member.email.replace(/@(ignitetech\.com|khoros\.com)$/, '');
+      setEditMemberEmailValue(emailUsername);
+    } else {
+      setEditMemberEmailValue('');
+      setEditMemberDomain('ignitetech.com');
+    }
     setShowEditMemberDialog(true);
   };
 
   const startEditLead = (lead: ProjectLead) => {
     setEditingLeadId(lead.id);
     setEditLeadValue(lead.name);
-    // Strip the domain when loading for editing
-    const emailUsername = lead.email ? lead.email.replace(/@ignitetech\.com$/, '') : '';
-    setEditLeadEmailValue(emailUsername);
+    // Detect domain and strip it when loading for editing
+    if (lead.email) {
+      const domain = ALLOWED_DOMAINS.find(d => lead.email?.endsWith(`@${d}`));
+      setEditLeadDomain(domain || 'ignitetech.com');
+      const emailUsername = lead.email.replace(/@(ignitetech\.com|khoros\.com)$/, '');
+      setEditLeadEmailValue(emailUsername);
+    } else {
+      setEditLeadEmailValue('');
+      setEditLeadDomain('ignitetech.com');
+    }
     setShowEditLeadDialog(true);
   };
 
   const saveEditMember = () => {
     if (editingMemberId && editMemberValue.trim()) {
-      const email = editMemberEmailValue.trim() ? `${editMemberEmailValue.trim()}@ignitetech.com` : undefined;
+      const email = editMemberEmailValue.trim() ? `${editMemberEmailValue.trim()}@${editMemberDomain}` : undefined;
       updateMemberMutation.mutate({ 
         id: editingMemberId, 
         name: editMemberValue.trim(), 
@@ -1464,7 +1486,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
   const saveEditLead = () => {
     if (editingLeadId && editLeadValue.trim()) {
-      const email = editLeadEmailValue.trim() ? `${editLeadEmailValue.trim()}@ignitetech.com` : undefined;
+      const email = editLeadEmailValue.trim() ? `${editLeadEmailValue.trim()}@${editLeadDomain}` : undefined;
       updateLeadMutation.mutate({ 
         id: editingLeadId, 
         name: editLeadValue.trim(),
@@ -1562,14 +1584,14 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
   const handleAddMember = () => {
     if (newMember.trim() && !memberNameError) {
-      const email = newMemberEmail.trim() ? `${newMemberEmail.trim()}@ignitetech.com` : undefined;
+      const email = newMemberEmail.trim() ? `${newMemberEmail.trim()}@${newMemberDomain}` : undefined;
       createMemberMutation.mutate({ name: newMember.trim(), email });
     }
   };
 
   const handleAddLead = () => {
     if (newLead.trim() && !leadNameError) {
-      const email = newLeadEmail.trim() ? `${newLeadEmail.trim()}@ignitetech.com` : undefined;
+      const email = newLeadEmail.trim() ? `${newLeadEmail.trim()}@${newLeadDomain}` : undefined;
       createLeadMutation.mutate({ name: newLead.trim(), email });
     }
   };
@@ -4536,11 +4558,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                         value={newMemberEmail}
                         onChange={(e) => setNewMemberEmail(e.target.value.replace(/@.*$/, ''))}
                         placeholder="username"
-                        className="rounded-r-none"
+                        className="rounded-r-none flex-1"
                       />
-                      <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
-                        @ignitetech.com
-                      </span>
+                      <Select value={newMemberDomain} onValueChange={(v) => setNewMemberDomain(v as EmailDomain)}>
+                        <SelectTrigger className="w-[160px] rounded-l-none border-l-0" data-testid="select-member-domain">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ALLOWED_DOMAINS.map(domain => (
+                            <SelectItem key={domain} value={domain}>@{domain}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2">
@@ -4550,6 +4579,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                         setShowAddMemberDialog(false);
                         setNewMember('');
                         setNewMemberEmail('');
+                        setNewMemberDomain('ignitetech.com');
                         setMemberNameError(null);
                         setMemberNameWarning(null);
                       }}
@@ -4803,11 +4833,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                         value={newLeadEmail}
                         onChange={(e) => setNewLeadEmail(e.target.value.replace(/@.*$/, ''))}
                         placeholder="username (optional)"
-                        className="rounded-r-none"
+                        className="rounded-r-none flex-1"
                       />
-                      <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
-                        @ignitetech.com
-                      </span>
+                      <Select value={newLeadDomain} onValueChange={(v) => setNewLeadDomain(v as EmailDomain)}>
+                        <SelectTrigger className="w-[160px] rounded-l-none border-l-0" data-testid="select-lead-domain">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ALLOWED_DOMAINS.map(domain => (
+                            <SelectItem key={domain} value={domain}>@{domain}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2">
@@ -4817,6 +4854,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                         setShowAddLeadDialog(false);
                         setNewLead('');
                         setNewLeadEmail('');
+                        setNewLeadDomain('ignitetech.com');
                         setLeadNameError(null);
                         setLeadNameWarning(null);
                       }}
@@ -5143,11 +5181,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   value={editLeadEmailValue}
                   onChange={(e) => setEditLeadEmailValue(e.target.value.replace(/@.*$/, ''))}
                   placeholder="username (optional)"
-                  className="rounded-r-none"
+                  className="rounded-r-none flex-1"
                 />
-                <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
-                  @ignitetech.com
-                </span>
+                <Select value={editLeadDomain} onValueChange={(v) => setEditLeadDomain(v as EmailDomain)}>
+                  <SelectTrigger className="w-[160px] rounded-l-none border-l-0" data-testid="select-edit-lead-domain">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALLOWED_DOMAINS.map(domain => (
+                      <SelectItem key={domain} value={domain}>@{domain}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -5202,11 +5247,18 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   value={editMemberEmailValue}
                   onChange={(e) => setEditMemberEmailValue(e.target.value.replace(/@.*$/, ''))}
                   placeholder="username"
-                  className="rounded-r-none"
+                  className="rounded-r-none flex-1"
                 />
-                <span className="inline-flex items-center px-3 bg-muted border border-l-0 border-input rounded-r-md text-sm text-muted-foreground">
-                  @ignitetech.com
-                </span>
+                <Select value={editMemberDomain} onValueChange={(v) => setEditMemberDomain(v as EmailDomain)}>
+                  <SelectTrigger className="w-[160px] rounded-l-none border-l-0" data-testid="select-edit-member-domain">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALLOWED_DOMAINS.map(domain => (
+                      <SelectItem key={domain} value={domain}>@{domain}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex justify-end gap-2">
