@@ -1728,16 +1728,61 @@ export default function TaskTemplates() {
     },
   });
 
-  // Helper to calculate due date from template delivery schedule using consolidated function
-  // Returns full ISO datetime string to preserve time
-  const calculateDueDate = (template: TaskTemplate): string | null => {
-    // Use pre-calculated nextDueAt if available
+  // Helper to calculate due date from template delivery schedule
+  // For manual triggers, we calculate TODAY's due date (not the stored nextDueAt)
+  const calculateDueDate = (template: TaskTemplate, forceToday: boolean = false): string | null => {
+    // For manual triggers, always calculate fresh for TODAY
+    if (forceToday) {
+      return calculateTodaysDueDate(template);
+    }
+    
+    // Use pre-calculated nextDueAt if available (for display purposes)
     if ((template as any).nextDueAt) {
       return (template as any).nextDueAt;
     }
     // Fall back to legacy calculation
     const result = calculateNextScheduledDelivery(template);
     return result ? result.dueDateTimeISO : null;
+  };
+  
+  // Calculate TODAY's due date based on template settings
+  const calculateTodaysDueDate = (template: TaskTemplate): string | null => {
+    const endTime = template.endTime || template.deliveryTime || '23:59';
+    const timezone = template.timezone || '+0';
+    
+    // Format timezone for ISO string
+    let tzStr = timezone.replace(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/, (_, sign, h, m) => {
+      const hrs = h.padStart(2, '0');
+      const mins = (m || '0').padStart(2, '0');
+      return `${sign || '+'}${hrs}:${mins}`;
+    });
+    if (!tzStr.startsWith('+') && !tzStr.startsWith('-')) {
+      tzStr = '+' + tzStr;
+    }
+    
+    // Get current date in template's timezone
+    const now = new Date();
+    const tzMatch = timezone.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
+    const tzSign = tzMatch?.[1] === '-' ? -1 : 1;
+    const tzHours = parseInt(tzMatch?.[2] || '0', 10);
+    const tzMinutes = parseInt(tzMatch?.[3] || '0', 10);
+    const tzOffsetMinutes = tzSign * (tzHours * 60 + tzMinutes);
+    
+    // Convert now to template's timezone
+    const nowInTzMs = now.getTime() + tzOffsetMinutes * 60 * 1000;
+    const nowInTz = new Date(nowInTzMs);
+    
+    const year = nowInTz.getUTCFullYear();
+    const month = String(nowInTz.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(nowInTz.getUTCDate()).padStart(2, '0');
+    
+    // Parse end time
+    const [hours, minutes] = endTime.split(':').map(Number);
+    const hourStr = String(hours).padStart(2, '0');
+    const minStr = String(minutes).padStart(2, '0');
+    
+    // Return ISO string with timezone: YYYY-MM-DDTHH:MM±HH:MM
+    return `${year}-${month}-${day}T${hourStr}:${minStr}${tzStr}`;
   };
 
   const triggerMutation = useMutation({
@@ -1757,8 +1802,8 @@ export default function TaskTemplates() {
       const isDaily = template.recurrence === 'daily';
       const templateDays: string[] = (template as any).daysOfWeek || [];
       
-      // Calculate due date first to determine target day
-      const dueDate = calculateDueDate(template);
+      // Calculate due date for TODAY (manual trigger = create task for today, not stored nextDueAt)
+      const dueDate = calculateDueDate(template, true);
       
       // Get the target day from scheduled delivery date (in template's timezone)
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
