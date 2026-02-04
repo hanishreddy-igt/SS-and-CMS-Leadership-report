@@ -2583,7 +2583,36 @@ ${formattedActivities}`;
       // Recalculate next occurrence if schedule changed
       if (needsRecalculation) {
         console.log('[Template PATCH] Recalculating due to schedule change');
-        const nextOccurrence = calculateNextOccurrence(template);
+        
+        // Check if template was already triggered today (in template's timezone)
+        // If so, use calculateNextOccurrenceAfterTrigger to prevent going back to today
+        let useAfterTrigger = false;
+        if (template.lastTriggeredAt) {
+          const tzMatch = template.timezone?.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
+          const tzOffsetMinutes = tzMatch 
+            ? (tzMatch[1] === '-' ? -1 : 1) * (parseInt(tzMatch[2], 10) * 60 + parseInt(tzMatch[3] || '0', 10))
+            : 0;
+          
+          const now = new Date();
+          const nowInTzMs = now.getTime() + tzOffsetMinutes * 60 * 1000;
+          const nowInTz = new Date(nowInTzMs);
+          
+          const lastTriggered = new Date(template.lastTriggeredAt);
+          const lastTriggeredInTzMs = lastTriggered.getTime() + tzOffsetMinutes * 60 * 1000;
+          const lastTriggeredInTz = new Date(lastTriggeredInTzMs);
+          
+          // Check if last triggered was today in the template's timezone
+          useAfterTrigger = nowInTz.getUTCFullYear() === lastTriggeredInTz.getUTCFullYear() &&
+                           nowInTz.getUTCMonth() === lastTriggeredInTz.getUTCMonth() &&
+                           nowInTz.getUTCDate() === lastTriggeredInTz.getUTCDate();
+          
+          console.log('[Template PATCH] lastTriggeredAt check - useAfterTrigger:', useAfterTrigger);
+        }
+        
+        const nextOccurrence = useAfterTrigger 
+          ? calculateNextOccurrenceAfterTrigger(template)
+          : calculateNextOccurrence(template);
+          
         if (nextOccurrence) {
           template = await storage.updateTaskTemplate(req.params.id, {
             nextTriggerAt: nextOccurrence.nextTriggerAt,
