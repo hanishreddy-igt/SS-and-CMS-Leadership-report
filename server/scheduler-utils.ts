@@ -88,13 +88,13 @@ export function calculateNextOccurrence(
     const currentHours = fromInTz.getUTCHours();
     const currentMinutes = fromInTz.getUTCMinutes();
     const currentTimeInMinutes = currentHours * 60 + currentMinutes;
-    const startTimeInMinutes = startHours * 60 + startMinutes;
+    const endTimeInMinutes = endHours * 60 + endMinutes;
     
-    // Check if today is past the start time (strict: exact time is still valid)
-    const isPastStartTimeToday = currentTimeInMinutes > startTimeInMinutes;
+    // Check if today is past the END time (due time) - if past due time, move to next day
+    const isPastEndTimeToday = currentTimeInMinutes > endTimeInMinutes;
     
-    // Find next valid day (starting from today, or tomorrow if past start time)
-    const startOffset = isPastStartTimeToday && selectedDayNumbers.includes(currentDayOfWeek) ? 1 : 0;
+    // Find next valid day (starting from today, or tomorrow if past end time)
+    const startOffset = isPastEndTimeToday && selectedDayNumbers.includes(currentDayOfWeek) ? 1 : 0;
     let daysToAdd = 0;
     
     for (let i = startOffset; i < 7 + startOffset; i++) {
@@ -122,18 +122,30 @@ export function calculateNextOccurrence(
     const currentHours = fromInTz.getUTCHours();
     const currentMinutes = fromInTz.getUTCMinutes();
     const currentTimeInMinutes = currentHours * 60 + currentMinutes;
-    const startTimeInMinutes = startHours * 60 + startMinutes;
+    const endTimeInMinutes = endHours * 60 + endMinutes;
     
-    // Check if today is the start day and past the start time (strict: exact time is still valid)
-    const isTodayStartDay = currentDayOfWeek === startDayNum;
-    const isPastStartTimeToday = currentTimeInMinutes > startTimeInMinutes;
+    // Check if we're past the END day and END time (due date/time)
+    const isTodayEndDay = currentDayOfWeek === endDayNum;
+    const isPastEndTimeToday = currentTimeInMinutes > endTimeInMinutes;
+    
+    // Calculate if we're past this week's due date
+    // Days since start day in current week (could be negative if before start day)
+    const daysSinceStartDay = (currentDayOfWeek - startDayNum + 7) % 7;
+    const daysUntilEndDay = (endDayNum - startDayNum + 7) % 7;
+    
+    // Are we past the end day, or on end day but past end time?
+    const isPastThisWeeksDueDate = 
+      daysSinceStartDay > daysUntilEndDay || 
+      (isTodayEndDay && isPastEndTimeToday);
     
     // Calculate days until next start day
     let daysUntilStart = (startDayNum - currentDayOfWeek + 7) % 7;
-    
-    // If today is start day but past start time, go to next week
-    if (isTodayStartDay && isPastStartTimeToday) {
-      daysUntilStart = 7;
+    if (daysUntilStart === 0 && !isPastThisWeeksDueDate) {
+      // Today is start day and we haven't passed the due date yet - use today
+      daysUntilStart = 0;
+    } else if (isPastThisWeeksDueDate || daysUntilStart === 0) {
+      // Past due date or today is start day but past due - go to next week
+      daysUntilStart = (startDayNum - currentDayOfWeek + 7) % 7 || 7;
     }
     
     const triggerDate = new Date(fromInTzMs);
@@ -184,9 +196,9 @@ export function calculateNextOccurrence(
     const currentHours = fromInTz.getUTCHours();
     const currentMinutes = fromInTz.getUTCMinutes();
     const currentTimeInMinutes = currentHours * 60 + currentMinutes;
-    const startTimeInMinutes = startHours * 60 + startMinutes;
+    const endTimeInMinutes = endHours * 60 + endMinutes;
     
-    // Get actual start date (handle last day of month = 0)
+    // Get actual date (handle last day of month = 0)
     const getActualDate = (date: number, year: number, month: number): number => {
       if (date === 0) {
         return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
@@ -196,13 +208,26 @@ export function calculateNextOccurrence(
     };
     
     let actualStartDate = getActualDate(startDate, targetYear, targetMonth);
+    let actualEndDate = getActualDate(endDate, targetYear, targetMonth);
     
-    // Check if today is the start date and we're past the start time (strict: exact time is still valid)
-    const isTodayStartDate = currentDay === actualStartDate;
-    const isPastStartTimeToday = currentTimeInMinutes > startTimeInMinutes;
+    // Handle case where end date is in next month (endDate < startDate)
+    let endMonthForCheck = targetMonth;
+    let endYearForCheck = targetYear;
+    if (actualEndDate < actualStartDate) {
+      endMonthForCheck = (targetMonth + 1) % 12;
+      endYearForCheck = targetMonth === 11 ? targetYear + 1 : targetYear;
+      actualEndDate = getActualDate(endDate, endYearForCheck, endMonthForCheck);
+    }
     
-    // If we've passed this month's start date (or it's start date but past time), go to next month
-    if (currentDay > actualStartDate || (isTodayStartDate && isPastStartTimeToday)) {
+    // Check if we're past the END date and END time (due date/time)
+    const isTodayEndDate = currentDay === actualEndDate && targetMonth === endMonthForCheck;
+    const isPastEndTimeToday = currentTimeInMinutes > endTimeInMinutes;
+    const isPastThisMonthsDueDate = 
+      currentDay > actualEndDate || 
+      (isTodayEndDate && isPastEndTimeToday);
+    
+    // If we've passed this month's due date, go to next month's cycle
+    if (isPastThisMonthsDueDate) {
       targetMonth++;
       if (targetMonth > 11) {
         targetMonth = 0;
@@ -218,10 +243,10 @@ export function calculateNextOccurrence(
     // Calculate due date
     let dueMonthCalc = targetMonth;
     let dueYearCalc = targetYear;
-    const actualEndDate = getActualDate(endDate, dueYearCalc, dueMonthCalc);
+    const finalEndDate = getActualDate(endDate, dueYearCalc, dueMonthCalc);
     
     // If end date < start date, due is next month
-    if (actualEndDate < actualStartDate) {
+    if (finalEndDate < actualStartDate) {
       dueMonthCalc++;
       if (dueMonthCalc > 11) {
         dueMonthCalc = 0;
@@ -240,7 +265,7 @@ export function calculateNextOccurrence(
     const currentHours = fromInTz.getUTCHours();
     const currentMinutes = fromInTz.getUTCMinutes();
     const currentTimeInMinutes = currentHours * 60 + currentMinutes;
-    const startTimeInMinutes = startHours * 60 + startMinutes;
+    const endTimeInMinutes = endHours * 60 + endMinutes;
     
     // Get current quarter's first month (0, 3, 6, 9)
     const currentQuarterStart = Math.floor(targetMonth / 3) * 3;
@@ -254,15 +279,25 @@ export function calculateNextOccurrence(
     };
     
     let actualStartDate = getActualDate(startDate, targetYear, currentQuarterStart);
+    let actualEndDate = getActualDate(endDate, targetYear, currentQuarterStart);
     
-    // If we're past the start date in the first month of current quarter, go to next quarter (strict: exact time is still valid)
-    const inFirstMonthOfQuarter = targetMonth === currentQuarterStart;
-    const isTodayStartDate = inFirstMonthOfQuarter && currentDay === actualStartDate;
-    const isPastStartTimeToday = currentTimeInMinutes > startTimeInMinutes;
-    const pastStartDate = inFirstMonthOfQuarter && (currentDay > actualStartDate || (isTodayStartDate && isPastStartTimeToday));
-    const pastFirstMonth = targetMonth > currentQuarterStart;
+    // Determine due month (could be in a later month within the quarter if endDate < startDate)
+    let dueMonthForCheck = currentQuarterStart;
+    if (actualEndDate < actualStartDate) {
+      dueMonthForCheck = currentQuarterStart + 1;
+      if (dueMonthForCheck > currentQuarterStart + 2) dueMonthForCheck = currentQuarterStart + 2;
+      actualEndDate = getActualDate(endDate, targetYear, dueMonthForCheck);
+    }
     
-    if (pastStartDate || pastFirstMonth) {
+    // Check if we're past the END date and END time (due date/time)
+    const isTodayEndDate = currentDay === actualEndDate && targetMonth === dueMonthForCheck;
+    const isPastEndTimeToday = currentTimeInMinutes > endTimeInMinutes;
+    const isPastThisQuartersDueDate = 
+      targetMonth > dueMonthForCheck ||
+      (targetMonth === dueMonthForCheck && currentDay > actualEndDate) || 
+      (isTodayEndDate && isPastEndTimeToday);
+    
+    if (isPastThisQuartersDueDate) {
       // Move to next quarter
       const nextQuarterStart = (currentQuarterStart + 3) % 12;
       if (nextQuarterStart < currentQuarterStart) targetYear++;
@@ -276,8 +311,8 @@ export function calculateNextOccurrence(
     triggerMonth = targetMonth;
     triggerDay = actualStartDate;
     
-    // Calculate due date (in first month of quarter)
-    const actualEndDate = getActualDate(endDate, targetYear, targetMonth);
+    // Calculate due date (in first month of quarter or later)
+    actualEndDate = getActualDate(endDate, targetYear, targetMonth);
     
     dueYear = targetYear;
     dueMonth = targetMonth;
