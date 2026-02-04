@@ -2679,11 +2679,25 @@ ${formattedActivities}`;
             (!lastTriggered || lastTriggered < currentWindow.start);
 
           if (!shouldTrigger) {
+            // Add debug info for timezone verification
+            const parseTimezoneOffset = (tz: string | null | undefined): number => {
+              if (!tz) return 0;
+              const match = tz.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
+              if (!match) return 0;
+              const sign = match[1] === '-' ? -1 : 1;
+              const hoursOffset = parseInt(match[2], 10);
+              const minutesOffset = parseInt(match[3] || '0', 10);
+              return sign * (hoursOffset * 60 + minutesOffset);
+            };
+            const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
+            const nowInTz = new Date(now.getTime() + tzOffsetMinutes * 60 * 1000);
+            const startInTz = new Date(currentWindow.start.getTime() + tzOffsetMinutes * 60 * 1000);
+            
             results.push({ 
               templateId: template.id, 
               templateName: template.name,
               status: 'not-due',
-              error: `Waiting until: ${currentWindow.start.toISOString()}`
+              error: `Waiting until: ${currentWindow.start.toISOString()} (${startInTz.toISOString().slice(11, 16)} in ${template.timezone || 'UTC'}). Server now: ${now.toISOString()} (${nowInTz.toISOString().slice(11, 16)} in ${template.timezone || 'UTC'}). LastTriggered: ${lastTriggered?.toISOString() || 'never'}`
             });
             continue;
           }
