@@ -2572,6 +2572,7 @@ ${formattedActivities}`;
       
       // Check if this is a manual trigger (lastTriggeredAt update)
       const isManualTrigger = 'lastTriggeredAt' in updates;
+      console.log('[Template PATCH] isManualTrigger:', isManualTrigger, 'needsRecalculation:', needsRecalculation, 'updates:', Object.keys(updates));
       
       // Apply updates first
       let template = await storage.updateTaskTemplate(req.params.id, updates);
@@ -2581,6 +2582,7 @@ ${formattedActivities}`;
       
       // Recalculate next occurrence if schedule changed
       if (needsRecalculation) {
+        console.log('[Template PATCH] Recalculating due to schedule change');
         const nextOccurrence = calculateNextOccurrence(template);
         if (nextOccurrence) {
           template = await storage.updateTaskTemplate(req.params.id, {
@@ -2592,12 +2594,15 @@ ${formattedActivities}`;
       
       // If manual trigger, calculate next occurrence after trigger
       if (isManualTrigger && !needsRecalculation && template) {
+        console.log('[Template PATCH] Manual trigger - calculating next occurrence');
         const nextOccurrence = calculateNextOccurrenceAfterTrigger(template);
+        console.log('[Template PATCH] nextOccurrence result:', nextOccurrence);
         if (nextOccurrence) {
           template = await storage.updateTaskTemplate(req.params.id, {
             nextTriggerAt: nextOccurrence.nextTriggerAt,
             nextDueAt: nextOccurrence.nextDueAt,
           });
+          console.log('[Template PATCH] Updated template with new dates');
         }
       }
       
