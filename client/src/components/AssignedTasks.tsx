@@ -67,7 +67,7 @@ export default function AssignedTasks() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // EOD Report state
-  const [isEodExpanded, setIsEodExpanded] = useState(false);
+  const [isEodExpanded, setIsEodExpanded] = useState(true);
   const [eodDateMode, setEodDateMode] = useState<'single' | 'range'>('single');
   const [eodStartDate, setEodStartDate] = useState<Date>(new Date());
   const [eodEndDate, setEodEndDate] = useState<Date>(new Date());
