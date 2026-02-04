@@ -1544,6 +1544,41 @@ export default function TaskTemplates() {
     return templates.filter(t => t.projectId === accountFilter);
   }, [templates, accountFilter]);
 
+  // Group templates by account (alphabetically sorted)
+  const groupedTemplates = useMemo(() => {
+    const projectMap = new Map(projects.map(p => [p.id, p.name]));
+    
+    // Group templates by account
+    const groups: Record<string, TaskTemplate[]> = {};
+    const noAccountTemplates: TaskTemplate[] = [];
+    
+    for (const template of filteredTemplates) {
+      if (template.projectId) {
+        const accountName = projectMap.get(template.projectId) || 'Unknown Account';
+        if (!groups[accountName]) {
+          groups[accountName] = [];
+        }
+        groups[accountName].push(template);
+      } else {
+        noAccountTemplates.push(template);
+      }
+    }
+    
+    // Sort account names alphabetically and create ordered array
+    const sortedAccountNames = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+    const result: { accountName: string; templates: TaskTemplate[] }[] = sortedAccountNames.map(name => ({
+      accountName: name,
+      templates: groups[name]
+    }));
+    
+    // Add "No Account" group at the end if there are any
+    if (noAccountTemplates.length > 0) {
+      result.push({ accountName: 'No Account', templates: noAccountTemplates });
+    }
+    
+    return result;
+  }, [filteredTemplates, projects]);
+
   const createMutation = useMutation({
     mutationFn: async (data: TemplateFormData) => {
       const isDaily = data.recurrence === 'daily';
@@ -1951,18 +1986,29 @@ export default function TaskTemplates() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filteredTemplates.map(template => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              projects={projects}
-              people={people}
-              onEdit={handleEdit}
-              onDelete={(id) => deleteMutation.mutate(id)}
-              onTrigger={(t) => triggerMutation.mutate(t)}
-              onView={(t) => setViewingTemplate(t)}
-            />
+        <div className="space-y-6">
+          {groupedTemplates.map(group => (
+            <div key={group.accountName}>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-medium text-sm">{group.accountName}</h3>
+                <Badge variant="secondary" className="text-xs">{group.templates.length}</Badge>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {group.templates.map(template => (
+                  <TemplateCard
+                    key={template.id}
+                    template={template}
+                    projects={projects}
+                    people={people}
+                    onEdit={handleEdit}
+                    onDelete={(id) => deleteMutation.mutate(id)}
+                    onTrigger={(t) => triggerMutation.mutate(t)}
+                    onView={(t) => setViewingTemplate(t)}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
