@@ -19,6 +19,255 @@ const parseTimezoneOffset = (tz: string | null | undefined): number => {
   return sign * (hoursOffset * 60 + minutesOffset);
 };
 
+// Format timezone offset for ISO string (e.g., "+05:30" or "-08:00")
+function formatTimezoneForISO(tz: string | null | undefined): string {
+  if (!tz) return '+00:00';
+  const match = tz.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) return '+00:00';
+  const sign = match[1] === '-' ? '-' : '+';
+  const hours = match[2].padStart(2, '0');
+  const minutes = (match[3] || '0').padStart(2, '0');
+  return `${sign}${hours}:${minutes}`;
+}
+
+// Format a date as ISO string with embedded timezone (e.g., "2026-02-03T09:00+05:30")
+function formatDateWithTimezone(year: number, month: number, day: number, hours: number, minutes: number, tz: string): string {
+  const y = year.toString();
+  const m = (month + 1).toString().padStart(2, '0');
+  const d = day.toString().padStart(2, '0');
+  const h = hours.toString().padStart(2, '0');
+  const min = minutes.toString().padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${min}${tz}`;
+}
+
+/**
+ * Calculate the next occurrence of a recurring template.
+ * Returns ISO 8601 strings with embedded timezone.
+ * 
+ * @param template - The task template
+ * @param fromDate - Calculate next occurrence from this date (default: now)
+ * @returns { nextTriggerAt, nextDueAt } or null if invalid template
+ */
+export function calculateNextOccurrence(
+  template: TaskTemplate, 
+  fromDate: Date = new Date()
+): { nextTriggerAt: string; nextDueAt: string } | null {
+  const startTime = template.startTime || template.deliveryTime;
+  const endTime = template.endTime || startTime;
+  const startDay = template.startDay || template.deliveryDay || 'monday';
+  const endDay = template.endDay || startDay;
+  const startDate = template.startDate ?? template.deliveryDate ?? 1;
+  const endDate = template.endDate ?? startDate;
+  const daysOfWeek: string[] = template.daysOfWeek || [];
+  
+  if (!template.recurrence || !startTime) return null;
+  
+  const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
+  const tzFormatted = formatTimezoneForISO(template.timezone);
+  const [startHours, startMinutes] = startTime.split(':').map(Number);
+  const [endHours, endMinutes] = (endTime || startTime).split(':').map(Number);
+  
+  // Convert fromDate to template's timezone
+  const fromInTzMs = fromDate.getTime() + tzOffsetMinutes * 60 * 1000;
+  const fromInTz = new Date(fromInTzMs);
+  
+  const dayMap: Record<string, number> = {
+    'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+    'thursday': 4, 'friday': 5, 'saturday': 6
+  };
+  
+  let triggerYear: number, triggerMonth: number, triggerDay: number;
+  let dueYear: number, dueMonth: number, dueDay: number;
+  
+  if (template.recurrence === 'daily') {
+    // Find next valid day from daysOfWeek
+    const selectedDays = daysOfWeek.length > 0 ? daysOfWeek : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const selectedDayNumbers = selectedDays.map(d => dayMap[d]);
+    
+    const currentDayOfWeek = fromInTz.getUTCDay();
+    let daysToAdd = 0;
+    
+    // Find next valid day (starting from today)
+    for (let i = 0; i < 7; i++) {
+      const checkDay = (currentDayOfWeek + i) % 7;
+      if (selectedDayNumbers.includes(checkDay)) {
+        daysToAdd = i;
+        break;
+      }
+    }
+    
+    const targetDate = new Date(fromInTzMs);
+    targetDate.setUTCDate(targetDate.getUTCDate() + daysToAdd);
+    
+    triggerYear = targetDate.getUTCFullYear();
+    triggerMonth = targetDate.getUTCMonth();
+    triggerDay = targetDate.getUTCDate();
+    dueYear = triggerYear;
+    dueMonth = triggerMonth;
+    dueDay = triggerDay;
+    
+  } else if (template.recurrence === 'weekly' || template.recurrence === 'biweekly') {
+    const startDayNum = dayMap[startDay];
+    const endDayNum = dayMap[endDay];
+    const currentDayOfWeek = fromInTz.getUTCDay();
+    
+    // Calculate days until next start day
+    let daysUntilStart = (startDayNum - currentDayOfWeek + 7) % 7;
+    if (daysUntilStart === 0) daysUntilStart = 0; // Today is start day
+    
+    const triggerDate = new Date(fromInTzMs);
+    triggerDate.setUTCDate(triggerDate.getUTCDate() + daysUntilStart);
+    
+    // For biweekly, check if this is the right week
+    if (template.recurrence === 'biweekly') {
+      const anchorDate = template.createdAt ? new Date(template.createdAt) : fromDate;
+      const daysSinceAnchor = Math.floor((triggerDate.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weeksOffset = Math.floor(daysSinceAnchor / 7) % 2;
+      if (weeksOffset !== 0) {
+        triggerDate.setUTCDate(triggerDate.getUTCDate() + 7);
+      }
+    }
+    
+    triggerYear = triggerDate.getUTCFullYear();
+    triggerMonth = triggerDate.getUTCMonth();
+    triggerDay = triggerDate.getUTCDate();
+    
+    // Calculate due date (end day of that week)
+    let daysUntilEnd = (endDayNum - startDayNum + 7) % 7;
+    if (daysUntilEnd === 0 && endDayNum !== startDayNum) daysUntilEnd = 7;
+    
+    const dueDate = new Date(triggerDate.getTime());
+    dueDate.setUTCDate(dueDate.getUTCDate() + daysUntilEnd);
+    
+    dueYear = dueDate.getUTCFullYear();
+    dueMonth = dueDate.getUTCMonth();
+    dueDay = dueDate.getUTCDate();
+    
+  } else if (template.recurrence === 'monthly') {
+    let targetMonth = fromInTz.getUTCMonth();
+    let targetYear = fromInTz.getUTCFullYear();
+    const currentDay = fromInTz.getUTCDate();
+    
+    // Get actual start date (handle last day of month = 0)
+    const getActualDate = (date: number, year: number, month: number): number => {
+      if (date === 0) {
+        return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+      }
+      const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+      return Math.min(date, lastDay);
+    };
+    
+    let actualStartDate = getActualDate(startDate, targetYear, targetMonth);
+    
+    // If we've passed this month's start date, go to next month
+    if (currentDay > actualStartDate) {
+      targetMonth++;
+      if (targetMonth > 11) {
+        targetMonth = 0;
+        targetYear++;
+      }
+      actualStartDate = getActualDate(startDate, targetYear, targetMonth);
+    }
+    
+    triggerYear = targetYear;
+    triggerMonth = targetMonth;
+    triggerDay = actualStartDate;
+    
+    // Calculate due date
+    let dueMonthCalc = targetMonth;
+    let dueYearCalc = targetYear;
+    const actualEndDate = getActualDate(endDate, dueYearCalc, dueMonthCalc);
+    
+    // If end date < start date, due is next month
+    if (actualEndDate < actualStartDate) {
+      dueMonthCalc++;
+      if (dueMonthCalc > 11) {
+        dueMonthCalc = 0;
+        dueYearCalc++;
+      }
+    }
+    
+    dueYear = dueYearCalc;
+    dueMonth = dueMonthCalc;
+    dueDay = getActualDate(endDate, dueYearCalc, dueMonthCalc);
+    
+  } else if (template.recurrence === 'quarterly') {
+    let targetMonth = fromInTz.getUTCMonth();
+    let targetYear = fromInTz.getUTCFullYear();
+    const currentDay = fromInTz.getUTCDate();
+    
+    // Get current quarter's first month (0, 3, 6, 9)
+    const currentQuarterStart = Math.floor(targetMonth / 3) * 3;
+    
+    const getActualDate = (date: number, year: number, month: number): number => {
+      if (date === 0) {
+        return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+      }
+      const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+      return Math.min(date, lastDay);
+    };
+    
+    let actualStartDate = getActualDate(startDate, targetYear, currentQuarterStart);
+    
+    // If we're past the start date in the first month of current quarter, go to next quarter
+    const inFirstMonthOfQuarter = targetMonth === currentQuarterStart;
+    const pastStartDate = inFirstMonthOfQuarter && currentDay > actualStartDate;
+    const pastFirstMonth = targetMonth > currentQuarterStart;
+    
+    if (pastStartDate || pastFirstMonth) {
+      // Move to next quarter
+      const nextQuarterStart = (currentQuarterStart + 3) % 12;
+      if (nextQuarterStart < currentQuarterStart) targetYear++;
+      targetMonth = nextQuarterStart;
+      actualStartDate = getActualDate(startDate, targetYear, targetMonth);
+    } else {
+      targetMonth = currentQuarterStart;
+    }
+    
+    triggerYear = targetYear;
+    triggerMonth = targetMonth;
+    triggerDay = actualStartDate;
+    
+    // Calculate due date (in first month of quarter)
+    const actualEndDate = getActualDate(endDate, targetYear, targetMonth);
+    
+    dueYear = targetYear;
+    dueMonth = targetMonth;
+    dueDay = actualEndDate;
+    
+    // If end date < start date, due extends into next month (still in quarter)
+    if (actualEndDate < actualStartDate) {
+      dueMonth = targetMonth + 1;
+      if (dueMonth > targetMonth + 2) dueMonth = targetMonth + 2; // Stay in quarter
+      if (dueMonth > 11) {
+        dueMonth = dueMonth % 12;
+        dueYear++;
+      }
+      dueDay = getActualDate(endDate, dueYear, dueMonth);
+    }
+    
+  } else {
+    return null;
+  }
+  
+  const nextTriggerAt = formatDateWithTimezone(triggerYear, triggerMonth, triggerDay, startHours, startMinutes, tzFormatted);
+  const nextDueAt = formatDateWithTimezone(dueYear, dueMonth, dueDay, endHours, endMinutes, tzFormatted);
+  
+  return { nextTriggerAt, nextDueAt };
+}
+
+/**
+ * Calculate the next occurrence AFTER a trigger has happened.
+ * Used when updating template after triggering.
+ */
+export function calculateNextOccurrenceAfterTrigger(template: TaskTemplate): { nextTriggerAt: string; nextDueAt: string } | null {
+  // Start from tomorrow to find next occurrence
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  return calculateNextOccurrence(template, tomorrow);
+}
+
 // Calculate the current triggerable window (for scheduler triggering)
 // Returns today's window if we're on a valid day, regardless of whether start time has passed
 export function calculateCurrentTriggerWindow(template: TaskTemplate): { start: Date; end: Date } | null {
