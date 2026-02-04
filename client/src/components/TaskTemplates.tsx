@@ -1779,7 +1779,8 @@ export default function TaskTemplates() {
       subTasksCreated += await createSubTasksFromTemplates(parentTask.id, assignees);
       
       await apiRequest('PATCH', `/api/task-templates/${template.id}`, { 
-        lastUsedAt: new Date().toISOString() 
+        lastUsedAt: new Date().toISOString(),
+        lastTriggeredAt: new Date().toISOString() 
       });
       
       return { tasksCreated, subTasksCreated };
