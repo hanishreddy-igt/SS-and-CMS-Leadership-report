@@ -1109,11 +1109,19 @@ interface InlineNotesPanelProps {
 
 function InlineNotesPanel({ notes, onAddNote, onDeleteNote, onClose, depth }: InlineNotesPanelProps) {
   const [newNote, setNewNote] = useState('');
+  const [noteToDelete, setNoteToDelete] = useState<number | null>(null);
 
   const handleAdd = () => {
     if (newNote.trim()) {
       onAddNote(newNote.trim());
       setNewNote('');
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (noteToDelete !== null) {
+      onDeleteNote(noteToDelete);
+      setNoteToDelete(null);
     }
   };
 
@@ -1149,7 +1157,7 @@ function InlineNotesPanel({ notes, onAddNote, onDeleteNote, onClose, depth }: In
                   variant="ghost"
                   size="icon"
                   className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                  onClick={() => onDeleteNote(i)}
+                  onClick={() => setNoteToDelete(i)}
                   data-testid={`button-delete-note-${i}`}
                 >
                   <Trash2 className="h-3 w-3" />
@@ -1160,6 +1168,30 @@ function InlineNotesPanel({ notes, onAddNote, onDeleteNote, onClose, depth }: In
           ))}
         </div>
       )}
+
+      {/* Delete Note Confirmation Dialog */}
+      <Dialog open={noteToDelete !== null} onOpenChange={(open) => !open && setNoteToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Note</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this note? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNoteToDelete(null)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmDelete}
+              data-testid="confirm-delete-note"
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <div className="space-y-2">
         <Textarea
