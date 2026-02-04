@@ -46,6 +46,36 @@ import {
 } from 'lucide-react';
 import type { TaskTemplate, Project, Person, SubTemplateItem } from '@shared/schema';
 
+// Parse ISO 8601 string and display date/time AS STORED (in template's timezone), not converted
+// This prevents timezone conversion issues where dates appear 24 hours off
+const formatStoredDatetime = (isoString: string): string => {
+  try {
+    // Parse ISO 8601 string like "2026-02-05T09:00+05:30"
+    const match = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!match) {
+      // Fallback to browser conversion if format doesn't match
+      const date = new Date(isoString);
+      if (isNaN(date.getTime())) return isoString;
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + 
+        ', ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+    
+    const [, year, month, day, hours, minutes] = match;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = monthNames[parseInt(month, 10) - 1];
+    
+    // Format time as 12-hour with AM/PM
+    const hour24 = parseInt(hours, 10);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+    const timeStr = `${hour12}:${minutes} ${ampm}`;
+    
+    return `${monthName} ${parseInt(day, 10)}, ${timeStr}`;
+  } catch {
+    return isoString;
+  }
+};
+
 // Helper to get friendly timezone abbreviation
 const getTimezoneAbbr = (date: Date): string => {
   const rawTz = date.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop() || '';
@@ -1117,23 +1147,9 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
   const assignedPeople = people.filter(p => template.assignedTo?.includes(p.id));
   
   // Use stored next dates if available, otherwise fall back to calculation
-  // Convert ISO string to browser's local timezone for display
-  const formatStoredDate = (isoString: string): string => {
-    try {
-      const date = new Date(isoString);
-      if (isNaN(date.getTime())) return isoString;
-      
-      // Display in browser's local timezone
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + 
-        ', ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    } catch {
-      return isoString;
-    }
-  };
-  
   let nextScheduled: string | null = null;
   if ((template as any).nextTriggerAt) {
-    nextScheduled = formatStoredDate((template as any).nextTriggerAt);
+    nextScheduled = formatStoredDatetime((template as any).nextTriggerAt);
   } else {
     const nextScheduledData = calculateNextScheduledDelivery(template);
     nextScheduled = nextScheduledData?.displayString || null;
@@ -1308,12 +1324,12 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
           {(template as any).nextTriggerAt && (
             <p className="text-xs text-primary">
               <Clock className="h-3 w-3 inline mr-1" />
-              Next: {new Date((template as any).nextTriggerAt).toLocaleString()}
+              Next: {formatStoredDatetime((template as any).nextTriggerAt)}
             </p>
           )}
           {(template as any).lastTriggeredAt && (
             <p className="text-xs text-muted-foreground">
-              Last triggered: {new Date((template as any).lastTriggeredAt).toLocaleString()}
+              Last triggered: {formatStoredDatetime((template as any).lastTriggeredAt)}
             </p>
           )}
           {project?.endDate && (
