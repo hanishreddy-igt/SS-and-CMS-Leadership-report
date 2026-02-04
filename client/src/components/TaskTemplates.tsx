@@ -1115,8 +1115,26 @@ interface TemplateCardProps {
 function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger, onView }: TemplateCardProps) {
   const project = template.projectId ? projects.find(p => p.id === template.projectId) : null;
   const assignedPeople = people.filter(p => template.assignedTo?.includes(p.id));
-  const nextScheduledData = calculateNextScheduledDelivery(template);
-  const nextScheduled = nextScheduledData?.displayString || null;
+  
+  // Use stored next dates if available, otherwise fall back to calculation
+  const formatStoredDate = (isoString: string): string => {
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + 
+        ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } catch {
+      return isoString;
+    }
+  };
+  
+  let nextScheduled: string | null = null;
+  if ((template as any).nextTriggerAt) {
+    nextScheduled = formatStoredDate((template as any).nextTriggerAt);
+  } else {
+    const nextScheduledData = calculateNextScheduledDelivery(template);
+    nextScheduled = nextScheduledData?.displayString || null;
+  }
+  
   const owner = people.find(p => p.email === template.createdBy);
   const ownerDisplay = owner?.name || template.createdBy?.split('@')[0] || 'Unknown';
   
@@ -1285,9 +1303,15 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
               <Badge variant="secondary">Disabled</Badge>
             )}
           </DialogTitle>
+          {(template as any).nextTriggerAt && (
+            <p className="text-xs text-primary">
+              <Clock className="h-3 w-3 inline mr-1" />
+              Next: {new Date((template as any).nextTriggerAt).toLocaleString()}
+            </p>
+          )}
           {(template as any).lastTriggeredAt && (
             <p className="text-xs text-muted-foreground">
-              Last auto-triggered: {new Date((template as any).lastTriggeredAt).toLocaleString()}
+              Last triggered: {new Date((template as any).lastTriggeredAt).toLocaleString()}
             </p>
           )}
           {project?.endDate && (
