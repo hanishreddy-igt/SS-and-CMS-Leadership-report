@@ -2628,6 +2628,40 @@ ${formattedActivities}`;
   // Linux cron, cloud schedulers, or manual triggers
   // ============================================
 
+  // POST /api/scheduler/recalculate-all
+  // Recalculates nextTriggerAt and nextDueAt for all templates
+  // Useful after scheduler logic changes
+  app.post('/api/scheduler/recalculate-all', async (req, res) => {
+    try {
+      const templates = await storage.getTaskTemplates();
+      const results: { templateId: string; templateName: string; nextTriggerAt: string | null; nextDueAt: string | null }[] = [];
+      
+      for (const template of templates) {
+        if (!template.recurrence) continue;
+        
+        const nextOccurrence = calculateNextOccurrence(template);
+        if (nextOccurrence) {
+          await storage.updateTaskTemplate(template.id, {
+            nextTriggerAt: nextOccurrence.nextTriggerAt,
+            nextDueAt: nextOccurrence.nextDueAt,
+          });
+          results.push({
+            templateId: template.id,
+            templateName: template.name,
+            nextTriggerAt: nextOccurrence.nextTriggerAt,
+            nextDueAt: nextOccurrence.nextDueAt,
+          });
+        }
+      }
+      
+      console.log(`[Scheduler] Recalculated ${results.length} templates`);
+      res.json({ success: true, recalculated: results.length, results });
+    } catch (error: any) {
+      console.error('[Scheduler] Error recalculating templates:', error);
+      res.status(500).json({ message: 'Failed to recalculate templates', error: error.message });
+    }
+  });
+
   // POST /api/scheduler/trigger-deliverables
   // Checks all auto-trigger enabled templates and creates tasks for due ones
   app.post('/api/scheduler/trigger-deliverables', async (req, res) => {
