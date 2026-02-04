@@ -2569,6 +2569,9 @@ ${formattedActivities}`;
                               'deliveryTime', 'deliveryDay', 'deliveryDate'];
       const needsRecalculation = scheduleFields.some(field => field in updates);
       
+      // Check if this is a manual trigger (lastTriggeredAt update)
+      const isManualTrigger = 'lastTriggeredAt' in updates;
+      
       // Apply updates first
       let template = await storage.updateTaskTemplate(req.params.id, updates);
       if (!template) {
@@ -2578,6 +2581,17 @@ ${formattedActivities}`;
       // Recalculate next occurrence if schedule changed
       if (needsRecalculation) {
         const nextOccurrence = calculateNextOccurrence(template);
+        if (nextOccurrence) {
+          template = await storage.updateTaskTemplate(req.params.id, {
+            nextTriggerAt: nextOccurrence.nextTriggerAt,
+            nextDueAt: nextOccurrence.nextDueAt,
+          });
+        }
+      }
+      
+      // If manual trigger, calculate next occurrence after trigger
+      if (isManualTrigger && !needsRecalculation) {
+        const nextOccurrence = calculateNextOccurrenceAfterTrigger(template);
         if (nextOccurrence) {
           template = await storage.updateTaskTemplate(req.params.id, {
             nextTriggerAt: nextOccurrence.nextTriggerAt,
@@ -2687,56 +2701,44 @@ ${formattedActivities}`;
 
       for (const template of activeTemplates) {
         try {
-          // Calculate if today is a valid trigger day and get today's window
-          const currentWindow = calculateCurrentTriggerWindow(template);
-          
-          if (!currentWindow) {
-            // Today is not a valid trigger day for this template
-            const nextScheduled = calculateNextScheduledDelivery(template);
+          // Simple check: is nextTriggerAt in the past?
+          if (!template.nextTriggerAt) {
+            // Template has no calculated next trigger time - calculate it now
+            const nextOccurrence = calculateNextOccurrence(template);
+            if (nextOccurrence) {
+              await storage.updateTaskTemplate(template.id, {
+                nextTriggerAt: nextOccurrence.nextTriggerAt,
+                nextDueAt: nextOccurrence.nextDueAt,
+              });
+            }
             results.push({ 
               templateId: template.id, 
               templateName: template.name,
               status: 'not-due', 
-              error: nextScheduled ? `Next: ${nextScheduled.start.toISOString()}` : 'No valid schedule'
+              error: nextOccurrence ? `Initialized: Next trigger at ${nextOccurrence.nextTriggerAt}` : 'No valid schedule'
             });
             continue;
           }
 
-          // Check if we're past the start time and haven't triggered yet today
-          const lastTriggered = template.lastTriggeredAt ? new Date(template.lastTriggeredAt) : null;
+          // Parse the stored nextTriggerAt (ISO 8601 with timezone)
+          const nextTriggerTime = new Date(template.nextTriggerAt);
           
-          // Only trigger if:
-          // 1. We're at or past the scheduled start time
-          // 2. We haven't triggered since before the current window started
-          const shouldTrigger = now >= currentWindow.start && 
-            (!lastTriggered || lastTriggered < currentWindow.start);
-
-          if (!shouldTrigger) {
-            // Add debug info for timezone verification
-            const parseTimezoneOffset = (tz: string | null | undefined): number => {
-              if (!tz) return 0;
-              const match = tz.match(/^([+-]?)(\d{1,2})(?::(\d{2}))?$/);
-              if (!match) return 0;
-              const sign = match[1] === '-' ? -1 : 1;
-              const hoursOffset = parseInt(match[2], 10);
-              const minutesOffset = parseInt(match[3] || '0', 10);
-              return sign * (hoursOffset * 60 + minutesOffset);
-            };
-            const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
-            const nowInTz = new Date(now.getTime() + tzOffsetMinutes * 60 * 1000);
-            const startInTz = new Date(currentWindow.start.getTime() + tzOffsetMinutes * 60 * 1000);
-            
+          // Check if it's time to trigger
+          if (now < nextTriggerTime) {
             results.push({ 
               templateId: template.id, 
               templateName: template.name,
               status: 'not-due',
-              error: `Waiting until: ${currentWindow.start.toISOString()} (${startInTz.toISOString().slice(11, 16)} in ${template.timezone || 'UTC'}). Server now: ${now.toISOString()} (${nowInTz.toISOString().slice(11, 16)} in ${template.timezone || 'UTC'}). LastTriggered: ${lastTriggered?.toISOString() || 'never'}`
+              error: `Waiting until: ${template.nextTriggerAt}. Server now: ${now.toISOString()}`
             });
             continue;
           }
 
+          // Parse nextDueAt for creating tasks with the correct due date
+          const dueDateTime = template.nextDueAt ? new Date(template.nextDueAt) : new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
           // Create tasks from template
-          const { tasksCreated, subTasksCreated } = await createTasksFromTemplate(template, storage, currentWindow.end);
+          const { tasksCreated, subTasksCreated } = await createTasksFromTemplate(template, storage, dueDateTime);
 
           // Update lastTriggeredAt and calculate next occurrence
           const nextOccurrence = calculateNextOccurrenceAfterTrigger(template);

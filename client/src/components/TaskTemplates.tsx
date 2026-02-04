@@ -1698,6 +1698,11 @@ export default function TaskTemplates() {
   // Helper to calculate due date from template delivery schedule using consolidated function
   // Returns full ISO datetime string to preserve time
   const calculateDueDate = (template: TaskTemplate): string | null => {
+    // Use pre-calculated nextDueAt if available
+    if ((template as any).nextDueAt) {
+      return (template as any).nextDueAt;
+    }
+    // Fall back to legacy calculation
     const result = calculateNextScheduledDelivery(template);
     return result ? result.dueDateTimeISO : null;
   };
