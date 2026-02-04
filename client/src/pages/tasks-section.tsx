@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useParams } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
 import { LayoutGrid, UserCheck, FileStack, ShieldAlert, FolderKanban } from 'lucide-react';
 import SectionLayout from '@/components/SectionLayout';
 import WorkingSpace from '@/components/WorkingSpace';
@@ -8,6 +9,7 @@ import AssignedTasks from '@/components/AssignedTasks';
 import TaskTemplates from '@/components/TaskTemplates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePermissions } from '@/hooks/usePermissions';
+import type { TaskTemplate } from '@shared/schema';
 
 // ============================================================
 // TASK ACCESS CONTROL - Change this to allow/restrict access
@@ -15,18 +17,29 @@ import { usePermissions } from '@/hooks/usePermissions';
 // ============================================================
 const TASKS_ALLOWED_ROLES = ['admin', 'manager', 'lead', 'member'];
 
-const tabs = [
-  { id: 'workspace', label: 'WorkSpace', icon: LayoutGrid },
-  { id: 'assigned', label: 'Assigned Tasks', icon: UserCheck },
-  { id: 'all-tasks', label: 'All Tasks', icon: FolderKanban },
-  { id: 'templates', label: 'Recurring Deliverables', icon: FileStack },
-];
-
 export default function TasksSection() {
   const [, setLocation] = useLocation();
   const params = useParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState(params.tab || 'workspace');
   const { role } = usePermissions();
+  
+  // Fetch task templates to get count for tab label
+  const { data: templates = [] } = useQuery<TaskTemplate[]>({
+    queryKey: ['/api/task-templates'],
+  });
+  
+  // Count active templates
+  const activeTemplateCount = useMemo(() => {
+    return templates.filter(t => t.isActive === 'true').length;
+  }, [templates]);
+  
+  // Build tabs dynamically with template count
+  const tabs = useMemo(() => [
+    { id: 'workspace', label: 'WorkSpace', icon: LayoutGrid },
+    { id: 'assigned', label: 'Assigned Tasks', icon: UserCheck },
+    { id: 'all-tasks', label: 'All Tasks', icon: FolderKanban },
+    { id: 'templates', label: `Recurring Deliverables (${activeTemplateCount})`, icon: FileStack },
+  ], [activeTemplateCount]);
   
   // Simple role check - easy to modify
   const hasAccess = TASKS_ALLOWED_ROLES.includes(role);
