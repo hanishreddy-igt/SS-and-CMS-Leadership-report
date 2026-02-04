@@ -2252,19 +2252,18 @@ Output valid JSON only.`;
     try {
       const { taskId, changedBy, startDate, endDate } = req.query;
       
-      const filters: {
-        taskId?: string;
-        changedBy?: string;
-        startDate?: Date;
-        endDate?: Date;
-      } = {};
+      let activities: any[] = [];
       
-      if (taskId) filters.taskId = taskId as string;
-      if (changedBy) filters.changedBy = changedBy as string;
-      if (startDate) filters.startDate = new Date(startDate as string);
-      if (endDate) filters.endDate = new Date(endDate as string);
+      if (taskId) {
+        // Get activities for a specific task
+        activities = await storage.getTaskActivities(taskId as string);
+      } else if (changedBy) {
+        // Get activities by user with optional date range
+        const start = startDate ? new Date(startDate as string) : undefined;
+        const end = endDate ? new Date(endDate as string) : undefined;
+        activities = await storage.getActivitiesByUser(changedBy as string, start, end);
+      }
       
-      const activities = await storage.getTaskActivities(filters);
       res.json(activities);
     } catch (error: any) {
       console.error('Error fetching task activities:', error);
