@@ -1102,11 +1102,12 @@ function InlineDueDatePanel({ task, onUpdate, onClose, depth }: InlineDueDatePan
 interface InlineNotesPanelProps {
   notes: TaskNote[];
   onAddNote: (content: string) => void;
+  onDeleteNote: (index: number) => void;
   onClose: () => void;
   depth: number;
 }
 
-function InlineNotesPanel({ notes, onAddNote, onClose, depth }: InlineNotesPanelProps) {
+function InlineNotesPanel({ notes, onAddNote, onDeleteNote, onClose, depth }: InlineNotesPanelProps) {
   const [newNote, setNewNote] = useState('');
 
   const handleAdd = () => {
@@ -1141,9 +1142,18 @@ function InlineNotesPanel({ notes, onAddNote, onClose, depth }: InlineNotesPanel
       {notes.length > 0 && (
         <div className="space-y-2 max-h-40 overflow-auto mb-3">
           {notes.map((note, i) => (
-            <div key={i} className="text-xs p-2 bg-background rounded border">
-              <div className="text-muted-foreground mb-1">
-                {note.author} - {format(new Date(note.timestamp), 'MMM d, h:mm a')}
+            <div key={i} className="text-xs p-2 bg-background rounded border group">
+              <div className="flex items-center justify-between text-muted-foreground mb-1">
+                <span>{note.author} - {format(new Date(note.timestamp), 'MMM d, h:mm a')}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                  onClick={() => onDeleteNote(i)}
+                  data-testid={`button-delete-note-${i}`}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
               </div>
               <div>{note.content}</div>
             </div>
@@ -1491,6 +1501,11 @@ export function TaskRow({
     onUpdate(task.id, { notes: [...notes, newNote] });
   };
 
+  const handleDeleteNote = (index: number) => {
+    const updatedNotes = notes.filter((_, i) => i !== index);
+    onUpdate(task.id, { notes: updatedNotes });
+  };
+
   const handleSubtaskCreate = (title: string, parsed: ParsedTitle) => {
     onCreateSubtask(task.id, title, parsed);
     setShowSubtaskInput(false);
@@ -1808,6 +1823,7 @@ export function TaskRow({
         <InlineNotesPanel
           notes={notes}
           onAddNote={handleAddNote}
+          onDeleteNote={handleDeleteNote}
           onClose={closePanel}
           depth={depth}
         />
