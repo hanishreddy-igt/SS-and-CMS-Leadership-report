@@ -329,10 +329,11 @@ export function calculateNextScheduledDelivery(template: TaskTemplate): { start:
     
     startDateTimeUTC = createDateInTz(targetYear, currentQuarterStart, actualStartDate, startHours, startMinutes);
     
-    // Only advance to next quarter if template was ALREADY TRIGGERED this quarter
+    // Advance to next quarter if template was already triggered OR if the start date is in the past
     const alreadyTriggeredThisQuarter = wasTriggeredInPeriod(startDateTimeUTC);
+    const startDateInPast = startDateTimeUTC <= nowUTC;
     
-    if (alreadyTriggeredThisQuarter) {
+    if (alreadyTriggeredThisQuarter || startDateInPast) {
       const nextQuarterStart = (currentQuarterStart + 3) % 12;
       const yearOffset = nextQuarterStart < currentQuarterStart ? 1 : 0;
       const newStartDate = startDate === 0 ? new Date(Date.UTC(targetYear + yearOffset, nextQuarterStart + 1, 0)).getUTCDate() : startDate;
