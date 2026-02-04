@@ -5,7 +5,7 @@ import { JiraService } from "./services/jiraService";
 import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema, insertTaskSchema, insertTaskTemplateSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
-import { calculateNextScheduledDelivery, createTasksFromTemplate, calculateNextOccurrence, calculateNextOccurrenceAfterTrigger } from "./scheduler-utils";
+import { createTasksFromTemplate, calculateNextOccurrence, calculateNextOccurrenceAfterTrigger } from "./scheduler-utils";
 
 // Initialize OpenAI client using Replit AI Integrations
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -2590,7 +2590,7 @@ ${formattedActivities}`;
       }
       
       // If manual trigger, calculate next occurrence after trigger
-      if (isManualTrigger && !needsRecalculation) {
+      if (isManualTrigger && !needsRecalculation && template) {
         const nextOccurrence = calculateNextOccurrenceAfterTrigger(template);
         if (nextOccurrence) {
           template = await storage.updateTaskTemplate(req.params.id, {
@@ -2887,14 +2887,13 @@ ${formattedActivities}`;
       );
 
       const templateStatus = autoTriggerTemplates.map(t => {
-        const nextScheduled = calculateNextScheduledDelivery(t);
         return {
           id: t.id,
           name: t.name,
           recurrence: t.recurrence,
           lastTriggeredAt: t.lastTriggeredAt,
-          nextScheduledStart: nextScheduled?.start?.toISOString() || null,
-          nextScheduledDue: nextScheduled?.end?.toISOString() || null
+          nextScheduledStart: t.nextTriggerAt || null,
+          nextScheduledDue: t.nextDueAt || null
         };
       });
 

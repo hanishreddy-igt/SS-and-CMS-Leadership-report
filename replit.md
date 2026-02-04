@@ -69,8 +69,15 @@ This project provides a comprehensive tracking system for Strategic Services (SS
           - **Monthly/Quarterly Recurrence**: Set start date and due date of month (1-28, or 0 for last day)
           - **Start/Due Times**: Configure work start time and due time independently (e.g., start at 09:00, due by 17:00)
           - **Timezone**: Manual GMT offset entry (+5:30, -8, +0) for timezone-aware scheduling
-          - **Next Scheduled Display**: Template cards show calculated next start/due date-times in template timezone
+          - **Next Scheduled Display**: Template cards show pre-calculated next start/due date-times stored in database
           - Tasks created from templates use the calculated due date/time based on schedule
+        - **Simplified Trigger System (Pre-calculated Dates)**:
+          - `nextTriggerAt`: ISO 8601 string with embedded timezone (e.g., "2026-02-05T09:00+05:30") - when to create tasks
+          - `nextDueAt`: ISO 8601 string with embedded timezone - when created tasks are due
+          - Fields are calculated and stored when: template created, template edited (schedule fields), template triggered
+          - Scheduler uses simple comparison: `new Date(nextTriggerAt) <= now` to determine if trigger is due
+          - After trigger, `calculateNextOccurrence()` recalculates for next period
+          - Migration script: `scripts/migrate-template-next-dates.ts` populates existing templates (idempotent)
         - **Triggering Modes**:
           - **Manual Triggering**: User clicks "Create" button to generate tasks from templates
           - **Auto-Trigger (Scheduled)**: Enable "Auto-trigger" toggle on templates to allow scheduled automation
