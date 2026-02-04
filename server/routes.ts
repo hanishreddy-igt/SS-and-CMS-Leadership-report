@@ -5,7 +5,7 @@ import { JiraService } from "./services/jiraService";
 import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema, insertTaskSchema, insertTaskTemplateSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import OpenAI from "openai";
-import { calculateNextScheduledDelivery, calculateCurrentTriggerWindow, createTasksFromTemplate } from "./scheduler-utils";
+import { calculateNextScheduledDelivery, calculateCurrentTriggerWindow, createTasksFromTemplate, calculateNextOccurrence, calculateNextOccurrenceAfterTrigger } from "./scheduler-utils";
 
 // Initialize OpenAI client using Replit AI Integrations
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -2532,8 +2532,22 @@ ${formattedActivities}`;
         return res.status(400).json({ message: 'Invalid template data', errors: parsed.error.errors });
       }
       
+      // Create template first
       const template = await storage.createTaskTemplate(parsed.data);
-      res.status(201).json(template);
+      
+      // Calculate and set next occurrence dates
+      const nextOccurrence = calculateNextOccurrence(template);
+      if (nextOccurrence) {
+        await storage.updateTaskTemplate(template.id, {
+          nextTriggerAt: nextOccurrence.nextTriggerAt,
+          nextDueAt: nextOccurrence.nextDueAt,
+        });
+        // Return updated template
+        const updatedTemplate = await storage.getTaskTemplate(template.id);
+        res.status(201).json(updatedTemplate);
+      } else {
+        res.status(201).json(template);
+      }
     } catch (error: any) {
       console.error('Error creating task template:', error);
       res.status(500).json({ message: 'Failed to create task template' });
@@ -2548,10 +2562,30 @@ ${formattedActivities}`;
       if (updates.lastUsedAt && typeof updates.lastUsedAt === 'string') {
         updates.lastUsedAt = new Date(updates.lastUsedAt);
       }
-      const template = await storage.updateTaskTemplate(req.params.id, updates);
+      
+      // Check if schedule-related fields are being updated
+      const scheduleFields = ['recurrence', 'startTime', 'endTime', 'startDay', 'endDay', 
+                              'startDate', 'endDate', 'daysOfWeek', 'timezone', 
+                              'deliveryTime', 'deliveryDay', 'deliveryDate'];
+      const needsRecalculation = scheduleFields.some(field => field in updates);
+      
+      // Apply updates first
+      let template = await storage.updateTaskTemplate(req.params.id, updates);
       if (!template) {
         return res.status(404).json({ message: 'Task template not found' });
       }
+      
+      // Recalculate next occurrence if schedule changed
+      if (needsRecalculation) {
+        const nextOccurrence = calculateNextOccurrence(template);
+        if (nextOccurrence) {
+          template = await storage.updateTaskTemplate(req.params.id, {
+            nextTriggerAt: nextOccurrence.nextTriggerAt,
+            nextDueAt: nextOccurrence.nextDueAt,
+          });
+        }
+      }
+      
       res.json(template);
     } catch (error: any) {
       console.error('Error updating task template:', error);
@@ -2704,10 +2738,15 @@ ${formattedActivities}`;
           // Create tasks from template
           const { tasksCreated, subTasksCreated } = await createTasksFromTemplate(template, storage, currentWindow.end);
 
-          // Update lastTriggeredAt
+          // Update lastTriggeredAt and calculate next occurrence
+          const nextOccurrence = calculateNextOccurrenceAfterTrigger(template);
           await storage.updateTaskTemplate(template.id, {
-            lastTriggeredAt: now,
-            lastUsedAt: now
+            lastTriggeredAt: now.toISOString(),
+            lastUsedAt: now,
+            ...(nextOccurrence && {
+              nextTriggerAt: nextOccurrence.nextTriggerAt,
+              nextDueAt: nextOccurrence.nextDueAt,
+            }),
           });
 
           results.push({ 
