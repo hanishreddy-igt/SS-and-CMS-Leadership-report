@@ -19,7 +19,7 @@ const getOidcConfig = memoize(
 );
 
 // Allowed email domains for authentication
-const ALLOWED_DOMAINS = ['ignitetech.com'];
+const ALLOWED_DOMAINS = ['ignitetech.com', 'khoros.com'];
 
 function isAllowedDomain(email: string | null | undefined): boolean {
   if (!email) return false;

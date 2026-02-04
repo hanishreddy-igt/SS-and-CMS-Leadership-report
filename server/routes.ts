@@ -208,9 +208,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Normalize email to lowercase for consistent comparison
       const email = rawEmail.trim().toLowerCase();
       
-      // Validate email domain
-      if (!email.endsWith('@ignitetech.com')) {
-        return res.status(400).json({ error: 'Email must be from @ignitetech.com domain' });
+      // Validate email domain - allow ignitetech.com and khoros.com
+      const allowedDomains = ['@ignitetech.com', '@khoros.com'];
+      if (!allowedDomains.some(domain => email.endsWith(domain))) {
+        return res.status(400).json({ error: 'Email must be from @ignitetech.com or @khoros.com domain' });
       }
       
       // Validate role

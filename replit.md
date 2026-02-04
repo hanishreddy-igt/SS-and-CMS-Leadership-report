@@ -7,7 +7,7 @@ This project provides a comprehensive tracking system for Strategic Services (SS
 - Material Design approach for data-rich enterprise applications
 - Color-coded status indicators for quick visual feedback
 - Responsive design with mobile-friendly layouts
-- Secure access: Authentication required with domain restriction (@ignitetech.com only)
+- Secure access: Authentication required with domain restriction (@ignitetech.com and @khoros.com)
 - Jira integration for automatic project data population
 
 ## System Architecture
@@ -98,7 +98,7 @@ This project provides a comprehensive tracking system for Strategic Services (SS
       - **Gap Detection**: The `/api/reporting-week` endpoint detects gaps between latest archive and current calendar week, returning the next unarchived week instead of jumping to current week.
 
 ### System Design Choices
-- **Authentication**: Secured with Google authentication via Replit Auth, restricted to `@ignitetech.com` email domains. Server-side validation and session management using PostgreSQL.
+- **Authentication**: Secured with Google authentication via Replit Auth, restricted to `@ignitetech.com` and `@khoros.com` email domains. Server-side validation and session management using PostgreSQL.
 - **API Protection**: All API endpoints are protected with authentication middleware, except scheduler endpoints (`/api/scheduler/*`) which are intentionally unauthenticated for external automation access with optional API key authentication via `SCHEDULER_API_KEY`.
 - **Development Environment**: Utilizes Vite for frontend, `tsx` for backend development, and `connect-pg-simple` for session management.
 
