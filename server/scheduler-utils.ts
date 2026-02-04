@@ -85,10 +85,19 @@ export function calculateNextOccurrence(
     const selectedDayNumbers = selectedDays.map(d => dayMap[d]);
     
     const currentDayOfWeek = fromInTz.getUTCDay();
+    const currentHours = fromInTz.getUTCHours();
+    const currentMinutes = fromInTz.getUTCMinutes();
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+    const startTimeInMinutes = startHours * 60 + startMinutes;
+    
+    // Check if today is past the start time (strict: exact time is still valid)
+    const isPastStartTimeToday = currentTimeInMinutes > startTimeInMinutes;
+    
+    // Find next valid day (starting from today, or tomorrow if past start time)
+    const startOffset = isPastStartTimeToday && selectedDayNumbers.includes(currentDayOfWeek) ? 1 : 0;
     let daysToAdd = 0;
     
-    // Find next valid day (starting from today)
-    for (let i = 0; i < 7; i++) {
+    for (let i = startOffset; i < 7 + startOffset; i++) {
       const checkDay = (currentDayOfWeek + i) % 7;
       if (selectedDayNumbers.includes(checkDay)) {
         daysToAdd = i;
@@ -110,18 +119,43 @@ export function calculateNextOccurrence(
     const startDayNum = dayMap[startDay];
     const endDayNum = dayMap[endDay];
     const currentDayOfWeek = fromInTz.getUTCDay();
+    const currentHours = fromInTz.getUTCHours();
+    const currentMinutes = fromInTz.getUTCMinutes();
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+    const startTimeInMinutes = startHours * 60 + startMinutes;
+    
+    // Check if today is the start day and past the start time (strict: exact time is still valid)
+    const isTodayStartDay = currentDayOfWeek === startDayNum;
+    const isPastStartTimeToday = currentTimeInMinutes > startTimeInMinutes;
     
     // Calculate days until next start day
     let daysUntilStart = (startDayNum - currentDayOfWeek + 7) % 7;
-    if (daysUntilStart === 0) daysUntilStart = 0; // Today is start day
+    
+    // If today is start day but past start time, go to next week
+    if (isTodayStartDay && isPastStartTimeToday) {
+      daysUntilStart = 7;
+    }
     
     const triggerDate = new Date(fromInTzMs);
     triggerDate.setUTCDate(triggerDate.getUTCDate() + daysUntilStart);
     
     // For biweekly, check if this is the right week
     if (template.recurrence === 'biweekly') {
+      // Normalize anchor to the startDay of anchor's week in template timezone
       const anchorDate = template.createdAt ? new Date(template.createdAt) : fromDate;
-      const daysSinceAnchor = Math.floor((triggerDate.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24));
+      const anchorInTzMs = anchorDate.getTime() + tzOffsetMinutes * 60 * 1000;
+      const anchorInTz = new Date(anchorInTzMs);
+      
+      // Find the startDay of anchor's week (move back to most recent startDay)
+      const anchorDayOfWeek = anchorInTz.getUTCDay();
+      const daysToGoBack = (anchorDayOfWeek - startDayNum + 7) % 7;
+      anchorInTz.setUTCDate(anchorInTz.getUTCDate() - daysToGoBack);
+      anchorInTz.setUTCHours(0, 0, 0, 0); // Normalize to start of day
+      
+      const triggerInTz = new Date(triggerDate.getTime());
+      triggerInTz.setUTCHours(0, 0, 0, 0); // Normalize to start of day
+      
+      const daysSinceAnchor = Math.floor((triggerInTz.getTime() - anchorInTz.getTime()) / (1000 * 60 * 60 * 24));
       const weeksOffset = Math.floor(daysSinceAnchor / 7) % 2;
       if (weeksOffset !== 0) {
         triggerDate.setUTCDate(triggerDate.getUTCDate() + 7);
@@ -147,6 +181,10 @@ export function calculateNextOccurrence(
     let targetMonth = fromInTz.getUTCMonth();
     let targetYear = fromInTz.getUTCFullYear();
     const currentDay = fromInTz.getUTCDate();
+    const currentHours = fromInTz.getUTCHours();
+    const currentMinutes = fromInTz.getUTCMinutes();
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+    const startTimeInMinutes = startHours * 60 + startMinutes;
     
     // Get actual start date (handle last day of month = 0)
     const getActualDate = (date: number, year: number, month: number): number => {
@@ -159,8 +197,12 @@ export function calculateNextOccurrence(
     
     let actualStartDate = getActualDate(startDate, targetYear, targetMonth);
     
-    // If we've passed this month's start date, go to next month
-    if (currentDay > actualStartDate) {
+    // Check if today is the start date and we're past the start time (strict: exact time is still valid)
+    const isTodayStartDate = currentDay === actualStartDate;
+    const isPastStartTimeToday = currentTimeInMinutes > startTimeInMinutes;
+    
+    // If we've passed this month's start date (or it's start date but past time), go to next month
+    if (currentDay > actualStartDate || (isTodayStartDate && isPastStartTimeToday)) {
       targetMonth++;
       if (targetMonth > 11) {
         targetMonth = 0;
@@ -195,6 +237,10 @@ export function calculateNextOccurrence(
     let targetMonth = fromInTz.getUTCMonth();
     let targetYear = fromInTz.getUTCFullYear();
     const currentDay = fromInTz.getUTCDate();
+    const currentHours = fromInTz.getUTCHours();
+    const currentMinutes = fromInTz.getUTCMinutes();
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+    const startTimeInMinutes = startHours * 60 + startMinutes;
     
     // Get current quarter's first month (0, 3, 6, 9)
     const currentQuarterStart = Math.floor(targetMonth / 3) * 3;
@@ -209,9 +255,11 @@ export function calculateNextOccurrence(
     
     let actualStartDate = getActualDate(startDate, targetYear, currentQuarterStart);
     
-    // If we're past the start date in the first month of current quarter, go to next quarter
+    // If we're past the start date in the first month of current quarter, go to next quarter (strict: exact time is still valid)
     const inFirstMonthOfQuarter = targetMonth === currentQuarterStart;
-    const pastStartDate = inFirstMonthOfQuarter && currentDay > actualStartDate;
+    const isTodayStartDate = inFirstMonthOfQuarter && currentDay === actualStartDate;
+    const isPastStartTimeToday = currentTimeInMinutes > startTimeInMinutes;
+    const pastStartDate = inFirstMonthOfQuarter && (currentDay > actualStartDate || (isTodayStartDate && isPastStartTimeToday));
     const pastFirstMonth = targetMonth > currentQuarterStart;
     
     if (pastStartDate || pastFirstMonth) {
