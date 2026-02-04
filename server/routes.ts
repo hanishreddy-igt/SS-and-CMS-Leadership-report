@@ -2735,11 +2735,8 @@ ${formattedActivities}`;
             continue;
           }
 
-          // Parse nextDueAt for creating tasks with the correct due date
-          const dueDateTime = template.nextDueAt ? new Date(template.nextDueAt) : new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-          // Create tasks from template
-          const { tasksCreated, subTasksCreated } = await createTasksFromTemplate(template, storage, dueDateTime);
+          // Create tasks from template (uses template.nextDueAt directly)
+          const { tasksCreated, subTasksCreated } = await createTasksFromTemplate(template, storage);
 
           // Update lastTriggeredAt and calculate next occurrence
           const nextOccurrence = calculateNextOccurrenceAfterTrigger(template);

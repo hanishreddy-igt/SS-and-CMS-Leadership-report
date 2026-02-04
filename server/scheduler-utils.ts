@@ -317,39 +317,48 @@ export function calculateNextOccurrenceAfterTrigger(template: TaskTemplate): { n
 }
 
 // Format due date with time and timezone offset for task storage
-function formatDueDateWithTimezone(dueDate: Date, template: TaskTemplate): string {
+// Uses template.nextDueAt string directly to avoid timezone conversion issues
+function formatDueDateFromNextDueAt(template: TaskTemplate): string {
+  // If we have nextDueAt, use it directly - it's already in the correct format
+  if (template.nextDueAt) {
+    return template.nextDueAt;
+  }
+  
+  // Fallback: construct from template fields
   const endTime = template.endTime || template.deliveryTime || '23:59';
   const timezone = template.timezone || '+0';
+  const tzFormatted = formatTimezoneForISO(timezone);
   
-  // Get date parts from the due date
-  const year = dueDate.getUTCFullYear();
-  const month = String(dueDate.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(dueDate.getUTCDate()).padStart(2, '0');
+  // Use today's date as fallback
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
   
   // Parse the end time
   const [hours, minutes] = endTime.split(':').map(Number);
   const hourStr = String(hours).padStart(2, '0');
   const minStr = String(minutes).padStart(2, '0');
   
-  // Normalize timezone format (ensure it has proper format like +5:30 or -6)
-  let tzStr = timezone;
-  if (!tzStr.startsWith('+') && !tzStr.startsWith('-')) {
-    tzStr = '+' + tzStr;
-  }
-  
   // Format: YYYY-MM-DDTHH:MM±HH:MM
-  return `${year}-${month}-${day}T${hourStr}:${minStr}${tzStr}`;
+  return `${year}-${month}-${day}T${hourStr}:${minStr}${tzFormatted}`;
 }
 
 export async function createTasksFromTemplate(
   template: TaskTemplate,
-  storage: IStorage,
-  dueDate: Date
+  storage: IStorage
 ): Promise<{ tasksCreated: number; subTasksCreated: number }> {
   const allAssignees = template.assignedTo || [];
   const subTemplates = (template.subTemplates as SubTemplateItem[]) || [];
-  const dueDateStr = formatDueDateWithTimezone(dueDate, template);
+  const dueDateStr = formatDueDateFromNextDueAt(template);
   const assigneeDays = (template as any).assigneeDays as Record<string, string[]> || {};
+  
+  // Parse the due date string to get day of week in template's timezone
+  // The dueDateStr is already in the template's timezone (e.g., "2026-02-05T17:00-08:00")
+  // Extract the date part directly from the string to avoid timezone conversion issues
+  const datePart = dueDateStr.split('T')[0]; // "2026-02-05"
+  const [year, month, day] = datePart.split('-').map(Number);
+  const dueDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0)); // Use noon UTC to avoid date boundary issues
   
   // Use template's timezone to determine day of week
   const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
