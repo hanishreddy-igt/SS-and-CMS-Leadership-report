@@ -39,7 +39,8 @@ import {
   UserPlus,
   Check,
   Filter,
-  CalendarOff
+  CalendarOff,
+  AlertTriangle
 } from 'lucide-react';
 import type { TaskTemplate, Project, Person, SubTemplateItem } from '@shared/schema';
 
@@ -1864,6 +1865,17 @@ export default function TaskTemplates() {
 
   return (
     <div className="space-y-4">
+      {/* Caution message about manual trigger */}
+      <div className="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
+        <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <span className="font-medium text-yellow-600 dark:text-yellow-400">Caution:</span>{' '}
+          <span className="text-muted-foreground">
+            Use the "Manual Trigger" button only when the scheduler is not working. The scheduler automatically creates tasks at the scheduled time.
+          </span>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between gap-2">
         <Button onClick={() => setIsDialogOpen(true)} data-testid="new-template-btn">
           <Plus className="h-4 w-4 mr-1" />
