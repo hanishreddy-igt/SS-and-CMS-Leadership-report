@@ -1117,11 +1117,15 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
   const assignedPeople = people.filter(p => template.assignedTo?.includes(p.id));
   
   // Use stored next dates if available, otherwise fall back to calculation
+  // Convert ISO string to browser's local timezone for display
   const formatStoredDate = (isoString: string): string => {
     try {
       const date = new Date(isoString);
+      if (isNaN(date.getTime())) return isoString;
+      
+      // Display in browser's local timezone
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + 
-        ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        ', ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     } catch {
       return isoString;
     }
