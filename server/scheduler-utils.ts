@@ -342,13 +342,32 @@ export function calculateNextOccurrence(
 /**
  * Calculate the next occurrence AFTER a trigger has happened.
  * Used when updating template after triggering.
+ * 
+ * IMPORTANT: We need to calculate "tomorrow" in the TEMPLATE'S timezone,
+ * not the server's timezone. Otherwise, when the server is in UTC and 
+ * the template is in PST (-8), "tomorrow at midnight UTC" becomes 
+ * "today at 4 PM PST" which is still before the end time.
  */
 export function calculateNextOccurrenceAfterTrigger(template: TaskTemplate): { nextTriggerAt: string; nextDueAt: string } | null {
-  // Start from tomorrow to find next occurrence
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
-  return calculateNextOccurrence(template, tomorrow);
+  // Get template's timezone offset
+  const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
+  
+  // Get current time in template's timezone
+  const now = new Date();
+  const nowInTzMs = now.getTime() + tzOffsetMinutes * 60 * 1000;
+  const nowInTz = new Date(nowInTzMs);
+  
+  // Calculate tomorrow at midnight in template's timezone
+  const tomorrowInTz = new Date(nowInTzMs);
+  tomorrowInTz.setUTCDate(tomorrowInTz.getUTCDate() + 1);
+  tomorrowInTz.setUTCHours(0, 0, 0, 0);
+  
+  // Convert back to UTC for the fromDate parameter
+  // tomorrowInTz represents "tomorrow midnight" as if it were UTC
+  // To get actual UTC time, we subtract the offset
+  const tomorrowUtc = new Date(tomorrowInTz.getTime() - tzOffsetMinutes * 60 * 1000);
+  
+  return calculateNextOccurrence(template, tomorrowUtc);
 }
 
 // Format due date with time and timezone offset for task storage
