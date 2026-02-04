@@ -1252,14 +1252,12 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
           <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
             <Play className="h-3 w-3" />
             <span>Last: {new Date(template.lastUsedAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
-            {template.timezone && <span className="opacity-70">(GMT{template.timezone})</span>}
           </div>
         )}
         {nextScheduled && (
           <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" />
             <span>Next: {nextScheduled}</span>
-            {template.timezone && <span className="opacity-70">(GMT{template.timezone})</span>}
           </div>
         )}
         {project?.endDate && (
