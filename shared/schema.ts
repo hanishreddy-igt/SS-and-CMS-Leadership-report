@@ -194,8 +194,12 @@ export const taskTemplates = pgTable("task_templates", {
   createdBy: text("created_by").notNull(), // Who created the template
   isActive: text("is_active").default('true'), // Whether template is active
   autoTriggerEnabled: text("auto_trigger_enabled").default('false'), // Whether auto-triggering is enabled
-  lastUsedAt: timestamp("last_used_at"), // When template was last used (manual or auto)
-  lastTriggeredAt: timestamp("last_triggered_at"), // When scheduler last auto-triggered this template
+  // New simplified trigger fields (ISO 8601 with timezone)
+  nextTriggerAt: text("next_trigger_at"), // When to trigger next (e.g., "2026-02-03T09:00+05:30")
+  nextDueAt: text("next_due_at"), // Due date for next trigger (e.g., "2026-02-15T17:00+05:30")
+  lastTriggeredAt: text("last_triggered_at"), // ISO format: when last triggered (e.g., "2026-01-03T09:00+05:30")
+  // Legacy fields (to be removed after migration verified)
+  lastUsedAt: timestamp("last_used_at"), // DEPRECATED
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -283,7 +287,14 @@ export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 // Task template schemas and types
-export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).omit({ id: true, createdAt: true, lastUsedAt: true });
+export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).omit({ 
+  id: true, 
+  createdAt: true, 
+  lastUsedAt: true,
+  nextTriggerAt: true,
+  nextDueAt: true,
+  lastTriggeredAt: true,
+});
 export type TaskTemplate = typeof taskTemplates.$inferSelect;
 export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
 
