@@ -40,7 +40,9 @@ import {
   Check,
   Filter,
   CalendarOff,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import type { TaskTemplate, Project, Person, SubTemplateItem } from '@shared/schema';
 
@@ -1521,6 +1523,19 @@ export default function TaskTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<TaskTemplate | null>(null);
   const [accountFilter, setAccountFilter] = useState<string>('all');
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = (accountName: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(accountName)) {
+        next.delete(accountName);
+      } else {
+        next.add(accountName);
+      }
+      return next;
+    });
+  };
 
   const { data: templates = [], isLoading } = useQuery<TaskTemplate[]>({
     queryKey: ['/api/task-templates'],
@@ -1986,30 +2001,46 @@ export default function TaskTemplates() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {groupedTemplates.map(group => (
-            <div key={group.accountName}>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                <FolderKanban className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-medium text-sm">{group.accountName}</h3>
-                <Badge variant="secondary" className="text-xs">{group.templates.length}</Badge>
+        <div className="space-y-2">
+          {groupedTemplates.map(group => {
+            const isExpanded = expandedGroups.has(group.accountName);
+            return (
+              <div key={group.accountName} className="border rounded-md">
+                <button
+                  onClick={() => toggleGroup(group.accountName)}
+                  className="w-full flex items-center gap-2 p-3 hover-elevate rounded-md transition-colors"
+                  data-testid={`toggle-group-${group.accountName}`}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="font-medium text-sm flex-1 text-left">{group.accountName}</h3>
+                  <Badge variant="secondary" className="text-xs">{group.templates.length}</Badge>
+                </button>
+                {isExpanded && (
+                  <div className="p-3 pt-0">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {group.templates.map(template => (
+                        <TemplateCard
+                          key={template.id}
+                          template={template}
+                          projects={projects}
+                          people={people}
+                          onEdit={handleEdit}
+                          onDelete={(id) => deleteMutation.mutate(id)}
+                          onTrigger={(t) => triggerMutation.mutate(t)}
+                          onView={(t) => setViewingTemplate(t)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                {group.templates.map(template => (
-                  <TemplateCard
-                    key={template.id}
-                    template={template}
-                    projects={projects}
-                    people={people}
-                    onEdit={handleEdit}
-                    onDelete={(id) => deleteMutation.mutate(id)}
-                    onTrigger={(t) => triggerMutation.mutate(t)}
-                    onView={(t) => setViewingTemplate(t)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
