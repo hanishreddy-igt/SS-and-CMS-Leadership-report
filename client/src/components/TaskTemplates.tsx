@@ -46,31 +46,22 @@ import {
 } from 'lucide-react';
 import type { TaskTemplate, Project, Person, SubTemplateItem } from '@shared/schema';
 
-// Parse ISO 8601 string and display date/time AS STORED (in template's timezone), not converted
-// This prevents timezone conversion issues where dates appear 24 hours off
+// Format ISO 8601 datetime string for display in browser's timezone
 const formatStoredDatetime = (isoString: string): string => {
   try {
-    // Parse ISO 8601 string like "2026-02-05T09:00+05:30"
-    const match = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-    if (!match) {
-      // Fallback to browser conversion if format doesn't match
-      const date = new Date(isoString);
-      if (isNaN(date.getTime())) return isoString;
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + 
-        ', ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    }
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
     
-    const [, year, month, day, hours, minutes] = match;
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const monthName = monthNames[parseInt(month, 10) - 1];
-    
-    // Format time as 12-hour with AM/PM
-    const hour24 = parseInt(hours, 10);
-    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
-    const ampm = hour24 >= 12 ? 'PM' : 'AM';
-    const timeStr = `${hour12}:${minutes} ${ampm}`;
-    
-    return `${monthName} ${parseInt(day, 10)}, ${timeStr}`;
+    // Format: "Feb 5, 9:00 AM" in browser's local timezone
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    }) + ', ' + date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true
+    });
   } catch {
     return isoString;
   }
