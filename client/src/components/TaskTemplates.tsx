@@ -496,7 +496,7 @@ function TemplateForm({ initialData, projects, people, onSubmit, onCancel, isSub
           {/* Manual creation notice */}
           <div className="text-xs text-muted-foreground bg-background/50 p-2 rounded border">
             <p className="font-medium mb-1">How it works:</p>
-            <p>When you click the <strong>Create</strong> button on this deliverable, tasks will be created at the scheduled start time with due dates set to the scheduled end time.</p>
+            <p>When you click the <strong>Manual Trigger</strong> button on this deliverable, tasks will be created at the scheduled start time with due dates set to the scheduled end time.</p>
             <p className="mt-1 text-muted-foreground/80">Note: You need to manually click Create each time you want to generate tasks from this template.</p>
           </div>
         </div>
@@ -1151,11 +1151,11 @@ function TemplateCard({ template, projects, people, onEdit, onDelete, onTrigger,
               variant="default" 
               size="sm"
               onClick={() => onTrigger(template)}
-              title="Create task from deliverable"
+              title="Manual trigger - use only when scheduler is not working"
               data-testid={`trigger-template-${template.id}`}
             >
               <Play className="h-4 w-4 mr-1" />
-              Create
+              Manual Trigger
             </Button>
             <Button 
               variant="ghost" 
@@ -1503,9 +1503,9 @@ function TemplateDetailModal({ template, projects, people, onClose, onEdit, onTr
             <Edit2 className="h-4 w-4 mr-1" />
             Edit
           </Button>
-          <Button onClick={() => { onClose(); onTrigger(template); }}>
+          <Button onClick={() => { onClose(); onTrigger(template); }} title="Use only when scheduler is not working">
             <Play className="h-4 w-4 mr-1" />
-            Create Task
+            Manual Trigger
           </Button>
         </DialogFooter>
       </DialogContent>
