@@ -496,9 +496,8 @@ function InlineTaskInput({
         .map(p => ({ value: p.name.replace(/\s+/g, ''), label: p.name, id: p.id }));
     }
     if (suggestion.type === 'person') {
-      const taggedProject = getTaggedProject();
-      const availablePeople = taggedProject ? getProjectPeople(taggedProject) : people;
-      return availablePeople
+      // Show all people globally - no filtering by project context
+      return people
         .filter(p => p.name.toLowerCase().includes(suggestion.query.toLowerCase()))
         .sort((a, b) => a.name.localeCompare(b.name))
         .slice(0, 8)
