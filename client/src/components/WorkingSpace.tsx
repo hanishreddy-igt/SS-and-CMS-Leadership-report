@@ -1162,7 +1162,7 @@ function InlineNotesPanel({ notes, onAddNote, onDeleteNote, onClose, depth }: In
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
-              <div>{note.content}</div>
+              <div className="whitespace-pre-wrap break-words">{note.content}</div>
             </div>
           ))}
         </div>
