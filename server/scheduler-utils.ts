@@ -343,13 +343,13 @@ export function calculateNextOccurrence(
  * Calculate the next occurrence AFTER a trigger has happened.
  * Used when updating template after triggering.
  * 
- * IMPORTANT: We need to calculate "tomorrow" in the TEMPLATE'S timezone,
- * not the server's timezone. Otherwise, when the server is in UTC and 
- * the template is in PST (-8), "tomorrow at midnight UTC" becomes 
- * "today at 4 PM PST" which is still before the end time.
+ * For different recurrence types, we need to advance past the current cycle:
+ * - Daily: tomorrow
+ * - Weekly/Biweekly: past the end day of current week
+ * - Monthly: past the end date of current month
+ * - Quarterly: past the end date of current quarter
  */
 export function calculateNextOccurrenceAfterTrigger(template: TaskTemplate): { nextTriggerAt: string; nextDueAt: string } | null {
-  // Get template's timezone offset
   const tzOffsetMinutes = parseTimezoneOffset(template.timezone);
   
   // Get current time in template's timezone
@@ -357,17 +357,53 @@ export function calculateNextOccurrenceAfterTrigger(template: TaskTemplate): { n
   const nowInTzMs = now.getTime() + tzOffsetMinutes * 60 * 1000;
   const nowInTz = new Date(nowInTzMs);
   
-  // Calculate tomorrow at midnight in template's timezone
-  const tomorrowInTz = new Date(nowInTzMs);
-  tomorrowInTz.setUTCDate(tomorrowInTz.getUTCDate() + 1);
-  tomorrowInTz.setUTCHours(0, 0, 0, 0);
+  let fromDateInTz: Date;
+  
+  if (template.recurrence === 'daily') {
+    // For daily: just go to tomorrow
+    fromDateInTz = new Date(nowInTzMs);
+    fromDateInTz.setUTCDate(fromDateInTz.getUTCDate() + 1);
+    fromDateInTz.setUTCHours(0, 0, 0, 0);
+    
+  } else if (template.recurrence === 'weekly') {
+    // For weekly: go to 7 days from now to ensure we're in next week
+    fromDateInTz = new Date(nowInTzMs);
+    fromDateInTz.setUTCDate(fromDateInTz.getUTCDate() + 7);
+    fromDateInTz.setUTCHours(0, 0, 0, 0);
+    
+  } else if (template.recurrence === 'biweekly') {
+    // For biweekly: go to 14 days from now to ensure we're in next cycle
+    fromDateInTz = new Date(nowInTzMs);
+    fromDateInTz.setUTCDate(fromDateInTz.getUTCDate() + 14);
+    fromDateInTz.setUTCHours(0, 0, 0, 0);
+    
+  } else if (template.recurrence === 'monthly') {
+    // For monthly: go to next month
+    fromDateInTz = new Date(nowInTzMs);
+    fromDateInTz.setUTCMonth(fromDateInTz.getUTCMonth() + 1);
+    fromDateInTz.setUTCDate(1); // First of next month
+    fromDateInTz.setUTCHours(0, 0, 0, 0);
+    
+  } else if (template.recurrence === 'quarterly') {
+    // For quarterly: go to next quarter
+    fromDateInTz = new Date(nowInTzMs);
+    const currentMonth = fromDateInTz.getUTCMonth();
+    const nextQuarterStart = Math.floor(currentMonth / 3) * 3 + 3;
+    fromDateInTz.setUTCMonth(nextQuarterStart);
+    fromDateInTz.setUTCDate(1);
+    fromDateInTz.setUTCHours(0, 0, 0, 0);
+    
+  } else {
+    // Fallback: tomorrow
+    fromDateInTz = new Date(nowInTzMs);
+    fromDateInTz.setUTCDate(fromDateInTz.getUTCDate() + 1);
+    fromDateInTz.setUTCHours(0, 0, 0, 0);
+  }
   
   // Convert back to UTC for the fromDate parameter
-  // tomorrowInTz represents "tomorrow midnight" as if it were UTC
-  // To get actual UTC time, we subtract the offset
-  const tomorrowUtc = new Date(tomorrowInTz.getTime() - tzOffsetMinutes * 60 * 1000);
+  const fromDateUtc = new Date(fromDateInTz.getTime() - tzOffsetMinutes * 60 * 1000);
   
-  return calculateNextOccurrence(template, tomorrowUtc);
+  return calculateNextOccurrence(template, fromDateUtc);
 }
 
 // Format due date with time and timezone offset for task storage
