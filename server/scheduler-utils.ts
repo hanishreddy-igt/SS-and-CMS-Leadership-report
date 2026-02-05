@@ -385,11 +385,10 @@ export function calculateNextOccurrenceAfterTrigger(template: TaskTemplate): { n
     fromDateInTz.setUTCHours(0, 0, 0, 0);
     
   } else if (template.recurrence === 'quarterly') {
-    // For quarterly: go to next quarter
+    // For quarterly: advance past the current quarter's end to force next quarter calculation
+    // We need to go 3 months ahead to ensure we're in the following quarter
     fromDateInTz = new Date(nowInTzMs);
-    const currentMonth = fromDateInTz.getUTCMonth();
-    const nextQuarterStart = Math.floor(currentMonth / 3) * 3 + 3;
-    fromDateInTz.setUTCMonth(nextQuarterStart);
+    fromDateInTz.setUTCMonth(fromDateInTz.getUTCMonth() + 3);
     fromDateInTz.setUTCDate(1);
     fromDateInTz.setUTCHours(0, 0, 0, 0);
     
