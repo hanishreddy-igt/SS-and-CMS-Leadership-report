@@ -1643,23 +1643,24 @@ export function TaskRow({
             >
               {task.dueDate ? formatDueDateDisplay(task.dueDate) : formatDueDateDisplay(getDefaultDueDate())}
             </Badge>
-            <button
-              ref={notesButtonRef}
-              onClick={() => !hasSubtasks && (activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes'))}
-              className={`p-1 rounded relative ${hasSubtasks ? 'opacity-30 cursor-not-allowed' : 'hover:bg-accent cursor-pointer'} ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}
-              title={hasSubtasks ? "Notes disabled for parent tasks with sub-tasks" : notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
-              disabled={hasSubtasks}
-              data-testid={`notes-icon-${task.id}`}
-            >
-              <StickyNote className="h-3.5 w-3.5" />
-              {notes.length > 0 ? (
-                <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
-                  {notes.length}
-                </span>
-              ) : (
-                <span className="absolute -top-1.5 -right-1.5 text-[9px] text-destructive font-bold">?</span>
-              )}
-            </button>
+            {!hasSubtasks && (
+              <button
+                ref={notesButtonRef}
+                onClick={() => activePanel === 'notes' ? closePanel() : openPanel('notes', 'notes')}
+                className={`p-1 rounded relative hover:bg-accent cursor-pointer ${notes.length > 0 ? 'text-primary' : 'text-muted-foreground'}`}
+                title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
+                data-testid={`notes-icon-${task.id}`}
+              >
+                <StickyNote className="h-3.5 w-3.5" />
+                {notes.length > 0 ? (
+                  <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
+                    {notes.length}
+                  </span>
+                ) : (
+                  <span className="absolute -top-1.5 -right-1.5 text-[9px] text-destructive font-bold">?</span>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
