@@ -35,10 +35,10 @@ export default function TasksSection() {
   
   // Build tabs dynamically with template count
   const tabs = useMemo(() => [
-    { id: 'workspace', label: 'WorkSpace', icon: LayoutGrid },
-    { id: 'assigned', label: 'Assigned Tasks', icon: UserCheck },
-    { id: 'all-tasks', label: 'All Tasks', icon: FolderKanban },
-    { id: 'templates', label: `Recurring Deliverables (${activeTemplateCount})`, icon: FileStack },
+    { id: 'workspace', label: 'Create Tasks', icon: LayoutGrid },
+    { id: 'assigned', label: 'Tasks for You', icon: UserCheck },
+    { id: 'all-tasks', label: 'All Tasks in SSCMA', icon: FolderKanban },
+    { id: 'templates', label: `Create Recurring Tasks (${activeTemplateCount})`, icon: FileStack },
   ], [activeTemplateCount]);
   
   // Simple role check - easy to modify

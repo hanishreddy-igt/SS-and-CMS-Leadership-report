@@ -2036,7 +2036,7 @@ Output valid JSON only.`;
     }
   });
 
-  // Get tasks by creator (for "Your Workspace" section)
+  // Get tasks by creator (for "Create Tasks" section)
   app.get('/api/tasks/creator/:email', isAuthenticated, async (req, res) => {
     try {
       const tasks = await storage.getTasksByCreator(req.params.email);
@@ -2047,7 +2047,7 @@ Output valid JSON only.`;
     }
   });
 
-  // Get tasks by assignee (for "Tasks Assigned to You" tab)
+  // Get tasks by assignee (for "Tasks for You" tab)
   app.get('/api/tasks/assignee/:personId', isAuthenticated, async (req, res) => {
     try {
       const tasks = await storage.getTasksByAssignee(req.params.personId);
@@ -2058,7 +2058,7 @@ Output valid JSON only.`;
     }
   });
 
-  // Get tasks by project (for "All Tasks" tree view)
+  // Get tasks by project (for "All Tasks in SSCMA" tree view)
   app.get('/api/tasks/project/:projectId', isAuthenticated, async (req, res) => {
     try {
       const tasks = await storage.getTasksByProject(req.params.projectId);

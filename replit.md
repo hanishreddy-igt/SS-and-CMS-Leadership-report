@@ -56,10 +56,11 @@ This project provides a comprehensive tracking system for Strategic Services (SS
       - Submit Report: Consolidated view with metrics for submitted/pending reports, a weekly report submission form with health status, progress, challenges, next steps, and optional team member feedback. Draft report functionality allows saving partial reports.
       - View Current: Displays overall project health statistics (On Track, Needs Attention, Critical), offers comprehensive filtering by lead, member, and health status, provides export options (PDF/CSV), and includes archive functionality.
       - Historical: View and manage archived weekly reports with AI summaries.
-    - **Work Management Section**: Workflowy-style task management system with three tabs:
-      - **Working Space**: Primary task creation area with "Your Workspace" section (create and manage your own tasks) and "All Tasks" section (team-wide view grouped by project with collapsible groups).
-      - **Tasks Assigned to You**: Filtered view showing tasks assigned to the current user, grouped by status (To Do, In Progress, Blocked, Done) with quick status updates.
-      - **Recurring Deliverables (Task Templates)**: Recurring task templates with support for daily/weekly/biweekly/monthly/quarterly patterns. Features include:
+    - **Work Management Section**: Workflowy-style task management system with four tabs:
+      - **Create Tasks**: Primary task creation area with "Your Workspace" section (create and manage your own tasks) and "All Tasks" section (team-wide view grouped by project with collapsible groups).
+      - **Tasks for You**: Filtered view showing tasks assigned to the current user, grouped by status (To Do, In Progress, Blocked, Done) with quick status updates.
+      - **All Tasks in SSCMA**: All tasks across projects, grouped by account/project alphabetically with filters for lead, member, and account.
+      - **Create Recurring Tasks**: Recurring task templates with support for daily/weekly/biweekly/monthly/quarterly patterns. Features include:
         - **Sub-tasks**: Define hierarchical sub-tasks that are created as child tasks when deliverable is triggered
         - **Assignment Mode**: Choose between "One task" (all assignees on same task) or "Separate tasks" (individual task per assignee)
         - **Priority inheritance**: Sub-tasks can have their own priority (normal/medium/high) or inherit from parent

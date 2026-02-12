@@ -340,7 +340,7 @@ export default function AssignedTasks() {
       <Card>
         <CardContent className="py-12 text-center">
           <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="text-lg font-medium mb-2">No Tasks Assigned</h3>
+          <h3 className="text-lg font-medium mb-2">No Tasks for You</h3>
           <p className="text-muted-foreground">
             You don't have any tasks assigned to you yet. Tasks assigned to your profile will appear here.
           </p>
