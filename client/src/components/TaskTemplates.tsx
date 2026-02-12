@@ -1556,6 +1556,7 @@ export default function TaskTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<TaskTemplate | null>(null);
   const [accountFilter, setAccountFilter] = useState<string>('all');
+  const [creatorFilter, setCreatorFilter] = useState<string>('all');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const toggleGroup = (accountName: string) => {
@@ -1586,11 +1587,29 @@ export default function TaskTemplates() {
     return [...projects].sort((a, b) => a.name.localeCompare(b.name));
   }, [projects]);
 
+  const uniqueCreators = useMemo(() => {
+    const creators = new Map<string, string>();
+    for (const t of templates) {
+      if (t.createdBy) {
+        const person = people.find(p => p.email === t.createdBy);
+        creators.set(t.createdBy, person?.name || t.createdBy.split('@')[0]);
+      }
+    }
+    return Array.from(creators.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [templates, people]);
+
   const filteredTemplates = useMemo(() => {
-    if (accountFilter === 'all') return templates;
-    if (accountFilter === 'none') return templates.filter(t => !t.projectId);
-    return templates.filter(t => t.projectId === accountFilter);
-  }, [templates, accountFilter]);
+    let result = templates;
+    if (accountFilter !== 'all') {
+      result = accountFilter === 'none'
+        ? result.filter(t => !t.projectId)
+        : result.filter(t => t.projectId === accountFilter);
+    }
+    if (creatorFilter !== 'all') {
+      result = result.filter(t => t.createdBy === creatorFilter);
+    }
+    return result;
+  }, [templates, accountFilter, creatorFilter]);
 
   // Group templates by account (alphabetically sorted)
   const groupedTemplates = useMemo(() => {
@@ -2018,36 +2037,54 @@ export default function TaskTemplates() {
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2" data-testid="template-filter-button">
               <Filter className="h-4 w-4" />
-              Filter
-              {accountFilter !== 'all' && (
-                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">1</Badge>
+              Filters
+              {(accountFilter !== 'all' || creatorFilter !== 'all') && (
+                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
+                  {[accountFilter !== 'all', creatorFilter !== 'all'].filter(Boolean).length}
+                </Badge>
               )}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-64" align="end">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Account</Label>
-              <Select value={accountFilter} onValueChange={setAccountFilter}>
-                <SelectTrigger className="w-full" data-testid="template-account-filter">
-                  <SelectValue placeholder="All Accounts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Accounts</SelectItem>
-                  <SelectItem value="none">No Account</SelectItem>
-                  {sortedAccounts.map(account => (
-                    <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {accountFilter !== 'all' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Account</Label>
+                <Select value={accountFilter} onValueChange={setAccountFilter}>
+                  <SelectTrigger className="w-full" data-testid="template-account-filter">
+                    <SelectValue placeholder="All Accounts" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Accounts</SelectItem>
+                    <SelectItem value="none">No Account</SelectItem>
+                    {sortedAccounts.map(account => (
+                      <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Created By</Label>
+                <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+                  <SelectTrigger className="w-full" data-testid="template-creator-filter">
+                    <SelectValue placeholder="All Creators" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Creators</SelectItem>
+                    {uniqueCreators.map(([email, name]) => (
+                      <SelectItem key={email} value={email}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(accountFilter !== 'all' || creatorFilter !== 'all') && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full"
-                  onClick={() => setAccountFilter('all')}
+                  onClick={() => { setAccountFilter('all'); setCreatorFilter('all'); }}
                   data-testid="clear-template-filter"
                 >
-                  Clear filter
+                  Clear all filters
                 </Button>
               )}
             </div>
