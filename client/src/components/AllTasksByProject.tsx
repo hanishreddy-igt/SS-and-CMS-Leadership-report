@@ -532,7 +532,7 @@ export default function AllTasksByProject() {
               const closedUnassigned = sortByPriority(filteredTasksWithoutAccount.filter(t => t.status === 'done'));
               
               return (
-                <Collapsible defaultOpen>
+                <Collapsible defaultOpen={false}>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover-elevate text-left group">
                     <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                     <Circle className="h-4 w-4 text-muted-foreground" />
