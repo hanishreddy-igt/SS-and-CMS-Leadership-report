@@ -386,9 +386,9 @@ export default function AllTasksByProject() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400 mb-3">
-          <TriangleAlert className="h-4 w-4 flex-shrink-0" />
-          <span>Please add your end-of-shift reports or the work you did on the task as notes <StickyNote className="h-3.5 w-3.5 inline-block align-text-bottom mx-0.5" /> before closing a task.</span>
+        <div className="flex items-center gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-700 dark:text-amber-400 mb-3">
+          <TriangleAlert className="h-5 w-5 flex-shrink-0" />
+          <p className="text-sm leading-relaxed">Please add your end-of-shift reports or the work you did on the task as notes <StickyNote className="h-4 w-4 inline-block align-text-bottom mx-0.5" /> before closing a task.</p>
         </div>
         {accountsWithTasks.length === 0 && filteredTasksWithoutAccount.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
