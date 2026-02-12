@@ -404,7 +404,7 @@ export default function AllTasksByProject() {
               const closedTasks = sortByPriority(filteredAccountTasks.filter(t => t.status === 'done'));
               
               return (
-                <Collapsible key={account.id} defaultOpen>
+                <Collapsible key={account.id} defaultOpen={false}>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover-elevate text-left group">
                     <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                     <FolderKanban className="h-4 w-4 text-primary" />
