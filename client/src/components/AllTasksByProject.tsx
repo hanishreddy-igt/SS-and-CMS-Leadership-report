@@ -236,7 +236,7 @@ export default function AllTasksByProject() {
     }
     
     return true;
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name));
 
   const tasksWithoutAccount = allTasks.filter(t => !t.projectId && !t.parentTaskId);
   // Apply member filter to unassigned tasks
