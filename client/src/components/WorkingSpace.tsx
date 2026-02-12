@@ -1651,14 +1651,19 @@ export function TaskRow({
                 title={notes.length > 0 ? `${notes.length} note(s) - Click to view/add` : "Add note"}
                 data-testid={`notes-icon-${task.id}`}
               >
-                <StickyNote className="h-3.5 w-3.5" />
                 {notes.length > 0 ? (
+                <>
+                  <StickyNote className="h-3.5 w-3.5" />
                   <span className="absolute -top-1 -right-1 text-[8px] bg-primary text-primary-foreground rounded-full h-3 w-3 flex items-center justify-center">
                     {notes.length}
                   </span>
-                ) : (
-                  <span className="absolute -top-1.5 -right-1.5 text-[9px] text-destructive font-bold">?</span>
-                )}
+                </>
+              ) : (
+                <span className="relative inline-flex items-center justify-center">
+                  <StickyNote className="h-3.5 w-3.5 text-destructive" />
+                  <span className="absolute text-[8px] text-destructive font-bold" style={{ top: '-1px' }}>?</span>
+                </span>
+              )}
               </button>
             )}
           </div>
