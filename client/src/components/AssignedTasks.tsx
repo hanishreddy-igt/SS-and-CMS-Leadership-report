@@ -24,7 +24,9 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
-  Sparkles
+  Sparkles,
+  TriangleAlert,
+  StickyNote
 } from 'lucide-react';
 import type { Task, Project, Person } from '@shared/schema';
 import { TaskRow, ParsedTitle, parseInlineTags } from './WorkingSpace';
@@ -533,6 +535,11 @@ export default function AssignedTasks() {
           <Check className="h-3 w-3 text-blue-500" />
           Closed: {closedTasks.length}
         </Badge>
+      </div>
+
+      <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+        <TriangleAlert className="h-4 w-4 flex-shrink-0" />
+        <span>Please add your end-of-shift reports or the work you did on the task as notes <StickyNote className="h-3.5 w-3.5 inline-block align-text-bottom mx-0.5" /> before closing a task.</span>
       </div>
 
       <div className="border rounded-lg bg-card space-y-8 p-4">

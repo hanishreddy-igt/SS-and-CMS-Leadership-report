@@ -21,7 +21,9 @@ import {
   Check,
   Ban,
   Filter,
-  X
+  X,
+  TriangleAlert,
+  StickyNote
 } from 'lucide-react';
 import type { Task, Project, Person } from '@shared/schema';
 import { TaskRow, ParsedTitle, parseInlineTags } from './WorkingSpace';
@@ -384,6 +386,10 @@ export default function AllTasksByProject() {
         </div>
       </CardHeader>
       <CardContent>
+        <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400 mb-3">
+          <TriangleAlert className="h-4 w-4 flex-shrink-0" />
+          <span>Please add your end-of-shift reports or the work you did on the task as notes <StickyNote className="h-3.5 w-3.5 inline-block align-text-bottom mx-0.5" /> before closing a task.</span>
+        </div>
         {accountsWithTasks.length === 0 && filteredTasksWithoutAccount.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
             <FolderKanban className="h-6 w-6 mx-auto mb-2 opacity-50" />
