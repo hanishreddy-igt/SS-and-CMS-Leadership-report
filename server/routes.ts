@@ -3129,7 +3129,47 @@ No explanation.`
       const contextData = await fetchContextForIntent(detectedIntentKey, targetEmail, dateRange);
 
       // Build messages for OpenAI
-      const systemMessage = `${matchedIntent?.systemPrompt || 'You are a helpful assistant.'}\n\nHere is the current data from the SSCMA Dashboard:\n\n${contextData}`;
+      let systemMessage: string;
+      let userMessage: string;
+
+      if (detectedIntentKey === 'eod_report') {
+        // Use the exact same system + user prompt structure as the Tasks section EOD report
+        systemMessage = matchedIntent?.systemPrompt || `You are a senior team member writing a concise End of Day work update.
+Your goal is to explain meaningful progress and outcomes, not list actions.
+Think like a human reporting to a manager.`;
+
+        userMessage = `Generate a professional End of Day update grouped by account/project.
+
+Guidelines:
+- Group the update by account/project.
+- Within each account, summarize meaningful work in plain language.
+- Do NOT list task names or individual actions.
+- Combine all activity related to the same task into a single concise line.
+- Use note content to infer outcomes, blockers resolved, communication done, or progress made.
+- Focus on WHAT was accomplished or progressed, not HOW the system changed.
+- Prefer outcomes like:
+  - completed
+  - progressed
+  - unblocked
+  - blocked
+  - started
+  - communicated
+- Ignore low-signal actions unless they add context.
+- Use past tense for completed work and present tense for ongoing work.
+
+Formatting rules:
+- Start with one high-level summary sentence.
+- For each account:
+  - Use the account name as a header.
+  - Use 1–3 bullet points maximum.
+  - Each bullet should describe a meaningful outcome in one sentence.
+
+Activities (grouped by account and task):
+${contextData}`;
+      } else {
+        systemMessage = `${matchedIntent?.systemPrompt || 'You are a helpful assistant.'}\n\nHere is the current data from the SSCMA Dashboard:\n\n${contextData}`;
+        userMessage = question;
+      }
 
       const messages: any[] = [
         { role: 'system', content: systemMessage },
@@ -3137,7 +3177,7 @@ No explanation.`
           role: m.role,
           content: m.content,
         })),
-        { role: 'user', content: question },
+        { role: 'user', content: userMessage },
       ];
 
       // Stream the response
