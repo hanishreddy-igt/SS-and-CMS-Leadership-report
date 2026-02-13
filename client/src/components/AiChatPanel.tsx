@@ -165,7 +165,7 @@ export default function AiChatPanel() {
           style={{ position: 'fixed', bottom: '5rem', right: '2rem', zIndex: 9999, height: '44px' }}
         >
           <Sparkles className="h-4 w-4" />
-          <span className="text-sm font-medium">AI Assistant</span>
+          <span className="text-sm font-medium">SS-CMA AI Assistant</span>
         </button>
       )}
 
@@ -178,7 +178,7 @@ export default function AiChatPanel() {
           <div className="flex items-center justify-between gap-2 p-3 border-b border-border">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-sm" data-testid="text-chat-title">AI Assistant</span>
+              <span className="font-semibold text-sm" data-testid="text-chat-title">SS-CMA AI Assistant</span>
             </div>
             <div className="flex items-center gap-1">
               <Button
