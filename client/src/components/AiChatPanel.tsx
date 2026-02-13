@@ -161,10 +161,11 @@ export default function AiChatPanel() {
         <button
           data-testid="button-open-ai-chat"
           onClick={() => setIsOpen(true)}
-          className="bg-primary text-primary-foreground border border-primary-border rounded-full shadow-xl flex items-center justify-center hover-elevate active-elevate-2"
-          style={{ position: 'fixed', bottom: '5rem', right: '2rem', zIndex: 9999, width: '56px', height: '56px' }}
+          className="bg-primary text-primary-foreground border border-primary-border rounded-full shadow-xl flex items-center gap-2 px-4 hover-elevate active-elevate-2"
+          style={{ position: 'fixed', bottom: '5rem', right: '2rem', zIndex: 9999, height: '44px' }}
         >
-          <MessageSquare className="h-6 w-6" />
+          <Sparkles className="h-4 w-4" />
+          <span className="text-sm font-medium">AI Assistant</span>
         </button>
       )}
 
