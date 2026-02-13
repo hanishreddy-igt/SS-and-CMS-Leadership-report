@@ -3189,7 +3189,7 @@ ${contextData}`;
       res.write(`data: ${JSON.stringify({ type: 'intent', intentKey: detectedIntentKey, intentName: matchedIntent?.name })}\n\n`);
 
       const stream = await openai.chat.completions.create({
-        model: 'gpt-4.1-mini',
+        model: detectedIntentKey === 'eod_report' ? 'gpt-5.2' : 'gpt-4.1-mini',
         messages,
         max_completion_tokens: 2000,
         stream: true,
