@@ -219,7 +219,7 @@ export default function AiChatPanel() {
                       data-testid={`button-quick-action-${action.intent}`}
                       className="cursor-pointer text-xs"
                       variant="secondary"
-                      onClick={() => sendMessage(action.question, action.intent)}
+                      onClick={() => { setInput(action.question); setTimeout(() => inputRef.current?.focus(), 50); }}
                     >
                       {action.label}
                     </Badge>
