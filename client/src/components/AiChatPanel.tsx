@@ -158,14 +158,14 @@ export default function AiChatPanel() {
   return (
     <>
       {!isOpen && (
-        <Button
+        <button
           data-testid="button-open-ai-chat"
-          size="icon"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-20 right-8 z-[9999] h-14 w-14 rounded-full shadow-xl bg-primary border border-primary-border"
+          className="bg-primary text-primary-foreground border border-primary-border rounded-full shadow-xl flex items-center justify-center hover-elevate active-elevate-2"
+          style={{ position: 'fixed', bottom: '5rem', right: '2rem', zIndex: 9999, width: '56px', height: '56px' }}
         >
           <MessageSquare className="h-6 w-6" />
-        </Button>
+        </button>
       )}
 
       {isOpen && (
