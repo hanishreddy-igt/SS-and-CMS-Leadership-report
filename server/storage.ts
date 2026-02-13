@@ -30,8 +30,10 @@ import type {
   InsertTaskTemplate,
   TaskActivity,
   InsertTaskActivity,
+  AiChatIntent,
+  InsertAiChatIntent,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries, tasks, taskTemplates, taskActivity } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries, tasks, taskTemplates, taskActivity, aiChatIntents } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -153,6 +155,15 @@ export interface IStorage {
   createTaskActivity(activity: InsertTaskActivity): Promise<TaskActivity>;
   getTaskActivities(taskId: string): Promise<TaskActivity[]>;
   getActivitiesByUser(userEmail: string, startDate?: Date, endDate?: Date): Promise<TaskActivity[]>;
+
+  // AI Chat intent operations
+  getAiChatIntents(): Promise<AiChatIntent[]>;
+  getAiChatIntent(id: string): Promise<AiChatIntent | undefined>;
+  getAiChatIntentByKey(intentKey: string): Promise<AiChatIntent | undefined>;
+  createAiChatIntent(intent: InsertAiChatIntent): Promise<AiChatIntent>;
+  updateAiChatIntent(id: string, updates: Partial<InsertAiChatIntent>): Promise<AiChatIntent | undefined>;
+  deleteAiChatIntent(id: string): Promise<boolean>;
+  seedDefaultIntents(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -835,6 +846,14 @@ export class MemStorage implements IStorage {
   async deleteTaskTemplate(id: string): Promise<boolean> {
     return this.taskTemplatesStore.delete(id);
   }
+
+  async getAiChatIntents(): Promise<AiChatIntent[]> { return []; }
+  async getAiChatIntent(_id: string): Promise<AiChatIntent | undefined> { return undefined; }
+  async getAiChatIntentByKey(_key: string): Promise<AiChatIntent | undefined> { return undefined; }
+  async createAiChatIntent(_intent: InsertAiChatIntent): Promise<AiChatIntent> { throw new Error('Not implemented'); }
+  async updateAiChatIntent(_id: string, _updates: Partial<InsertAiChatIntent>): Promise<AiChatIntent | undefined> { return undefined; }
+  async deleteAiChatIntent(_id: string): Promise<boolean> { return false; }
+  async seedDefaultIntents(): Promise<void> {}
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1623,13 +1642,140 @@ export class DatabaseStorage implements IStorage {
     const conditions = [eq(taskActivity.changedBy, userEmail)];
     
     if (startDate && endDate) {
-      // For date range queries, we'll need to import gte and lte
       const { gte, lte } = await import('drizzle-orm');
       conditions.push(gte(taskActivity.changedAt, startDate));
       conditions.push(lte(taskActivity.changedAt, endDate));
     }
     
     return await db.select().from(taskActivity).where(and(...conditions));
+  }
+
+  async getAiChatIntents(): Promise<AiChatIntent[]> {
+    return await db.select().from(aiChatIntents).orderBy(aiChatIntents.sortOrder);
+  }
+
+  async getAiChatIntent(id: string): Promise<AiChatIntent | undefined> {
+    const [intent] = await db.select().from(aiChatIntents).where(eq(aiChatIntents.id, id));
+    return intent;
+  }
+
+  async getAiChatIntentByKey(intentKey: string): Promise<AiChatIntent | undefined> {
+    const [intent] = await db.select().from(aiChatIntents).where(eq(aiChatIntents.intentKey, intentKey));
+    return intent;
+  }
+
+  async createAiChatIntent(intent: InsertAiChatIntent): Promise<AiChatIntent> {
+    const [created] = await db.insert(aiChatIntents).values(intent).returning();
+    return created;
+  }
+
+  async updateAiChatIntent(id: string, updates: Partial<InsertAiChatIntent>): Promise<AiChatIntent | undefined> {
+    const [updated] = await db.update(aiChatIntents).set(updates).where(eq(aiChatIntents.id, id)).returning();
+    return updated;
+  }
+
+  async deleteAiChatIntent(id: string): Promise<boolean> {
+    const result = await db.delete(aiChatIntents).where(eq(aiChatIntents.id, id));
+    return (result?.rowCount ?? 0) > 0;
+  }
+
+  async seedDefaultIntents(): Promise<void> {
+    const existing = await this.getAiChatIntents();
+    if (existing.length > 0) return;
+
+    const defaults: InsertAiChatIntent[] = [
+      {
+        intentKey: 'eod_report',
+        name: 'EOD Report',
+        description: 'Generate end-of-day status reports summarizing task progress',
+        systemPrompt: `You are an EOD report generator for an enterprise dashboard tracking SS and CMA accounts. Given the task and project data, generate a concise end-of-day summary including:
+- Tasks completed today
+- Tasks in progress with current status
+- Any blockers or issues
+- Planned work for tomorrow
+Format as a clean, professional status update. Use bullet points. Be specific about project names and task titles.`,
+        isEnabled: 'true',
+        sortOrder: 0,
+      },
+      {
+        intentKey: 'project_status',
+        name: 'Project Status',
+        description: 'Get current status overview of specific projects or all projects',
+        systemPrompt: `You are a project status analyst for an enterprise dashboard tracking SS and CMA accounts. Given the project and task data, provide a clear status overview including:
+- Overall project health (based on task completion rates and overdue items)
+- Key milestones and deliverables status
+- Team allocation and workload
+- Risks or concerns
+Be concise and data-driven. Reference specific numbers and percentages where possible.`,
+        isEnabled: 'true',
+        sortOrder: 1,
+      },
+      {
+        intentKey: 'task_query',
+        name: 'Task Query',
+        description: 'Search and filter tasks by various criteria',
+        systemPrompt: `You are a task search assistant for an enterprise dashboard. Help users find and understand their tasks. When answering:
+- List matching tasks with their status, assignees, and due dates
+- Group results logically (by project, status, or priority)
+- Highlight overdue or high-priority items
+- Provide counts and summaries
+Be direct and organized in your responses.`,
+        isEnabled: 'true',
+        sortOrder: 2,
+      },
+      {
+        intentKey: 'person_activity',
+        name: 'Person Activity',
+        description: 'View what specific team members are working on',
+        systemPrompt: `You are a team activity tracker for an enterprise dashboard. When asked about a person's activity:
+- List their assigned tasks with current status
+- Show their recent task completions
+- Identify their current workload
+- Note any overdue items they're responsible for
+Reference the person by name and be specific about task details.`,
+        isEnabled: 'true',
+        sortOrder: 3,
+      },
+      {
+        intentKey: 'report_summary',
+        name: 'Report Summary',
+        description: 'Summarize weekly reports and historical data',
+        systemPrompt: `You are a report summarizer for an enterprise dashboard tracking SS and CMA accounts. When summarizing reports:
+- Extract key highlights and trends
+- Compare current vs previous performance
+- Identify notable changes or patterns
+- Provide actionable insights
+Be analytical and concise. Use data to support your observations.`,
+        isEnabled: 'true',
+        sortOrder: 4,
+      },
+      {
+        intentKey: 'usage_guide',
+        name: 'Usage Guide',
+        description: 'Help users navigate and use the dashboard features',
+        systemPrompt: `You are a helpful guide for the SSCMA Enterprise Dashboard. Help users understand how to use the application features:
+- Task management (creating, assigning, tracking tasks)
+- Weekly reporting and snapshots
+- Team and project management
+- Recurring deliverables and templates
+- Jira integration
+Answer questions about the dashboard functionality clearly and provide step-by-step guidance when needed.`,
+        isEnabled: 'true',
+        sortOrder: 5,
+      },
+      {
+        intentKey: 'general',
+        name: 'General',
+        description: 'General questions and catch-all for unmatched queries',
+        systemPrompt: `You are a helpful assistant for the SSCMA Enterprise Dashboard that tracks Strategic Services (SS) and Community Managed Advisory (CMA) accounts. Answer questions based on the available data. Be concise, helpful, and professional. If you don't have enough data to answer a question, say so clearly.`,
+        isEnabled: 'true',
+        sortOrder: 6,
+      },
+    ];
+
+    for (const intent of defaults) {
+      await this.createAiChatIntent(intent);
+    }
   }
 }
 

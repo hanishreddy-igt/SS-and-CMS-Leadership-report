@@ -2976,6 +2976,224 @@ ${formattedActivities}`;
     }
   });
 
+  // ====== AI CHAT Q&A ROUTES ======
+
+  // Get all AI chat intents (for admin management)
+  app.get('/api/ai-chat/intents', isAuthenticated, async (_req, res) => {
+    try {
+      const intents = await storage.getAiChatIntents();
+      res.json(intents);
+    } catch (error: any) {
+      res.status(500).json({ message: 'Failed to fetch AI chat intents' });
+    }
+  });
+
+  // Update an AI chat intent (admin only)
+  app.patch('/api/ai-chat/intents/:id', isAuthenticated, requirePermission('canManageRoles'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const body = req.body;
+      const allowedFields: Record<string, boolean> = {
+        systemPrompt: true,
+        description: true,
+        isEnabled: true,
+        name: true,
+        sortOrder: true,
+      };
+      const updates: Record<string, any> = {};
+      for (const key of Object.keys(body)) {
+        if (allowedFields[key]) {
+          updates[key] = body[key];
+        }
+      }
+      if (updates.isEnabled !== undefined && updates.isEnabled !== 'true' && updates.isEnabled !== 'false') {
+        return res.status(400).json({ message: 'isEnabled must be "true" or "false"' });
+      }
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: 'No valid fields to update' });
+      }
+      const updated = await storage.updateAiChatIntent(id, updates);
+      if (!updated) return res.status(404).json({ message: 'Intent not found' });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: 'Failed to update intent' });
+    }
+  });
+
+  // AI Chat - main Q&A endpoint with streaming
+  app.post('/api/ai-chat/ask', isAuthenticated, async (req: any, res) => {
+    try {
+      const { question, messageHistory = [], intentOverride } = req.body;
+      if (!question || typeof question !== 'string' || question.trim().length === 0) {
+        return res.status(400).json({ message: 'Question is required' });
+      }
+      if (!Array.isArray(messageHistory)) {
+        return res.status(400).json({ message: 'messageHistory must be an array' });
+      }
+      if (intentOverride && typeof intentOverride !== 'string') {
+        return res.status(400).json({ message: 'intentOverride must be a string' });
+      }
+
+      // Get enabled intents
+      const allIntents = await storage.getAiChatIntents();
+      const enabledIntents = allIntents.filter(i => i.isEnabled === 'true');
+
+      // Detect intent from question (or use override)
+      let detectedIntentKey = intentOverride || 'general';
+      
+      if (!intentOverride && enabledIntents.length > 1) {
+        const intentList = enabledIntents
+          .filter(i => i.intentKey !== 'general')
+          .map(i => `- "${i.intentKey}": ${i.description}`)
+          .join('\n');
+
+        try {
+          const classifyResponse = await openai.chat.completions.create({
+            model: 'gpt-4.1-nano',
+            messages: [
+              {
+                role: 'system',
+                content: `You are an intent classifier. Given a user question, classify it into one of these intents:\n${intentList}\n- "general": General questions that don't fit other categories\n\nRespond with ONLY the intent key (e.g., "eod_report", "project_status", etc.). No explanation.`
+              },
+              { role: 'user', content: question }
+            ],
+            max_completion_tokens: 20,
+          });
+          const classifiedKey = classifyResponse.choices[0]?.message?.content?.trim().replace(/"/g, '') || 'general';
+          if (enabledIntents.some(i => i.intentKey === classifiedKey)) {
+            detectedIntentKey = classifiedKey;
+          }
+        } catch (err) {
+          console.error('Intent classification failed, using general:', err);
+        }
+      }
+
+      // Get the system prompt for the detected intent
+      const matchedIntent = enabledIntents.find(i => i.intentKey === detectedIntentKey) 
+        || enabledIntents.find(i => i.intentKey === 'general')
+        || enabledIntents[0];
+
+      // Fetch relevant data based on intent
+      const contextData = await fetchContextForIntent(detectedIntentKey);
+
+      // Build messages for OpenAI
+      const systemMessage = `${matchedIntent?.systemPrompt || 'You are a helpful assistant.'}\n\nHere is the current data from the SSCMA Dashboard:\n\n${contextData}`;
+
+      const messages: any[] = [
+        { role: 'system', content: systemMessage },
+        ...messageHistory.slice(-10).map((m: any) => ({
+          role: m.role,
+          content: m.content,
+        })),
+        { role: 'user', content: question },
+      ];
+
+      // Stream the response
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      // Send the detected intent as the first event
+      res.write(`data: ${JSON.stringify({ type: 'intent', intentKey: detectedIntentKey, intentName: matchedIntent?.name })}\n\n`);
+
+      const stream = await openai.chat.completions.create({
+        model: 'gpt-4.1-mini',
+        messages,
+        max_completion_tokens: 2000,
+        stream: true,
+      });
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          res.write(`data: ${JSON.stringify({ type: 'content', content })}\n\n`);
+        }
+      }
+
+      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+      res.end();
+    } catch (error: any) {
+      console.error('AI Chat error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Failed to process AI chat request' });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: 'error', message: 'An error occurred while generating the response.' })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // Helper function to fetch context data based on intent
+  async function fetchContextForIntent(intentKey: string): Promise<string> {
+    try {
+      const sections: string[] = [];
+
+      if (['eod_report', 'task_query', 'person_activity', 'general', 'project_status'].includes(intentKey)) {
+        const allTasks = await storage.getTasks();
+        const activeTasks = allTasks.filter(t => t.status !== 'cancelled');
+        
+        const taskSummary = activeTasks.map(t => {
+          const assignees = Array.isArray(t.assignedTo) ? t.assignedTo.join(', ') : 'Unassigned';
+          const dueStr = t.dueDate ? String(t.dueDate).split('T')[0] : 'No due date';
+          return `- [${t.status}] "${t.title}" | Assigned: ${assignees} | Due: ${dueStr} | Priority: ${t.priority || 'normal'} | Project: ${t.projectId || 'None'}`;
+        }).join('\n');
+
+        sections.push(`TASKS (${activeTasks.length} active):\n${taskSummary || 'No tasks found.'}`);
+      }
+
+      if (['project_status', 'eod_report', 'report_summary', 'general'].includes(intentKey)) {
+        const allProjects = await storage.getProjects();
+        const projectSummary = allProjects.map(p => {
+          const members = Array.isArray(p.teamMembers) ? p.teamMembers.join(', ') : 'None';
+          const leads = Array.isArray(p.projectLeads) ? p.projectLeads.join(', ') : 'None';
+          return `- "${p.name}" (${p.type || 'unknown'}) | Status: ${p.status || 'active'} | Leads: ${leads} | Members: ${members}`;
+        }).join('\n');
+
+        sections.push(`PROJECTS (${allProjects.length}):\n${projectSummary || 'No projects found.'}`);
+      }
+
+      if (['person_activity', 'general'].includes(intentKey)) {
+        const allPeople = await storage.getAllPeople();
+        const peopleSummary = allPeople.map(p => {
+          const roles = Array.isArray(p.roles) ? p.roles.join(', ') : 'None';
+          return `- ${p.name} (${p.email || 'no email'}) | Roles: ${roles}`;
+        }).join('\n');
+
+        sections.push(`TEAM MEMBERS (${allPeople.length}):\n${peopleSummary || 'No team members found.'}`);
+      }
+
+      if (['report_summary', 'general'].includes(intentKey)) {
+        const reports = await storage.getWeeklyReports();
+        if (reports.length > 0) {
+          const recentReports = reports.slice(0, 5);
+          const reportSummary = recentReports.map(r => 
+            `- ${r.projectId}: Week of ${r.weekStart} | Status: ${r.status || 'N/A'}`
+          ).join('\n');
+          sections.push(`RECENT WEEKLY REPORTS:\n${reportSummary}`);
+        }
+      }
+
+      if (intentKey === 'usage_guide') {
+        sections.push(`DASHBOARD FEATURES:
+- Task Management: Create, assign, and track tasks across projects. Tasks support subtasks, priorities (normal/medium/high), statuses (todo/in-progress/done/cancelled), notes, and due dates.
+- Weekly Reporting: Generate and archive weekly status reports for accounts. Reports include AI-generated summaries.
+- Team Management: Manage people with roles (team member, project lead). Track assignments and workload.
+- Recurring Deliverables: Create task templates that automatically generate tasks on a schedule (daily, weekly, biweekly, monthly).
+- Project Management: Track SS and CMA accounts with team members, project leads, and JIRA integration.
+- EOD Reports: Generate end-of-day reports summarizing task activities.
+- AI Q&A: Ask questions about your dashboard data using natural language.`);
+      }
+
+      return sections.join('\n\n') || 'No specific data available for this query.';
+    } catch (error) {
+      console.error('Error fetching context data:', error);
+      return 'Error retrieving dashboard data.';
+    }
+  }
+
+  // Seed default AI chat intents on startup
+  storage.seedDefaultIntents().catch(err => console.error('Failed to seed AI chat intents:', err));
+
   const httpServer = createServer(app);
 
   return httpServer;

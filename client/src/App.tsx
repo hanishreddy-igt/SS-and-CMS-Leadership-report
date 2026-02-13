@@ -12,6 +12,7 @@ import ReportsSection from "@/pages/reports-section";
 import TasksSection from "@/pages/tasks-section";
 import NotFound from "@/pages/not-found";
 import { useAuth } from "@/hooks/useAuth";
+import AiChatPanel from "@/components/AiChatPanel";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -46,12 +47,19 @@ function Router() {
   );
 }
 
+function AuthenticatedExtras() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return null;
+  return <AiChatPanel />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Router />
+        <AuthenticatedExtras />
       </TooltipProvider>
     </QueryClientProvider>
   );

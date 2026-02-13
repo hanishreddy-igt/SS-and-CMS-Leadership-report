@@ -335,6 +335,21 @@ export type TaskTemplateNode = {
   children?: TaskTemplateNode[];
 };
 
+// AI Chat intent configurations for Q&A feature
+export const aiChatIntents = pgTable("ai_chat_intents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  intentKey: varchar("intent_key").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  systemPrompt: text("system_prompt").notNull(),
+  isEnabled: text("is_enabled").notNull().default('true'),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const insertAiChatIntentSchema = createInsertSchema(aiChatIntents).omit({ id: true });
+export type AiChatIntent = typeof aiChatIntents.$inferSelect;
+export type InsertAiChatIntent = z.infer<typeof insertAiChatIntentSchema>;
+
 // EOS format configuration
 export type EOSFormat = {
   includeStatus: boolean;

@@ -34,7 +34,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft, LayoutGrid, Check, X, Trash2, Plus } from "lucide-react";
+import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft, LayoutGrid, Check, X, Trash2, Plus, Sparkles, Save } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -451,6 +453,10 @@ export default function AdminPanel() {
                 {pendingRequests.length}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="ai-prompts" className="gap-2" data-testid="tab-ai-prompts">
+            <Sparkles className="h-4 w-4" />
+            AI Prompts
           </TabsTrigger>
         </TabsList>
 
@@ -870,7 +876,174 @@ export default function AdminPanel() {
           </div>
         </TabsContent>
 
+        <TabsContent value="ai-prompts">
+          <AiPromptsManager />
+        </TabsContent>
+
       </Tabs>
     </div>
+  );
+}
+
+interface AiChatIntent {
+  id: string;
+  intentKey: string;
+  name: string;
+  description: string | null;
+  systemPrompt: string;
+  isEnabled: string;
+  sortOrder: number;
+}
+
+function AiPromptsManager() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPrompt, setEditPrompt] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+
+  const { data: intents = [], isLoading } = useQuery<AiChatIntent[]>({
+    queryKey: ['/api/ai-chat/intents'],
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<AiChatIntent> }) => {
+      const res = await apiRequest('PATCH', `/api/ai-chat/intents/${id}`, updates);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ai-chat/intents'] });
+      toast({ title: 'Intent updated successfully' });
+      setEditingId(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to update intent', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const startEditing = (intent: AiChatIntent) => {
+    setEditingId(intent.id);
+    setEditPrompt(intent.systemPrompt);
+    setEditDescription(intent.description || '');
+  };
+
+  const saveEdit = () => {
+    if (!editingId) return;
+    updateMutation.mutate({
+      id: editingId,
+      updates: { systemPrompt: editPrompt, description: editDescription },
+    });
+  };
+
+  const toggleEnabled = (intent: AiChatIntent) => {
+    updateMutation.mutate({
+      id: intent.id,
+      updates: { isEnabled: intent.isEnabled === 'true' ? 'false' : 'true' },
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-muted-foreground text-sm">Loading AI intents...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>AI Chat Intent Prompts</CardTitle>
+        <CardDescription>
+          Configure system prompts for each AI chat intent. These prompts control how the AI assistant responds to different types of questions.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {intents.map((intent) => (
+          <Card key={intent.id} data-testid={`card-intent-${intent.intentKey}`}>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-sm" data-testid={`text-intent-name-${intent.intentKey}`}>
+                    {intent.name}
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">{intent.intentKey}</Badge>
+                </div>
+                {editingId !== intent.id && (
+                  <p className="text-xs text-muted-foreground mt-1">{intent.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  data-testid={`switch-intent-${intent.intentKey}`}
+                  checked={intent.isEnabled === 'true'}
+                  onCheckedChange={() => toggleEnabled(intent)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {editingId === intent.id ? (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Description</Label>
+                    <Input
+                      data-testid={`input-intent-description-${intent.intentKey}`}
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      className="mt-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">System Prompt</Label>
+                    <Textarea
+                      data-testid={`textarea-intent-prompt-${intent.intentKey}`}
+                      value={editPrompt}
+                      onChange={(e) => setEditPrompt(e.target.value)}
+                      className="mt-1 text-sm font-mono min-h-[150px]"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      data-testid={`button-save-intent-${intent.intentKey}`}
+                      size="sm"
+                      onClick={saveEdit}
+                      disabled={updateMutation.isPending}
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      Save
+                    </Button>
+                    <Button
+                      data-testid={`button-cancel-intent-${intent.intentKey}`}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditingId(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <pre className="text-xs text-muted-foreground bg-muted rounded-md p-2 whitespace-pre-wrap max-h-[120px] overflow-y-auto">
+                    {intent.systemPrompt}
+                  </pre>
+                  <Button
+                    data-testid={`button-edit-intent-${intent.intentKey}`}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => startEditing(intent)}
+                    className="mt-2"
+                  >
+                    Edit Prompt
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
