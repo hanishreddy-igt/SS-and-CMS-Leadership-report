@@ -210,8 +210,7 @@ export default function AiChatPanel() {
               <div className="flex flex-col items-center justify-center h-full gap-4 px-2">
                 <Sparkles className="h-8 w-8 text-muted-foreground" />
                 <div className="text-center">
-                  <p className="text-sm font-medium" data-testid="text-chat-greeting">Hi {firstName}, how can I help?</p>
-                  <p className="text-xs text-muted-foreground mt-1">Ask about tasks, projects, team activity, or generate reports.</p>
+                  <p className="text-sm font-medium" data-testid="text-chat-greeting">Hi {firstName}, I'm SS-CMA Assistant. I'm still under development but how can I help you?</p>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-center mt-2">
                   {quickActions.map((action) => (
