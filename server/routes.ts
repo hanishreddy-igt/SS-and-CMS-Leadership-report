@@ -3076,23 +3076,37 @@ ${formattedActivities}`;
       // Fetch relevant data based on intent
       const userEmail = req.user.claims.email;
 
-      // For EOD reports, extract date range from the question
+      // For EOD reports, extract date range and target person from the question
       let dateRange: { start: Date; end: Date } | undefined;
+      let targetEmail = userEmail;
       if (detectedIntentKey === 'eod_report') {
+        // Build a people lookup for the AI to match names/emails
+        const allPeople = await storage.getAllPeople();
+        const peopleList = allPeople.map(p => `${p.name} (${p.email || 'no email'})`).join(', ');
+
         try {
-          const dateExtract = await openai.chat.completions.create({
+          const extractResponse = await openai.chat.completions.create({
             model: 'gpt-4.1-nano',
             messages: [
               {
                 role: 'system',
-                content: `Today is ${new Date().toISOString().split('T')[0]}. Extract the date range from the user's question about an activity/EOD report. Return ONLY a JSON object with "start" and "end" as ISO date strings (YYYY-MM-DD). If the user says "today" or doesn't mention dates, return today's date for both. If they say a single date like "Feb 5th", use that date for both start and end. If they say a range like "Feb 5th to Feb 10th", use those dates. Always use the current year (${new Date().getFullYear()}) unless another year is specified. Return ONLY valid JSON, no explanation.`
+                content: `Today is ${new Date().toISOString().split('T')[0]}. Extract TWO things from the user's question about an activity/EOD report:
+1. Date range: "start" and "end" as YYYY-MM-DD. If "today" or no dates mentioned, use today for both. Single date = same for both. Use year ${new Date().getFullYear()} unless specified.
+2. Target person: If the user mentions generating a report FOR someone else (by name or email), return their email. If no specific person mentioned or they say "me"/"my", return null.
+
+Known team members: ${peopleList}
+
+The current user's email is: ${userEmail}
+
+Return ONLY a JSON object: {"start":"YYYY-MM-DD","end":"YYYY-MM-DD","personEmail":null or "email@example.com"}
+No explanation.`
               },
               { role: 'user', content: question }
             ],
-            max_completion_tokens: 60,
+            max_completion_tokens: 80,
           });
-          const dateJson = dateExtract.choices[0]?.message?.content?.trim() || '';
-          const parsed = JSON.parse(dateJson);
+          const json = extractResponse.choices[0]?.message?.content?.trim() || '';
+          const parsed = JSON.parse(json);
           if (parsed.start && parsed.end) {
             const startDate = new Date(parsed.start + 'T00:00:00');
             const endDate = new Date(parsed.end + 'T23:59:59');
@@ -3100,12 +3114,19 @@ ${formattedActivities}`;
               dateRange = { start: startDate, end: endDate };
             }
           }
+          if (parsed.personEmail && typeof parsed.personEmail === 'string') {
+            // Verify the person exists
+            const person = await storage.getPersonByEmail(parsed.personEmail);
+            if (person) {
+              targetEmail = parsed.personEmail;
+            }
+          }
         } catch (err) {
-          // Fall back to today if date extraction fails
+          // Fall back to today + current user if extraction fails
         }
       }
 
-      const contextData = await fetchContextForIntent(detectedIntentKey, userEmail, dateRange);
+      const contextData = await fetchContextForIntent(detectedIntentKey, targetEmail, dateRange);
 
       // Build messages for OpenAI
       const systemMessage = `${matchedIntent?.systemPrompt || 'You are a helpful assistant.'}\n\nHere is the current data from the SSCMA Dashboard:\n\n${contextData}`;
