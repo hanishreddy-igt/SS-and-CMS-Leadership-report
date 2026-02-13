@@ -3075,7 +3075,37 @@ ${formattedActivities}`;
 
       // Fetch relevant data based on intent
       const userEmail = req.user.claims.email;
-      const contextData = await fetchContextForIntent(detectedIntentKey, userEmail);
+
+      // For EOD reports, extract date range from the question
+      let dateRange: { start: Date; end: Date } | undefined;
+      if (detectedIntentKey === 'eod_report') {
+        try {
+          const dateExtract = await openai.chat.completions.create({
+            model: 'gpt-4.1-nano',
+            messages: [
+              {
+                role: 'system',
+                content: `Today is ${new Date().toISOString().split('T')[0]}. Extract the date range from the user's question about an activity/EOD report. Return ONLY a JSON object with "start" and "end" as ISO date strings (YYYY-MM-DD). If the user says "today" or doesn't mention dates, return today's date for both. If they say a single date like "Feb 5th", use that date for both start and end. If they say a range like "Feb 5th to Feb 10th", use those dates. Always use the current year (${new Date().getFullYear()}) unless another year is specified. Return ONLY valid JSON, no explanation.`
+              },
+              { role: 'user', content: question }
+            ],
+            max_completion_tokens: 60,
+          });
+          const dateJson = dateExtract.choices[0]?.message?.content?.trim() || '';
+          const parsed = JSON.parse(dateJson);
+          if (parsed.start && parsed.end) {
+            const startDate = new Date(parsed.start + 'T00:00:00');
+            const endDate = new Date(parsed.end + 'T23:59:59');
+            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+              dateRange = { start: startDate, end: endDate };
+            }
+          }
+        } catch (err) {
+          // Fall back to today if date extraction fails
+        }
+      }
+
+      const contextData = await fetchContextForIntent(detectedIntentKey, userEmail, dateRange);
 
       // Build messages for OpenAI
       const systemMessage = `${matchedIntent?.systemPrompt || 'You are a helpful assistant.'}\n\nHere is the current data from the SSCMA Dashboard:\n\n${contextData}`;
@@ -3125,17 +3155,16 @@ ${formattedActivities}`;
   });
 
   // Helper function to fetch context data based on intent
-  async function fetchContextForIntent(intentKey: string, userEmail?: string): Promise<string> {
+  async function fetchContextForIntent(intentKey: string, userEmail?: string, dateRange?: { start: Date; end: Date }): Promise<string> {
     try {
       const sections: string[] = [];
 
       // For EOD report, pull actual task activity (same as Tasks section EOD report)
       if (intentKey === 'eod_report' && userEmail) {
-        const now = new Date();
-        const startOfDay = new Date(now);
-        startOfDay.setHours(0, 0, 0, 0);
+        const startDate = dateRange?.start || (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+        const endDate = dateRange?.end || new Date();
         
-        const activities = await storage.getActivitiesByUser(userEmail, startOfDay, now);
+        const activities = await storage.getActivitiesByUser(userEmail, startDate, endDate);
         const allTasks = await storage.getTasks();
         const allProjects = await storage.getProjects();
         const taskMap = new Map(allTasks.map(t => [t.id, t]));
@@ -3209,10 +3238,13 @@ ${formattedActivities}`;
           return `**${account.accountName}**\n${taskSummaries.join('\n')}`;
         }).join('\n\n');
 
+        const rangeLabel = dateRange
+          ? `${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`
+          : 'today';
         if (activities.length > 0) {
-          sections.push(`TODAY'S ACTIVITY (${activities.length} changes by ${userEmail}):\n${formattedActivities}`);
+          sections.push(`ACTIVITY FOR ${rangeLabel.toUpperCase()} (${activities.length} changes by ${userEmail}):\n${formattedActivities}`);
         } else {
-          sections.push(`TODAY'S ACTIVITY: No task activity recorded today for ${userEmail}.`);
+          sections.push(`ACTIVITY FOR ${rangeLabel.toUpperCase()}: No task activity recorded for ${userEmail}.`);
         }
       }
 
