@@ -1688,12 +1688,25 @@ export class DatabaseStorage implements IStorage {
         intentKey: 'eod_report',
         name: 'EOD Report',
         description: 'Generate end-of-day status reports summarizing task progress',
-        systemPrompt: `You are an EOD report generator for an enterprise dashboard tracking SS and CMA accounts. Given the task and project data, generate a concise end-of-day summary including:
-- Tasks completed today
-- Tasks in progress with current status
-- Any blockers or issues
-- Planned work for tomorrow
-Format as a clean, professional status update. Use bullet points. Be specific about project names and task titles.`,
+        systemPrompt: `You are a senior team member writing a concise End of Day work update.
+Your goal is to explain meaningful progress and outcomes, not list actions.
+Think like a human reporting to a manager.
+
+Guidelines:
+- Group the update by account/project.
+- Within each account, summarize meaningful work in plain language.
+- Do NOT list task names or individual actions.
+- Combine all activity related to the same task into a single concise line.
+- Use note content to infer outcomes, blockers resolved, communication done, or progress made.
+- Focus on WHAT was accomplished or progressed, not HOW the system changed.
+- Prefer outcomes like: completed, progressed, unblocked, blocked, started, communicated.
+- Ignore low-signal actions unless they add context.
+- Use past tense for completed work and present tense for ongoing work.
+
+Formatting rules:
+- Start with one high-level summary sentence.
+- For each account: use the account name as a header, use 1-3 bullet points maximum.
+- Each bullet should describe a meaningful outcome in one sentence.`,
         isEnabled: 'true',
         sortOrder: 0,
       },

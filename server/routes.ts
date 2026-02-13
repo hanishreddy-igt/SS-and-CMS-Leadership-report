@@ -3074,7 +3074,8 @@ ${formattedActivities}`;
         || enabledIntents[0];
 
       // Fetch relevant data based on intent
-      const contextData = await fetchContextForIntent(detectedIntentKey);
+      const userEmail = req.user.claims.email;
+      const contextData = await fetchContextForIntent(detectedIntentKey, userEmail);
 
       // Build messages for OpenAI
       const systemMessage = `${matchedIntent?.systemPrompt || 'You are a helpful assistant.'}\n\nHere is the current data from the SSCMA Dashboard:\n\n${contextData}`;
@@ -3124,11 +3125,98 @@ ${formattedActivities}`;
   });
 
   // Helper function to fetch context data based on intent
-  async function fetchContextForIntent(intentKey: string): Promise<string> {
+  async function fetchContextForIntent(intentKey: string, userEmail?: string): Promise<string> {
     try {
       const sections: string[] = [];
 
-      if (['eod_report', 'task_query', 'person_activity', 'general', 'project_status'].includes(intentKey)) {
+      // For EOD report, pull actual task activity (same as Tasks section EOD report)
+      if (intentKey === 'eod_report' && userEmail) {
+        const now = new Date();
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const activities = await storage.getActivitiesByUser(userEmail, startOfDay, now);
+        const allTasks = await storage.getTasks();
+        const allProjects = await storage.getProjects();
+        const taskMap = new Map(allTasks.map(t => [t.id, t]));
+        const projectMap = new Map(allProjects.map(p => [p.id, p]));
+
+        const accountActivities: Record<string, { accountName: string; activities: Array<{ taskTitle: string; changeType: string; previousValue: any; newValue: any; timestamp: Date }> }> = {};
+
+        for (const activity of activities) {
+          const task = taskMap.get(activity.taskId);
+          const taskTitle = task?.title || 'Unknown Task';
+          const projectId = task?.projectId;
+          const project = projectId ? projectMap.get(projectId) : null;
+          const accountName = project?.name || 'No Account';
+          const accountKey = project?.id || 'no-account';
+
+          if (!accountActivities[accountKey]) {
+            accountActivities[accountKey] = { accountName, activities: [] };
+          }
+          accountActivities[accountKey].activities.push({
+            taskTitle, changeType: activity.changeType,
+            previousValue: activity.previousValue, newValue: activity.newValue,
+            timestamp: activity.changedAt
+          });
+        }
+
+        const formattedActivities = Object.values(accountActivities).map(account => {
+          const taskGroups: Record<string, { taskTitle: string; notes: string[]; statusChanges: string[]; otherChanges: string[] }> = {};
+          for (const a of account.activities) {
+            if (!taskGroups[a.taskTitle]) {
+              taskGroups[a.taskTitle] = { taskTitle: a.taskTitle, notes: [], statusChanges: [], otherChanges: [] };
+            }
+            switch (a.changeType) {
+              case 'created': taskGroups[a.taskTitle].otherChanges.push('Created'); break;
+              case 'status_change': {
+                const prev = (a.previousValue as any)?.status || 'unknown';
+                const next = (a.newValue as any)?.status || 'unknown';
+                taskGroups[a.taskTitle].statusChanges.push(`${prev} → ${next}`);
+                break;
+              }
+              case 'note_added': {
+                const note = (a.newValue as any)?.content || '';
+                if (note) taskGroups[a.taskTitle].notes.push(note);
+                break;
+              }
+              case 'priority_change': {
+                const p = (a.newValue as any)?.priority || 'unknown';
+                taskGroups[a.taskTitle].otherChanges.push(`Priority set to ${p}`);
+                break;
+              }
+              case 'due_date_change': taskGroups[a.taskTitle].otherChanges.push('Due date updated'); break;
+            }
+          }
+          const taskSummaries = Object.values(taskGroups).map(task => {
+            const parts: string[] = [];
+            if (task.notes.length > 0) parts.push(`Notes: ${task.notes.join(' | ')}`);
+            if (task.statusChanges.length > 0) {
+              const transitions = task.statusChanges.map(change => {
+                const [from, to] = change.split(' → ');
+                if (from === 'todo' && to === 'in-progress') return 'Started';
+                if (to === 'done') return 'Completed';
+                if (to === 'blocked') return 'Blocked';
+                if (from === 'blocked' && to === 'in-progress') return 'Unblocked';
+                if (to === 'cancelled') return 'Cancelled';
+                return `${from} → ${to}`;
+              });
+              parts.push(`Progress: ${transitions.join(', ')}`);
+            }
+            if (task.otherChanges.includes('Created')) parts.push('Newly created');
+            return `  - Task: "${task.taskTitle}"\n    ${parts.join('\n    ')}`;
+          });
+          return `**${account.accountName}**\n${taskSummaries.join('\n')}`;
+        }).join('\n\n');
+
+        if (activities.length > 0) {
+          sections.push(`TODAY'S ACTIVITY (${activities.length} changes by ${userEmail}):\n${formattedActivities}`);
+        } else {
+          sections.push(`TODAY'S ACTIVITY: No task activity recorded today for ${userEmail}.`);
+        }
+      }
+
+      if (['task_query', 'person_activity', 'general', 'project_status'].includes(intentKey)) {
         const allTasks = await storage.getTasks();
         const activeTasks = allTasks.filter(t => t.status !== 'cancelled');
         
