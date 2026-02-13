@@ -212,7 +212,8 @@ export default function AiChatPanel() {
                 <div className="text-center">
                   <p className="text-sm font-medium" data-testid="text-chat-greeting">Hi {firstName}, I'm SS-CMA Assistant. I'm still under development but how can I help you?</p>
                 </div>
-                <div className="flex flex-wrap gap-2 justify-center mt-2">
+                <p className="text-xs text-muted-foreground mt-2">Quick prompts for :</p>
+                <div className="flex flex-wrap gap-2 justify-center">
                   {quickActions.map((action) => (
                     <Badge
                       key={action.intent + action.label}
