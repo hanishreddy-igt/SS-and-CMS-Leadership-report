@@ -162,16 +162,16 @@ export default function AiChatPanel() {
           data-testid="button-open-ai-chat"
           size="icon"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg bg-primary border border-primary-border"
+          className="fixed bottom-20 right-8 z-[9999] h-14 w-14 rounded-full shadow-xl bg-primary border border-primary-border"
         >
-          <MessageSquare className="h-5 w-5" />
+          <MessageSquare className="h-6 w-6" />
         </Button>
       )}
 
       {isOpen && (
         <Card
           data-testid="panel-ai-chat"
-          className="fixed bottom-6 right-6 z-50 flex flex-col shadow-xl border border-border"
+          className="fixed bottom-8 right-8 z-[9999] flex flex-col shadow-xl border border-border"
           style={{ width: '420px', height: '600px' }}
         >
           <div className="flex items-center justify-between gap-2 p-3 border-b border-border">
