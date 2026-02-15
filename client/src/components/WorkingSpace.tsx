@@ -1630,15 +1630,6 @@ export function TaskRow({
                 {task.title}
               </span>
             )}
-            {hasSubtasks && (
-              <Badge
-                variant="secondary"
-                className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 ml-1"
-                data-testid={`subtask-count-${task.id}`}
-              >
-                {subtasks.filter(st => st.status === 'done').length}/{subtasks.length} sub-tasks
-              </Badge>
-            )}
           </div>
 
           <div className="flex items-center gap-1 flex-shrink-0">
