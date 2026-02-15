@@ -569,7 +569,7 @@ export default function AssignedTasks() {
                   <TaskRow
                     key={task.id}
                     task={task}
-                    allTasks={assignedTasks}
+                    allTasks={allTasks}
                     projects={projects}
                     people={people}
                     onUpdate={handleUpdateTask}
@@ -601,7 +601,7 @@ export default function AssignedTasks() {
                   <TaskRow
                     key={task.id}
                     task={task}
-                    allTasks={assignedTasks}
+                    allTasks={allTasks}
                     projects={projects}
                     people={people}
                     onUpdate={handleUpdateTask}
@@ -633,7 +633,7 @@ export default function AssignedTasks() {
                   <TaskRow
                     key={task.id}
                     task={task}
-                    allTasks={assignedTasks}
+                    allTasks={allTasks}
                     projects={projects}
                     people={people}
                     onUpdate={handleUpdateTask}
