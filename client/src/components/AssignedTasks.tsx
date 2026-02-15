@@ -565,23 +565,34 @@ export default function AssignedTasks() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="border rounded-md bg-background mt-1">
-                {activeTasks.map(task => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    allTasks={assignedTasks}
-                    projects={projects}
-                    people={people}
-                    onUpdate={handleUpdateTask}
-                    onDelete={handleDeleteTask}
-                    onCreateSubtask={handleCreateSubtask}
-                    userEmail={userEmail}
-                    hiddenAssigneeIds={[]}
-                    showDetailsToggle={true}
-                    openTaskId={openTaskId}
-                    onOpenDetails={setOpenTaskId}
-                  />
-                ))}
+                {activeTasks.map(task => {
+                  const totalSubs = allTasks.filter(st => st.parentTaskId === task.id);
+                  const mySubs = totalSubs.filter(st => st.assignedTo?.some(id => myPersonIds.includes(id)));
+                  const otherSubCount = totalSubs.length - mySubs.length;
+                  return (
+                    <div key={task.id}>
+                      <TaskRow
+                        task={task}
+                        allTasks={assignedTasks}
+                        projects={projects}
+                        people={people}
+                        onUpdate={handleUpdateTask}
+                        onDelete={handleDeleteTask}
+                        onCreateSubtask={handleCreateSubtask}
+                        userEmail={userEmail}
+                        hiddenAssigneeIds={[]}
+                        showDetailsToggle={true}
+                        openTaskId={openTaskId}
+                        onOpenDetails={setOpenTaskId}
+                      />
+                      {otherSubCount > 0 && (
+                        <div className="pl-10 pb-1 text-[11px] text-muted-foreground" data-testid={`other-subtasks-${task.id}`}>
+                          +{otherSubCount} other sub-task{otherSubCount > 1 ? 's' : ''} assigned to others
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -597,23 +608,34 @@ export default function AssignedTasks() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="border rounded-md mt-1">
-                {blockedTasks.map(task => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    allTasks={assignedTasks}
-                    projects={projects}
-                    people={people}
-                    onUpdate={handleUpdateTask}
-                    onDelete={handleDeleteTask}
-                    onCreateSubtask={handleCreateSubtask}
-                    userEmail={userEmail}
-                    hiddenAssigneeIds={[]}
-                    showDetailsToggle={true}
-                    openTaskId={openTaskId}
-                    onOpenDetails={setOpenTaskId}
-                  />
-                ))}
+                {blockedTasks.map(task => {
+                  const totalSubs = allTasks.filter(st => st.parentTaskId === task.id);
+                  const mySubs = totalSubs.filter(st => st.assignedTo?.some(id => myPersonIds.includes(id)));
+                  const otherSubCount = totalSubs.length - mySubs.length;
+                  return (
+                    <div key={task.id}>
+                      <TaskRow
+                        task={task}
+                        allTasks={assignedTasks}
+                        projects={projects}
+                        people={people}
+                        onUpdate={handleUpdateTask}
+                        onDelete={handleDeleteTask}
+                        onCreateSubtask={handleCreateSubtask}
+                        userEmail={userEmail}
+                        hiddenAssigneeIds={[]}
+                        showDetailsToggle={true}
+                        openTaskId={openTaskId}
+                        onOpenDetails={setOpenTaskId}
+                      />
+                      {otherSubCount > 0 && (
+                        <div className="pl-10 pb-1 text-[11px] text-muted-foreground" data-testid={`other-subtasks-${task.id}`}>
+                          +{otherSubCount} other sub-task{otherSubCount > 1 ? 's' : ''} assigned to others
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -629,23 +651,34 @@ export default function AssignedTasks() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="border rounded-md bg-muted/30 mt-1">
-                {closedTasks.map(task => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    allTasks={assignedTasks}
-                    projects={projects}
-                    people={people}
-                    onUpdate={handleUpdateTask}
-                    onDelete={handleDeleteTask}
-                    onCreateSubtask={handleCreateSubtask}
-                    userEmail={userEmail}
-                    hiddenAssigneeIds={[]}
-                    showDetailsToggle={true}
-                    openTaskId={openTaskId}
-                    onOpenDetails={setOpenTaskId}
-                  />
-                ))}
+                {closedTasks.map(task => {
+                  const totalSubs = allTasks.filter(st => st.parentTaskId === task.id);
+                  const mySubs = totalSubs.filter(st => st.assignedTo?.some(id => myPersonIds.includes(id)));
+                  const otherSubCount = totalSubs.length - mySubs.length;
+                  return (
+                    <div key={task.id}>
+                      <TaskRow
+                        task={task}
+                        allTasks={assignedTasks}
+                        projects={projects}
+                        people={people}
+                        onUpdate={handleUpdateTask}
+                        onDelete={handleDeleteTask}
+                        onCreateSubtask={handleCreateSubtask}
+                        userEmail={userEmail}
+                        hiddenAssigneeIds={[]}
+                        showDetailsToggle={true}
+                        openTaskId={openTaskId}
+                        onOpenDetails={setOpenTaskId}
+                      />
+                      {otherSubCount > 0 && (
+                        <div className="pl-10 pb-1 text-[11px] text-muted-foreground" data-testid={`other-subtasks-${task.id}`}>
+                          +{otherSubCount} other sub-task{otherSubCount > 1 ? 's' : ''} assigned to others
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </CollapsibleContent>
           </Collapsible>
