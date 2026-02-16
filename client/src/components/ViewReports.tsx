@@ -4339,6 +4339,10 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                                       <span className="text-xs text-muted-foreground/70"> • submitted by {getSubmittedByName(report)}</span>
                                     )}
                                   </p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    <Key className="h-3 w-3 inline mr-1" />
+                                    Steady Key: {project?.steadyKey || 'Not Listed'}
+                                  </p>
                                 </div>
                                 {editingId !== report.id && (
                                   <div className="flex items-center gap-1">
