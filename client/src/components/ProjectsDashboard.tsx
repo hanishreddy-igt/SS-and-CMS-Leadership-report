@@ -2170,84 +2170,178 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
           </CardHeader>
           <CardContent className="pt-6">
             {isEditingInline && editingProject ? (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold mb-6">Edit Contract</h2>
-                <div className="space-y-2">
-                  <Label htmlFor="inline-edit-name">Account Name <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="inline-edit-name"
-                    data-testid="input-edit-project-name"
-                    value={editFormData.name}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="inline-edit-customer">Customer Contact Name <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="inline-edit-customer"
-                    data-testid="input-edit-customer"
-                    value={editFormData.customer}
-                    onChange={(e) => setEditFormData({ ...editFormData, customer: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="inline-edit-customer-email">Customer Contact Email <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="inline-edit-customer-email"
-                    data-testid="input-edit-customer-email"
-                    type="email"
-                    value={editFormData.customerContactEmail}
-                    onChange={(e) => setEditFormData({ ...editFormData, customerContactEmail: e.target.value })}
-                    placeholder="Enter customer contact email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="inline-edit-account-owner">Account Owner</Label>
-                  <Input
-                    id="inline-edit-account-owner"
-                    data-testid="input-edit-account-owner"
-                    type="text"
-                    value={editFormData.accountOwner}
-                    onChange={(e) => setEditFormData({ ...editFormData, accountOwner: e.target.value })}
-                    placeholder="Enter account owner"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Total Contractual Time</Label>
-                  <div className="flex gap-2 items-center">
-                    <div className="flex-1">
-                      <Input
-                        id="inline-edit-contractual-hours"
-                        data-testid="input-edit-contractual-hours"
-                        type="text"
-                        value={editFormData.contractualHours}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9]/g, '');
-                          setEditFormData({ ...editFormData, contractualHours: value });
-                        }}
-                        placeholder="Hours"
-                      />
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Edit Contract</h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="inline-edit-name">Account Name <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="inline-edit-name"
+                      data-testid="input-edit-project-name"
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inline-edit-customer">Customer Contact Name <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="inline-edit-customer"
+                      data-testid="input-edit-customer"
+                      value={editFormData.customer}
+                      onChange={(e) => setEditFormData({ ...editFormData, customer: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inline-edit-customer-email">Customer Contact Email <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="inline-edit-customer-email"
+                      data-testid="input-edit-customer-email"
+                      type="email"
+                      value={editFormData.customerContactEmail}
+                      onChange={(e) => setEditFormData({ ...editFormData, customerContactEmail: e.target.value })}
+                      placeholder="Enter customer contact email"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inline-edit-account-owner">Account Owner</Label>
+                    <Input
+                      id="inline-edit-account-owner"
+                      data-testid="input-edit-account-owner"
+                      type="text"
+                      value={editFormData.accountOwner}
+                      onChange={(e) => setEditFormData({ ...editFormData, accountOwner: e.target.value })}
+                      placeholder="Enter account owner"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Total Contractual Time</Label>
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1">
+                        <Input
+                          id="inline-edit-contractual-hours"
+                          data-testid="input-edit-contractual-hours"
+                          type="text"
+                          value={editFormData.contractualHours}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9]/g, '');
+                            setEditFormData({ ...editFormData, contractualHours: value });
+                          }}
+                          placeholder="Hours"
+                        />
+                      </div>
+                      <span className="text-muted-foreground text-sm">hrs</span>
+                      <div className="flex-1">
+                        <Input
+                          id="inline-edit-contractual-minutes"
+                          data-testid="input-edit-contractual-minutes"
+                          type="text"
+                          value={editFormData.contractualMinutes}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9]/g, '');
+                            const numVal = parseInt(value, 10);
+                            if (value === '' || (numVal >= 0 && numVal <= 59)) {
+                              setEditFormData({ ...editFormData, contractualMinutes: value });
+                            }
+                          }}
+                          placeholder="Minutes"
+                        />
+                      </div>
+                      <span className="text-muted-foreground text-sm">min</span>
                     </div>
-                    <span className="text-muted-foreground text-sm">hrs</span>
-                    <div className="flex-1">
-                      <Input
-                        id="inline-edit-contractual-minutes"
-                        data-testid="input-edit-contractual-minutes"
-                        type="text"
-                        value={editFormData.contractualMinutes}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9]/g, '');
-                          const numVal = parseInt(value, 10);
-                          if (value === '' || (numVal >= 0 && numVal <= 59)) {
-                            setEditFormData({ ...editFormData, contractualMinutes: value });
-                          }
-                        }}
-                        placeholder="Minutes"
-                      />
-                    </div>
-                    <span className="text-muted-foreground text-sm">min</span>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inline-edit-steady-key">Steady Key</Label>
+                    <Input
+                      id="inline-edit-steady-key"
+                      data-testid="input-edit-steady-key"
+                      placeholder="Enter Steady Key"
+                      value={editFormData.steadyKey}
+                      onChange={(e) => setEditFormData({ ...editFormData, steadyKey: e.target.value })}
+                    />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="inline-edit-start-date">Start Date</Label>
+                    <Input
+                      id="inline-edit-start-date"
+                      data-testid="input-edit-start-date"
+                      type="text"
+                      placeholder="MM/DD/YYYY"
+                      value={editStartDateInput}
+                      onChange={(e) => setEditStartDateInput(formatDateInput(e.target.value))}
+                      className={(!isValidDateFormat(editStartDateInput) && editStartDateInput) || validateStartDate(editStartDateInput) ? 'border-red-500' : ''}
+                    />
+                    {!isValidDateFormat(editStartDateInput) && editStartDateInput && (
+                      <p className="text-xs text-red-500">Enter a valid date</p>
+                    )}
+                    {isValidDateFormat(editStartDateInput) && validateStartDate(editStartDateInput) && (
+                      <p className="text-xs text-red-500">{validateStartDate(editStartDateInput)}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inline-edit-end-date">End Date</Label>
+                    <Input
+                      id="inline-edit-end-date"
+                      data-testid="input-edit-end-date"
+                      type="text"
+                      placeholder="MM/DD/YYYY"
+                      value={editEndDateInput}
+                      onChange={(e) => setEditEndDateInput(formatDateInput(e.target.value))}
+                      className={(!isValidDateFormat(editEndDateInput) && editEndDateInput) || validateEndDate(editStartDateInput, editEndDateInput) ? 'border-red-500' : ''}
+                    />
+                    {!isValidDateFormat(editEndDateInput) && editEndDateInput && (
+                      <p className="text-xs text-red-500">Enter a valid date</p>
+                    )}
+                    {isValidDateFormat(editEndDateInput) && validateEndDate(editStartDateInput, editEndDateInput) && (
+                      <p className="text-xs text-red-500">{validateEndDate(editStartDateInput, editEndDateInput)}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Contract Business Nature <span className="text-red-500">*</span></Label>
+                    <div className="flex flex-col gap-2 pt-1">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="inline-edit-project-type-cms"
+                          data-testid="checkbox-edit-project-type-cms"
+                          checked={editFormData.projectType === 'CMS'}
+                          onCheckedChange={(checked) => {
+                            setEditFormData({ 
+                              ...editFormData, 
+                              projectType: checked ? 'CMS' : '' 
+                            });
+                          }}
+                        />
+                        <Label htmlFor="inline-edit-project-type-cms" className="font-normal cursor-pointer text-sm">
+                          CMS
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="inline-edit-project-type-ss"
+                          data-testid="checkbox-edit-project-type-ss"
+                          checked={editFormData.projectType === 'SS'}
+                          onCheckedChange={(checked) => {
+                            setEditFormData({ 
+                              ...editFormData, 
+                              projectType: checked ? 'SS' : '' 
+                            });
+                          }}
+                        />
+                        <Label htmlFor="inline-edit-project-type-ss" className="font-normal cursor-pointer text-sm">
+                          SS
+                        </Label>
+                      </div>
+                    </div>
+                    {!editFormData.projectType && (
+                      <p className="text-xs text-red-500">Required</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Team Lead(s) <span className="text-red-500">*</span></Label>
@@ -2481,162 +2575,76 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="inline-edit-start-date">Start Date</Label>
-                    <Input
-                      id="inline-edit-start-date"
-                      data-testid="input-edit-start-date"
-                      type="text"
-                      placeholder="MM/DD/YYYY"
-                      value={editStartDateInput}
-                      onChange={(e) => setEditStartDateInput(formatDateInput(e.target.value))}
-                      className={(!isValidDateFormat(editStartDateInput) && editStartDateInput) || validateStartDate(editStartDateInput) ? 'border-red-500' : ''}
-                    />
-                    {!isValidDateFormat(editStartDateInput) && editStartDateInput && (
-                      <p className="text-xs text-red-500">Enter a valid date</p>
-                    )}
-                    {isValidDateFormat(editStartDateInput) && validateStartDate(editStartDateInput) && (
-                      <p className="text-xs text-red-500">{validateStartDate(editStartDateInput)}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="inline-edit-end-date">End Date</Label>
-                    <Input
-                      id="inline-edit-end-date"
-                      data-testid="input-edit-end-date"
-                      type="text"
-                      placeholder="MM/DD/YYYY"
-                      value={editEndDateInput}
-                      onChange={(e) => setEditEndDateInput(formatDateInput(e.target.value))}
-                      className={(!isValidDateFormat(editEndDateInput) && editEndDateInput) || validateEndDate(editStartDateInput, editEndDateInput) ? 'border-red-500' : ''}
-                    />
-                    {!isValidDateFormat(editEndDateInput) && editEndDateInput && (
-                      <p className="text-xs text-red-500">Enter a valid date</p>
-                    )}
-                    {isValidDateFormat(editEndDateInput) && validateEndDate(editStartDateInput, editEndDateInput) && (
-                      <p className="text-xs text-red-500">{validateEndDate(editStartDateInput, editEndDateInput)}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Contract Business Nature <span className="text-red-500">*</span></Label>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="inline-edit-project-type-cms"
-                        data-testid="checkbox-edit-project-type-cms"
-                        checked={editFormData.projectType === 'CMS'}
-                        onCheckedChange={(checked) => {
-                          setEditFormData({ 
-                            ...editFormData, 
-                            projectType: checked ? 'CMS' : '' 
-                          });
-                        }}
-                      />
-                      <Label htmlFor="inline-edit-project-type-cms" className="font-normal cursor-pointer">
-                        Community Managed Advisory (CMS)
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="inline-edit-project-type-ss"
-                        data-testid="checkbox-edit-project-type-ss"
-                        checked={editFormData.projectType === 'SS'}
-                        onCheckedChange={(checked) => {
-                          setEditFormData({ 
-                            ...editFormData, 
-                            projectType: checked ? 'SS' : '' 
-                          });
-                        }}
-                      />
-                      <Label htmlFor="inline-edit-project-type-ss" className="font-normal cursor-pointer">
-                        Strategic Services (SS)
-                      </Label>
-                    </div>
-                  </div>
-                  {!editFormData.projectType && (
-                    <p className="text-xs text-red-500">Project type is required</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="inline-edit-steady-key">Steady Key</Label>
-                  <Input
-                    id="inline-edit-steady-key"
-                    data-testid="input-edit-steady-key"
-                    placeholder="Enter Steady Key"
-                    value={editFormData.steadyKey}
-                    onChange={(e) => setEditFormData({ ...editFormData, steadyKey: e.target.value })}
-                  />
                 </div>
 
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">External Links</Label>
-                  <div className="space-y-1">
-                    <Input
-                      id="inline-edit-jira-epic"
-                      data-testid="input-edit-jira-epic"
-                      placeholder="Jira Epic URL"
-                      value={editFormData.jiraEpic}
-                      onChange={(e) => setEditFormData({ ...editFormData, jiraEpic: e.target.value })}
-                      className={editFormData.jiraEpic && !isValidUrl(editFormData.jiraEpic) ? 'border-red-500' : ''}
-                    />
-                    {editFormData.jiraEpic && !isValidUrl(editFormData.jiraEpic) && (
-                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <Input
-                      id="inline-edit-google-drive"
-                      data-testid="input-edit-google-drive"
-                      placeholder="Google internal folder link"
-                      value={editFormData.googleDriveLink}
-                      onChange={(e) => setEditFormData({ ...editFormData, googleDriveLink: e.target.value })}
-                      className={editFormData.googleDriveLink && !isValidUrl(editFormData.googleDriveLink) ? 'border-red-500' : ''}
-                    />
-                    {editFormData.googleDriveLink && !isValidUrl(editFormData.googleDriveLink) && (
-                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <Input
-                      id="inline-edit-google-external"
-                      data-testid="input-edit-google-external"
-                      placeholder="Google external folder link (if exists)"
-                      value={editFormData.googleExternalLink}
-                      onChange={(e) => setEditFormData({ ...editFormData, googleExternalLink: e.target.value })}
-                      className={editFormData.googleExternalLink && !isValidUrl(editFormData.googleExternalLink) ? 'border-red-500' : ''}
-                    />
-                    {editFormData.googleExternalLink && !isValidUrl(editFormData.googleExternalLink) && (
-                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <Input
-                      id="inline-edit-workflowy"
-                      data-testid="input-edit-workflowy"
-                      placeholder="Workflowy URL"
-                      value={editFormData.workflowyLink}
-                      onChange={(e) => setEditFormData({ ...editFormData, workflowyLink: e.target.value })}
-                      className={editFormData.workflowyLink && !isValidUrl(editFormData.workflowyLink) ? 'border-red-500' : ''}
-                    />
-                    {editFormData.workflowyLink && !isValidUrl(editFormData.workflowyLink) && (
-                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <Input
-                      id="inline-edit-contract-file"
-                      data-testid="input-edit-contract-file"
-                      placeholder="Contract File URL"
-                      value={editFormData.contractFileLink}
-                      onChange={(e) => setEditFormData({ ...editFormData, contractFileLink: e.target.value })}
-                      className={editFormData.contractFileLink && !isValidUrl(editFormData.contractFileLink) ? 'border-red-500' : ''}
-                    />
-                    {editFormData.contractFileLink && !isValidUrl(editFormData.contractFileLink) && (
-                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Input
+                        id="inline-edit-jira-epic"
+                        data-testid="input-edit-jira-epic"
+                        placeholder="Jira Epic URL"
+                        value={editFormData.jiraEpic}
+                        onChange={(e) => setEditFormData({ ...editFormData, jiraEpic: e.target.value })}
+                        className={editFormData.jiraEpic && !isValidUrl(editFormData.jiraEpic) ? 'border-red-500' : ''}
+                      />
+                      {editFormData.jiraEpic && !isValidUrl(editFormData.jiraEpic) && (
+                        <p className="text-xs text-red-500">Please enter a valid URL</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Input
+                        id="inline-edit-google-drive"
+                        data-testid="input-edit-google-drive"
+                        placeholder="Google internal folder link"
+                        value={editFormData.googleDriveLink}
+                        onChange={(e) => setEditFormData({ ...editFormData, googleDriveLink: e.target.value })}
+                        className={editFormData.googleDriveLink && !isValidUrl(editFormData.googleDriveLink) ? 'border-red-500' : ''}
+                      />
+                      {editFormData.googleDriveLink && !isValidUrl(editFormData.googleDriveLink) && (
+                        <p className="text-xs text-red-500">Please enter a valid URL</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Input
+                        id="inline-edit-google-external"
+                        data-testid="input-edit-google-external"
+                        placeholder="Google external folder link (if exists)"
+                        value={editFormData.googleExternalLink}
+                        onChange={(e) => setEditFormData({ ...editFormData, googleExternalLink: e.target.value })}
+                        className={editFormData.googleExternalLink && !isValidUrl(editFormData.googleExternalLink) ? 'border-red-500' : ''}
+                      />
+                      {editFormData.googleExternalLink && !isValidUrl(editFormData.googleExternalLink) && (
+                        <p className="text-xs text-red-500">Please enter a valid URL</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Input
+                        id="inline-edit-workflowy"
+                        data-testid="input-edit-workflowy"
+                        placeholder="Workflowy URL"
+                        value={editFormData.workflowyLink}
+                        onChange={(e) => setEditFormData({ ...editFormData, workflowyLink: e.target.value })}
+                        className={editFormData.workflowyLink && !isValidUrl(editFormData.workflowyLink) ? 'border-red-500' : ''}
+                      />
+                      {editFormData.workflowyLink && !isValidUrl(editFormData.workflowyLink) && (
+                        <p className="text-xs text-red-500">Please enter a valid URL</p>
+                      )}
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Input
+                        id="inline-edit-contract-file"
+                        data-testid="input-edit-contract-file"
+                        placeholder="Contract File URL"
+                        value={editFormData.contractFileLink}
+                        onChange={(e) => setEditFormData({ ...editFormData, contractFileLink: e.target.value })}
+                        className={editFormData.contractFileLink && !isValidUrl(editFormData.contractFileLink) ? 'border-red-500' : ''}
+                      />
+                      {editFormData.contractFileLink && !isValidUrl(editFormData.contractFileLink) && (
+                        <p className="text-xs text-red-500">Please enter a valid URL</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
