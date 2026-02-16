@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, ChevronUp, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare, RefreshCw } from 'lucide-react';
+import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, ChevronUp, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare, RefreshCw, Key } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment, Person, FeedbackEntry } from '@shared/schema';
@@ -4985,6 +4985,15 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                         <p className="font-medium text-primary">{selectedReport.weekStart}</p>
                       </div>
                     </div>
+                    {project?.steadyKey && (
+                      <div className="flex items-center gap-2">
+                        <Key className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Steady Key</p>
+                          <p className="font-medium">{project.steadyKey}</p>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <div>
