@@ -5409,47 +5409,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     </div>
                   </div>
                 </div>
-                {!selectionModeMembers && (permissions.canEditTeamMembers || permissions.canDeletePeople) && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        data-testid={`button-member-menu-${member.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {permissions.canEditTeamMembers && (
-                      <DropdownMenuItem 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startEditMember(member);
-                        }}
-                        data-testid={`button-edit-member-${member.id}`}
-                      >
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      )}
-                      {permissions.canDeletePeople && (
-                      <DropdownMenuItem 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingMemberId(member.id);
-                        }}
-                        className="text-destructive focus:text-destructive"
-                        data-testid={`button-delete-member-${member.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
               </div>
               ))}
               </div>
@@ -5876,44 +5835,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     </div>
                   </div>
                 </div>
-                {!selectionModeLeads && (permissions.canEditProjectLeads || permissions.canDeletePeople) && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        data-testid={`button-lead-menu-${lead.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {permissions.canEditProjectLeads && (
-                      <DropdownMenuItem 
-                        onClick={(e) => { e.stopPropagation(); startEditLead(lead); }}
-                        data-testid={`button-edit-lead-${lead.id}`}
-                      >
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      )}
-                      {permissions.canDeletePeople && (
-                      <DropdownMenuItem 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingLeadId(lead.id);
-                        }}
-                        className="text-destructive focus:text-destructive"
-                        data-testid={`button-delete-lead-${lead.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
               </div>
               ))}
               </div>
