@@ -2458,10 +2458,10 @@ Guidelines:
 
 Formatting rules:
 - Start with one high-level summary sentence.
-- For each account:
-  - Use the exact account/project key provided in the data as the section header (do NOT modify it - keep underscores, do not add spaces).
-  - Use 1–3 bullet points maximum.
-  - Each bullet should describe a meaningful outcome in one sentence.
+- For each account, write ONE line in this exact format: account_key : summary of meaningful work done
+  - Use the exact account/project key provided in the data (do NOT modify it - keep underscores, do not add spaces). Do NOT use markdown headers (no ## or **).
+  - The summary after the colon should be a concise sentence describing meaningful outcomes.
+  - If there are multiple distinct outcomes for one account, separate them with semicolons on the same line.
 
 Activities (grouped by account and task):
 ${formattedActivities}`;
@@ -3159,10 +3159,10 @@ Guidelines:
 
 Formatting rules:
 - Start with one high-level summary sentence.
-- For each account:
-  - Use the exact account/project key provided in the data as the section header (do NOT modify it - keep underscores, do not add spaces).
-  - Use 1–3 bullet points maximum.
-  - Each bullet should describe a meaningful outcome in one sentence.
+- For each account, write ONE line in this exact format: account_key : summary of meaningful work done
+  - Use the exact account/project key provided in the data (do NOT modify it - keep underscores, do not add spaces). Do NOT use markdown headers (no ## or **).
+  - The summary after the colon should be a concise sentence describing meaningful outcomes.
+  - If there are multiple distinct outcomes for one account, separate them with semicolons on the same line.
 
 Activities (grouped by account and task):
 ${contextData}`;
