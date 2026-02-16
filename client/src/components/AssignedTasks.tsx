@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Plus,
@@ -18,46 +16,14 @@ import {
   Play,
   Check,
   Ban,
-  FileText,
-  Calendar as CalendarIcon,
-  Copy,
-  Loader2,
   ChevronDown,
   ChevronUp,
-  Sparkles,
   TriangleAlert,
   StickyNote
 } from 'lucide-react';
 import type { Task, Project, Person } from '@shared/schema';
 import { TaskRow, ParsedTitle, parseInlineTags } from './WorkingSpace';
 
-// Helper to calculate UTC boundaries from local date
-// Uses browser's local timezone - toISOString converts local date/time to UTC
-function getUtcBoundaries(startDate: Date, endDate: Date): { startUtc: string; endUtc: string } {
-  // Start of day in local timezone (midnight)
-  const startLocal = new Date(startDate);
-  startLocal.setHours(0, 0, 0, 0);
-  
-  // End of day in local timezone (23:59:59.999)
-  const endLocal = new Date(endDate);
-  endLocal.setHours(23, 59, 59, 999);
-  
-  // toISOString converts to UTC, which is what the backend expects
-  return {
-    startUtc: startLocal.toISOString(),
-    endUtc: endLocal.toISOString()
-  };
-}
-
-interface EODReport {
-  startDate: string;
-  endDate: string;
-  user: string;
-  summary: string;
-  activityCount: number;
-  accountsWorked: string[];
-  rawActivities: string; // Formatted markdown string of activities grouped by account
-}
 
 export default function AssignedTasks() {
   const { user } = useAuth();
@@ -68,15 +34,6 @@ export default function AssignedTasks() {
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // EOD Report state
-  const [isEodExpanded, setIsEodExpanded] = useState(true);
-  const [eodDateMode, setEodDateMode] = useState<'single' | 'range'>('single');
-  const [eodStartDate, setEodStartDate] = useState<Date>(new Date());
-  const [eodEndDate, setEodEndDate] = useState<Date>(new Date());
-  const [eodReport, setEodReport] = useState<EODReport | null>(null);
-  const [isGeneratingEod, setIsGeneratingEod] = useState(false);
-  const [startCalendarOpen, setStartCalendarOpen] = useState(false);
-  const [endCalendarOpen, setEndCalendarOpen] = useState(false);
 
   // Close task details when clicking outside
   useEffect(() => {
@@ -184,97 +141,6 @@ export default function AssignedTasks() {
     deleteTaskMutation.mutate(id);
   };
 
-  // EOD Report functions
-  const generateEodReport = async () => {
-    const effectiveEndDate = eodDateMode === 'single' ? eodStartDate : eodEndDate;
-    
-    // Validate date range
-    if (eodDateMode === 'range' && eodEndDate < eodStartDate) {
-      toast({ title: 'Invalid Date Range', description: 'End date must be after start date.', variant: 'destructive' });
-      return;
-    }
-    
-    setIsGeneratingEod(true);
-    setEodReport(null);
-    
-    try {
-      const { startUtc, endUtc } = getUtcBoundaries(eodStartDate, effectiveEndDate);
-      
-      const res = await apiRequest('GET', `/api/eod-report?startUtc=${encodeURIComponent(startUtc)}&endUtc=${encodeURIComponent(endUtc)}`);
-      const data = await res.json();
-      setEodReport(data);
-      
-      if (data.activityCount === 0) {
-        toast({ title: 'No Activities', description: 'No task activities found for the selected date range.' });
-      }
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to generate report', variant: 'destructive' });
-    } finally {
-      setIsGeneratingEod(false);
-    }
-  };
-
-  const copyEodToClipboard = async () => {
-    if (!eodReport?.summary) return;
-    
-    try {
-      await navigator.clipboard.writeText(eodReport.summary);
-      toast({ title: 'Copied!', description: 'Report copied to clipboard' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to copy to clipboard', variant: 'destructive' });
-    }
-  };
-
-  const setPresetDate = (preset: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'last7Days') => {
-    const now = new Date();
-    
-    switch (preset) {
-      case 'today':
-        setEodDateMode('single');
-        setEodStartDate(now);
-        setEodEndDate(now);
-        break;
-      case 'yesterday':
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-        setEodDateMode('single');
-        setEodStartDate(yesterday);
-        setEodEndDate(yesterday);
-        break;
-      case 'thisWeek':
-        const thisWeekStart = new Date(now);
-        const dayOfWeek = thisWeekStart.getDay();
-        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        thisWeekStart.setDate(thisWeekStart.getDate() + diffToMonday);
-        setEodDateMode('range');
-        setEodStartDate(thisWeekStart);
-        setEodEndDate(now);
-        break;
-      case 'lastWeek':
-        const lastWeekEnd = new Date(now);
-        const lastWeekEndDayOfWeek = lastWeekEnd.getDay();
-        const diffToLastSunday = lastWeekEndDayOfWeek === 0 ? -7 : -lastWeekEndDayOfWeek;
-        lastWeekEnd.setDate(lastWeekEnd.getDate() + diffToLastSunday);
-        const lastWeekStart = new Date(lastWeekEnd);
-        lastWeekStart.setDate(lastWeekStart.getDate() - 6);
-        setEodDateMode('range');
-        setEodStartDate(lastWeekStart);
-        setEodEndDate(lastWeekEnd);
-        break;
-      case 'last7Days':
-        const sevenDaysAgo = new Date(now);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        setEodDateMode('range');
-        setEodStartDate(sevenDaysAgo);
-        setEodEndDate(now);
-        break;
-    }
-  };
-
-  const formatDateDisplay = (date: Date) => {
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
-
   const handleCreateSubtask = (parentId: string, title: string, parsed: ParsedTitle) => {
     const parentTask = allTasks.find(t => t.id === parentId);
     
@@ -360,176 +226,6 @@ export default function AssignedTasks() {
 
   return (
     <div ref={containerRef} className="space-y-4" data-testid="assigned-tasks-section">
-      {/* EOD Report Section */}
-      <Card className="border-primary/20">
-        <Collapsible open={isEodExpanded} onOpenChange={setIsEodExpanded}>
-          <CollapsibleTrigger className="w-full" data-testid="eod-report-trigger">
-            <CardHeader className="flex flex-row items-center justify-between py-3 cursor-pointer hover-elevate">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base">AI Activity Report</CardTitle>
-              </div>
-              {isEodExpanded ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="pt-0 space-y-4">
-              {/* Date Selection */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1 bg-muted rounded-md p-1">
-                  <Button
-                    variant={eodDateMode === 'single' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setEodDateMode('single')}
-                    data-testid="eod-mode-single"
-                  >
-                    Single Day
-                  </Button>
-                  <Button
-                    variant={eodDateMode === 'range' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setEodDateMode('range')}
-                    data-testid="eod-mode-range"
-                  >
-                    Date Range
-                  </Button>
-                </div>
-
-                {/* Date Pickers */}
-                <div className="flex items-center gap-2">
-                  <Popover open={startCalendarOpen} onOpenChange={setStartCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2" data-testid="eod-start-date">
-                        <CalendarIcon className="h-4 w-4" />
-                        {formatDateDisplay(eodStartDate)}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={eodStartDate}
-                        onSelect={(date) => {
-                          if (date) {
-                            setEodStartDate(date);
-                            if (eodDateMode === 'single') setEodEndDate(date);
-                            setStartCalendarOpen(false);
-                          }
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-
-                  {eodDateMode === 'range' && (
-                    <>
-                      <span className="text-muted-foreground">to</span>
-                      <Popover open={endCalendarOpen} onOpenChange={setEndCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-2" data-testid="eod-end-date">
-                            <CalendarIcon className="h-4 w-4" />
-                            {formatDateDisplay(eodEndDate)}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={eodEndDate}
-                            onSelect={(date) => {
-                              if (date) {
-                                setEodEndDate(date);
-                                setEndCalendarOpen(false);
-                              }
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Preset Buttons */}
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPresetDate('today')} data-testid="eod-preset-today">
-                  Today
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setPresetDate('yesterday')} data-testid="eod-preset-yesterday">
-                  Yesterday
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setPresetDate('thisWeek')} data-testid="eod-preset-thisweek">
-                  This Week
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setPresetDate('lastWeek')} data-testid="eod-preset-lastweek">
-                  Last Week
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setPresetDate('last7Days')} data-testid="eod-preset-last7days">
-                  Last 7 Days
-                </Button>
-              </div>
-
-              {/* Generate Button */}
-              <Button
-                onClick={generateEodReport}
-                disabled={isGeneratingEod}
-                className="w-full sm:w-auto"
-                data-testid="eod-generate-btn"
-              >
-                {isGeneratingEod ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Generate Report
-                  </>
-                )}
-              </Button>
-
-              {/* Report Preview */}
-              {eodReport && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <FileText className="h-4 w-4" />
-                      <span>{eodReport.activityCount} activities across {eodReport.accountsWorked.length} account{eodReport.accountsWorked.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    {eodReport.summary && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={copyEodToClipboard}
-                        className="gap-2"
-                        data-testid="eod-copy-btn"
-                      >
-                        <Copy className="h-4 w-4" />
-                        Copy
-                      </Button>
-                    )}
-                  </div>
-
-                  {eodReport.summary ? (
-                    <div className="bg-muted/50 rounded-lg p-4 text-sm whitespace-pre-wrap" data-testid="eod-report-content">
-                      {eodReport.summary}
-                    </div>
-                  ) : (
-                    <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground text-center">
-                      No activities found for this date range.
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
-
       <div className="flex items-center gap-4 flex-wrap">
         <Badge variant="secondary" className="gap-1">
           <Circle className="h-3 w-3 text-slate-400" />
