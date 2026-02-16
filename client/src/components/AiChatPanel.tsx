@@ -15,7 +15,7 @@ interface ChatMessage {
 }
 
 const quickActions = [
-  { label: 'EOD Report', intent: 'eod_report', question: 'Generate my end-of-day report for today' },
+  { label: 'Steady Check-in', intent: 'eod_report', question: 'Generate my end-of-day report for today' },
   { label: 'Project Status', intent: 'project_status', question: 'Give me a status overview of all projects' },
   { label: 'My Tasks', intent: 'task_query', question: 'What are my current tasks and their status?' },
   { label: 'Overdue Items', intent: 'task_query', question: 'Show me all overdue tasks across all projects' },
