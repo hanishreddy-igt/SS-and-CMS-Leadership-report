@@ -4985,15 +4985,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                         <p className="font-medium text-primary">{selectedReport.weekStart}</p>
                       </div>
                     </div>
-                    {project?.steadyKey && (
-                      <div className="flex items-center gap-2">
-                        <Key className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Steady Key</p>
-                          <p className="font-medium">{project.steadyKey}</p>
-                        </div>
+                    <div className="flex items-center gap-2">
+                      <Key className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Steady Key</p>
+                        <p className="font-medium">{project?.steadyKey || 'Not Listed'}</p>
                       </div>
-                    )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <div>
