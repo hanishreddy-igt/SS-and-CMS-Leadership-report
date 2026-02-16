@@ -13,8 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, Info, Users, Sparkles } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, Info, Users, Sparkles, ArrowLeft } from 'lucide-react';
 import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusOptions = [
@@ -310,9 +309,9 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
     }
   };
 
-  // Close the modal and reset state
+  // Close the inline detail view and reset state
   const closeReportModal = async () => {
-    // Release the lock when closing modal
+    // Release the lock when closing
     if (modalProject && !projectLockInfo?.isLocked) {
       try {
         await apiRequest('DELETE', `/api/project-locks/${modalProject.id}`, {});
@@ -945,6 +944,183 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
           </div>
         </CardHeader>
         <CardContent>
+          {showReportModal && modalProject ? (
+            /* Inline Report Detail View */
+            <div className="space-y-6" data-testid="section-report-detail">
+              {/* Back button and header */}
+              <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={closeReportModal}
+                  data-testid="button-back-to-reports"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    {getProjectReportStatus(modalProject.id) === 'submitted' ? (
+                      <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
+                    ) : getProjectReportStatus(modalProject.id) === 'drafted' ? (
+                      <PenLine className="h-5 w-5 text-primary shrink-0" />
+                    ) : (
+                      <FileText className="h-5 w-5 text-primary shrink-0" />
+                    )}
+                    <h2 className="text-xl font-semibold truncate" data-testid="text-report-project-name">{modalProject.name}</h2>
+                    {getProjectReportStatus(modalProject.id) === 'submitted' && (
+                      <Badge variant="outline" className="text-success border-success/30 shrink-0">Submitted</Badge>
+                    )}
+                    {getProjectReportStatus(modalProject.id) === 'drafted' && (
+                      <Badge variant="outline" className="text-primary border-primary/30 shrink-0">Draft</Badge>
+                    )}
+                    {getProjectReportStatus(modalProject.id) === 'pending' && (
+                      <Badge variant="outline" className="text-warning border-warning/30 shrink-0">Pending</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                    {modalProject.customer && <span>{modalProject.customer}</span>}
+                    {hasCoLeads(modalProject) && (
+                      <span className="text-xs">Co-Leads: {getProjectLeadNames(modalProject)}</span>
+                    )}
+                    <span className="text-xs">Week: {currentWeek}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning banner when someone else is editing */}
+              {projectLockInfo?.isLocked && (
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30" data-testid="lock-warning-banner">
+                  <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-warning">Someone else is editing this report</p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium">{projectLockInfo.lockedBy}</span> is currently editing this report. 
+                      If you both submit changes, one may overwrite the other.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {getProjectReportStatus(modalProject.id) === 'submitted' ? (
+                <div className="py-12 text-center space-y-4">
+                  <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="h-8 w-8 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium">This report has already been submitted</p>
+                    {hasCoLeads(modalProject) && getSubmittedByName(modalProject.id) && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Submitted by {getSubmittedByName(modalProject.id)}
+                      </p>
+                    )}
+                    <p className="text-sm text-muted-foreground mt-2">
+                      You can view this report under the <span className="font-medium text-primary">"View Current Report"</span> tab.
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={closeReportModal} className="mt-4" data-testid="button-back-submitted">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to All Reports
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleModalSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="modal-health-status">Contract Health Status <span className="text-red-500">*</span></Label>
+                      <Select value={modalHealthStatus} onValueChange={setModalHealthStatus}>
+                        <SelectTrigger id="modal-health-status" data-testid="modal-select-health-status">
+                          <SelectValue placeholder="Select health status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {healthStatusOptions.map((option) => {
+                            const Icon = option.icon;
+                            return (
+                              <SelectItem key={option.value} value={option.value}>
+                                <div className="flex items-center gap-2">
+                                  <Icon className={`h-4 w-4 ${option.color}`} />
+                                  <span>{option.label}</span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="modal-progress">Progress in Previous Week <span className="text-red-500">*</span></Label>
+                    <Textarea
+                      id="modal-progress"
+                      data-testid="modal-textarea-progress"
+                      value={modalProgress}
+                      onChange={(e) => setModalProgress(e.target.value)}
+                      placeholder="Describe what was accomplished this week..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="modal-challenges">Challenges & Blockers</Label>
+                    <Textarea
+                      id="modal-challenges"
+                      data-testid="modal-textarea-challenges"
+                      value={modalChallenges}
+                      onChange={(e) => setModalChallenges(e.target.value)}
+                      placeholder="Describe any challenges or blockers..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="modal-next-week">Plans for Current Week <span className="text-red-500">*</span></Label>
+                    <Textarea
+                      id="modal-next-week"
+                      data-testid="modal-textarea-next-week"
+                      value={modalNextWeek}
+                      onChange={(e) => setModalNextWeek(e.target.value)}
+                      placeholder="Outline plans for the upcoming week..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/10">
+                    <Button 
+                      data-testid="modal-button-cancel"
+                      type="button"
+                      variant="outline"
+                      onClick={closeReportModal}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back
+                    </Button>
+                    <Button 
+                      data-testid="modal-button-save-draft" 
+                      type="button"
+                      variant="outline"
+                      disabled={!canModalSaveDraft || modalSaveDraftMutation.isPending}
+                      onClick={handleModalSaveDraft}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {modalSaveDraftMutation.isPending ? 'Saving...' : modalExistingDraftId ? 'Update Draft' : 'Save as Draft'}
+                    </Button>
+                    {permissions.canSubmitReports && (
+                      <Button 
+                        data-testid="modal-button-submit-report" 
+                        type="submit" 
+                        className="flex-1"
+                        disabled={!canModalSubmit || modalSubmitReportMutation.isPending}
+                      >
+                        {modalSubmitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              )}
+            </div>
+          ) : (
+            /* Report List View */
+            <>
           {/* Auto-archive schedule banner */}
           <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
             <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
@@ -1138,179 +1314,10 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
               })
             )}
           </div>
+          </>
+          )}
         </CardContent>
       </Card>
-
-      {/* Report Submission Modal - Opens when clicking on a project tile */}
-      <Dialog open={showReportModal} onOpenChange={(open) => !open && closeReportModal()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {modalProject && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  {getProjectReportStatus(modalProject.id) === 'submitted' ? (
-                    <>
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                      Report Already Submitted
-                    </>
-                  ) : getProjectReportStatus(modalProject.id) === 'drafted' ? (
-                    <>
-                      <PenLine className="h-5 w-5 text-primary" />
-                      Continue Draft Report
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="h-5 w-5 text-primary" />
-                      Submit Weekly Report
-                    </>
-                  )}
-                </DialogTitle>
-                <DialogDescription>
-                  <span className="font-medium">{modalProject.name}</span> - {modalProject.customer}
-                  {hasCoLeads(modalProject) && (
-                    <>
-                      <br />
-                      <span className="text-xs text-muted-foreground">Co-Leads: {getProjectLeadNames(modalProject)}</span>
-                    </>
-                  )}
-                  <br />
-                  <span className="text-xs">Week starting: {currentWeek}</span>
-                </DialogDescription>
-              </DialogHeader>
-
-              {/* Warning banner when someone else is editing */}
-              {projectLockInfo?.isLocked && (
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30" data-testid="lock-warning-banner">
-                  <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="font-medium text-warning">Someone else is editing this report</p>
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium">{projectLockInfo.lockedBy}</span> is currently editing this report. 
-                      If you both submit changes, one may overwrite the other.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {getProjectReportStatus(modalProject.id) === 'submitted' ? (
-                <div className="py-8 text-center space-y-4">
-                  <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="h-8 w-8 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-medium">This report has already been submitted</p>
-                    {hasCoLeads(modalProject) && getSubmittedByName(modalProject.id) && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Submitted by {getSubmittedByName(modalProject.id)}
-                      </p>
-                    )}
-                    <p className="text-sm text-muted-foreground mt-2">
-                      You can view this report under the <span className="font-medium text-primary">"View Current Report"</span> tab.
-                    </p>
-                  </div>
-                  <Button variant="outline" onClick={closeReportModal} className="mt-4" data-testid="button-close-submitted-modal">
-                    <Eye className="h-4 w-4 mr-2" />
-                    Close
-                  </Button>
-                </div>
-              ) : (
-                <form onSubmit={handleModalSubmit} className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="modal-health-status">Contract Health Status <span className="text-red-500">*</span></Label>
-                    <Select value={modalHealthStatus} onValueChange={setModalHealthStatus}>
-                      <SelectTrigger id="modal-health-status" data-testid="modal-select-health-status">
-                        <SelectValue placeholder="Select health status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {healthStatusOptions.map((option) => {
-                          const Icon = option.icon;
-                          return (
-                            <SelectItem key={option.value} value={option.value}>
-                              <div className="flex items-center gap-2">
-                                <Icon className={`h-4 w-4 ${option.color}`} />
-                                <span>{option.label}</span>
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="modal-progress">Progress in Previous Week <span className="text-red-500">*</span></Label>
-                    <Textarea
-                      id="modal-progress"
-                      data-testid="modal-textarea-progress"
-                      value={modalProgress}
-                      onChange={(e) => setModalProgress(e.target.value)}
-                      placeholder="Describe what was accomplished this week..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="modal-challenges">Challenges & Blockers</Label>
-                    <Textarea
-                      id="modal-challenges"
-                      data-testid="modal-textarea-challenges"
-                      value={modalChallenges}
-                      onChange={(e) => setModalChallenges(e.target.value)}
-                      placeholder="Describe any challenges or blockers..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="modal-next-week">Plans for Current Week <span className="text-red-500">*</span></Label>
-                    <Textarea
-                      id="modal-next-week"
-                      data-testid="modal-textarea-next-week"
-                      value={modalNextWeek}
-                      onChange={(e) => setModalNextWeek(e.target.value)}
-                      placeholder="Outline plans for the upcoming week..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                    <Button 
-                      data-testid="modal-button-cancel"
-                      type="button"
-                      variant="outline"
-                      onClick={closeReportModal}
-                    >
-                      Cancel
-                    </Button>
-                    {/* Save as Draft button - available to everyone */}
-                    <Button 
-                      data-testid="modal-button-save-draft" 
-                      type="button"
-                      variant="outline"
-                      disabled={!canModalSaveDraft || modalSaveDraftMutation.isPending}
-                      onClick={handleModalSaveDraft}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {modalSaveDraftMutation.isPending ? 'Saving...' : modalExistingDraftId ? 'Update Draft' : 'Save as Draft'}
-                    </Button>
-                    {/* Submit button - only for users with canSubmitReports permission */}
-                    {permissions.canSubmitReports && (
-                      <Button 
-                        data-testid="modal-button-submit-report" 
-                        type="submit" 
-                        className="flex-1"
-                        disabled={!canModalSubmit || modalSubmitReportMutation.isPending}
-                      >
-                        {modalSubmitReportMutation.isPending ? 'Submitting...' : 'Submit Report'}
-                      </Button>
-                    )}
-                  </div>
-                </form>
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
