@@ -5259,36 +5259,42 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                           if (memberProjects.length === 0) {
                             return <p className="text-sm text-muted-foreground italic">No contracts assigned</p>;
                           }
-                          const displayedProjects = showAllMemberContracts ? memberProjects : memberProjects.slice(0, 4);
-                          const remainingCount = memberProjects.length - 4;
+                          const displayedProjects = showAllMemberContracts ? memberProjects : memberProjects.slice(0, 6);
+                          const remainingCount = memberProjects.length - 6;
                           return (
-                            <div className="space-y-2" data-testid="inline-list-member-projects">
-                              {displayedProjects.map(({ project, role, hours }) => (
-                                <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="text-sm font-medium truncate">{project.name}</span>
-                                    {(() => {
-                                      const status = getProjectStatus(project.endDate);
-                                      if (status === 'active') return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
-                                      if (status === 'renewal') return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
-                                      return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
-                                    })()}
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <Badge variant="secondary" className="text-xs font-medium w-fit max-w-full">
-                                      <span className="truncate">{role}</span>
-                                    </Badge>
-                                    {hours && <span className="text-xs text-muted-foreground">{hours} hrs/wk</span>}
-                                  </div>
-                                </div>
-                              ))}
+                            <div data-testid="inline-list-member-projects">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {displayedProjects.map(({ project, role, hours }) => {
+                                  const status = getProjectStatus(project.endDate);
+                                  const dotColor = status === 'active' ? 'bg-success' : status === 'renewal' ? 'bg-warning' : 'bg-destructive';
+                                  return (
+                                    <div key={project.id} className="p-2.5 bg-muted/30 rounded-md">
+                                      <div className="flex items-start gap-2 mb-1.5">
+                                        <div className={`w-2 h-2 rounded-full ${dotColor} mt-1.5 flex-shrink-0`} />
+                                        <span className="text-sm font-medium leading-tight line-clamp-2">{project.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 flex-wrap pl-4">
+                                        <Badge variant="secondary" className="text-xs font-medium max-w-full">
+                                          <span className="truncate">{role}</span>
+                                        </Badge>
+                                        {hours && (
+                                          <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                                            <Clock className="h-3 w-3" />
+                                            {hours}h/wk
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                               {remainingCount > 0 && !showAllMemberContracts && (
-                                <button type="button" onClick={() => setShowAllMemberContracts(true)} className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer" data-testid="button-inline-show-more-member-contracts">
+                                <button type="button" onClick={() => setShowAllMemberContracts(true)} className="text-xs text-primary hover:underline text-center w-full pt-2 cursor-pointer" data-testid="button-inline-show-more-member-contracts">
                                   +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
                                 </button>
                               )}
-                              {showAllMemberContracts && memberProjects.length > 4 && (
-                                <button type="button" onClick={() => setShowAllMemberContracts(false)} className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer" data-testid="button-inline-show-less-member-contracts">
+                              {showAllMemberContracts && memberProjects.length > 6 && (
+                                <button type="button" onClick={() => setShowAllMemberContracts(false)} className="text-xs text-primary hover:underline text-center w-full pt-2 cursor-pointer" data-testid="button-inline-show-less-member-contracts">
                                   Show less
                                 </button>
                               )}
@@ -5715,36 +5721,38 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                           if (ledProjects.length === 0) {
                             return <p className="text-sm text-muted-foreground italic">No contracts assigned as lead</p>;
                           }
-                          const displayedProjects = showAllLeadContracts ? ledProjects : ledProjects.slice(0, 4);
-                          const remainingCount = ledProjects.length - 4;
+                          const displayedProjects = showAllLeadContracts ? ledProjects : ledProjects.slice(0, 6);
+                          const remainingCount = ledProjects.length - 6;
                           return (
-                            <div className="space-y-2" data-testid="inline-list-lead-projects">
-                              {displayedProjects.map((project) => {
-                                const leadAssignment = leadAssignments.find(a => a.leadId === selectedLeadForDetail.id && a.projectId === project.id);
-                                return (
-                                  <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="text-sm font-medium truncate">{project.name}</span>
-                                      {(() => {
-                                        const status = getProjectStatus(project.endDate);
-                                        if (status === 'active') return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
-                                        if (status === 'renewal') return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
-                                        return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
-                                      })()}
+                            <div data-testid="inline-list-lead-projects">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {displayedProjects.map((project) => {
+                                  const leadAssignment = leadAssignments.find(a => a.leadId === selectedLeadForDetail.id && a.projectId === project.id);
+                                  const status = getProjectStatus(project.endDate);
+                                  const dotColor = status === 'active' ? 'bg-success' : status === 'renewal' ? 'bg-warning' : 'bg-destructive';
+                                  return (
+                                    <div key={project.id} className="p-2.5 bg-muted/30 rounded-md">
+                                      <div className="flex items-start gap-2 mb-1.5">
+                                        <div className={`w-2 h-2 rounded-full ${dotColor} mt-1.5 flex-shrink-0`} />
+                                        <span className="text-sm font-medium leading-tight line-clamp-2">{project.name}</span>
+                                      </div>
+                                      {leadAssignment?.hours && (
+                                        <span className="text-xs text-muted-foreground flex items-center gap-0.5 pl-4">
+                                          <Clock className="h-3 w-3" />
+                                          {leadAssignment.hours}h/wk
+                                        </span>
+                                      )}
                                     </div>
-                                    {leadAssignment?.hours && (
-                                      <span className="text-xs text-muted-foreground">{leadAssignment.hours} hrs/wk</span>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
+                              </div>
                               {remainingCount > 0 && !showAllLeadContracts && (
-                                <button type="button" onClick={() => setShowAllLeadContracts(true)} className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer" data-testid="button-inline-show-more-lead-contracts">
+                                <button type="button" onClick={() => setShowAllLeadContracts(true)} className="text-xs text-primary hover:underline text-center w-full pt-2 cursor-pointer" data-testid="button-inline-show-more-lead-contracts">
                                   +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
                                 </button>
                               )}
-                              {showAllLeadContracts && ledProjects.length > 4 && (
-                                <button type="button" onClick={() => setShowAllLeadContracts(false)} className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer" data-testid="button-inline-show-less-lead-contracts">
+                              {showAllLeadContracts && ledProjects.length > 6 && (
+                                <button type="button" onClick={() => setShowAllLeadContracts(false)} className="text-xs text-primary hover:underline text-center w-full pt-2 cursor-pointer" data-testid="button-inline-show-less-lead-contracts">
                                   Show less
                                 </button>
                               )}
