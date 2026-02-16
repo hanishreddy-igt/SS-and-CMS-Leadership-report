@@ -195,6 +195,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
 
   // Track if we're in inline detail view mode for contracts tab
   const [inlineDetailProject, setInlineDetailProject] = useState<Project | null>(null);
+  const [isEditingInline, setIsEditingInline] = useState(false);
 
   // Keep inline detail project in sync with projects list after edits/refetches
   useEffect(() => {
@@ -285,6 +286,9 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const closeInlineDetailView = () => {
     setInlineDetailProject(null);
     setVisibleLeadEmails(new Set());
+    setIsEditingInline(false);
+    setEditingProject(null);
+    setSearchQuery('');
   };
 
   const toggleLeadEmailVisibility = (leadId: string) => {
@@ -904,7 +908,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         title: 'Success', 
         description: 'Project updated successfully' 
       });
-      setEditingProject(null);
+      if (isEditingInline) {
+        setIsEditingInline(false);
+        setEditingProject(null);
+      } else {
+        setEditingProject(null);
+      }
       setSearchQuery('');
     },
     onError: (error: Error) => {
@@ -2142,16 +2151,518 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={closeInlineDetailView}
+                onClick={() => {
+                  if (isEditingInline) {
+                    setIsEditingInline(false);
+                    setEditingProject(null);
+                    setSearchQuery('');
+                  } else {
+                    closeInlineDetailView();
+                  }
+                }}
                 className="gap-2"
-                data-testid="button-back-to-accounts"
+                data-testid={isEditingInline ? "button-back-to-detail" : "button-back-to-accounts"}
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back to Accounts
+                {isEditingInline ? 'Back to Account Details' : 'Back to Accounts'}
               </Button>
             </div>
           </CardHeader>
           <CardContent className="pt-6">
+            {isEditingInline && editingProject ? (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold mb-6">Edit Contract</h2>
+                <div className="space-y-2">
+                  <Label htmlFor="inline-edit-name">Account Name <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="inline-edit-name"
+                    data-testid="input-edit-project-name"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inline-edit-customer">Customer Contact Name <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="inline-edit-customer"
+                    data-testid="input-edit-customer"
+                    value={editFormData.customer}
+                    onChange={(e) => setEditFormData({ ...editFormData, customer: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inline-edit-customer-email">Customer Contact Email <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="inline-edit-customer-email"
+                    data-testid="input-edit-customer-email"
+                    type="email"
+                    value={editFormData.customerContactEmail}
+                    onChange={(e) => setEditFormData({ ...editFormData, customerContactEmail: e.target.value })}
+                    placeholder="Enter customer contact email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inline-edit-account-owner">Account Owner</Label>
+                  <Input
+                    id="inline-edit-account-owner"
+                    data-testid="input-edit-account-owner"
+                    type="text"
+                    value={editFormData.accountOwner}
+                    onChange={(e) => setEditFormData({ ...editFormData, accountOwner: e.target.value })}
+                    placeholder="Enter account owner"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Contractual Time</Label>
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1">
+                      <Input
+                        id="inline-edit-contractual-hours"
+                        data-testid="input-edit-contractual-hours"
+                        type="text"
+                        value={editFormData.contractualHours}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9]/g, '');
+                          setEditFormData({ ...editFormData, contractualHours: value });
+                        }}
+                        placeholder="Hours"
+                      />
+                    </div>
+                    <span className="text-muted-foreground text-sm">hrs</span>
+                    <div className="flex-1">
+                      <Input
+                        id="inline-edit-contractual-minutes"
+                        data-testid="input-edit-contractual-minutes"
+                        type="text"
+                        value={editFormData.contractualMinutes}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9]/g, '');
+                          const numVal = parseInt(value, 10);
+                          if (value === '' || (numVal >= 0 && numVal <= 59)) {
+                            setEditFormData({ ...editFormData, contractualMinutes: value });
+                          }
+                        }}
+                        placeholder="Minutes"
+                      />
+                    </div>
+                    <span className="text-muted-foreground text-sm">min</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Team Lead(s) <span className="text-red-500">*</span></Label>
+                    {editFormData.leadIds.length > 0 && (
+                      <Badge variant="secondary" data-testid="badge-edit-lead-count">
+                        {editFormData.leadIds.length} selected {editFormData.leadIds.length === 2 && '(Co-leads)'}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto" data-testid="edit-leads-selection-container">
+                    {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => {
+                      const isSelected = editFormData.leadIds.includes(lead.id);
+                      const leadAssignment = editFormData.leadAssignments.find(a => a.leadId === lead.id);
+                      return (
+                        <div key={lead.id} className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id={`inline-edit-lead-${lead.id}`}
+                              data-testid={`checkbox-edit-lead-${lead.id}`}
+                              checked={isSelected}
+                              onCheckedChange={() => {
+                                if (isSelected) {
+                                  setEditFormData({ 
+                                    ...editFormData, 
+                                    leadIds: editFormData.leadIds.filter(id => id !== lead.id),
+                                    leadAssignments: editFormData.leadAssignments.filter(a => a.leadId !== lead.id)
+                                  });
+                                } else {
+                                  setEditFormData({ 
+                                    ...editFormData, 
+                                    leadIds: [...editFormData.leadIds, lead.id],
+                                    leadAssignments: [...editFormData.leadAssignments, { leadId: lead.id, hours: '' }]
+                                  });
+                                }
+                              }}
+                            />
+                            <Label
+                              htmlFor={`inline-edit-lead-${lead.id}`}
+                              className="font-normal text-sm cursor-pointer flex-1"
+                            >
+                              {lead.name}
+                              {editFormData.leadIds.indexOf(lead.id) === 0 && editFormData.leadIds.length > 1 && (
+                                <span className="text-xs text-muted-foreground ml-2">(Primary)</span>
+                              )}
+                            </Label>
+                          </div>
+                          {isSelected && (
+                            <div className="ml-6 flex items-center gap-2">
+                              <Input
+                                type="text"
+                                placeholder="Hours/week"
+                                className="h-8 text-sm w-24"
+                                value={leadAssignment?.hours || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/[^0-9.]/g, '');
+                                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                    setEditFormData({
+                                      ...editFormData,
+                                      leadAssignments: editFormData.leadAssignments.map(a => 
+                                        a.leadId === lead.id ? { ...a, hours: value } : a
+                                      )
+                                    });
+                                  }
+                                }}
+                                data-testid={`input-edit-lead-hours-${lead.id}`}
+                              />
+                              <span className="text-xs text-muted-foreground">hrs/week</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {projectLeads.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-2">No project leads available</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Select one lead, or select two for co-lead. First selected becomes primary.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Team Members <span className="text-red-500">*</span></Label>
+                    {editFormData.teamMembers.length > 0 && (
+                      <Badge variant="secondary" data-testid="badge-edit-selected-count">
+                        {editFormData.teamMembers.length} selected
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Search team members..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 pr-9"
+                      data-testid="input-edit-search-members"
+                    />
+                    {searchQuery && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                        data-testid="button-edit-clear-search"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="border rounded-md p-4 space-y-2 max-h-64 overflow-y-auto">
+                    {filteredTeamMembers.length > 0 ? (
+                      filteredTeamMembers.map((member) => {
+                        const assignment = editFormData.teamMembers.find(m => m.memberId === member.id);
+                        const isSelected = !!assignment;
+                        return (
+                          <div key={member.id} className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                id={`inline-edit-member-${member.id}`}
+                                data-testid={`checkbox-edit-member-${member.id}`}
+                                checked={isSelected}
+                                onCheckedChange={() => toggleTeamMember(member.id)}
+                              />
+                              <Label htmlFor={`inline-edit-member-${member.id}`} className="font-normal cursor-pointer flex-1">
+                                {member.name}
+                              </Label>
+                            </div>
+                            {isSelected && (
+                              <div className="ml-6 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  {showAddRolePopover === `edit-${member.id}` ? (
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="text"
+                                        placeholder="New role name..."
+                                        className="h-8 text-sm w-32"
+                                        value={roleInputs[`edit-${member.id}`] || ''}
+                                        onChange={(e) => setRoleInputs(prev => ({ ...prev, [`edit-${member.id}`]: e.target.value }))}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' && (roleInputs[`edit-${member.id}`] || '').trim()) {
+                                            createRoleMutation.mutate((roleInputs[`edit-${member.id}`] || '').trim());
+                                          }
+                                          if (e.key === 'Escape') {
+                                            setShowAddRolePopover(null);
+                                            setRoleInputs(prev => ({ ...prev, [`edit-${member.id}`]: '' }));
+                                          }
+                                        }}
+                                        autoFocus
+                                        data-testid={`input-new-edit-role-${member.id}`}
+                                      />
+                                      <Button
+                                        size="sm"
+                                        className="h-8"
+                                        onClick={() => {
+                                          if ((roleInputs[`edit-${member.id}`] || '').trim()) {
+                                            createRoleMutation.mutate((roleInputs[`edit-${member.id}`] || '').trim());
+                                          }
+                                        }}
+                                        disabled={!(roleInputs[`edit-${member.id}`] || '').trim() || createRoleMutation.isPending}
+                                        data-testid={`button-save-edit-role-${member.id}`}
+                                      >
+                                        {createRoleMutation.isPending ? '...' : 'Add'}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8"
+                                        onClick={() => {
+                                          setShowAddRolePopover(null);
+                                          setRoleInputs(prev => ({ ...prev, [`edit-${member.id}`]: '' }));
+                                        }}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Select
+                                      value={assignment?.role || ''}
+                                      onValueChange={(value) => {
+                                        if (value === '__add_new__') {
+                                          setShowAddRolePopover(`edit-${member.id}`);
+                                        } else {
+                                          updateTeamMemberRole(member.id, value);
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 text-sm" data-testid={`select-edit-role-${member.id}`}>
+                                        <SelectValue placeholder="Select role..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {projectRoles.map((role) => (
+                                          <SelectItem key={role.id} value={role.name}>
+                                            {role.name}
+                                          </SelectItem>
+                                        ))}
+                                        <SelectItem value="__add_new__" className="text-primary font-medium">
+                                          <span className="flex items-center gap-1">
+                                            <Plus className="h-3 w-3" /> Add New Role
+                                          </span>
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="text"
+                                    placeholder="Hours/week"
+                                    className="h-8 text-sm w-24"
+                                    value={assignment?.hours || ''}
+                                    onChange={(e) => {
+                                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                        updateTeamMemberHours(member.id, value);
+                                      }
+                                    }}
+                                    data-testid={`input-edit-member-hours-${member.id}`}
+                                  />
+                                  <span className="text-xs text-muted-foreground">hrs/week</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No team members found matching "{searchQuery}"
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="inline-edit-start-date">Start Date</Label>
+                    <Input
+                      id="inline-edit-start-date"
+                      data-testid="input-edit-start-date"
+                      type="text"
+                      placeholder="MM/DD/YYYY"
+                      value={editStartDateInput}
+                      onChange={(e) => setEditStartDateInput(formatDateInput(e.target.value))}
+                      className={(!isValidDateFormat(editStartDateInput) && editStartDateInput) || validateStartDate(editStartDateInput) ? 'border-red-500' : ''}
+                    />
+                    {!isValidDateFormat(editStartDateInput) && editStartDateInput && (
+                      <p className="text-xs text-red-500">Enter a valid date</p>
+                    )}
+                    {isValidDateFormat(editStartDateInput) && validateStartDate(editStartDateInput) && (
+                      <p className="text-xs text-red-500">{validateStartDate(editStartDateInput)}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inline-edit-end-date">End Date</Label>
+                    <Input
+                      id="inline-edit-end-date"
+                      data-testid="input-edit-end-date"
+                      type="text"
+                      placeholder="MM/DD/YYYY"
+                      value={editEndDateInput}
+                      onChange={(e) => setEditEndDateInput(formatDateInput(e.target.value))}
+                      className={(!isValidDateFormat(editEndDateInput) && editEndDateInput) || validateEndDate(editStartDateInput, editEndDateInput) ? 'border-red-500' : ''}
+                    />
+                    {!isValidDateFormat(editEndDateInput) && editEndDateInput && (
+                      <p className="text-xs text-red-500">Enter a valid date</p>
+                    )}
+                    {isValidDateFormat(editEndDateInput) && validateEndDate(editStartDateInput, editEndDateInput) && (
+                      <p className="text-xs text-red-500">{validateEndDate(editStartDateInput, editEndDateInput)}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Contract Business Nature <span className="text-red-500">*</span></Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="inline-edit-project-type-cms"
+                        data-testid="checkbox-edit-project-type-cms"
+                        checked={editFormData.projectType === 'CMS'}
+                        onCheckedChange={(checked) => {
+                          setEditFormData({ 
+                            ...editFormData, 
+                            projectType: checked ? 'CMS' : '' 
+                          });
+                        }}
+                      />
+                      <Label htmlFor="inline-edit-project-type-cms" className="font-normal cursor-pointer">
+                        Community Managed Advisory (CMS)
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="inline-edit-project-type-ss"
+                        data-testid="checkbox-edit-project-type-ss"
+                        checked={editFormData.projectType === 'SS'}
+                        onCheckedChange={(checked) => {
+                          setEditFormData({ 
+                            ...editFormData, 
+                            projectType: checked ? 'SS' : '' 
+                          });
+                        }}
+                      />
+                      <Label htmlFor="inline-edit-project-type-ss" className="font-normal cursor-pointer">
+                        Strategic Services (SS)
+                      </Label>
+                    </div>
+                  </div>
+                  {!editFormData.projectType && (
+                    <p className="text-xs text-red-500">Project type is required</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="inline-edit-steady-key">Steady Key</Label>
+                  <Input
+                    id="inline-edit-steady-key"
+                    data-testid="input-edit-steady-key"
+                    placeholder="Enter Steady Key"
+                    value={editFormData.steadyKey}
+                    onChange={(e) => setEditFormData({ ...editFormData, steadyKey: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">External Links</Label>
+                  <div className="space-y-1">
+                    <Input
+                      id="inline-edit-jira-epic"
+                      data-testid="input-edit-jira-epic"
+                      placeholder="Jira Epic URL"
+                      value={editFormData.jiraEpic}
+                      onChange={(e) => setEditFormData({ ...editFormData, jiraEpic: e.target.value })}
+                      className={editFormData.jiraEpic && !isValidUrl(editFormData.jiraEpic) ? 'border-red-500' : ''}
+                    />
+                    {editFormData.jiraEpic && !isValidUrl(editFormData.jiraEpic) && (
+                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Input
+                      id="inline-edit-google-drive"
+                      data-testid="input-edit-google-drive"
+                      placeholder="Google internal folder link"
+                      value={editFormData.googleDriveLink}
+                      onChange={(e) => setEditFormData({ ...editFormData, googleDriveLink: e.target.value })}
+                      className={editFormData.googleDriveLink && !isValidUrl(editFormData.googleDriveLink) ? 'border-red-500' : ''}
+                    />
+                    {editFormData.googleDriveLink && !isValidUrl(editFormData.googleDriveLink) && (
+                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Input
+                      id="inline-edit-google-external"
+                      data-testid="input-edit-google-external"
+                      placeholder="Google external folder link (if exists)"
+                      value={editFormData.googleExternalLink}
+                      onChange={(e) => setEditFormData({ ...editFormData, googleExternalLink: e.target.value })}
+                      className={editFormData.googleExternalLink && !isValidUrl(editFormData.googleExternalLink) ? 'border-red-500' : ''}
+                    />
+                    {editFormData.googleExternalLink && !isValidUrl(editFormData.googleExternalLink) && (
+                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Input
+                      id="inline-edit-workflowy"
+                      data-testid="input-edit-workflowy"
+                      placeholder="Workflowy URL"
+                      value={editFormData.workflowyLink}
+                      onChange={(e) => setEditFormData({ ...editFormData, workflowyLink: e.target.value })}
+                      className={editFormData.workflowyLink && !isValidUrl(editFormData.workflowyLink) ? 'border-red-500' : ''}
+                    />
+                    {editFormData.workflowyLink && !isValidUrl(editFormData.workflowyLink) && (
+                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Input
+                      id="inline-edit-contract-file"
+                      data-testid="input-edit-contract-file"
+                      placeholder="Contract File URL"
+                      value={editFormData.contractFileLink}
+                      onChange={(e) => setEditFormData({ ...editFormData, contractFileLink: e.target.value })}
+                      className={editFormData.contractFileLink && !isValidUrl(editFormData.contractFileLink) ? 'border-red-500' : ''}
+                    />
+                    {editFormData.contractFileLink && !isValidUrl(editFormData.contractFileLink) && (
+                      <p className="text-xs text-red-500">Please enter a valid URL (must start with http:// or https://)</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditingInline(false);
+                      setEditingProject(null);
+                      setSearchQuery('');
+                    }}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleSaveEdit} 
+                    data-testid="button-save-edit"
+                    disabled={editProjectMutation.isPending}
+                  >
+                    {editProjectMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+            <>
             {/* Account Header */}
             <div className="flex items-center gap-4 mb-8">
               <EndDateIndicator endDate={inlineDetailProject.endDate} />
@@ -2435,7 +2946,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     size="sm"
                     onClick={() => {
                       startEdit(inlineDetailProject);
-                      // Keep inline detail view open while editing
+                      setIsEditingInline(true);
                     }}
                     data-testid="button-inline-edit"
                   >
@@ -2459,6 +2970,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   </Button>
                 )}
               </div>
+            )}
+            </>
             )}
           </CardContent>
         </Card>
@@ -3814,7 +4327,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       )}
 
       {/* Edit Project Dialog - Rendered outside view conditionals so it works from both list and detail views */}
-      <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
+      <Dialog open={!!editingProject && !isEditingInline} onOpenChange={(open) => !open && setEditingProject(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Contract</DialogTitle>
