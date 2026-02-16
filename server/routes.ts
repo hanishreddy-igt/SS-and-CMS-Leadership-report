@@ -2990,24 +2990,23 @@ ${formattedActivities}`;
 
       console.log(`[Scheduler] Generate report drafts called at ${new Date().toISOString()}`);
 
-      const now = new Date();
-      const dayOfWeek = now.getUTCDay();
-      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const currentMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + mondayOffset));
-      const weekStart = currentMonday.toISOString().split('T')[0];
+      const allReports = await storage.getWeeklyReports();
+      const draftReports = allReports.filter(r => r.status === 'draft' && !r.aiDraftStatus);
+
+      if (draftReports.length === 0) {
+        return res.json({ success: true, message: 'No draft reports to process', draftsGenerated: 0 });
+      }
+
+      const weekStarts = [...new Set(draftReports.map(r => r.weekStart))];
+      const weekStart = weekStarts[0];
+      const draftsByWeek = draftReports.filter(r => r.weekStart === weekStart);
+
       const weekStartDate = new Date(weekStart + 'T00:00:00Z');
       const weekEndDate = new Date(weekStartDate);
       weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
       weekEndDate.setUTCHours(23, 59, 59, 999);
 
-      const allReports = await storage.getWeeklyReports();
-      const draftReports = allReports.filter(r => r.status === 'draft' && r.weekStart === weekStart);
-
-      if (draftReports.length === 0) {
-        return res.json({ success: true, message: 'No draft reports found for current week', weekStart, draftsGenerated: 0 });
-      }
-
-      console.log(`[Scheduler] Generating drafts for week: ${weekStart} to ${weekEndDate.toISOString()}`);
+      console.log(`[Scheduler] Generating drafts for week: ${weekStart} to ${weekEndDate.toISOString()} (${draftsByWeek.length} reports)`);
 
       const allActivities = await storage.getActivitiesByDateRange(weekStartDate, weekEndDate);
       const allTasks = await storage.getTasks();
@@ -3043,7 +3042,7 @@ ${formattedActivities}`;
 
       const results: Array<{ reportId: string; projectName: string; status: string; error?: string }> = [];
 
-      for (const report of draftReports) {
+      for (const report of draftsByWeek) {
         try {
           const project = projectMap.get(report.projectId);
           const projectName = project?.name || 'Unknown Project';
@@ -3171,13 +3170,13 @@ ${formattedActivities}`;
       }
 
       const draftedCount = results.filter(r => r.status === 'drafted').length;
-      console.log(`[Scheduler] Completed: ${draftedCount}/${draftReports.length} reports drafted`);
+      console.log(`[Scheduler] Completed: ${draftedCount}/${draftsByWeek.length} reports drafted`);
 
       res.json({
         success: true,
         weekStart,
         weekEnd: weekEndDate.toISOString().split('T')[0],
-        totalReports: draftReports.length,
+        totalReports: draftsByWeek.length,
         draftsGenerated: draftedCount,
         results
       });
