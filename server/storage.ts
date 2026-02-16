@@ -155,6 +155,7 @@ export interface IStorage {
   createTaskActivity(activity: InsertTaskActivity): Promise<TaskActivity>;
   getTaskActivities(taskId: string): Promise<TaskActivity[]>;
   getActivitiesByUser(userEmail: string, startDate?: Date, endDate?: Date): Promise<TaskActivity[]>;
+  getActivitiesByDateRange(startDate: Date, endDate: Date): Promise<TaskActivity[]>;
 
   // AI Chat intent operations
   getAiChatIntents(): Promise<AiChatIntent[]>;
@@ -1648,6 +1649,16 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await db.select().from(taskActivity).where(and(...conditions));
+  }
+
+  async getActivitiesByDateRange(startDate: Date, endDate: Date): Promise<TaskActivity[]> {
+    const { gte, lte } = await import('drizzle-orm');
+    return await db.select().from(taskActivity).where(
+      and(
+        gte(taskActivity.changedAt, startDate),
+        lte(taskActivity.changedAt, endDate)
+      )
+    );
   }
 
   async getAiChatIntents(): Promise<AiChatIntent[]> {

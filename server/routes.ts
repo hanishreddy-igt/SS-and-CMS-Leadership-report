@@ -2976,6 +2976,218 @@ ${formattedActivities}`;
     }
   });
 
+  // POST /api/scheduler/generate-report-drafts
+  // Generates AI drafts for all weekly reports using task activity data
+  // Uses the current reporting week's weekStart at UTC 00:00:00 for 7 days
+  app.post('/api/scheduler/generate-report-drafts', async (req, res) => {
+    try {
+      const authHeader = req.headers['x-scheduler-key'];
+      const schedulerKey = process.env.SCHEDULER_API_KEY;
+      
+      if (schedulerKey && authHeader !== schedulerKey) {
+        return res.status(401).json({ message: 'Invalid scheduler key' });
+      }
+
+      console.log(`[Scheduler] Generate report drafts called at ${new Date().toISOString()}`);
+
+      const now = new Date();
+      const dayOfWeek = now.getUTCDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const currentMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + mondayOffset));
+      const weekStart = currentMonday.toISOString().split('T')[0];
+      const weekStartDate = new Date(weekStart + 'T00:00:00Z');
+      const weekEndDate = new Date(weekStartDate);
+      weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
+      weekEndDate.setUTCHours(23, 59, 59, 999);
+
+      const allReports = await storage.getWeeklyReports();
+      const draftReports = allReports.filter(r => r.status === 'draft' && r.weekStart === weekStart);
+
+      if (draftReports.length === 0) {
+        return res.json({ success: true, message: 'No draft reports found for current week', weekStart, draftsGenerated: 0 });
+      }
+
+      console.log(`[Scheduler] Generating drafts for week: ${weekStart} to ${weekEndDate.toISOString()}`);
+
+      const allActivities = await storage.getActivitiesByDateRange(weekStartDate, weekEndDate);
+      const allTasks = await storage.getTasks();
+      const allProjects = await storage.getProjects();
+      const taskMap = new Map(allTasks.map(t => [t.id, t]));
+      const projectMap = new Map(allProjects.map(p => [p.id, p]));
+
+      const projectActivities: Record<string, Array<{
+        taskTitle: string;
+        changeType: string;
+        changedBy: string;
+        previousValue: any;
+        newValue: any;
+        timestamp: Date;
+      }>> = {};
+
+      for (const activity of allActivities) {
+        const task = taskMap.get(activity.taskId);
+        if (!task?.projectId) continue;
+
+        if (!projectActivities[task.projectId]) {
+          projectActivities[task.projectId] = [];
+        }
+        projectActivities[task.projectId].push({
+          taskTitle: task.title,
+          changeType: activity.changeType,
+          changedBy: activity.changedBy,
+          previousValue: activity.previousValue,
+          newValue: activity.newValue,
+          timestamp: activity.changedAt
+        });
+      }
+
+      const results: Array<{ reportId: string; projectName: string; status: string; error?: string }> = [];
+
+      for (const report of draftReports) {
+        try {
+          const project = projectMap.get(report.projectId);
+          const projectName = project?.name || 'Unknown Project';
+          const accountHeader = project?.steadyKey || project?.name?.replace(/\s+/g, '_') || 'No_Account';
+          const activities = projectActivities[report.projectId] || [];
+
+          if (report.aiDraftStatus === 'generated' || report.aiDraftStatus === 'edited') {
+            results.push({ reportId: report.id, projectName, status: 'skipped_already_drafted' });
+            continue;
+          }
+
+          if (activities.length === 0) {
+            results.push({ reportId: report.id, projectName, status: 'skipped_no_activity' });
+            continue;
+          }
+
+          const taskGroups: Record<string, { taskTitle: string; notes: string[]; statusChanges: string[]; otherChanges: string[]; changedBy: Set<string> }> = {};
+          for (const a of activities) {
+            if (!taskGroups[a.taskTitle]) {
+              taskGroups[a.taskTitle] = { taskTitle: a.taskTitle, notes: [], statusChanges: [], otherChanges: [], changedBy: new Set() };
+            }
+            taskGroups[a.taskTitle].changedBy.add(a.changedBy);
+            switch (a.changeType) {
+              case 'created': taskGroups[a.taskTitle].otherChanges.push('Created'); break;
+              case 'status_change': {
+                const prev = (a.previousValue as any)?.status || 'unknown';
+                const next = (a.newValue as any)?.status || 'unknown';
+                taskGroups[a.taskTitle].statusChanges.push(`${prev} → ${next}`);
+                break;
+              }
+              case 'note_added': {
+                const note = (a.newValue as any)?.content || '';
+                if (note) taskGroups[a.taskTitle].notes.push(note);
+                break;
+              }
+              case 'priority_change': {
+                const p = (a.newValue as any)?.priority || 'unknown';
+                taskGroups[a.taskTitle].otherChanges.push(`Priority set to ${p}`);
+                break;
+              }
+              case 'due_date_change': taskGroups[a.taskTitle].otherChanges.push('Due date updated'); break;
+            }
+          }
+
+          const formattedActivities = Object.values(taskGroups).map(task => {
+            const parts: string[] = [];
+            if (task.notes.length > 0) parts.push(`Notes: ${task.notes.join(' | ')}`);
+            if (task.statusChanges.length > 0) {
+              const transitions = task.statusChanges.map(change => {
+                const [from, to] = change.split(' → ');
+                if (from === 'todo' && to === 'in-progress') return 'Started';
+                if (to === 'done') return 'Completed';
+                if (to === 'blocked') return 'Blocked';
+                if (from === 'blocked' && to === 'in-progress') return 'Unblocked';
+                if (to === 'cancelled') return 'Cancelled';
+                return `${from} → ${to}`;
+              });
+              parts.push(`Progress: ${transitions.join(', ')}`);
+            }
+            if (task.otherChanges.includes('Created')) parts.push('Newly created');
+            return `  - Task: "${task.taskTitle}" (by: ${Array.from(task.changedBy).join(', ')})\n    ${parts.join('\n    ')}`;
+          }).join('\n');
+
+          const systemPrompt = `You are a senior project lead writing a concise weekly report for a specific project/account.
+Your goal is to summarize progress, identify challenges, and outline next steps based on task activity data.
+Write in a professional tone suitable for management review.`;
+
+          const userPrompt = `Generate a weekly report for project "${accountHeader}" based on the following task activity from the week of ${weekStart}.
+
+Produce three sections:
+1. PROGRESS: Summarize what was accomplished this week. Focus on outcomes, not individual actions. Write 2-4 concise bullet points.
+2. CHALLENGES: Identify any blockers, issues, or tasks that were blocked during the week. If none, write "No significant challenges this week." Write 1-3 bullet points.
+3. NEXT_STEPS: Based on in-progress tasks and the trajectory of work, suggest 1-3 next steps for the coming week.
+
+Task activity for this project:
+${formattedActivities}`;
+
+          const completion = await openai.chat.completions.create({
+            model: 'gpt-4.1-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            max_completion_tokens: 1000,
+          });
+
+          const aiOutput = completion.choices[0]?.message?.content || '';
+
+          const progressMatch = aiOutput.match(/PROGRESS[:\s]*([\s\S]*?)(?=CHALLENGES|$)/i);
+          const challengesMatch = aiOutput.match(/CHALLENGES[:\s]*([\s\S]*?)(?=NEXT_STEPS|$)/i);
+          const nextStepsMatch = aiOutput.match(/NEXT_STEPS[:\s]*([\s\S]*?)$/i);
+
+          const aiProgress = progressMatch?.[1]?.trim() || '';
+          const aiChallenges = challengesMatch?.[1]?.trim() || '';
+          const aiNextSteps = nextStepsMatch?.[1]?.trim() || '';
+
+          const updates: Record<string, any> = { aiDraftStatus: 'generated' };
+
+          const aiSeparator = '\n\n--- AI Draft (from task activity) ---\n';
+
+          if (aiProgress) {
+            updates.progress = report.progress
+              ? report.progress + aiSeparator + aiProgress
+              : aiProgress;
+          }
+          if (aiChallenges) {
+            updates.challenges = report.challenges
+              ? report.challenges + aiSeparator + aiChallenges
+              : aiChallenges;
+          }
+          if (aiNextSteps) {
+            updates.nextWeek = report.nextWeek
+              ? report.nextWeek + aiSeparator + aiNextSteps
+              : aiNextSteps;
+          }
+
+          await storage.updateWeeklyReport(report.id, updates);
+          results.push({ reportId: report.id, projectName, status: 'drafted' });
+          console.log(`[Scheduler] Generated draft for "${projectName}" (${activities.length} activities)`);
+
+        } catch (error: any) {
+          console.error(`[Scheduler] Error generating draft for report ${report.id}:`, error);
+          results.push({ reportId: report.id, projectName: report.projectId, status: 'error', error: error.message });
+        }
+      }
+
+      const draftedCount = results.filter(r => r.status === 'drafted').length;
+      console.log(`[Scheduler] Completed: ${draftedCount}/${draftReports.length} reports drafted`);
+
+      res.json({
+        success: true,
+        weekStart,
+        weekEnd: weekEndDate.toISOString().split('T')[0],
+        totalReports: draftReports.length,
+        draftsGenerated: draftedCount,
+        results
+      });
+
+    } catch (error: any) {
+      console.error('[Scheduler] Error generating report drafts:', error);
+      res.status(500).json({ message: 'Failed to generate report drafts', error: error.message });
+    }
+  });
+
   // ====== AI CHAT Q&A ROUTES ======
 
   // Get all AI chat intents (for admin management)

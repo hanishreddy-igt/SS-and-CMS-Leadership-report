@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, Info, Users } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Check, Clock, FileText, ClipboardList, Filter, X, Save, PenLine, Eye, Info, Users, Sparkles } from 'lucide-react';
 import type { Project, ProjectLead, WeeklyReport, TeamMember, TeamMemberFeedback, InsertWeeklyReport, TeamMemberAssignment } from '@shared/schema';
 
 const healthStatusOptions = [
@@ -237,6 +237,11 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
     const report = currentWeekReports.find((r) => r.projectId === projectId);
     if (!report) return 'pending';
     return report.status === 'submitted' ? 'submitted' : 'drafted';
+  };
+
+  const getProjectAiDraftStatus = (projectId: string): string | null => {
+    const report = currentWeekReports.find((r) => r.projectId === projectId);
+    return report?.aiDraftStatus || null;
   };
 
   // Get team members for a specific project
@@ -541,6 +546,9 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
       .filter(([_, feedback]) => feedback.trim())
       .map(([memberId, feedback]) => ({ memberId, feedback }));
 
+    const existingReport = currentWeekReports.find(r => r.projectId === selectedProject);
+    const currentAiDraftStatus = existingReport?.aiDraftStatus;
+
     return {
       projectId: selectedProject,
       leadId: selectedLead,
@@ -551,6 +559,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
       nextWeek: nextWeek || null,
       teamMemberFeedback: memberFeedbackList.length > 0 ? memberFeedbackList : null,
       status,
+      aiDraftStatus: currentAiDraftStatus === 'generated' ? 'edited' : currentAiDraftStatus || null,
       submittedByLeadId: status === 'submitted' ? selectedLead : null,
     };
   };
@@ -629,9 +638,12 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
     const projectLeadIds = getProjectLeadIds(modalProject);
     const primaryLeadId = projectLeadIds[0] || modalProject.leadId;
 
+    const existingReport = currentWeekReports.find(r => r.projectId === modalProject.id);
+    const currentAiDraftStatus = existingReport?.aiDraftStatus;
+
     return {
       projectId: modalProject.id,
-      leadId: primaryLeadId, // Primary lead for the project (from leadIds array)
+      leadId: primaryLeadId,
       weekStart: currentWeek,
       healthStatus: modalHealthStatus || null,
       progress: modalProgress || null,
@@ -639,7 +651,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
       nextWeek: modalNextWeek || null,
       teamMemberFeedback: memberFeedbackList.length > 0 ? memberFeedbackList : null,
       status,
-      // Track who submitted the report (using primary lead for now - could be enhanced with actual logged-in user)
+      aiDraftStatus: currentAiDraftStatus === 'generated' ? 'edited' : currentAiDraftStatus || null,
       submittedByLeadId: status === 'submitted' ? primaryLeadId : null,
     };
   };
@@ -927,6 +939,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                             .map(id => getLeadName(id))
                             .join(' & ')
                         : null;
+                      const aiDraftStatus = getProjectAiDraftStatus(project.id);
                       return (
                         <div
                           key={project.id}
@@ -935,7 +948,12 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                           onClick={() => handleProjectTileClick(project)}
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{project.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium truncate">{project.name}</p>
+                              {aiDraftStatus === 'generated' && (
+                                <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" data-testid={`ai-draft-indicator-${project.id}`} />
+                              )}
+                            </div>
                             {coLeadNames && (
                               <p className="text-xs text-muted-foreground mt-1">with {coLeadNames}</p>
                             )}
@@ -950,9 +968,9 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                           ) : reportStatus === 'drafted' ? (
                             <div className="flex items-center gap-2 text-primary shrink-0">
                               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <PenLine className="h-4 w-4" />
+                                {aiDraftStatus === 'generated' ? <Sparkles className="h-4 w-4" /> : <PenLine className="h-4 w-4" />}
                               </div>
-                              <span className="text-sm font-medium">Drafted</span>
+                              <span className="text-sm font-medium">{aiDraftStatus === 'generated' ? 'AI Draft' : 'Drafted'}</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 text-warning shrink-0">

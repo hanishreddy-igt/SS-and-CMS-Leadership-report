@@ -89,6 +89,7 @@ export const weeklyReports = pgTable("weekly_reports", {
   nextWeek: text("next_week"),
   teamMemberFeedback: jsonb("team_member_feedback"),
   status: text("status").notNull().default('draft'),
+  aiDraftStatus: text("ai_draft_status"), // null = no AI draft, 'generated' = AI draft added, 'edited' = user edited after AI draft
   submittedByLeadId: varchar("submitted_by_lead_id"), // Who actually submitted (for co-lead tracking)
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
 });
