@@ -475,6 +475,35 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
     }
   };
 
+  const generateAiDraftsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', '/api/scheduler/generate-report-drafts');
+    },
+    onSuccess: async (response: any) => {
+      const data = await response.json();
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
+      const drafted = data.draftsGenerated || 0;
+      const skippedAlready = (data.results || []).filter((r: any) => r.status === 'skipped_already_drafted').length;
+      const skippedNoActivity = (data.results || []).filter((r: any) => r.status === 'skipped_no_activity').length;
+      
+      let description = `${drafted} report${drafted !== 1 ? 's' : ''} drafted with AI`;
+      if (skippedAlready > 0) description += `, ${skippedAlready} already drafted`;
+      if (skippedNoActivity > 0) description += `, ${skippedNoActivity} had no task activity`;
+      
+      toast({
+        title: drafted > 0 ? 'AI Drafts Generated' : 'No New Drafts',
+        description,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to generate AI drafts',
+        variant: 'destructive'
+      });
+    }
+  });
+
   const saveDraftMutation = useMutation({
     mutationFn: async ({ report, isUpdate }: { report: InsertWeeklyReport; isUpdate: boolean }) => {
       if (isUpdate && existingDraftId) {
@@ -810,7 +839,21 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
               <CardTitle className="text-2xl">Submit Weekly Report</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">Week starting: <span className="text-primary font-medium">{currentWeek}</span></p>
             </div>
-            <Popover>
+            <div className="flex items-center gap-2 flex-wrap">
+              {permissions.isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  data-testid="button-generate-ai-drafts"
+                  disabled={generateAiDraftsMutation.isPending}
+                  onClick={() => generateAiDraftsMutation.mutate()}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {generateAiDraftsMutation.isPending ? 'Generating...' : 'Generate AI Drafts'}
+                </Button>
+              )}
+              <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2" data-testid="button-status-filter">
                   <Filter className="h-4 w-4" />
@@ -896,6 +939,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                 </div>
               </PopoverContent>
             </Popover>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
