@@ -167,6 +167,10 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Person | null>(null);
   const [showMemberDetailModal, setShowMemberDetailModal] = useState(false);
 
+  // Inline detail view state for Teams tab
+  const [inlineDetailMember, setInlineDetailMember] = useState<Person | null>(null);
+  const [inlineDetailLead, setInlineDetailLead] = useState<Person | null>(null);
+
   // Expanded contracts state for detail modals
   const [showAllLeadContracts, setShowAllLeadContracts] = useState(false);
   const [showAllMemberContracts, setShowAllMemberContracts] = useState(false);
@@ -1648,9 +1652,10 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   // Handle lead tile click to show detail popup
   const handleLeadTileClick = (lead: Person) => {
     if (!selectionModeLeads) {
+      setInlineDetailLead(lead);
       setSelectedLeadForDetail(lead);
       setLeadFeedbackValue('');
-      setShowLeadDetailModal(true);
+      setShowAllLeadContracts(false);
     }
   };
 
@@ -1661,17 +1666,32 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     setShowAllLeadContracts(false);
   };
 
-  // Handle team member tile click to show detail popup
+  const closeInlineLeadDetail = () => {
+    setInlineDetailLead(null);
+    setSelectedLeadForDetail(null);
+    setLeadFeedbackValue('');
+    setShowAllLeadContracts(false);
+  };
+
+  // Handle team member tile click to show inline detail
   const handleMemberTileClick = (member: Person) => {
     if (!selectionModeMembers) {
+      setInlineDetailMember(member);
       setSelectedMemberForDetail(member);
       setMemberFeedbackValue('');
-      setShowMemberDetailModal(true);
+      setShowAllMemberContracts(false);
     }
   };
 
   const closeMemberDetailModal = () => {
     setShowMemberDetailModal(false);
+    setSelectedMemberForDetail(null);
+    setMemberFeedbackValue('');
+    setShowAllMemberContracts(false);
+  };
+
+  const closeInlineMemberDetail = () => {
+    setInlineDetailMember(null);
     setSelectedMemberForDetail(null);
     setMemberFeedbackValue('');
     setShowAllMemberContracts(false);
@@ -5177,6 +5197,180 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   </div>
                 )}
               </div>
+
+              {/* Inline Member Detail View */}
+              {inlineDetailMember && selectedMemberForDetail && (
+                <Card className="mb-4 border" data-testid="inline-member-detail">
+                  <CardHeader className="pb-3 border-b">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={closeInlineMemberDetail}
+                        className="gap-2"
+                        data-testid="button-back-to-members"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Team Members
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                        <div className="w-12 h-12 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-lg font-semibold truncate" data-testid="text-inline-member-name">
+                            {selectedMemberForDetail.name}
+                          </p>
+                          <div className="flex items-center gap-2 text-muted-foreground text-sm mt-0.5">
+                            <Mail className="h-3.5 w-3.5" />
+                            <span data-testid="text-inline-member-email">
+                              {selectedMemberForDetail.email || 'No email set'}
+                            </span>
+                          </div>
+                          {getTotalHoursForMember(selectedMemberForDetail.id) > 0 && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground text-sm mt-0.5">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span data-testid="text-inline-member-hours">
+                                {getTotalHoursForMember(selectedMemberForDetail.id)} hours/week
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Contracts & Roles</p>
+                        {(() => {
+                          const memberProjects = getMemberProjects(selectedMemberForDetail.id)
+                            .sort((a, b) => {
+                              const statusA = getProjectStatus(a.project.endDate);
+                              const statusB = getProjectStatus(b.project.endDate);
+                              if (statusA === 'ended' && statusB !== 'ended') return 1;
+                              if (statusA !== 'ended' && statusB === 'ended') return -1;
+                              if (!a.project.endDate && b.project.endDate) return 1;
+                              if (a.project.endDate && !b.project.endDate) return -1;
+                              if (!a.project.endDate && !b.project.endDate) return 0;
+                              return new Date(a.project.endDate!).getTime() - new Date(b.project.endDate!).getTime();
+                            });
+                          if (memberProjects.length === 0) {
+                            return <p className="text-sm text-muted-foreground italic">No contracts assigned</p>;
+                          }
+                          const displayedProjects = showAllMemberContracts ? memberProjects : memberProjects.slice(0, 4);
+                          const remainingCount = memberProjects.length - 4;
+                          return (
+                            <div className="space-y-2" data-testid="inline-list-member-projects">
+                              {displayedProjects.map(({ project, role, hours }) => (
+                                <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-sm font-medium truncate">{project.name}</span>
+                                    {(() => {
+                                      const status = getProjectStatus(project.endDate);
+                                      if (status === 'active') return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
+                                      if (status === 'renewal') return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
+                                      return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
+                                    })()}
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge variant="secondary" className="text-xs font-medium w-fit max-w-full">
+                                      <span className="truncate">{role}</span>
+                                    </Badge>
+                                    {hours && <span className="text-xs text-muted-foreground">{hours} hrs/wk</span>}
+                                  </div>
+                                </div>
+                              ))}
+                              {remainingCount > 0 && !showAllMemberContracts && (
+                                <button type="button" onClick={() => setShowAllMemberContracts(true)} className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer" data-testid="button-inline-show-more-member-contracts">
+                                  +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
+                                </button>
+                              )}
+                              {showAllMemberContracts && memberProjects.length > 4 && (
+                                <button type="button" onClick={() => setShowAllMemberContracts(false)} className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer" data-testid="button-inline-show-less-member-contracts">
+                                  Show less
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {!canSubmitFeedback ? null : user?.email?.toLowerCase() === selectedMemberForDetail.email?.toLowerCase() ? (
+                        <div className="border-t pt-4">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <AlertCircle className="h-4 w-4" />
+                            <p className="text-sm italic">You cannot submit feedback about yourself.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border-t pt-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <MessageSquare className="h-4 w-4 text-primary" />
+                            <p className="text-sm font-medium">Submit Feedback</p>
+                          </div>
+                          <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                              <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                              <span>Only fill this form if you have worked with this person this week.</span>
+                            </div>
+                            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                              <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                              <span>Your feedback is anonymous and will not be attributed to you.</span>
+                            </div>
+                            <div className="flex items-start gap-2 text-xs text-warning">
+                              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                              <span>This feedback cannot be edited after submission.</span>
+                            </div>
+                            <Textarea
+                              value={memberFeedbackValue}
+                              onChange={(e) => setMemberFeedbackValue(e.target.value)}
+                              placeholder="Share your feedback about working with this person..."
+                              rows={3}
+                              className="mt-2"
+                              data-testid="textarea-inline-member-feedback"
+                            />
+                            <div className="flex justify-end">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  if (memberFeedbackValue.trim()) {
+                                    submitMemberFeedbackMutation.mutate({ id: selectedMemberForDetail.id, feedback: memberFeedbackValue });
+                                  }
+                                }}
+                                disabled={submitMemberFeedbackMutation.isPending || !memberFeedbackValue.trim()}
+                                data-testid="button-inline-submit-member-feedback"
+                              >
+                                {submitMemberFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {(permissions.canEditTeamMembers || permissions.canDeletePeople) && (
+                        <div className="flex gap-2 pt-4 border-t">
+                          {permissions.canEditTeamMembers && (
+                            <Button variant="outline" size="sm" onClick={() => startEditMember(selectedMemberForDetail as TeamMember)} data-testid="button-inline-edit-member">
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              Edit Member
+                            </Button>
+                          )}
+                          {permissions.canDeletePeople && (
+                            <Button variant="outline" size="sm" onClick={() => setDeletingMemberId(selectedMemberForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-member">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Member
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!inlineDetailMember && (<>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {filteredTeamMembers.slice(0, membersToShow).map((member) => (
               <div
@@ -5276,6 +5470,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   </Button>
                 </div>
               )}
+              </>)}
             </>
           )}
         </CardContent>
@@ -5452,6 +5647,189 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   </div>
                 )}
               </div>
+
+              {/* Inline Lead Detail View */}
+              {inlineDetailLead && selectedLeadForDetail && (
+                <Card className="mb-4 border" data-testid="inline-lead-detail">
+                  <CardHeader className="pb-3 border-b">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={closeInlineLeadDetail}
+                        className="gap-2"
+                        data-testid="button-back-to-leads"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Project Leads
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                        <div className="w-12 h-12 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-lg font-semibold truncate" data-testid="text-inline-lead-name">
+                            {selectedLeadForDetail.name}
+                          </p>
+                          <div className="flex items-center gap-2 text-muted-foreground text-sm mt-0.5">
+                            <Mail className="h-3.5 w-3.5" />
+                            <span data-testid="text-inline-lead-email">
+                              {selectedLeadForDetail.email || 'No email set'}
+                            </span>
+                          </div>
+                          {getTotalHoursForLead(selectedLeadForDetail.id) > 0 && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground text-sm mt-0.5">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span data-testid="text-inline-lead-hours">
+                                {getTotalHoursForLead(selectedLeadForDetail.id)} hours/week (as lead)
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Contracts Led</p>
+                        {(() => {
+                          const ledProjects = projects
+                            .filter(p => {
+                              const projectLeadIds = leadAssignments
+                                .filter(a => a.projectId === p.id)
+                                .map(a => a.leadId);
+                              return projectLeadIds.includes(selectedLeadForDetail.id);
+                            })
+                            .sort((a, b) => {
+                              const statusA = getProjectStatus(a.endDate);
+                              const statusB = getProjectStatus(b.endDate);
+                              if (statusA === 'ended' && statusB !== 'ended') return 1;
+                              if (statusA !== 'ended' && statusB === 'ended') return -1;
+                              if (!a.endDate && b.endDate) return 1;
+                              if (a.endDate && !b.endDate) return -1;
+                              if (!a.endDate && !b.endDate) return 0;
+                              return new Date(a.endDate!).getTime() - new Date(b.endDate!).getTime();
+                            });
+                          if (ledProjects.length === 0) {
+                            return <p className="text-sm text-muted-foreground italic">No contracts assigned as lead</p>;
+                          }
+                          const displayedProjects = showAllLeadContracts ? ledProjects : ledProjects.slice(0, 4);
+                          const remainingCount = ledProjects.length - 4;
+                          return (
+                            <div className="space-y-2" data-testid="inline-list-lead-projects">
+                              {displayedProjects.map((project) => {
+                                const leadAssignment = leadAssignments.find(a => a.leadId === selectedLeadForDetail.id && a.projectId === project.id);
+                                return (
+                                  <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-sm font-medium truncate">{project.name}</span>
+                                      {(() => {
+                                        const status = getProjectStatus(project.endDate);
+                                        if (status === 'active') return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
+                                        if (status === 'renewal') return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
+                                        return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
+                                      })()}
+                                    </div>
+                                    {leadAssignment?.hours && (
+                                      <span className="text-xs text-muted-foreground">{leadAssignment.hours} hrs/wk</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {remainingCount > 0 && !showAllLeadContracts && (
+                                <button type="button" onClick={() => setShowAllLeadContracts(true)} className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer" data-testid="button-inline-show-more-lead-contracts">
+                                  +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
+                                </button>
+                              )}
+                              {showAllLeadContracts && ledProjects.length > 4 && (
+                                <button type="button" onClick={() => setShowAllLeadContracts(false)} className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer" data-testid="button-inline-show-less-lead-contracts">
+                                  Show less
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {!canSubmitFeedback ? null : user?.email?.toLowerCase() === selectedLeadForDetail.email?.toLowerCase() ? (
+                        <div className="border-t pt-4">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <AlertCircle className="h-4 w-4" />
+                            <p className="text-sm italic">You cannot submit feedback about yourself.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border-t pt-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <MessageSquare className="h-4 w-4 text-primary" />
+                            <p className="text-sm font-medium">Submit Feedback</p>
+                          </div>
+                          <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                              <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                              <span>Only fill this form if you have worked with this person this week.</span>
+                            </div>
+                            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                              <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                              <span>Your feedback is anonymous and will not be attributed to you.</span>
+                            </div>
+                            <div className="flex items-start gap-2 text-xs text-warning">
+                              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                              <span>This feedback cannot be edited after submission.</span>
+                            </div>
+                            <Textarea
+                              value={leadFeedbackValue}
+                              onChange={(e) => setLeadFeedbackValue(e.target.value)}
+                              placeholder="Share your feedback about working with this person..."
+                              rows={3}
+                              className="mt-2"
+                              data-testid="textarea-inline-lead-feedback"
+                            />
+                            <div className="flex justify-end">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  if (leadFeedbackValue.trim()) {
+                                    submitLeadFeedbackMutation.mutate({
+                                      id: selectedLeadForDetail.id,
+                                      feedback: leadFeedbackValue
+                                    });
+                                  }
+                                }}
+                                disabled={submitLeadFeedbackMutation.isPending || !leadFeedbackValue.trim()}
+                                data-testid="button-inline-submit-lead-feedback"
+                              >
+                                {submitLeadFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {(permissions.canEditProjectLeads || permissions.canDeletePeople) && (
+                        <div className="flex gap-2 pt-4 border-t">
+                          {permissions.canEditProjectLeads && (
+                            <Button variant="outline" size="sm" onClick={() => startEditLead(selectedLeadForDetail as TeamLead)} data-testid="button-inline-edit-lead">
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              Edit Lead
+                            </Button>
+                          )}
+                          {permissions.canDeletePeople && (
+                            <Button variant="outline" size="sm" onClick={() => setDeletingLeadId(selectedLeadForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-lead">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Lead
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!inlineDetailLead && (<>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).slice(0, leadsToShow).map((lead) => (
               <div
@@ -5554,6 +5932,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   </Button>
                 </div>
               )}
+              </>)}
             </>
           )}
         </CardContent>
