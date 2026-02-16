@@ -1259,6 +1259,7 @@ export function TaskRow({
   const [activePanel, setActivePanel] = useState<'assignee' | 'dueDate' | 'notes' | null>(null);
   const [panelTrigger, setPanelTrigger] = useState<'notes' | 'assignee' | 'menu' | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showNoNotesConfirm, setShowNoNotesConfirm] = useState(false);
   
   // Use external control if provided, otherwise fall back to always showing details
   const showDetails = showDetailsToggle ? (openTaskId === task.id) : true;
@@ -1418,13 +1419,17 @@ export function TaskRow({
   };
 
   const handleCycleStatus = () => {
-    // Don't cycle if status is 'done' or 'blocked'
     if (task.status === 'done' || task.status === 'blocked') return;
     
     const currentIndex = STATUS_CYCLE.indexOf(task.status);
     const nextIndex = currentIndex + 1;
     if (nextIndex < STATUS_CYCLE.length) {
-      onUpdate(task.id, { status: STATUS_CYCLE[nextIndex] });
+      const nextStatus = STATUS_CYCLE[nextIndex];
+      if (nextStatus === 'done' && notes.length === 0) {
+        setShowNoNotesConfirm(true);
+        return;
+      }
+      onUpdate(task.id, { status: nextStatus });
     }
   };
 
@@ -1814,6 +1819,45 @@ export function TaskRow({
                     data-testid={`confirm-delete-${task.id}`}
                   >
                     Delete
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={showNoNotesConfirm} onOpenChange={setShowNoNotesConfirm}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    No Notes Added
+                  </DialogTitle>
+                  <DialogDescription>
+                    You have not added your end-of-shift reports or the work you did on this task as notes before closing it. Do you want to add notes?
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowNoNotesConfirm(false);
+                      onUpdate(task.id, { status: 'done' });
+                    }}
+                    data-testid={`close-without-notes-${task.id}`}
+                  >
+                    No, close task
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setShowNoNotesConfirm(false);
+                      if (showDetailsToggle && onOpenDetails) {
+                        onOpenDetails(task.id);
+                      }
+                      openPanel('notes', 'notes');
+                    }}
+                    data-testid={`add-notes-before-close-${task.id}`}
+                  >
+                    Yes, add notes
                   </Button>
                 </DialogFooter>
               </DialogContent>
