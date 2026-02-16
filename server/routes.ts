@@ -2332,12 +2332,12 @@ Output valid JSON only.`;
         const taskTitle = task?.title || 'Unknown Task';
         const projectId = task?.projectId;
         const project = projectId ? projectMap.get(projectId) : null;
-        const accountName = project?.name || 'No Account';
+        const accountHeader = project?.steadyKey || project?.name?.replace(/\s+/g, '_') || 'No_Account';
         const accountKey = project?.id || 'no-account';
 
         if (!accountActivities[accountKey]) {
           accountActivities[accountKey] = {
-            accountName,
+            accountName: accountHeader,
             activities: []
           };
         }
@@ -3238,11 +3238,11 @@ ${contextData}`;
           const taskTitle = task?.title || 'Unknown Task';
           const projectId = task?.projectId;
           const project = projectId ? projectMap.get(projectId) : null;
-          const accountName = project?.name || 'No Account';
+          const accountHeader = project?.steadyKey || project?.name?.replace(/\s+/g, '_') || 'No_Account';
           const accountKey = project?.id || 'no-account';
 
           if (!accountActivities[accountKey]) {
-            accountActivities[accountKey] = { accountName, activities: [] };
+            accountActivities[accountKey] = { accountName: accountHeader, activities: [] };
           }
           accountActivities[accountKey].activities.push({
             taskTitle, changeType: activity.changeType,
