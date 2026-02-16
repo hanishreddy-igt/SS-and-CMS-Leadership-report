@@ -1056,7 +1056,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                       value={modalProgress}
                       onChange={(e) => setModalProgress(e.target.value)}
                       placeholder="Describe what was accomplished this week..."
-                      rows={4}
+                      rows={8}
                     />
                   </div>
 
@@ -1068,7 +1068,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                       value={modalChallenges}
                       onChange={(e) => setModalChallenges(e.target.value)}
                       placeholder="Describe any challenges or blockers..."
-                      rows={4}
+                      rows={8}
                     />
                   </div>
 
@@ -1080,7 +1080,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                       value={modalNextWeek}
                       onChange={(e) => setModalNextWeek(e.target.value)}
                       placeholder="Outline plans for the upcoming week..."
-                      rows={4}
+                      rows={8}
                     />
                   </div>
 
