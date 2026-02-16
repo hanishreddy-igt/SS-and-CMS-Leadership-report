@@ -90,7 +90,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [editMemberValue, setEditMemberValue] = useState('');
   const [editLeadValue, setEditLeadValue] = useState('');
   const [editLeadEmailValue, setEditLeadEmailValue] = useState('');
-  const [showEditLeadDialog, setShowEditLeadDialog] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [deletingMemberId, setDeletingMemberId] = useState<string | null>(null);
   const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
@@ -131,7 +130,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [newMemberDomain, setNewMemberDomain] = useState<EmailDomain>('ignitetech.com');
   const [editMemberEmailValue, setEditMemberEmailValue] = useState('');
   const [editMemberDomain, setEditMemberDomain] = useState<EmailDomain>('ignitetech.com');
-  const [showEditMemberDialog, setShowEditMemberDialog] = useState(false);
   const [memberNameError, setMemberNameError] = useState<string | null>(null);
   const [memberNameWarning, setMemberNameWarning] = useState<string | null>(null);
 
@@ -159,13 +157,11 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const [editStartDateInput, setEditStartDateInput] = useState('');
   const [editEndDateInput, setEditEndDateInput] = useState('');
 
-  // Lead Detail Modal State
+  // Lead Detail State
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Person | null>(null);
-  const [showLeadDetailModal, setShowLeadDetailModal] = useState(false);
 
-  // Team Member Detail Modal State
+  // Team Member Detail State
   const [selectedMemberForDetail, setSelectedMemberForDetail] = useState<Person | null>(null);
-  const [showMemberDetailModal, setShowMemberDetailModal] = useState(false);
 
   // Inline detail view state for Teams tab
   const [inlineDetailMember, setInlineDetailMember] = useState<Person | null>(null);
@@ -215,26 +211,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     }
   }, [projects, inlineDetailProject]);
 
-  // Scroll state for lead and member detail modals - track if content is scrollable
-  const leadDetailScrollRef = useRef<HTMLDivElement>(null);
-  const memberDetailScrollRef = useRef<HTMLDivElement>(null);
-  const [leadDetailScrollable, setLeadDetailScrollable] = useState(false);
-  const [memberDetailScrollable, setMemberDetailScrollable] = useState(false);
-
-  // Check if content is scrollable when modal opens or content changes
-  useEffect(() => {
-    if (showLeadDetailModal && leadDetailScrollRef.current) {
-      const el = leadDetailScrollRef.current;
-      setLeadDetailScrollable(el.scrollHeight > el.clientHeight);
-    }
-  }, [showLeadDetailModal, selectedLeadForDetail, showAllLeadContracts]);
-
-  useEffect(() => {
-    if (showMemberDetailModal && memberDetailScrollRef.current) {
-      const el = memberDetailScrollRef.current;
-      setMemberDetailScrollable(el.scrollHeight > el.clientHeight);
-    }
-  }, [showMemberDetailModal, selectedMemberForDetail, showAllMemberContracts]);
 
   // Email display toggle state - track which leads' emails are visible (supports multiple)
   const [visibleLeadEmails, setVisibleLeadEmails] = useState<Set<string>>(new Set());
@@ -1228,8 +1204,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({ title: 'Success', description: 'Team member updated' });
+      if (selectedMemberForDetail && editingMemberId === selectedMemberForDetail.id) {
+        const updatedEmail = editMemberEmailValue.trim() ? `${editMemberEmailValue.trim()}@${editMemberDomain}` : null;
+        setSelectedMemberForDetail({ ...selectedMemberForDetail, name: editMemberValue.trim(), email: updatedEmail });
+        setInlineDetailMember({ ...selectedMemberForDetail, name: editMemberValue.trim(), email: updatedEmail });
+      }
       setEditingMemberId(null);
-      setShowEditMemberDialog(false);
     },
     onError: () => {
       toast({ 
@@ -1287,8 +1267,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/project-leads'] });
       toast({ title: 'Success', description: 'Project lead updated' });
+      if (selectedLeadForDetail && editingLeadId === selectedLeadForDetail.id) {
+        const updatedEmail = editLeadEmailValue.trim() ? `${editLeadEmailValue.trim()}@${editLeadDomain}` : null;
+        setSelectedLeadForDetail({ ...selectedLeadForDetail, name: editLeadValue.trim(), email: updatedEmail });
+        setInlineDetailLead({ ...selectedLeadForDetail, name: editLeadValue.trim(), email: updatedEmail });
+      }
       setEditingLeadId(null);
-      setShowEditLeadDialog(false);
       setEditLeadValue('');
       setEditLeadEmailValue('');
     },
@@ -1450,7 +1434,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   const startEditMember = (member: TeamMember) => {
     setEditingMemberId(member.id);
     setEditMemberValue(member.name);
-    // Detect domain and strip it when loading for editing
     if (member.email) {
       const domain = ALLOWED_DOMAINS.find(d => member.email?.endsWith(`@${d}`));
       setEditMemberDomain(domain || 'ignitetech.com');
@@ -1460,13 +1443,11 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       setEditMemberEmailValue('');
       setEditMemberDomain('ignitetech.com');
     }
-    setShowEditMemberDialog(true);
   };
 
   const startEditLead = (lead: ProjectLead) => {
     setEditingLeadId(lead.id);
     setEditLeadValue(lead.name);
-    // Detect domain and strip it when loading for editing
     if (lead.email) {
       const domain = ALLOWED_DOMAINS.find(d => lead.email?.endsWith(`@${d}`));
       setEditLeadDomain(domain || 'ignitetech.com');
@@ -1476,7 +1457,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       setEditLeadEmailValue('');
       setEditLeadDomain('ignitetech.com');
     }
-    setShowEditLeadDialog(true);
   };
 
   const saveEditMember = () => {
@@ -1491,7 +1471,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   };
 
   const cancelEditMember = () => {
-    setShowEditMemberDialog(false);
     setEditingMemberId(null);
     setEditMemberValue('');
     setEditMemberEmailValue('');
@@ -1509,7 +1488,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
   };
 
   const cancelEditLead = () => {
-    setShowEditLeadDialog(false);
     setEditingLeadId(null);
     setEditLeadValue('');
     setEditLeadEmailValue('');
@@ -1659,12 +1637,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     }
   };
 
-  const closeLeadDetailModal = () => {
-    setShowLeadDetailModal(false);
-    setSelectedLeadForDetail(null);
-    setLeadFeedbackValue('');
-    setShowAllLeadContracts(false);
-  };
 
   const closeInlineLeadDetail = () => {
     setInlineDetailLead(null);
@@ -1683,12 +1655,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
     }
   };
 
-  const closeMemberDetailModal = () => {
-    setShowMemberDetailModal(false);
-    setSelectedMemberForDetail(null);
-    setMemberFeedbackValue('');
-    setShowAllMemberContracts(false);
-  };
 
   const closeInlineMemberDetail = () => {
     setInlineDetailMember(null);
@@ -5356,18 +5322,82 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       )}
 
                       {(permissions.canEditTeamMembers || permissions.canDeletePeople) && (
-                        <div className="flex gap-2 pt-4 border-t">
-                          {permissions.canEditTeamMembers && (
-                            <Button variant="outline" size="sm" onClick={() => startEditMember(selectedMemberForDetail as TeamMember)} data-testid="button-inline-edit-member">
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Edit Member
-                            </Button>
-                          )}
-                          {permissions.canDeletePeople && (
-                            <Button variant="outline" size="sm" onClick={() => setDeletingMemberId(selectedMemberForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-member">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Member
-                            </Button>
+                        <div className="pt-4 border-t">
+                          {editingMemberId === selectedMemberForDetail.id ? (
+                            <div className="space-y-3" data-testid="inline-edit-member-form">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Edit2 className="h-4 w-4 text-primary" />
+                                <p className="text-sm font-medium">Edit Member</p>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="inline-edit-member-name" className="text-xs">Name <span className="text-destructive">*</span></Label>
+                                  <Input
+                                    id="inline-edit-member-name"
+                                    data-testid="input-inline-edit-member-name"
+                                    type="text"
+                                    value={editMemberValue}
+                                    onChange={(e) => setEditMemberValue(e.target.value)}
+                                    placeholder="Enter name"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="inline-edit-member-email" className="text-xs">Email</Label>
+                                  <div className="flex">
+                                    <Input
+                                      id="inline-edit-member-email"
+                                      data-testid="input-inline-edit-member-email"
+                                      type="text"
+                                      value={editMemberEmailValue}
+                                      onChange={(e) => setEditMemberEmailValue(e.target.value.replace(/@.*$/, ''))}
+                                      placeholder="username"
+                                      className="rounded-r-none flex-1"
+                                    />
+                                    <Select value={editMemberDomain} onValueChange={(v) => setEditMemberDomain(v as EmailDomain)}>
+                                      <SelectTrigger className="w-[145px] rounded-l-none border-l-0" data-testid="select-inline-edit-member-domain">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {ALLOWED_DOMAINS.map(domain => (
+                                          <SelectItem key={domain} value={domain}>@{domain}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                {permissions.canDeletePeople && (
+                                  <Button variant="outline" size="sm" onClick={() => setDeletingMemberId(selectedMemberForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-member">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </Button>
+                                )}
+                                <div className="flex gap-2 ml-auto">
+                                  <Button variant="outline" size="sm" onClick={cancelEditMember} data-testid="button-inline-cancel-edit-member">
+                                    Cancel
+                                  </Button>
+                                  <Button size="sm" onClick={saveEditMember} disabled={updateMemberMutation.isPending || !editMemberValue.trim()} data-testid="button-inline-save-edit-member">
+                                    {updateMemberMutation.isPending ? 'Saving...' : 'Save'}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              {permissions.canEditTeamMembers && (
+                                <Button variant="outline" size="sm" onClick={() => startEditMember(selectedMemberForDetail as TeamMember)} data-testid="button-inline-edit-member">
+                                  <Edit2 className="h-4 w-4 mr-2" />
+                                  Edit Member
+                                </Button>
+                              )}
+                              {permissions.canDeletePeople && (
+                                <Button variant="outline" size="sm" onClick={() => setDeletingMemberId(selectedMemberForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-member">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Member
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -5776,18 +5806,82 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                       )}
 
                       {(permissions.canEditProjectLeads || permissions.canDeletePeople) && (
-                        <div className="flex gap-2 pt-4 border-t">
-                          {permissions.canEditProjectLeads && (
-                            <Button variant="outline" size="sm" onClick={() => startEditLead(selectedLeadForDetail as TeamLead)} data-testid="button-inline-edit-lead">
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Edit Lead
-                            </Button>
-                          )}
-                          {permissions.canDeletePeople && (
-                            <Button variant="outline" size="sm" onClick={() => setDeletingLeadId(selectedLeadForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-lead">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Lead
-                            </Button>
+                        <div className="pt-4 border-t">
+                          {editingLeadId === selectedLeadForDetail.id ? (
+                            <div className="space-y-3" data-testid="inline-edit-lead-form">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Edit2 className="h-4 w-4 text-primary" />
+                                <p className="text-sm font-medium">Edit Lead</p>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="inline-edit-lead-name" className="text-xs">Name <span className="text-destructive">*</span></Label>
+                                  <Input
+                                    id="inline-edit-lead-name"
+                                    data-testid="input-inline-edit-lead-name"
+                                    type="text"
+                                    value={editLeadValue}
+                                    onChange={(e) => setEditLeadValue(e.target.value)}
+                                    placeholder="Enter name"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="inline-edit-lead-email" className="text-xs">Email</Label>
+                                  <div className="flex">
+                                    <Input
+                                      id="inline-edit-lead-email"
+                                      data-testid="input-inline-edit-lead-email"
+                                      type="text"
+                                      value={editLeadEmailValue}
+                                      onChange={(e) => setEditLeadEmailValue(e.target.value.replace(/@.*$/, ''))}
+                                      placeholder="username"
+                                      className="rounded-r-none flex-1"
+                                    />
+                                    <Select value={editLeadDomain} onValueChange={(v) => setEditLeadDomain(v as EmailDomain)}>
+                                      <SelectTrigger className="w-[145px] rounded-l-none border-l-0" data-testid="select-inline-edit-lead-domain">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {ALLOWED_DOMAINS.map(domain => (
+                                          <SelectItem key={domain} value={domain}>@{domain}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                {permissions.canDeletePeople && (
+                                  <Button variant="outline" size="sm" onClick={() => setDeletingLeadId(selectedLeadForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-lead">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </Button>
+                                )}
+                                <div className="flex gap-2 ml-auto">
+                                  <Button variant="outline" size="sm" onClick={cancelEditLead} data-testid="button-inline-cancel-edit-lead">
+                                    Cancel
+                                  </Button>
+                                  <Button size="sm" onClick={saveEditLead} disabled={updateLeadMutation.isPending || !editLeadValue.trim()} data-testid="button-inline-save-edit-lead">
+                                    {updateLeadMutation.isPending ? 'Saving...' : 'Save'}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              {permissions.canEditProjectLeads && (
+                                <Button variant="outline" size="sm" onClick={() => startEditLead(selectedLeadForDetail as TeamLead)} data-testid="button-inline-edit-lead">
+                                  <Edit2 className="h-4 w-4 mr-2" />
+                                  Edit Lead
+                                </Button>
+                              )}
+                              {permissions.canDeletePeople && (
+                                <Button variant="outline" size="sm" onClick={() => setDeletingLeadId(selectedLeadForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-lead">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Lead
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -5979,520 +6073,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
         </DialogContent>
       </Dialog>
 
-      {/* Edit Lead Dialog */}
-      <Dialog open={showEditLeadDialog} onOpenChange={(open) => !open && cancelEditLead()}>
-        <DialogContent data-testid="dialog-edit-lead">
-          <DialogHeader>
-            <DialogTitle>Edit Team Lead</DialogTitle>
-            <DialogDescription>
-              Update the team lead's name and email address.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-lead-name">Team Lead Name <span className="text-red-500">*</span></Label>
-              <Input
-                id="edit-lead-name"
-                data-testid="input-edit-lead-name"
-                type="text"
-                value={editLeadValue}
-                onChange={(e) => setEditLeadValue(e.target.value)}
-                placeholder="Enter team lead name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-lead-email">Email Address</Label>
-              <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
-              <div className="flex">
-                <Input
-                  id="edit-lead-email"
-                  data-testid="input-edit-lead-email"
-                  type="text"
-                  value={editLeadEmailValue}
-                  onChange={(e) => setEditLeadEmailValue(e.target.value.replace(/@.*$/, ''))}
-                  placeholder="username (optional)"
-                  className="rounded-r-none flex-1"
-                />
-                <Select value={editLeadDomain} onValueChange={(v) => setEditLeadDomain(v as EmailDomain)}>
-                  <SelectTrigger className="w-[160px] rounded-l-none border-l-0" data-testid="select-edit-lead-domain">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ALLOWED_DOMAINS.map(domain => (
-                      <SelectItem key={domain} value={domain}>@{domain}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={cancelEditLead}
-                data-testid="button-cancel-edit-lead"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={saveEditLead}
-                disabled={updateLeadMutation.isPending || !editLeadValue.trim()}
-                data-testid="button-save-edit-lead"
-              >
-                {updateLeadMutation.isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Edit Member Dialog */}
-      <Dialog open={showEditMemberDialog} onOpenChange={(open) => !open && cancelEditMember()}>
-        <DialogContent data-testid="dialog-edit-member">
-          <DialogHeader>
-            <DialogTitle>Edit Team Member</DialogTitle>
-            <DialogDescription>
-              Update the team member's name and email address.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-member-name">Team Member Name <span className="text-red-500">*</span></Label>
-              <Input
-                id="edit-member-name"
-                data-testid="input-edit-member-name"
-                type="text"
-                value={editMemberValue}
-                onChange={(e) => setEditMemberValue(e.target.value)}
-                placeholder="Enter team member name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-member-email">Email Address (Optional)</Label>
-              <p className="text-xs text-muted-foreground">Essential for enabling co-worker feedback option</p>
-              <div className="flex">
-                <Input
-                  id="edit-member-email"
-                  data-testid="input-edit-member-email"
-                  type="text"
-                  value={editMemberEmailValue}
-                  onChange={(e) => setEditMemberEmailValue(e.target.value.replace(/@.*$/, ''))}
-                  placeholder="username"
-                  className="rounded-r-none flex-1"
-                />
-                <Select value={editMemberDomain} onValueChange={(v) => setEditMemberDomain(v as EmailDomain)}>
-                  <SelectTrigger className="w-[160px] rounded-l-none border-l-0" data-testid="select-edit-member-domain">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ALLOWED_DOMAINS.map(domain => (
-                      <SelectItem key={domain} value={domain}>@{domain}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={cancelEditMember}
-                data-testid="button-cancel-edit-member"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={saveEditMember}
-                disabled={updateMemberMutation.isPending || !editMemberValue.trim()}
-                data-testid="button-save-edit-member"
-              >
-                {updateMemberMutation.isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Lead Detail Modal */}
-      <Dialog open={showLeadDetailModal} onOpenChange={(open) => !open && closeLeadDetailModal()}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col" data-testid="dialog-lead-detail">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <UserCog className="h-5 w-5" />
-              Team Lead Details
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              View details about this project lead including their email and projects they manage.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedLeadForDetail && (
-            <>
-              <div ref={leadDetailScrollRef} className="space-y-4 py-2 pb-4 overflow-y-auto overflow-x-hidden flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <div className="w-12 h-12 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
-                  <UserCog className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-lg font-semibold truncate" data-testid="text-lead-detail-name">
-                    {selectedLeadForDetail.name}
-                  </p>
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm mt-0.5">
-                    <Mail className="h-3.5 w-3.5" />
-                    <span data-testid="text-lead-detail-email">
-                      {selectedLeadForDetail.email || 'No email set'}
-                    </span>
-                  </div>
-                  {getTotalHoursForLead(selectedLeadForDetail.id) > 0 && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground text-sm mt-0.5">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span data-testid="text-lead-detail-hours">
-                        {getTotalHoursForLead(selectedLeadForDetail.id)} hours/week (as lead)
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Projects managed by this lead (includes co-lead projects) - max 4 shown */}
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Contracts Led</p>
-                {(() => {
-                  const ledProjects = projects.filter(p => {
-                    // Check leadIds array first (co-lead support), then fall back to leadId
-                    const projectLeadIds = p.leadIds && p.leadIds.length > 0 ? p.leadIds : [p.leadId];
-                    return projectLeadIds.includes(selectedLeadForDetail.id);
-                  }).sort((a, b) => {
-                    const statusA = getProjectStatus(a.endDate);
-                    const statusB = getProjectStatus(b.endDate);
-                    // Ended projects go to the bottom
-                    if (statusA === 'ended' && statusB !== 'ended') return 1;
-                    if (statusA !== 'ended' && statusB === 'ended') return -1;
-                    // Sort by end date (earliest first), null dates go after dated ones
-                    if (!a.endDate && b.endDate) return 1;
-                    if (a.endDate && !b.endDate) return -1;
-                    if (!a.endDate && !b.endDate) return 0;
-                    return new Date(a.endDate!).getTime() - new Date(b.endDate!).getTime();
-                  });
-                  if (ledProjects.length === 0) {
-                    return (
-                      <p className="text-sm text-muted-foreground italic">No contracts assigned</p>
-                    );
-                  }
-                  const displayedProjects = showAllLeadContracts ? ledProjects : ledProjects.slice(0, 4);
-                  const remainingCount = ledProjects.length - 4;
-                  return (
-                    <div className="space-y-2" data-testid="list-lead-projects">
-                      {displayedProjects.map(project => {
-                        const leadAssignments = (project.leadAssignments as LeadAssignment[]) || [];
-                        const leadAssignment = leadAssignments.find(a => a.leadId === selectedLeadForDetail.id);
-                        return (
-                          <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">{project.name}</span>
-                              {(() => {
-                                const status = getProjectStatus(project.endDate);
-                                if (status === 'active') {
-                                  return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
-                                } else if (status === 'renewal') {
-                                  return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
-                                } else {
-                                  return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
-                                }
-                              })()}
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {hasCoLeads(project) && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal text-muted-foreground">
-                                  Co-Lead
-                                </Badge>
-                              )}
-                              {leadAssignment?.hours && (
-                                <span className="text-xs text-muted-foreground">
-                                  {leadAssignment.hours} hrs/wk
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {remainingCount > 0 && !showAllLeadContracts && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllLeadContracts(true)}
-                          className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer"
-                          data-testid="button-show-more-lead-contracts"
-                        >
-                          +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
-                        </button>
-                      )}
-                      {showAllLeadContracts && ledProjects.length > 4 && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllLeadContracts(false)}
-                          className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer"
-                          data-testid="button-show-less-lead-contracts"
-                        >
-                          Show less
-                        </button>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Anonymous Feedback Submission Section - Hidden for non-team members and self-feedback */}
-              {!canSubmitFeedback ? (
-                null
-              ) : user?.email?.toLowerCase() === selectedLeadForDetail.email?.toLowerCase() ? (
-                <div className="border-t pt-4">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <AlertCircle className="h-4 w-4" />
-                    <p className="text-sm italic">You cannot submit feedback about yourself.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="border-t pt-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <MessageSquare className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-medium">Submit Feedback</p>
-                  </div>
-                  <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                      <span>Only fill this form if you have worked with this person this week.</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                      <span>Your feedback is anonymous and will not be attributed to you.</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-warning">
-                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                      <span>This feedback cannot be edited after submission. Please re-check and be careful before submitting.</span>
-                    </div>
-                    <Textarea
-                      value={leadFeedbackValue}
-                      onChange={(e) => setLeadFeedbackValue(e.target.value)}
-                      placeholder="Share your feedback about working with this person..."
-                      rows={3}
-                      className="mt-2"
-                      data-testid="textarea-lead-feedback"
-                    />
-                    <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          if (leadFeedbackValue.trim()) {
-                            submitLeadFeedbackMutation.mutate({ 
-                              id: selectedLeadForDetail.id, 
-                              feedback: leadFeedbackValue 
-                            });
-                          }
-                        }}
-                        disabled={submitLeadFeedbackMutation.isPending || !leadFeedbackValue.trim()}
-                        data-testid="button-submit-lead-feedback"
-                      >
-                        {submitLeadFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              </div>
-              {/* Scroll indicator - only show when content overflows */}
-              {leadDetailScrollable && (
-                <div className="flex justify-center items-center py-2 border-t">
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <ChevronsDown className="h-4 w-4 animate-bounce" />
-                    <span>Scroll for more</span>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Team Member Detail Modal */}
-      <Dialog open={showMemberDetailModal} onOpenChange={(open) => !open && closeMemberDetailModal()}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col" data-testid="dialog-member-detail">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Team Member Details
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              View details about this team member including projects they work on and their roles.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedMemberForDetail && (
-            <>
-              <div ref={memberDetailScrollRef} className="space-y-4 py-2 pb-4 overflow-y-auto overflow-x-hidden flex-1 scrollbar-visible" style={{ maxHeight: 'calc(85vh - 120px)' }}>
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <div className="w-12 h-12 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-lg font-semibold truncate" data-testid="text-member-detail-name">
-                    {selectedMemberForDetail.name}
-                  </p>
-                  {getTotalHoursForMember(selectedMemberForDetail.id) > 0 && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground text-sm mt-0.5">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span data-testid="text-member-detail-hours">
-                        {getTotalHoursForMember(selectedMemberForDetail.id)} hours/week
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Projects this member is working on - sorted by end date, ended projects last - max 4 shown */}
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Contracts & Roles</p>
-                {(() => {
-                  const memberProjects = getMemberProjects(selectedMemberForDetail.id)
-                    .sort((a, b) => {
-                      const statusA = getProjectStatus(a.project.endDate);
-                      const statusB = getProjectStatus(b.project.endDate);
-                      // Ended projects go to the bottom
-                      if (statusA === 'ended' && statusB !== 'ended') return 1;
-                      if (statusA !== 'ended' && statusB === 'ended') return -1;
-                      // Sort by end date (earliest first), null dates go after dated ones
-                      if (!a.project.endDate && b.project.endDate) return 1;
-                      if (a.project.endDate && !b.project.endDate) return -1;
-                      if (!a.project.endDate && !b.project.endDate) return 0;
-                      return new Date(a.project.endDate!).getTime() - new Date(b.project.endDate!).getTime();
-                    });
-                  if (memberProjects.length === 0) {
-                    return (
-                      <p className="text-sm text-muted-foreground italic">No contracts assigned</p>
-                    );
-                  }
-                  const displayedProjects = showAllMemberContracts ? memberProjects : memberProjects.slice(0, 4);
-                  const remainingCount = memberProjects.length - 4;
-                  return (
-                    <div className="space-y-2" data-testid="list-member-projects">
-                      {displayedProjects.map(({ project, role, hours }) => (
-                        <div key={project.id} className="flex flex-col gap-1 p-2 bg-muted/30 rounded-md">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-medium truncate">{project.name}</span>
-                            {(() => {
-                              const status = getProjectStatus(project.endDate);
-                              if (status === 'active') {
-                                return <Badge className="bg-success/20 text-success border-success/30 text-xs">Active</Badge>;
-                              } else if (status === 'renewal') {
-                                return <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">Renewal</Badge>;
-                              } else {
-                                return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-xs">Ended</Badge>;
-                              }
-                            })()}
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className="text-xs font-medium w-fit max-w-full">
-                              <span className="truncate">{role}</span>
-                            </Badge>
-                            {hours && (
-                              <span className="text-xs text-muted-foreground">
-                                {hours} hrs/wk
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      {remainingCount > 0 && !showAllMemberContracts && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllMemberContracts(true)}
-                          className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer"
-                          data-testid="button-show-more-member-contracts"
-                        >
-                          +{remainingCount} more contract{remainingCount > 1 ? 's' : ''}
-                        </button>
-                      )}
-                      {showAllMemberContracts && memberProjects.length > 4 && (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllMemberContracts(false)}
-                          className="text-xs text-primary hover:underline text-center w-full pt-1 cursor-pointer"
-                          data-testid="button-show-less-member-contracts"
-                        >
-                          Show less
-                        </button>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Anonymous Feedback Submission Section - Hidden for non-team members and self-feedback */}
-              {!canSubmitFeedback ? (
-                null
-              ) : user?.email?.toLowerCase() === selectedMemberForDetail.email?.toLowerCase() ? (
-                <div className="border-t pt-4">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <AlertCircle className="h-4 w-4" />
-                    <p className="text-sm italic">You cannot submit feedback about yourself.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="border-t pt-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <MessageSquare className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-medium">Submit Feedback</p>
-                  </div>
-                  <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                      <span>Only fill this form if you have worked with this person this week.</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <Shield className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                      <span>Your feedback is anonymous and will not be attributed to you.</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-warning">
-                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                      <span>This feedback cannot be edited after submission. Please re-check and be careful before submitting.</span>
-                    </div>
-                    <Textarea
-                      value={memberFeedbackValue}
-                      onChange={(e) => setMemberFeedbackValue(e.target.value)}
-                      placeholder="Share your feedback about working with this person..."
-                      rows={3}
-                      className="mt-2"
-                      data-testid="textarea-member-feedback"
-                    />
-                    <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          if (memberFeedbackValue.trim()) {
-                            submitMemberFeedbackMutation.mutate({ 
-                              id: selectedMemberForDetail.id, 
-                              feedback: memberFeedbackValue 
-                            });
-                          }
-                        }}
-                        disabled={submitMemberFeedbackMutation.isPending || !memberFeedbackValue.trim()}
-                        data-testid="button-submit-member-feedback"
-                      >
-                        {submitMemberFeedbackMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              </div>
-              {/* Scroll indicator - only show when content overflows */}
-              {memberDetailScrollable && (
-                <div className="flex justify-center items-center py-2 border-t">
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <ChevronsDown className="h-4 w-4 animate-bounce" />
-                    <span>Scroll for more</span>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
       </>
       )}
     </div>
