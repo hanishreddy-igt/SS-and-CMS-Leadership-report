@@ -2459,7 +2459,7 @@ Guidelines:
 Formatting rules:
 - Start with one high-level summary sentence.
 - For each account:
-  - Use the account name as a header.
+  - Use the exact account/project key provided in the data as the section header (do NOT modify it - keep underscores, do not add spaces).
   - Use 1–3 bullet points maximum.
   - Each bullet should describe a meaningful outcome in one sentence.
 
@@ -3160,7 +3160,7 @@ Guidelines:
 Formatting rules:
 - Start with one high-level summary sentence.
 - For each account:
-  - Use the account name as a header.
+  - Use the exact account/project key provided in the data as the section header (do NOT modify it - keep underscores, do not add spaces).
   - Use 1–3 bullet points maximum.
   - Each bullet should describe a meaningful outcome in one sentence.
 
