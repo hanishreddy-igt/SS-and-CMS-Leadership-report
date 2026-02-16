@@ -2352,7 +2352,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     )}
                   </div>
                   <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto" data-testid="edit-leads-selection-container">
-                    {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => {
+                    {[...projectLeads].sort((a, b) => {
+                      const aSelected = editFormData.leadIds.includes(a.id) ? 0 : 1;
+                      const bSelected = editFormData.leadIds.includes(b.id) ? 0 : 1;
+                      if (aSelected !== bSelected) return aSelected - bSelected;
+                      return a.name.localeCompare(b.name);
+                    }).map((lead) => {
                       const isSelected = editFormData.leadIds.includes(lead.id);
                       const leadAssignment = editFormData.leadAssignments.find(a => a.leadId === lead.id);
                       return (
@@ -2454,7 +2459,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                   </div>
                   <div className="border rounded-md p-4 space-y-2 max-h-64 overflow-y-auto">
                     {filteredTeamMembers.length > 0 ? (
-                      filteredTeamMembers.map((member) => {
+                      [...filteredTeamMembers].sort((a, b) => {
+                        const aSelected = editFormData.teamMembers.some(m => m.memberId === a.id) ? 0 : 1;
+                        const bSelected = editFormData.teamMembers.some(m => m.memberId === b.id) ? 0 : 1;
+                        if (aSelected !== bSelected) return aSelected - bSelected;
+                        return a.name.localeCompare(b.name);
+                      }).map((member) => {
                         const assignment = editFormData.teamMembers.find(m => m.memberId === member.id);
                         const isSelected = !!assignment;
                         return (
@@ -3227,7 +3237,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                         )}
                       </div>
                       <div className={`border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto ${projectFormErrors.leadIds ? 'border-red-500' : ''}`} data-testid="leads-selection-container">
-                        {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => {
+                        {[...projectLeads].sort((a, b) => {
+                          const aSelected = projectFormData.leadIds.includes(a.id) ? 0 : 1;
+                          const bSelected = projectFormData.leadIds.includes(b.id) ? 0 : 1;
+                          if (aSelected !== bSelected) return aSelected - bSelected;
+                          return a.name.localeCompare(b.name);
+                        }).map((lead) => {
                           const isSelected = projectFormData.leadIds.includes(lead.id);
                           const leadAssignment = projectFormData.leadAssignments.find(a => a.leadId === lead.id);
                           return (
@@ -4392,7 +4407,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                 )}
               </div>
               <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto" data-testid="edit-leads-selection-container">
-                {[...projectLeads].sort((a, b) => a.name.localeCompare(b.name)).map((lead) => {
+                {[...projectLeads].sort((a, b) => {
+                  const aSelected = editFormData.leadIds.includes(a.id) ? 0 : 1;
+                  const bSelected = editFormData.leadIds.includes(b.id) ? 0 : 1;
+                  if (aSelected !== bSelected) return aSelected - bSelected;
+                  return a.name.localeCompare(b.name);
+                }).map((lead) => {
                   const isSelected = editFormData.leadIds.includes(lead.id);
                   const leadAssignment = editFormData.leadAssignments.find(a => a.leadId === lead.id);
                   return (
@@ -4494,7 +4514,12 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
               </div>
               <div className="border rounded-md p-4 space-y-2 max-h-64 overflow-y-auto">
                 {filteredTeamMembers.length > 0 ? (
-                  filteredTeamMembers.map((member) => {
+                  [...filteredTeamMembers].sort((a, b) => {
+                    const aSelected = editFormData.teamMembers.some(m => m.memberId === a.id) ? 0 : 1;
+                    const bSelected = editFormData.teamMembers.some(m => m.memberId === b.id) ? 0 : 1;
+                    if (aSelected !== bSelected) return aSelected - bSelected;
+                    return a.name.localeCompare(b.name);
+                  }).map((member) => {
                     const assignment = editFormData.teamMembers.find(m => m.memberId === member.id);
                     const isSelected = !!assignment;
                     return (
