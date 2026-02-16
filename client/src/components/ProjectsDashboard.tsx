@@ -5692,9 +5692,7 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                         {(() => {
                           const ledProjects = projects
                             .filter(p => {
-                              const projectLeadIds = leadAssignments
-                                .filter(a => a.projectId === p.id)
-                                .map(a => a.leadId);
+                              const projectLeadIds = p.leadIds && p.leadIds.length > 0 ? p.leadIds : [p.leadId];
                               return projectLeadIds.includes(selectedLeadForDetail.id);
                             })
                             .sort((a, b) => {
@@ -5716,7 +5714,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                             <div data-testid="inline-list-lead-projects">
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                                 {displayedProjects.map((project) => {
-                                  const leadAssignment = leadAssignments.find(a => a.leadId === selectedLeadForDetail.id && a.projectId === project.id);
+                                  const projectLeadAssignments = (project.leadAssignments as LeadAssignment[]) || [];
+                                  const leadAssignment = projectLeadAssignments.find(a => a.leadId === selectedLeadForDetail.id);
                                   const status = getProjectStatus(project.endDate);
                                   const dotColor = status === 'active' ? 'bg-success' : status === 'renewal' ? 'bg-warning' : 'bg-destructive';
                                   return (
