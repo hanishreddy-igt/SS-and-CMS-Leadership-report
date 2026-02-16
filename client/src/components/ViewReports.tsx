@@ -3942,350 +3942,6 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         </DialogContent>
       </Dialog>
 
-      {/* SS/CMS Team Feedbacks Section */}
-      <Card className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="section-label">Anonymous Feedback</p>
-                <CardTitle className="text-2xl">SS/CMS Team Feedbacks</CardTitle>
-              </div>
-            </div>
-            {/* Download options for Team Feedback section */}
-            {permissions.canViewTeamFeedbackSummary && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    disabled={peopleWithFeedback.length === 0 && !teamSummary}
-                    data-testid="button-download-team-feedback"
-                  >
-                    <Download className="h-4 w-4" />
-                    Download
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={exportTeamFeedbackSummaryPDF} data-testid="menu-export-team-feedback-pdf" disabled={!teamSummary}>
-                    <Users className="h-4 w-4 mr-2" />
-                    Team Feedback Summary (PDF)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportTeamFeedbackCSV} data-testid="menu-export-team-feedback-csv" disabled={peopleWithFeedback.length === 0}>
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Team Feedback (CSV)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {/* Warning banner when reports modified after summary generation - only for those who can see team summary */}
-          {permissions.canViewTeamFeedbackSummary && reportsModifiedAfterSummary && teamSummary && (
-            <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-              <p className="text-sm text-warning">
-                Reports have been edited after the AI summary was generated. Consider regenerating the summary.
-              </p>
-            </div>
-          )}
-
-          {/* Team Feedback Summary Tile - Only visible to managers and admins */}
-          {permissions.canViewTeamFeedbackSummary && (
-            teamSummary ? (
-              <div 
-                className={`mb-6 p-4 rounded-lg cursor-pointer transition-all hover:border-blue-500/50 ${
-                  teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
-                  teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
-                  'bg-destructive/10 border border-destructive/30'
-                }`}
-                onClick={handleOpenTeamModal}
-                data-testid="tile-team-summary"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                      <Users className="h-4 w-4 text-blue-500" />
-                    </div>
-                    <h4 className="font-semibold">Team Feedback AI Summary</h4>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {permissions.canGenerateAISummary && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          generateSummaryMutation.mutate();
-                        }}
-                        disabled={generateSummaryMutation.isPending}
-                        className="gap-1 h-7 px-2"
-                        data-testid="button-regenerate-team-summary"
-                      >
-                        {generateSummaryMutation.isPending ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-3.5 w-3.5" />
-                        )}
-                        <span className="text-xs">Regenerate</span>
-                      </Button>
-                    )}
-                    <Badge className={`${
-                      teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
-                      teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
-                      'bg-destructive/10 text-destructive'
-                    } border-0`}>
-                      {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
-                      {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                      {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
-                      Team Morale: {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
-                       teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
-                    </Badge>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground line-clamp-2">{teamSummary.teamSummary}</p>
-                <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
-              </div>
-            ) : permissions.canGenerateAISummary && (
-              <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <Users className="h-4 w-4 text-blue-500" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm">Team Feedback AI Summary</h4>
-                    <p className="text-xs text-muted-foreground">Generate AI insights from team feedback</p>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => generateSummaryMutation.mutate()}
-                  disabled={generateSummaryMutation.isPending}
-                  size="sm"
-                  className="gap-2"
-                  data-testid="button-generate-summary-team"
-                >
-                  {generateSummaryMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      Generate
-                    </>
-                  )}
-                </Button>
-              </div>
-            )
-          )}
-
-          {/* Auto-archive schedule banner - only for managers and admins */}
-          {permissions.canViewAllFeedback && (
-            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
-              <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
-                <p className="text-muted-foreground">
-                  Feedbacks are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
-                  {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
-                </p>
-              </div>
-            </div>
-          )}
-
-          {(() => {
-            // For admins/managers: show individual feedback entries with delete capability
-            // For leads/members: show their submitted feedback entries from feedbackEntries API
-            
-            if (permissions.canViewAllFeedback) {
-              // Admins and managers see all individual feedback entries with delete buttons
-              return feedbackEntries.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p className="text-lg font-medium mb-2">No feedback submitted yet</p>
-                  <p className="text-sm">Anonymous feedback submitted about team members and leads will appear here.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the SS/CMS Team Feedback Summary.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {(showAllFeedback ? feedbackEntries : feedbackEntries.slice(0, 8)).map((entry) => {
-                      const aboutPerson = allPeople.find(p => p.id === entry.aboutPersonId);
-                      return (
-                        <div 
-                          key={entry.id}
-                          className="p-4 rounded-lg bg-muted/30 border border-white/5 relative group"
-                          data-testid={`feedback-card-${entry.id}`}
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-3">
-                            <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <User className="h-4 w-4 text-primary" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-sm">{aboutPerson?.name || 'Unknown'}</h4>
-                                <p className="text-xs text-muted-foreground">
-                                  {aboutPerson?.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
-                                </p>
-                              </div>
-                            </div>
-                            {permissions.canDeleteTeamFeedback && (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    data-testid={`button-delete-feedback-${entry.id}`}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Feedback?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This will permanently delete this feedback entry about {aboutPerson?.name || 'this person'}. This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => {
-                                        setDeletingFeedbackId(entry.id);
-                                        deleteFeedbackMutation.mutate(entry.id);
-                                      }}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      data-testid={`button-confirm-delete-feedback-${entry.id}`}
-                                    >
-                                      {deleteFeedbackMutation.isPending && deletingFeedbackId === entry.id ? (
-                                        <>
-                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                          Deleting...
-                                        </>
-                                      ) : (
-                                        'Delete'
-                                      )}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            )}
-                          </div>
-                          <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
-                            <p className="text-sm whitespace-pre-wrap">{entry.feedback}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {feedbackEntries.length > 8 && (
-                    <div className="flex justify-center pt-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAllFeedback(!showAllFeedback)}
-                        className="gap-2"
-                        data-testid="button-toggle-feedback"
-                      >
-                        {showAllFeedback ? (
-                          <>
-                            <ChevronUp className="h-4 w-4" />
-                            Show Less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="h-4 w-4" />
-                            Show More ({feedbackEntries.length - 8} more)
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            } else {
-              // Leads and members see only their own submitted feedback entries
-              return feedbackEntries.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p className="text-lg font-medium mb-2">No feedback submitted by you yet</p>
-                  <p className="text-sm">Feedback you submit about team members and leads will appear here.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Feedback you have submitted about team members and leads. Your submissions are tracked here for your reference.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {(showAllFeedback ? feedbackEntries : feedbackEntries.slice(0, 8)).map((entry) => {
-                      const aboutPerson = allPeople.find(p => p.id === entry.aboutPersonId);
-                      return (
-                        <div 
-                          key={entry.id}
-                          className="p-4 rounded-lg bg-muted/30 border border-white/5"
-                          data-testid={`feedback-entry-${entry.id}`}
-                        >
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                              <User className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-sm">{aboutPerson?.name || 'Unknown'}</h4>
-                              <p className="text-xs text-muted-foreground">
-                                {aboutPerson?.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
-                            <p className="text-sm whitespace-pre-wrap">{entry.feedback}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {feedbackEntries.length > 8 && (
-                    <div className="flex justify-center pt-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowAllFeedback(!showAllFeedback)}
-                        className="gap-2"
-                        data-testid="button-toggle-feedback"
-                      >
-                        {showAllFeedback ? (
-                          <>
-                            <ChevronUp className="h-4 w-4" />
-                            Show Less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="h-4 w-4" />
-                            Show More ({feedbackEntries.length - 8} more)
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            }
-          })()}
-        </CardContent>
-      </Card>
-
       <Card id="weekly-reports-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
           <div className="flex flex-col gap-4">
@@ -4944,6 +4600,350 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
             })()
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* SS/CMS Team Feedbacks Section */}
+      <Card className="glass-card border-white/10">
+        <CardHeader className="border-b border-white/5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="section-label">Anonymous Feedback</p>
+                <CardTitle className="text-2xl">SS/CMS Team Feedbacks</CardTitle>
+              </div>
+            </div>
+            {/* Download options for Team Feedback section */}
+            {permissions.canViewTeamFeedbackSummary && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    disabled={peopleWithFeedback.length === 0 && !teamSummary}
+                    data-testid="button-download-team-feedback"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={exportTeamFeedbackSummaryPDF} data-testid="menu-export-team-feedback-pdf" disabled={!teamSummary}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Team Feedback Summary (PDF)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportTeamFeedbackCSV} data-testid="menu-export-team-feedback-csv" disabled={peopleWithFeedback.length === 0}>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Team Feedback (CSV)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {/* Warning banner when reports modified after summary generation - only for those who can see team summary */}
+          {permissions.canViewTeamFeedbackSummary && reportsModifiedAfterSummary && teamSummary && (
+            <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+              <p className="text-sm text-warning">
+                Reports have been edited after the AI summary was generated. Consider regenerating the summary.
+              </p>
+            </div>
+          )}
+
+          {/* Team Feedback Summary Tile - Only visible to managers and admins */}
+          {permissions.canViewTeamFeedbackSummary && (
+            teamSummary ? (
+              <div 
+                className={`mb-6 p-4 rounded-lg cursor-pointer transition-all hover:border-blue-500/50 ${
+                  teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                  teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                  'bg-destructive/10 border border-destructive/30'
+                }`}
+                onClick={handleOpenTeamModal}
+                data-testid="tile-team-summary"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <Users className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <h4 className="font-semibold">Team Feedback AI Summary</h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {permissions.canGenerateAISummary && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateSummaryMutation.mutate();
+                        }}
+                        disabled={generateSummaryMutation.isPending}
+                        className="gap-1 h-7 px-2"
+                        data-testid="button-regenerate-team-summary"
+                      >
+                        {generateSummaryMutation.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
+                        <span className="text-xs">Regenerate</span>
+                      </Button>
+                    )}
+                    <Badge className={`${
+                      teamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
+                      teamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
+                      'bg-destructive/10 text-destructive'
+                    } border-0`}>
+                      {teamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                      {teamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
+                      {teamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3.5 w-3.5 mr-1" />}
+                      Team Morale: {teamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                       teamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">{teamSummary.teamSummary}</p>
+                <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
+              </div>
+            ) : permissions.canGenerateAISummary && (
+              <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm">Team Feedback AI Summary</h4>
+                    <p className="text-xs text-muted-foreground">Generate AI insights from team feedback</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => generateSummaryMutation.mutate()}
+                  disabled={generateSummaryMutation.isPending}
+                  size="sm"
+                  className="gap-2"
+                  data-testid="button-generate-summary-team"
+                >
+                  {generateSummaryMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              </div>
+            )
+          )}
+
+          {/* Auto-archive schedule banner - only for managers and admins */}
+          {permissions.canViewAllFeedback && (
+            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
+              <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
+                <p className="text-muted-foreground">
+                  Feedbacks are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
+                  {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(() => {
+            // For admins/managers: show individual feedback entries with delete capability
+            // For leads/members: show their submitted feedback entries from feedbackEntries API
+            
+            if (permissions.canViewAllFeedback) {
+              // Admins and managers see all individual feedback entries with delete buttons
+              return feedbackEntries.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-medium mb-2">No feedback submitted yet</p>
+                  <p className="text-sm">Anonymous feedback submitted about team members and leads will appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Anonymous feedback submitted by colleagues who worked with these individuals. This feedback is used to generate the SS/CMS Team Feedback Summary.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {(showAllFeedback ? feedbackEntries : feedbackEntries.slice(0, 8)).map((entry) => {
+                      const aboutPerson = allPeople.find(p => p.id === entry.aboutPersonId);
+                      return (
+                        <div 
+                          key={entry.id}
+                          className="p-4 rounded-lg bg-muted/30 border border-white/5 relative group"
+                          data-testid={`feedback-card-${entry.id}`}
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-sm">{aboutPerson?.name || 'Unknown'}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {aboutPerson?.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
+                                </p>
+                              </div>
+                            </div>
+                            {permissions.canDeleteTeamFeedback && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    data-testid={`button-delete-feedback-${entry.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Feedback?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete this feedback entry about {aboutPerson?.name || 'this person'}. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => {
+                                        setDeletingFeedbackId(entry.id);
+                                        deleteFeedbackMutation.mutate(entry.id);
+                                      }}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      data-testid={`button-confirm-delete-feedback-${entry.id}`}
+                                    >
+                                      {deleteFeedbackMutation.isPending && deletingFeedbackId === entry.id ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          Deleting...
+                                        </>
+                                      ) : (
+                                        'Delete'
+                                      )}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
+                          <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
+                            <p className="text-sm whitespace-pre-wrap">{entry.feedback}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {feedbackEntries.length > 8 && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllFeedback(!showAllFeedback)}
+                        className="gap-2"
+                        data-testid="button-toggle-feedback"
+                      >
+                        {showAllFeedback ? (
+                          <>
+                            <ChevronUp className="h-4 w-4" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4" />
+                            Show More ({feedbackEntries.length - 8} more)
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            } else {
+              // Leads and members see only their own submitted feedback entries
+              return feedbackEntries.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-medium mb-2">No feedback submitted by you yet</p>
+                  <p className="text-sm">Feedback you submit about team members and leads will appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Feedback you have submitted about team members and leads. Your submissions are tracked here for your reference.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {(showAllFeedback ? feedbackEntries : feedbackEntries.slice(0, 8)).map((entry) => {
+                      const aboutPerson = allPeople.find(p => p.id === entry.aboutPersonId);
+                      return (
+                        <div 
+                          key={entry.id}
+                          className="p-4 rounded-lg bg-muted/30 border border-white/5"
+                          data-testid={`feedback-entry-${entry.id}`}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-sm">{aboutPerson?.name || 'Unknown'}</h4>
+                              <p className="text-xs text-muted-foreground">
+                                {aboutPerson?.roles?.includes('project-lead') ? 'Team Lead' : 'Team Member'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
+                            <p className="text-sm whitespace-pre-wrap">{entry.feedback}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {feedbackEntries.length > 8 && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllFeedback(!showAllFeedback)}
+                        className="gap-2"
+                        data-testid="button-toggle-feedback"
+                      >
+                        {showAllFeedback ? (
+                          <>
+                            <ChevronUp className="h-4 w-4" />
+                            Show Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4" />
+                            Show More ({feedbackEntries.length - 8} more)
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+          })()}
         </CardContent>
       </Card>
 
