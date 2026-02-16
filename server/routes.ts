@@ -2991,28 +2991,34 @@ ${formattedActivities}`;
       console.log(`[Scheduler] Generate report drafts called at ${new Date().toISOString()}`);
 
       const allReports = await storage.getWeeklyReports();
-      const draftReports = allReports.filter(r => r.status === 'draft' && !r.aiDraftStatus);
+      const allTasks = await storage.getTasks();
+      const allProjects = await storage.getProjects();
+      const projectMap = new Map(allProjects.map(p => [p.id, p]));
+      const taskMap = new Map(allTasks.map(t => [t.id, t]));
 
-      if (draftReports.length === 0) {
-        return res.json({ success: true, message: 'No draft reports to process', draftsGenerated: 0 });
+      // Determine the active reporting week from existing drafts, or fall back to current calendar week
+      const existingDrafts = allReports.filter(r => r.status === 'draft');
+      let weekStart: string;
+      if (existingDrafts.length > 0) {
+        const weekStarts = [...new Set(existingDrafts.map(r => r.weekStart))].sort();
+        weekStart = weekStarts[weekStarts.length - 1]; // Use the latest week with drafts
+      } else {
+        const now = new Date();
+        const dayOfWeek = now.getUTCDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const currentMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + mondayOffset));
+        weekStart = currentMonday.toISOString().split('T')[0];
       }
-
-      const weekStarts = [...new Set(draftReports.map(r => r.weekStart))];
-      const weekStart = weekStarts[0];
-      const draftsByWeek = draftReports.filter(r => r.weekStart === weekStart);
 
       const weekStartDate = new Date(weekStart + 'T00:00:00Z');
       const weekEndDate = new Date(weekStartDate);
       weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
       weekEndDate.setUTCHours(23, 59, 59, 999);
 
-      console.log(`[Scheduler] Generating drafts for week: ${weekStart} to ${weekEndDate.toISOString()} (${draftsByWeek.length} reports)`);
+      console.log(`[Scheduler] Processing week: ${weekStart} to ${weekEndDate.toISOString().split('T')[0]}`);
 
+      // Get all activity for this week
       const allActivities = await storage.getActivitiesByDateRange(weekStartDate, weekEndDate);
-      const allTasks = await storage.getTasks();
-      const allProjects = await storage.getProjects();
-      const taskMap = new Map(allTasks.map(t => [t.id, t]));
-      const projectMap = new Map(allProjects.map(p => [p.id, p]));
 
       const projectActivities: Record<string, Array<{
         taskTitle: string;
@@ -3039,6 +3045,57 @@ ${formattedActivities}`;
           timestamp: activity.changedAt
         });
       }
+
+      // Build map of ALL existing reports (draft + submitted) for this week to avoid duplicates
+      const allReportsForWeek = allReports.filter(r => r.weekStart === weekStart);
+      const existingReportProjectIds = new Set(allReportsForWeek.map(r => r.projectId));
+      const existingDraftMap = new Map(
+        allReportsForWeek.filter(r => r.status === 'draft').map(r => [r.projectId, r])
+      );
+
+      // Auto-create draft reports for projects that have activity but no existing draft
+      let autoCreatedCount = 0;
+      for (const projectId of Object.keys(projectActivities)) {
+        if (!existingReportProjectIds.has(projectId)) {
+          const project = projectMap.get(projectId);
+          if (!project) continue;
+          const leadId = project.leadIds?.[0] || project.leadId;
+          if (!leadId) continue;
+
+          try {
+            const newReport = await storage.createWeeklyReport({
+              projectId,
+              leadId,
+              weekStart,
+              status: 'draft',
+              healthStatus: null,
+              progress: null,
+              challenges: null,
+              nextWeek: null,
+              teamMemberFeedback: null,
+              submittedByLeadId: null,
+            });
+            existingDraftMap.set(projectId, newReport);
+            autoCreatedCount++;
+            console.log(`[Scheduler] Auto-created draft for "${project.name}"`);
+          } catch (err: any) {
+            console.error(`[Scheduler] Failed to auto-create draft for "${project.name}":`, err.message);
+          }
+        }
+      }
+
+      if (autoCreatedCount > 0) {
+        console.log(`[Scheduler] Auto-created ${autoCreatedCount} draft reports`);
+      }
+
+      // Get all drafts to process (existing + newly created) that haven't been AI-drafted yet
+      const draftsByWeek = [...existingDraftMap.values()].filter(r => !r.aiDraftStatus);
+
+      if (draftsByWeek.length === 0 && autoCreatedCount === 0) {
+        return res.json({ success: true, message: 'No draft reports to process', weekStart, draftsGenerated: 0 });
+      }
+
+      console.log(`[Scheduler] Generating AI drafts for ${draftsByWeek.length} reports`);
 
       const results: Array<{ reportId: string; projectName: string; status: string; error?: string }> = [];
 
@@ -3170,13 +3227,14 @@ ${formattedActivities}`;
       }
 
       const draftedCount = results.filter(r => r.status === 'drafted').length;
-      console.log(`[Scheduler] Completed: ${draftedCount}/${draftsByWeek.length} reports drafted`);
+      console.log(`[Scheduler] Completed: ${draftedCount}/${draftsByWeek.length} reports drafted (${autoCreatedCount} auto-created)`);
 
       res.json({
         success: true,
         weekStart,
         weekEnd: weekEndDate.toISOString().split('T')[0],
         totalReports: draftsByWeek.length,
+        autoCreated: autoCreatedCount,
         draftsGenerated: draftedCount,
         results
       });

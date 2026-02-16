@@ -483,10 +483,12 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
       const data = await response.json();
       queryClient.invalidateQueries({ queryKey: ['/api/weekly-reports'] });
       const drafted = data.draftsGenerated || 0;
+      const autoCreated = data.autoCreated || 0;
       const skippedAlready = (data.results || []).filter((r: any) => r.status === 'skipped_already_drafted').length;
       const skippedNoActivity = (data.results || []).filter((r: any) => r.status === 'skipped_no_activity').length;
       
       let description = `${drafted} report${drafted !== 1 ? 's' : ''} drafted with AI`;
+      if (autoCreated > 0) description += ` (${autoCreated} auto-created)`;
       if (skippedAlready > 0) description += `, ${skippedAlready} already drafted`;
       if (skippedNoActivity > 0) description += `, ${skippedNoActivity} had no task activity`;
       
