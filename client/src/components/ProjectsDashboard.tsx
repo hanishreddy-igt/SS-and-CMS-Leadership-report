@@ -4141,41 +4141,6 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                           )}
                         </div>
                       </div>
-                      {!selectionModeProjects && (permissions.canEditContracts || permissions.canDeleteContracts) && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              data-testid={`button-project-menu-${project.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {permissions.canEditContracts && (
-                            <DropdownMenuItem 
-                              onClick={(e) => { e.stopPropagation(); startEdit(project); }}
-                              data-testid={`button-edit-project-${project.id}`}
-                            >
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            )}
-                            {permissions.canDeleteContracts && (
-                            <DropdownMenuItem 
-                              onClick={(e) => { e.stopPropagation(); setDeletingProjectId(project.id); }}
-                              className="text-destructive focus:text-destructive"
-                              data-testid={`button-delete-project-${project.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
