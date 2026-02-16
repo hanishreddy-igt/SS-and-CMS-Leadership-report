@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
-import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon, Loader2, ChevronsDown, ArrowLeft } from 'lucide-react';
+import { Users, Briefcase, Calendar, ArrowUpDown, Edit2, Search, X, Download, Trash2, Check, Plus, UserPlus, Filter, MoreVertical, AlertCircle, AlertTriangle, CheckCircle2, UsersRound, UserCog, User, Mail, Building2, Clock, MessageSquare, Shield, CalendarIcon, Loader2, ChevronsDown, ArrowLeft, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -2198,6 +2198,17 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                     </div>
                   </div>
                 )}
+
+                {/* Steady Key Section */}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Key className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Steady Key</p>
+                    <p className="text-lg font-semibold" data-testid="text-inline-steady-key">{inlineDetailProject.steadyKey || 'Not Listed'}</p>
+                  </div>
+                </div>
 
                 {/* Contractual Time Section */}
                 {inlineDetailProject.totalContractualHours && (
