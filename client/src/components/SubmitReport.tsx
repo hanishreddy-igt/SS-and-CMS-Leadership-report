@@ -844,12 +844,13 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
           {showReportModal && modalProject ? (
             <div className="flex items-center gap-3">
               <Button
-                variant="ghost"
-                size="icon"
+                variant="outline"
                 onClick={closeReportModal}
                 data-testid="button-header-back"
+                className="gap-2"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4" />
+                Back
               </Button>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
