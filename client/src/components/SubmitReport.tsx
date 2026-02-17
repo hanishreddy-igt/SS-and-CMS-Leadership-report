@@ -841,6 +841,39 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
 
       <Card id="report-status-section" data-testid="card-submit-report" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
+          {showReportModal && modalProject ? (
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={closeReportModal}
+                data-testid="button-header-back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CardTitle className="text-2xl truncate">{modalProject.name}</CardTitle>
+                  {getProjectReportStatus(modalProject.id) === 'submitted' && (
+                    <Badge variant="outline" className="text-success border-success/30 shrink-0">Submitted</Badge>
+                  )}
+                  {getProjectReportStatus(modalProject.id) === 'drafted' && (
+                    <Badge variant="outline" className="text-primary border-primary/30 shrink-0">Draft</Badge>
+                  )}
+                  {getProjectReportStatus(modalProject.id) === 'pending' && (
+                    <Badge variant="outline" className="text-warning border-warning/30 shrink-0">Pending</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                  {modalProject.customer && <span>{modalProject.customer}</span>}
+                  {hasCoLeads(modalProject) && (
+                    <span className="text-xs">Co-Leads: {getProjectLeadNames(modalProject)}</span>
+                  )}
+                  <span className="text-xs">Week: {currentWeek}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <p className="section-label">Weekly Submission</p>
@@ -949,51 +982,12 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
             </Popover>
             </div>
           </div>
+          )}
         </CardHeader>
         <CardContent>
           {showReportModal && modalProject ? (
             /* Inline Report Detail View */
             <div className="space-y-6" data-testid="section-report-detail">
-              {/* Back button and header */}
-              <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={closeReportModal}
-                  data-testid="button-back-to-reports"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {getProjectReportStatus(modalProject.id) === 'submitted' ? (
-                      <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
-                    ) : getProjectReportStatus(modalProject.id) === 'drafted' ? (
-                      <PenLine className="h-5 w-5 text-primary shrink-0" />
-                    ) : (
-                      <FileText className="h-5 w-5 text-primary shrink-0" />
-                    )}
-                    <h2 className="text-xl font-semibold truncate" data-testid="text-report-project-name">{modalProject.name}</h2>
-                    {getProjectReportStatus(modalProject.id) === 'submitted' && (
-                      <Badge variant="outline" className="text-success border-success/30 shrink-0">Submitted</Badge>
-                    )}
-                    {getProjectReportStatus(modalProject.id) === 'drafted' && (
-                      <Badge variant="outline" className="text-primary border-primary/30 shrink-0">Draft</Badge>
-                    )}
-                    {getProjectReportStatus(modalProject.id) === 'pending' && (
-                      <Badge variant="outline" className="text-warning border-warning/30 shrink-0">Pending</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                    {modalProject.customer && <span>{modalProject.customer}</span>}
-                    {hasCoLeads(modalProject) && (
-                      <span className="text-xs">Co-Leads: {getProjectLeadNames(modalProject)}</span>
-                    )}
-                    <span className="text-xs">Week: {currentWeek}</span>
-                  </div>
-                </div>
-              </div>
-
               {/* Warning banner when someone else is editing */}
               {projectLockInfo?.isLocked && (
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30" data-testid="lock-warning-banner">
