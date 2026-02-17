@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, ChevronUp, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare, RefreshCw, Key } from 'lucide-react';
+import { Edit2, X, CheckCircle2, AlertTriangle, AlertCircle, FileDown, FileText, Filter, ChevronDown, ChevronUp, Calendar, User, Users, Clock, Sparkles, TrendingUp, Target, Lightbulb, Loader2, Archive, Download, Save, Info, Trash2, MessageSquare, RefreshCw, Key, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { WeeklyReport, ProjectLead, TeamMember, Project, TeamMemberFeedback, SavedReport, TeamMemberAssignment, Person, FeedbackEntry } from '@shared/schema';
@@ -3290,20 +3290,30 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
   return (
     <div className="space-y-8">
-      {/* Leadership Summary Modal */}
-      <Dialog open={showLeadershipModal} onOpenChange={handleLeadershipModalClose}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+      {/* Leadership Summary Inline View */}
+      {showLeadershipModal && (
+        <Card className="glass-card border-white/10">
+          <CardHeader className="border-b border-white/5">
             <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => handleLeadershipModalClose(false)}
+                data-testid="button-back-leadership"
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Sparkles className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="section-label">AI-Powered Insights</p>
-                <DialogTitle className="text-2xl">Leadership Summary</DialogTitle>
+                <CardTitle className="text-2xl">Leadership Summary</CardTitle>
               </div>
             </div>
-          </DialogHeader>
+          </CardHeader>
+          <CardContent className="pt-6">
           {aiSummary && (
             <div className="space-y-6 mt-4">
               {/* Executive Summary */}
@@ -3697,23 +3707,34 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               )}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* SS/CMS Team Feedback Summary Modal */}
-      <Dialog open={showTeamModal} onOpenChange={handleTeamModalClose}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+      {/* SS/CMS Team Feedback Summary Inline View */}
+      {showTeamModal && (
+        <Card className="glass-card border-white/10">
+          <CardHeader className="border-b border-white/5">
             <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => handleTeamModalClose(false)}
+                data-testid="button-back-team-feedback"
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
               <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
                 <Users className="h-5 w-5 text-blue-500" />
               </div>
               <div>
                 <p className="section-label">AI-Powered Team Insights</p>
-                <DialogTitle className="text-2xl">SS/CMS Team Feedback Summary</DialogTitle>
+                <CardTitle className="text-2xl">SS/CMS Team Feedback Summary</CardTitle>
               </div>
             </div>
-          </DialogHeader>
+          </CardHeader>
+          <CardContent className="pt-6">
           {teamSummary && (
             <div className="space-y-6 mt-4">
               {/* Team Morale Overview */}
@@ -3949,8 +3970,9 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               )}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+      )}
 
       <Card id="weekly-reports-section" className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
