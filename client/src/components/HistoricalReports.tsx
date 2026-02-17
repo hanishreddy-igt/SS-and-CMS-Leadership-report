@@ -6,7 +6,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -40,8 +39,10 @@ import {
   Lightbulb,
   Target,
   RefreshCw,
-  Loader2
+  Loader2,
+  ArrowLeft
 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import type { SavedReport } from '@shared/schema';
 
 // Comprehensive Leadership Summary interfaces
@@ -1015,30 +1016,33 @@ export default function HistoricalReports() {
       </Card>
       )}
 
-      <Dialog open={showPdfModal} onOpenChange={setShowPdfModal}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <FileText className="h-5 w-5 text-primary" />
-              Weekly Report Preview
-            </DialogTitle>
-            {selectedReport && (
-              <DialogDescription>
-                Week Ending {formatWeekEnding(selectedReport.weekEnd)}
-              </DialogDescription>
-            )}
-          </DialogHeader>
-          
-          {selectedReport && (() => {
-            const healthCounts = selectedReport.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
-            const selectedReportType = (selectedReport as any).reportType || 'account';
-            const isSelectedTeamReport = selectedReportType === 'team';
-            const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(selectedReport.aiSummary, selectedReportType);
-            const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
+      {showPdfModal && selectedReport && (() => {
+        const healthCounts = selectedReport.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
+        const selectedReportType = (selectedReport as any).reportType || 'account';
+        const isSelectedTeamReport = selectedReportType === 'team';
+        const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(selectedReport.aiSummary, selectedReportType);
+        const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
 
-            return (
-              <>
-                <div className="flex items-center justify-between gap-4 py-4 border-b border-white/10">
+        return (
+          <Card className="glass-card border-white/10">
+            <CardHeader className="border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-detail" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </Button>
+                <Separator orientation="vertical" className="h-6" />
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h3 className="text-xl font-bold">Weekly Report Preview</h3>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  Week Ending {formatWeekEnding(selectedReport.weekEnd)}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-4">
                     <Badge variant={isSelectedTeamReport ? 'secondary' : 'default'} className={`gap-1 ${isSelectedTeamReport ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/20 text-primary'}`}>
                       {isSelectedTeamReport ? <Users className="h-3 w-3" /> : <BarChart3 className="h-3 w-3" />}
@@ -1168,7 +1172,7 @@ export default function HistoricalReports() {
                             <CheckCircle2 className="h-4 w-4 text-success" />
                             <h4 className="font-medium text-success">On Track ({reportAiSummary.portfolioHealthBreakdown.onTrack.count})</h4>
                           </div>
-                          <ul className="space-y-1 max-h-32 overflow-y-auto scrollbar-visible pr-2">
+                          <ul className="space-y-1">
                             {reportAiSummary.portfolioHealthBreakdown.onTrack.projects.map((project, i) => (
                               <li key={i} className="text-xs text-muted-foreground">{project}</li>
                             ))}
@@ -1179,7 +1183,7 @@ export default function HistoricalReports() {
                             <AlertTriangle className="h-4 w-4 text-warning" />
                             <h4 className="font-medium text-warning">Needs Attention ({reportAiSummary.portfolioHealthBreakdown.needsAttention.count})</h4>
                           </div>
-                          <ul className="space-y-1 max-h-32 overflow-y-auto scrollbar-visible pr-2">
+                          <ul className="space-y-1">
                             {reportAiSummary.portfolioHealthBreakdown.needsAttention.projects.map((project, i) => (
                               <li key={i} className="text-xs text-muted-foreground">{project}</li>
                             ))}
@@ -1190,7 +1194,7 @@ export default function HistoricalReports() {
                             <AlertCircle className="h-4 w-4 text-destructive" />
                             <h4 className="font-medium text-destructive">Critical ({reportAiSummary.portfolioHealthBreakdown.critical.count})</h4>
                           </div>
-                          <ul className="space-y-1 max-h-32 overflow-y-auto scrollbar-visible pr-2">
+                          <ul className="space-y-1">
                             {reportAiSummary.portfolioHealthBreakdown.critical.projects.map((project, i) => (
                               <li key={i} className="text-xs text-muted-foreground">{project}</li>
                             ))}
@@ -1577,11 +1581,10 @@ export default function HistoricalReports() {
                   </div>
                 )}
 
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }
