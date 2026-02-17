@@ -2121,10 +2121,12 @@ export default function WorkingSpace() {
   const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
   const sortByPriority = (tasks: Task[]) => 
     [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
+  const sortByRecentlyClosed = (tasks: Task[]) =>
+    [...tasks].sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
   
   const myActiveTasks = sortByPriority(myRootTasks.filter(t => t.status === 'todo' || t.status === 'in-progress'));
   const myBlockedTasks = sortByPriority(myRootTasks.filter(t => t.status === 'blocked'));
-  const myClosedTasks = sortByPriority(myRootTasks.filter(t => t.status === 'done'));
+  const myClosedTasks = sortByRecentlyClosed(myRootTasks.filter(t => t.status === 'done'));
 
   return (
     <div className="space-y-6" data-testid="your-workspace-section">

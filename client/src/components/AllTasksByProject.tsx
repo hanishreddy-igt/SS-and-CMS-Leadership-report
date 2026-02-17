@@ -404,13 +404,15 @@ export default function AllTasksByProject() {
               const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
               const sortByPriority = (tasks: Task[]) => 
                 [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
+              const sortByRecentlyClosed = (tasks: Task[]) =>
+                [...tasks].sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
               
               const accountTasks = allTasks.filter(t => t.projectId === account.id && !t.parentTaskId);
               // Apply member filter to only show tasks assigned to the selected member
               const filteredAccountTasks = getFilteredTasks(accountTasks);
               const activeTasks = sortByPriority(filteredAccountTasks.filter(t => t.status === 'todo' || t.status === 'in-progress'));
               const blockedTasks = sortByPriority(filteredAccountTasks.filter(t => t.status === 'blocked'));
-              const closedTasks = sortByPriority(filteredAccountTasks.filter(t => t.status === 'done'));
+              const closedTasks = sortByRecentlyClosed(filteredAccountTasks.filter(t => t.status === 'done'));
               
               return (
                 <Collapsible key={account.id} defaultOpen={false}>
@@ -535,10 +537,12 @@ export default function AllTasksByProject() {
               const priorityOrder: Record<string, number> = { high: 2, medium: 1, normal: 0 };
               const sortByPriority = (tasks: Task[]) => 
                 [...tasks].sort((a, b) => (priorityOrder[b.priority || 'normal'] || 0) - (priorityOrder[a.priority || 'normal'] || 0));
+              const sortByRecentlyClosed = (tasks: Task[]) =>
+                [...tasks].sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
               
               const activeUnassigned = sortByPriority(filteredTasksWithoutAccount.filter(t => t.status === 'todo' || t.status === 'in-progress'));
               const blockedUnassigned = sortByPriority(filteredTasksWithoutAccount.filter(t => t.status === 'blocked'));
-              const closedUnassigned = sortByPriority(filteredTasksWithoutAccount.filter(t => t.status === 'done'));
+              const closedUnassigned = sortByRecentlyClosed(filteredTasksWithoutAccount.filter(t => t.status === 'done'));
               
               return (
                 <Collapsible defaultOpen={false}>
