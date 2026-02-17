@@ -1289,6 +1289,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                       {sortedLeadProjects.map((project) => {
                         const reportStatus = getProjectReportStatus(project.id);
                         const isCoLead = hasCoLeads(project);
+                        const aiDraftStatus = getProjectAiDraftStatus(project.id);
                         return (
                           <div
                             key={project.id}
@@ -1296,28 +1297,33 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                             data-testid={`status-${project.id}`}
                             onClick={() => handleProjectTileClick(project)}
                           >
-                            <div className="flex-1">
-                              <p className="font-medium">{project.name}</p>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-medium truncate">{project.name}</p>
+                                {aiDraftStatus === 'generated' && (
+                                  <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" data-testid={`ai-draft-indicator-${project.id}`} />
+                                )}
+                              </div>
                               {isCoLead && (
                                 <Badge variant="outline" className="text-xs mt-1">Co-Lead</Badge>
                               )}
                             </div>
                             {reportStatus === 'submitted' ? (
-                              <div className="flex items-center gap-2 text-success">
+                              <div className="flex items-center gap-2 text-success shrink-0">
                                 <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
                                   <Check className="h-4 w-4" />
                                 </div>
                                 <span className="text-sm font-medium">Submitted</span>
                               </div>
                             ) : reportStatus === 'drafted' ? (
-                              <div className="flex items-center gap-2 text-primary">
+                              <div className="flex items-center gap-2 text-primary shrink-0">
                                 <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                  <PenLine className="h-4 w-4" />
+                                  {aiDraftStatus === 'generated' ? <Sparkles className="h-4 w-4" /> : <PenLine className="h-4 w-4" />}
                                 </div>
-                                <span className="text-sm font-medium">Drafted</span>
+                                <span className="text-sm font-medium">{aiDraftStatus === 'generated' ? 'AI Draft' : 'Drafted'}</span>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2 text-warning">
+                              <div className="flex items-center gap-2 text-warning shrink-0">
                                 <div className="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center">
                                   <Clock className="h-4 w-4" />
                                 </div>
