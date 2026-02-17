@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -299,6 +299,7 @@ export default function HistoricalReports() {
   const permissions = usePermissions();
   const [selectedReport, setSelectedReport] = useState<SavedReport | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const reportDetailRef = useRef<HTMLDivElement>(null);
   
   // Separate state for Account Reports section
   const [accountCalendarOpen, setAccountCalendarOpen] = useState(false);
@@ -519,6 +520,12 @@ export default function HistoricalReports() {
     setShowPdfModal(true);
   };
 
+  useEffect(() => {
+    if (showPdfModal && reportDetailRef.current) {
+      reportDetailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showPdfModal, selectedReport]);
+
   const handleAccountCalendarSelect = (report: SavedReport) => {
     setSelectedReport(report);
     setShowPdfModal(true);
@@ -569,6 +576,568 @@ export default function HistoricalReports() {
 
   return (
     <div className="space-y-6">
+      {/* Inline Report Detail View */}
+      {showPdfModal && selectedReport && (() => {
+        const healthCounts = selectedReport.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
+        const selectedReportType = (selectedReport as any).reportType || 'account';
+        const isSelectedTeamReport = selectedReportType === 'team';
+        const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(selectedReport.aiSummary, selectedReportType);
+        const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
+
+        return (
+          <div ref={reportDetailRef}>
+          <Card className="glass-card border-white/10">
+            <CardHeader className="border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-detail" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </Button>
+                <Separator orientation="vertical" className="h-6" />
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h3 className="text-xl font-bold">Weekly Report Preview</h3>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  Week Ending {formatWeekEnding(selectedReport.weekEnd)}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-4">
+                  <Badge variant={isSelectedTeamReport ? 'secondary' : 'default'} className={`gap-1 ${isSelectedTeamReport ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/20 text-primary'}`}>
+                    {isSelectedTeamReport ? <Users className="h-3 w-3" /> : <BarChart3 className="h-3 w-3" />}
+                    {selectedReport.reportCount} {isSelectedTeamReport ? 'Feedbacks' : 'Reports'}
+                  </Badge>
+                  <Badge variant="outline" className={isSelectedTeamReport ? 'border-blue-500/30 text-blue-400' : 'border-primary/30 text-primary'}>
+                    {isSelectedTeamReport ? 'Team Report' : 'Account Report'}
+                  </Badge>
+                  {!isSelectedTeamReport && healthCounts && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="flex items-center gap-1">
+                        <div className="h-2 w-2 rounded-full bg-success" />
+                        <span className="text-success font-medium">{healthCounts.onTrack || 0}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <div className="h-2 w-2 rounded-full bg-warning" />
+                        <span className="text-warning font-medium">{healthCounts.needsAttention || 0}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <div className="h-2 w-2 rounded-full bg-destructive" />
+                        <span className="text-destructive font-medium">{healthCounts.critical || 0}</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedReport.pdfData && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => downloadPDF(selectedReport)}
+                      data-testid="button-download-pdf-inline"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {isSelectedTeamReport ? 'Team Summary (PDF)' : 'Leadership Summary (PDF)'}
+                    </Button>
+                  )}
+                  {selectedReport.csvData && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => downloadCSV(selectedReport)}
+                      data-testid="button-download-csv-inline"
+                    >
+                      <FileDown className="h-4 w-4" />
+                      {isSelectedTeamReport ? 'Team Feedback (CSV)' : 'Account Reports (CSV)'}
+                    </Button>
+                  )}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="gap-2"
+                        data-testid="button-delete-historical-inline"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Archived Report?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete the archived report for week ending {formatWeekEnding(selectedReport.weekEnd)}. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteArchivedReportMutation.mutate(selectedReport.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+
+              {!isSelectedTeamReport && !reportAiSummary && permissions.canGenerateAISummary && (
+                <div className="p-4 rounded-lg bg-muted/20 border border-muted/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-warning" />
+                      <span className="text-sm text-muted-foreground">No AI summary available for this archived report</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => regenerateAISummaryMutation.mutate(selectedReport.id)}
+                      disabled={regenerateAISummaryMutation.isPending}
+                      data-testid="button-regenerate-ai-summary-inline"
+                    >
+                      {regenerateAISummaryMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      {regenerateAISummaryMutation.isPending ? 'Generating...' : 'Regenerate AI Summary'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {reportAiSummary && healthConfig && (
+                <div className={`p-4 rounded-lg ${healthConfig.bgColor} border ${healthConfig.borderColor}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <h4 className="font-semibold">Leadership Summary</h4>
+                    <Badge className={`ml-auto ${healthConfig.bgColor} ${healthConfig.color} border-0`}>
+                      <healthConfig.Icon className="h-3 w-3 mr-1" />
+                      {healthConfig.label}
+                    </Badge>
+                  </div>
+                  <p className="text-sm mb-4">{reportAiSummary.executiveSummary}</p>
+                  
+                  {reportAiSummary.portfolioHealthBreakdown && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="p-4 rounded-lg bg-success/10 border border-success/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle2 className="h-4 w-4 text-success" />
+                          <h4 className="font-medium text-success">On Track ({reportAiSummary.portfolioHealthBreakdown.onTrack.count})</h4>
+                        </div>
+                        <ul className="space-y-1">
+                          {reportAiSummary.portfolioHealthBreakdown.onTrack.projects.map((project: string, i: number) => (
+                            <li key={i} className="text-xs text-muted-foreground">{project}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="p-4 rounded-lg bg-warning/10 border border-warning/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertTriangle className="h-4 w-4 text-warning" />
+                          <h4 className="font-medium text-warning">Needs Attention ({reportAiSummary.portfolioHealthBreakdown.needsAttention.count})</h4>
+                        </div>
+                        <ul className="space-y-1">
+                          {reportAiSummary.portfolioHealthBreakdown.needsAttention.projects.map((project: string, i: number) => (
+                            <li key={i} className="text-xs text-muted-foreground">{project}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                          <h4 className="font-medium text-destructive">Critical ({reportAiSummary.portfolioHealthBreakdown.critical.count})</h4>
+                        </div>
+                        <ul className="space-y-1">
+                          {reportAiSummary.portfolioHealthBreakdown.critical.projects.map((project: string, i: number) => (
+                            <li key={i} className="text-xs text-muted-foreground">{project}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {reportAiSummary.immediateAttentionRequired && reportAiSummary.immediateAttentionRequired.length > 0 && (
+                    <div className="mb-4 p-3 rounded bg-destructive/5 border border-destructive/20">
+                      <p className="text-xs font-medium text-destructive mb-2">Immediate Attention Required</p>
+                      <div className="space-y-2">
+                        {reportAiSummary.immediateAttentionRequired.map((item: any, i: number) => (
+                          <div key={i} className="text-xs text-muted-foreground">
+                            <span className="font-medium">{item.project}</span> ({item.lead}): {item.issue}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {reportAiSummary.weekHighlights && reportAiSummary.weekHighlights.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-primary mb-2">Weekly Highlights</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportAiSummary.weekHighlights.map((item: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {reportAiSummary.keyAchievements && reportAiSummary.keyAchievements.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-success mb-2">Key Achievements</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportAiSummary.keyAchievements.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
+                              {typeof item === 'string' ? item : `${item.project}: ${item.achievement}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {reportAiSummary.attentionNeeded && reportAiSummary.attentionNeeded.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-warning mb-2">Needs Attention</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportAiSummary.attentionNeeded.map((item: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {reportAiSummary.upcomingFocus && reportAiSummary.upcomingFocus.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-400 mb-2">Upcoming Focus</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportAiSummary.upcomingFocus.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                              {typeof item === 'string' ? item : `${item.project} (${item.priority}): ${item.focus}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {reportAiSummary.criticalIssues && reportAiSummary.criticalIssues.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-destructive mb-2">Critical Issues</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportAiSummary.criticalIssues.map((item: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {reportAiSummary.crossProjectPatterns && (
+                      <>
+                        {reportAiSummary.crossProjectPatterns.commonChallenges?.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-warning mb-2">Common Challenges</p>
+                            <ul className="text-xs text-muted-foreground space-y-1">
+                              {reportAiSummary.crossProjectPatterns.commonChallenges.map((item: string, i: number) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {reportAiSummary.crossProjectPatterns.resourceConstraints?.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-blue-400 mb-2">Resource Constraints</p>
+                            <ul className="text-xs text-muted-foreground space-y-1">
+                              {reportAiSummary.crossProjectPatterns.resourceConstraints.map((item: string, i: number) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {reportAiSummary.weekOverWeekChanges && (
+                      <div className="col-span-2">
+                        <p className="text-xs font-medium text-primary mb-2">Week-over-Week Changes</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {reportAiSummary.weekOverWeekChanges.improved?.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-medium text-success mb-1">Improved</p>
+                              <ul className="text-xs text-muted-foreground space-y-0.5">
+                                {reportAiSummary.weekOverWeekChanges.improved.map((item: string, i: number) => (
+                                  <li key={i} className="flex items-start gap-1">
+                                    <div className="h-1 w-1 rounded-full bg-success mt-1.5 shrink-0" />
+                                    <span className="text-[10px]">{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {reportAiSummary.weekOverWeekChanges.worsened?.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-medium text-destructive mb-1">Worsened</p>
+                              <ul className="text-xs text-muted-foreground space-y-0.5">
+                                {reportAiSummary.weekOverWeekChanges.worsened.map((item: string, i: number) => (
+                                  <li key={i} className="flex items-start gap-1">
+                                    <div className="h-1 w-1 rounded-full bg-destructive mt-1.5 shrink-0" />
+                                    <span className="text-[10px]">{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {reportAiSummary.weekOverWeekChanges.newRisks?.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-medium text-warning mb-1">New Risks</p>
+                              <ul className="text-xs text-muted-foreground space-y-0.5">
+                                {reportAiSummary.weekOverWeekChanges.newRisks.map((item: string, i: number) => (
+                                  <li key={i} className="flex items-start gap-1">
+                                    <div className="h-1 w-1 rounded-full bg-warning mt-1.5 shrink-0" />
+                                    <span className="text-[10px]">{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {reportAiSummary.weekOverWeekChanges.resolved?.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-medium text-blue-400 mb-1">Resolved</p>
+                              <ul className="text-xs text-muted-foreground space-y-0.5">
+                                {reportAiSummary.weekOverWeekChanges.resolved.map((item: string, i: number) => (
+                                  <li key={i} className="flex items-start gap-1">
+                                    <div className="h-1 w-1 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                    <span className="text-[10px]">{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {reportAiSummary.dependenciesAndCrossTeamNeeds && reportAiSummary.dependenciesAndCrossTeamNeeds.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-xs font-medium text-purple-400 mb-2">Dependencies & Cross-Team Needs</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportAiSummary.dependenciesAndCrossTeamNeeds.map((dep: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-purple-400 mt-1.5 shrink-0" />
+                              <span><strong>{dep.project}:</strong> {dep.dependency} <span className="text-muted-foreground/70">(Impact: {dep.impact})</span></span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {reportAiSummary.recommendedLeadershipActions && reportAiSummary.recommendedLeadershipActions.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-xs font-medium text-primary mb-2">Recommended Actions</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportAiSummary.recommendedLeadershipActions.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="text-[10px] px-1 py-0 shrink-0">
+                                {item.priority}
+                              </Badge>
+                              <span>{item.action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {isSelectedTeamReport && !reportTeamSummary && permissions.canGenerateAISummary && (
+                <div className="p-4 rounded-lg bg-muted/20 border border-muted/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-warning" />
+                      <span className="text-sm text-muted-foreground">No AI summary available for this archived team report</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => regenerateAISummaryMutation.mutate(selectedReport.id)}
+                      disabled={regenerateAISummaryMutation.isPending}
+                      data-testid="button-regenerate-team-ai-summary-inline"
+                    >
+                      {regenerateAISummaryMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      {regenerateAISummaryMutation.isPending ? 'Generating...' : 'Regenerate AI Summary'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {reportTeamSummary && (
+                <div className={`p-4 rounded-lg ${
+                  reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
+                  reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
+                  'bg-destructive/10 border border-destructive/30'
+                }`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Users className="h-4 w-4 text-blue-500" />
+                    <h4 className="font-semibold">Team Members Summary</h4>
+                    <Badge className={`ml-auto ${
+                      reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
+                      reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
+                      'bg-destructive/10 text-destructive'
+                    } border-0`}>
+                      {reportTeamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                      {reportTeamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3 w-3 mr-1" />}
+                      {reportTeamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3 w-3 mr-1" />}
+                      Morale: {reportTeamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
+                               reportTeamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm mb-4">{reportTeamSummary.teamSummary}</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {reportTeamSummary.teamHighlights && reportTeamSummary.teamHighlights.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-400 mb-2">Team Highlights</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportTeamSummary.teamHighlights.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                              {typeof item === 'string' ? item : `${item.memberName} (${item.project}): ${item.highlight}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {reportTeamSummary.recognitionOpportunities && reportTeamSummary.recognitionOpportunities.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-success mb-2">Recognition Opportunities</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportTeamSummary.recognitionOpportunities.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
+                              {typeof item === 'string' ? item : `${item.memberName}: ${item.achievement}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {reportTeamSummary.teamConcerns && reportTeamSummary.teamConcerns.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-warning mb-2">Team Concerns</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportTeamSummary.teamConcerns.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
+                              {typeof item === 'string' ? item : `${item.concern} (${item.project})`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {reportTeamSummary.supportNeeded && reportTeamSummary.supportNeeded.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-destructive mb-2">Support Needed</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportTeamSummary.supportNeeded.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
+                              {typeof item === 'string' ? item : `${item.area}: ${item.suggestedSupport}`}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {reportTeamSummary.workloadObservations && reportTeamSummary.workloadObservations.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-400 mb-2">Workload Observations</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportTeamSummary.workloadObservations.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                              {item.observation}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {reportTeamSummary.developmentOpportunities && reportTeamSummary.developmentOpportunities.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-purple-400 mb-2">Development Opportunities</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportTeamSummary.developmentOpportunities.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-purple-400 mt-1.5 shrink-0" />
+                              {item.memberName}: {item.opportunity}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {reportTeamSummary.retentionRisks && reportTeamSummary.retentionRisks.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-destructive mb-2">Retention Risks</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportTeamSummary.retentionRisks.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
+                              {item.indicator}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {reportTeamSummary.recommendedHRActions && reportTeamSummary.recommendedHRActions.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-xs font-medium text-primary mb-2">Recommended HR Actions</p>
+                        <ul className="text-xs text-muted-foreground space-y-1">
+                          {reportTeamSummary.recommendedHRActions.map((item: any, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="text-[10px] px-1 py-0 shrink-0">
+                                {item.priority}
+                              </Badge>
+                              <span>{item.action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            </CardContent>
+          </Card>
+          </div>
+        );
+      })()}
+
       {/* Section 1: Historical Account Reports */}
       <Card className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
@@ -1016,575 +1585,8 @@ export default function HistoricalReports() {
       </Card>
       )}
 
-      {showPdfModal && selectedReport && (() => {
-        const healthCounts = selectedReport.healthCounts as { onTrack?: number; needsAttention?: number; critical?: number } | null;
-        const selectedReportType = (selectedReport as any).reportType || 'account';
-        const isSelectedTeamReport = selectedReportType === 'team';
-        const { leadership: reportAiSummary, team: reportTeamSummary } = parseSavedSummary(selectedReport.aiSummary, selectedReportType);
-        const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
 
-        return (
-          <Card className="glass-card border-white/10">
-            <CardHeader className="border-b border-white/5">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-detail" className="gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  <h3 className="text-xl font-bold">Weekly Report Preview</h3>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  Week Ending {formatWeekEnding(selectedReport.weekEnd)}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex items-center gap-4">
-                    <Badge variant={isSelectedTeamReport ? 'secondary' : 'default'} className={`gap-1 ${isSelectedTeamReport ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/20 text-primary'}`}>
-                      {isSelectedTeamReport ? <Users className="h-3 w-3" /> : <BarChart3 className="h-3 w-3" />}
-                      {selectedReport.reportCount} {isSelectedTeamReport ? 'Feedbacks' : 'Reports'}
-                    </Badge>
-                    <Badge variant="outline" className={isSelectedTeamReport ? 'border-blue-500/30 text-blue-400' : 'border-primary/30 text-primary'}>
-                      {isSelectedTeamReport ? 'Team Report' : 'Account Report'}
-                    </Badge>
-                    {!isSelectedTeamReport && healthCounts && (
-                      <div className="flex items-center gap-3 text-sm">
-                        <span className="flex items-center gap-1">
-                          <div className="h-2 w-2 rounded-full bg-success" />
-                          <span className="text-success font-medium">{healthCounts.onTrack || 0}</span>
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <div className="h-2 w-2 rounded-full bg-warning" />
-                          <span className="text-warning font-medium">{healthCounts.needsAttention || 0}</span>
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <div className="h-2 w-2 rounded-full bg-destructive" />
-                          <span className="text-destructive font-medium">{healthCounts.critical || 0}</span>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {selectedReport.pdfData && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => downloadPDF(selectedReport)}
-                        data-testid="button-download-pdf-modal"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                        {isSelectedTeamReport ? 'Team Summary (PDF)' : 'Leadership Summary (PDF)'}
-                      </Button>
-                    )}
-                    {selectedReport.csvData && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => downloadCSV(selectedReport)}
-                        data-testid="button-download-csv-modal"
-                      >
-                        <FileDown className="h-4 w-4" />
-                        {isSelectedTeamReport ? 'Team Feedback (CSV)' : 'Account Reports (CSV)'}
-                      </Button>
-                    )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="gap-2"
-                          data-testid="button-delete-historical"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Archived Report?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete the archived report for week ending {formatWeekEnding(selectedReport.weekEnd)}. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteArchivedReportMutation.mutate(selectedReport.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-
-                {!isSelectedTeamReport && !reportAiSummary && permissions.canGenerateAISummary && (
-                  <div className="p-4 rounded-lg bg-muted/20 border border-muted/30 my-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-warning" />
-                        <span className="text-sm text-muted-foreground">No AI summary available for this archived report</span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => regenerateAISummaryMutation.mutate(selectedReport.id)}
-                        disabled={regenerateAISummaryMutation.isPending}
-                        data-testid="button-regenerate-ai-summary"
-                      >
-                        {regenerateAISummaryMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4" />
-                        )}
-                        {regenerateAISummaryMutation.isPending ? 'Generating...' : 'Regenerate AI Summary'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {reportAiSummary && healthConfig && (
-                  <div className={`p-4 rounded-lg ${healthConfig.bgColor} border ${healthConfig.borderColor} my-4`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      <h4 className="font-semibold">Leadership Summary</h4>
-                      <Badge className={`ml-auto ${healthConfig.bgColor} ${healthConfig.color} border-0`}>
-                        <healthConfig.Icon className="h-3 w-3 mr-1" />
-                        {healthConfig.label}
-                      </Badge>
-                    </div>
-                    <p className="text-sm mb-4">{reportAiSummary.executiveSummary}</p>
-                    
-                    {/* Portfolio Health Breakdown (matching ViewReports format) */}
-                    {reportAiSummary.portfolioHealthBreakdown && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="p-4 rounded-lg bg-success/10 border border-success/30">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle2 className="h-4 w-4 text-success" />
-                            <h4 className="font-medium text-success">On Track ({reportAiSummary.portfolioHealthBreakdown.onTrack.count})</h4>
-                          </div>
-                          <ul className="space-y-1">
-                            {reportAiSummary.portfolioHealthBreakdown.onTrack.projects.map((project, i) => (
-                              <li key={i} className="text-xs text-muted-foreground">{project}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="p-4 rounded-lg bg-warning/10 border border-warning/30">
-                          <div className="flex items-center gap-2 mb-2">
-                            <AlertTriangle className="h-4 w-4 text-warning" />
-                            <h4 className="font-medium text-warning">Needs Attention ({reportAiSummary.portfolioHealthBreakdown.needsAttention.count})</h4>
-                          </div>
-                          <ul className="space-y-1">
-                            {reportAiSummary.portfolioHealthBreakdown.needsAttention.projects.map((project, i) => (
-                              <li key={i} className="text-xs text-muted-foreground">{project}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
-                          <div className="flex items-center gap-2 mb-2">
-                            <AlertCircle className="h-4 w-4 text-destructive" />
-                            <h4 className="font-medium text-destructive">Critical ({reportAiSummary.portfolioHealthBreakdown.critical.count})</h4>
-                          </div>
-                          <ul className="space-y-1">
-                            {reportAiSummary.portfolioHealthBreakdown.critical.projects.map((project, i) => (
-                              <li key={i} className="text-xs text-muted-foreground">{project}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Immediate Attention Required (new comprehensive format) */}
-                    {reportAiSummary.immediateAttentionRequired && reportAiSummary.immediateAttentionRequired.length > 0 && (
-                      <div className="mb-4 p-3 rounded bg-destructive/5 border border-destructive/20">
-                        <p className="text-xs font-medium text-destructive mb-2">Immediate Attention Required</p>
-                        <div className="space-y-2">
-                          {reportAiSummary.immediateAttentionRequired.map((item, i) => (
-                            <div key={i} className="text-xs text-muted-foreground">
-                              <span className="font-medium">{item.project}</span> ({item.lead}): {item.issue}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {reportAiSummary.weekHighlights && reportAiSummary.weekHighlights.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-primary mb-2">Weekly Highlights</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportAiSummary.weekHighlights.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                                {item}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {reportAiSummary.keyAchievements && reportAiSummary.keyAchievements.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-success mb-2">Key Achievements</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportAiSummary.keyAchievements.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
-                                {typeof item === 'string' ? item : `${item.project}: ${item.achievement}`}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {reportAiSummary.attentionNeeded && reportAiSummary.attentionNeeded.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-warning mb-2">Needs Attention</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportAiSummary.attentionNeeded.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
-                                {item}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {reportAiSummary.upcomingFocus && reportAiSummary.upcomingFocus.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-blue-400 mb-2">Upcoming Focus</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportAiSummary.upcomingFocus.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                                {typeof item === 'string' ? item : `${item.project} (${item.priority}): ${item.focus}`}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {reportAiSummary.criticalIssues && reportAiSummary.criticalIssues.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-destructive mb-2">Critical Issues</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportAiSummary.criticalIssues.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
-                                {item}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Cross-Project Patterns (new comprehensive format) */}
-                      {reportAiSummary.crossProjectPatterns && (
-                        <>
-                          {reportAiSummary.crossProjectPatterns.commonChallenges?.length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-warning mb-2">Common Challenges</p>
-                              <ul className="text-xs text-muted-foreground space-y-1">
-                                {reportAiSummary.crossProjectPatterns.commonChallenges.map((item, i) => (
-                                  <li key={i} className="flex items-start gap-2">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
-                                    {item}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {reportAiSummary.crossProjectPatterns.resourceConstraints?.length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-blue-400 mb-2">Resource Constraints</p>
-                              <ul className="text-xs text-muted-foreground space-y-1">
-                                {reportAiSummary.crossProjectPatterns.resourceConstraints.map((item, i) => (
-                                  <li key={i} className="flex items-start gap-2">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                                    {item}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {/* Week-over-Week Changes */}
-                      {reportAiSummary.weekOverWeekChanges && (
-                        <div className="col-span-2">
-                          <p className="text-xs font-medium text-primary mb-2">Week-over-Week Changes</p>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {reportAiSummary.weekOverWeekChanges.improved?.length > 0 && (
-                              <div>
-                                <p className="text-[10px] font-medium text-success mb-1">Improved</p>
-                                <ul className="text-xs text-muted-foreground space-y-0.5">
-                                  {reportAiSummary.weekOverWeekChanges.improved.slice(0, 3).map((item: string, i: number) => (
-                                    <li key={i} className="flex items-start gap-1">
-                                      <div className="h-1 w-1 rounded-full bg-success mt-1.5 shrink-0" />
-                                      <span className="text-[10px]">{item}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {reportAiSummary.weekOverWeekChanges.worsened?.length > 0 && (
-                              <div>
-                                <p className="text-[10px] font-medium text-destructive mb-1">Worsened</p>
-                                <ul className="text-xs text-muted-foreground space-y-0.5">
-                                  {reportAiSummary.weekOverWeekChanges.worsened.slice(0, 3).map((item: string, i: number) => (
-                                    <li key={i} className="flex items-start gap-1">
-                                      <div className="h-1 w-1 rounded-full bg-destructive mt-1.5 shrink-0" />
-                                      <span className="text-[10px]">{item}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {reportAiSummary.weekOverWeekChanges.newRisks?.length > 0 && (
-                              <div>
-                                <p className="text-[10px] font-medium text-warning mb-1">New Risks</p>
-                                <ul className="text-xs text-muted-foreground space-y-0.5">
-                                  {reportAiSummary.weekOverWeekChanges.newRisks.slice(0, 3).map((item: string, i: number) => (
-                                    <li key={i} className="flex items-start gap-1">
-                                      <div className="h-1 w-1 rounded-full bg-warning mt-1.5 shrink-0" />
-                                      <span className="text-[10px]">{item}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {reportAiSummary.weekOverWeekChanges.resolved?.length > 0 && (
-                              <div>
-                                <p className="text-[10px] font-medium text-blue-400 mb-1">Resolved</p>
-                                <ul className="text-xs text-muted-foreground space-y-0.5">
-                                  {reportAiSummary.weekOverWeekChanges.resolved.slice(0, 3).map((item: string, i: number) => (
-                                    <li key={i} className="flex items-start gap-1">
-                                      <div className="h-1 w-1 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                                      <span className="text-[10px]">{item}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Dependencies & Cross-Team Needs */}
-                      {reportAiSummary.dependenciesAndCrossTeamNeeds && reportAiSummary.dependenciesAndCrossTeamNeeds.length > 0 && (
-                        <div className="col-span-2">
-                          <p className="text-xs font-medium text-purple-400 mb-2">Dependencies & Cross-Team Needs</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportAiSummary.dependenciesAndCrossTeamNeeds.slice(0, 5).map((dep: any, i: number) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-purple-400 mt-1.5 shrink-0" />
-                                <span><strong>{dep.project}:</strong> {dep.dependency} <span className="text-muted-foreground/70">(Impact: {dep.impact})</span></span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Recommended Leadership Actions (new comprehensive format) */}
-                      {reportAiSummary.recommendedLeadershipActions && reportAiSummary.recommendedLeadershipActions.length > 0 && (
-                        <div className="col-span-2">
-                          <p className="text-xs font-medium text-primary mb-2">Recommended Actions</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportAiSummary.recommendedLeadershipActions.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="text-[10px] px-1 py-0 shrink-0">
-                                  {item.priority}
-                                </Badge>
-                                <span>{item.action}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Team Member Summary Section */}
-                {isSelectedTeamReport && !reportTeamSummary && permissions.canGenerateAISummary && (
-                  <div className="p-4 rounded-lg bg-muted/20 border border-muted/30 my-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-warning" />
-                        <span className="text-sm text-muted-foreground">No AI summary available for this archived team report</span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => regenerateAISummaryMutation.mutate(selectedReport.id)}
-                        disabled={regenerateAISummaryMutation.isPending}
-                        data-testid="button-regenerate-team-ai-summary"
-                      >
-                        {regenerateAISummaryMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4" />
-                        )}
-                        {regenerateAISummaryMutation.isPending ? 'Generating...' : 'Regenerate AI Summary'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {reportTeamSummary && (
-                  <div className={`p-4 rounded-lg ${
-                    reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 border border-success/30' :
-                    reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 border border-warning/30' :
-                    'bg-destructive/10 border border-destructive/30'
-                  } mb-4`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Users className="h-4 w-4 text-blue-500" />
-                      <h4 className="font-semibold">Team Members Summary</h4>
-                      <Badge className={`ml-auto ${
-                        reportTeamSummary.overallTeamMorale === 'positive' ? 'bg-success/10 text-success' :
-                        reportTeamSummary.overallTeamMorale === 'mixed' ? 'bg-warning/10 text-warning' :
-                        'bg-destructive/10 text-destructive'
-                      } border-0`}>
-                        {reportTeamSummary.overallTeamMorale === 'positive' && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                        {reportTeamSummary.overallTeamMorale === 'mixed' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                        {reportTeamSummary.overallTeamMorale === 'concerning' && <AlertCircle className="h-3 w-3 mr-1" />}
-                        Morale: {reportTeamSummary.overallTeamMorale === 'positive' ? 'Positive' : 
-                                 reportTeamSummary.overallTeamMorale === 'mixed' ? 'Mixed' : 'Concerning'}
-                      </Badge>
-                    </div>
-                    <p className="text-sm mb-4">{reportTeamSummary.teamSummary}</p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {reportTeamSummary.teamHighlights && reportTeamSummary.teamHighlights.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-blue-400 mb-2">Team Highlights</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportTeamSummary.teamHighlights.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                                {typeof item === 'string' ? item : `${item.memberName} (${item.project}): ${item.highlight}`}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {reportTeamSummary.recognitionOpportunities && reportTeamSummary.recognitionOpportunities.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-success mb-2">Recognition Opportunities</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportTeamSummary.recognitionOpportunities.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-success mt-1.5 shrink-0" />
-                                {typeof item === 'string' ? item : `${item.memberName}: ${item.achievement}`}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {reportTeamSummary.teamConcerns && reportTeamSummary.teamConcerns.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-warning mb-2">Team Concerns</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportTeamSummary.teamConcerns.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-warning mt-1.5 shrink-0" />
-                                {typeof item === 'string' ? item : `${item.concern} (${item.project})`}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {reportTeamSummary.supportNeeded && reportTeamSummary.supportNeeded.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-destructive mb-2">Support Needed</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportTeamSummary.supportNeeded.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
-                                {typeof item === 'string' ? item : `${item.area}: ${item.suggestedSupport}`}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Workload Observations (new comprehensive format) */}
-                      {reportTeamSummary.workloadObservations && reportTeamSummary.workloadObservations.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-blue-400 mb-2">Workload Observations</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportTeamSummary.workloadObservations.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                                {item.observation}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Development Opportunities (new comprehensive format) */}
-                      {reportTeamSummary.developmentOpportunities && reportTeamSummary.developmentOpportunities.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-purple-400 mb-2">Development Opportunities</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportTeamSummary.developmentOpportunities.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-purple-400 mt-1.5 shrink-0" />
-                                {item.memberName}: {item.opportunity}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Retention Risks (new comprehensive format) */}
-                      {reportTeamSummary.retentionRisks && reportTeamSummary.retentionRisks.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-destructive mb-2">Retention Risks</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportTeamSummary.retentionRisks.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
-                                {item.indicator}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Recommended HR Actions (new comprehensive format) */}
-                      {reportTeamSummary.recommendedHRActions && reportTeamSummary.recommendedHRActions.length > 0 && (
-                        <div className="col-span-2">
-                          <p className="text-xs font-medium text-primary mb-2">Recommended HR Actions</p>
-                          <ul className="text-xs text-muted-foreground space-y-1">
-                            {reportTeamSummary.recommendedHRActions.map((item, i) => (
-                              <li key={i} className="flex items-start gap-2">
-                                <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="text-[10px] px-1 py-0 shrink-0">
-                                  {item.priority}
-                                </Badge>
-                                <span>{item.action}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-            </CardContent>
-          </Card>
-        );
-      })()}
     </div>
   );
 }
+
