@@ -585,21 +585,6 @@ export default function HistoricalReports() {
 
     return (
       <div ref={reportDetailRef} className="space-y-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-detail" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <Separator orientation="vertical" className="h-6" />
-          <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            <h3 className="text-xl font-bold">Weekly Report Preview</h3>
-          </div>
-          <span className="text-sm text-muted-foreground">
-            Week Ending {formatWeekEnding(selectedReport.weekEnd)}
-          </span>
-        </div>
-        <div className="space-y-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4">
               <Badge variant={isSelectedTeamReport ? 'secondary' : 'default'} className={`gap-1 ${isSelectedTeamReport ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/20 text-primary'}`}>
@@ -1128,7 +1113,6 @@ export default function HistoricalReports() {
             </div>
           )}
 
-        </div>
       </div>
     );
   };
@@ -1138,6 +1122,22 @@ export default function HistoricalReports() {
       {/* Section 1: Historical Account Reports */}
       <Card className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
+          {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') !== 'team' ? (
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-detail" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Account Reports
+              </Button>
+              <Separator orientation="vertical" className="h-6" />
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <FileText className="h-5 w-5 text-primary" />
+                Weekly Report Preview
+              </CardTitle>
+              <span className="text-sm text-muted-foreground">
+                Week Ending {formatWeekEnding(selectedReport.weekEnd)}
+              </span>
+            </div>
+          ) : (
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <CardTitle className="flex items-center gap-2 text-xl">
@@ -1273,6 +1273,7 @@ export default function HistoricalReports() {
               </Badge>
             </div>
           </div>
+          )}
         </CardHeader>
         <CardContent className="pt-6">
           {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') !== 'team' ? (
@@ -1374,6 +1375,22 @@ export default function HistoricalReports() {
       {permissions.canViewTeamFeedbackSummary && (
       <Card className="glass-card border-white/10">
         <CardHeader className="border-b border-white/5">
+          {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') === 'team' ? (
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-team-detail" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Team Feedback Reports
+              </Button>
+              <Separator orientation="vertical" className="h-6" />
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <FileText className="h-5 w-5 text-blue-500" />
+                Team Feedback Preview
+              </CardTitle>
+              <span className="text-sm text-muted-foreground">
+                Week Ending {formatWeekEnding(selectedReport.weekEnd)}
+              </span>
+            </div>
+          ) : (
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <CardTitle className="flex items-center gap-2 text-xl">
@@ -1502,6 +1519,7 @@ export default function HistoricalReports() {
               </Badge>
             </div>
           </div>
+          )}
         </CardHeader>
         <CardContent className="pt-6">
           {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') === 'team' ? (
