@@ -14,7 +14,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
@@ -5007,154 +5006,152 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         </CardContent>
       </Card>
 
-      {/* Report Detail Modal */}
-      <Dialog open={showReportDetailModal} onOpenChange={(open) => !open && closeReportDetailModal()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {selectedReport && (() => {
-            const healthConfig = healthStatusConfig[selectedReport.healthStatus as keyof typeof healthStatusConfig];
-            const HealthIcon = healthConfig?.icon || CheckCircle2;
-            const feedback = selectedReport.teamMemberFeedback as TeamMemberFeedback[] | null;
-            const project = projects.find(p => p.id === selectedReport.projectId);
-            const projectMembers = project ? ((project.teamMembers as TeamMemberAssignment[]) || []).map(a => a.memberId) : [];
-            
-            return (
-              <>
-                <DialogHeader className="pb-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-2">
-                      <DialogTitle className="text-2xl font-bold">
-                        {getProjectName(selectedReport.projectId)}
-                      </DialogTitle>
-                      {healthConfig && (
-                        <Badge className={`gap-1.5 ${healthConfig.bgColor} ${healthConfig.color} border-0`}>
-                          <HealthIcon className="h-4 w-4" />
-                          {healthConfig.label}
-                        </Badge>
+      {/* Report Detail Inline View */}
+      {showReportDetailModal && selectedReport && (() => {
+        const healthConfig = healthStatusConfig[selectedReport.healthStatus as keyof typeof healthStatusConfig];
+        const HealthIcon = healthConfig?.icon || CheckCircle2;
+        const feedback = selectedReport.teamMemberFeedback as TeamMemberFeedback[] | null;
+        const project = projects.find(p => p.id === selectedReport.projectId);
+        const projectMembers = project ? ((project.teamMembers as TeamMemberAssignment[]) || []).map(a => a.memberId) : [];
+        
+        return (
+          <Card className="glass-card border-white/10" data-testid="report-detail-inline">
+            <CardHeader className="border-b border-white/5">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="sm" onClick={closeReportDetailModal} className="gap-2" data-testid="button-back-report-detail">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-bold">
+                      {getProjectName(selectedReport.projectId)}
+                    </h3>
+                    {healthConfig && (
+                      <Badge className={`gap-1.5 ${healthConfig.bgColor} ${healthConfig.color} border-0`}>
+                        <HealthIcon className="h-4 w-4" />
+                        {healthConfig.label}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Week Starting</p>
+                      <p className="font-medium text-primary">{selectedReport.weekStart}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Key className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Steady Key</p>
+                      <p className="font-medium">{project?.steadyKey || 'Not Listed'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        {project && hasCoLeads(project) ? 'Team Leads' : 'Team Lead'}
+                      </p>
+                      <p className="font-medium">
+                        {project ? getProjectLeadNames(project) : getLeadName(selectedReport.leadId)}
+                      </p>
+                      {project && hasCoLeads(project) && getSubmittedByName(selectedReport) && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Submitted by {getSubmittedByName(selectedReport)}
+                        </p>
                       )}
                     </div>
                   </div>
-                </DialogHeader>
-
-                <div className="space-y-6">
-                  {/* Report Metadata */}
-                  <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-muted/30">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Week Starting</p>
-                        <p className="font-medium text-primary">{selectedReport.weekStart}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Key className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Steady Key</p>
-                        <p className="font-medium">{project?.steadyKey || 'Not Listed'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          {project && hasCoLeads(project) ? 'Team Leads' : 'Team Lead'}
-                        </p>
-                        <p className="font-medium">
-                          {project ? getProjectLeadNames(project) : getLeadName(selectedReport.leadId)}
-                        </p>
-                        {project && hasCoLeads(project) && getSubmittedByName(selectedReport) && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            Submitted by {getSubmittedByName(selectedReport)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Submitted</p>
-                        <p className="font-medium">{new Date(selectedReport.submittedAt).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    {projectMembers.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Team Members</p>
-                          <p className="font-medium">{projectMembers.length}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <Separator />
-
-                  {/* Progress Section */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-success" />
-                      <h3 className="font-semibold text-lg">Progress in Previous Week</h3>
-                    </div>
-                    <div className="pl-4 border-l-2 border-success/30">
-                      <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                        {selectedReport.progress || 'No progress recorded'}
-                      </p>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Submitted</p>
+                      <p className="font-medium">{new Date(selectedReport.submittedAt).toLocaleString()}</p>
                     </div>
                   </div>
-
-                  {/* Challenges Section */}
-                  {selectedReport.challenges && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-warning" />
-                        <h3 className="font-semibold text-lg">Challenges & Blockers</h3>
-                      </div>
-                      <div className="pl-4 border-l-2 border-warning/30">
-                        <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                          {selectedReport.challenges}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Next Week Section */}
-                  <div className="space-y-2">
+                  {projectMembers.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-primary" />
-                      <h3 className="font-semibold text-lg">Plans for Current Week</h3>
-                    </div>
-                    <div className="pl-4 border-l-2 border-primary/30">
-                      <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                        {selectedReport.nextWeek || 'No plans recorded'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Team Feedback Section */}
-                  {feedback && feedback.length > 0 && (
-                    <>
-                      <Separator />
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <h3 className="font-semibold text-lg">Team Member Feedback</h3>
-                        </div>
-                        <div className="space-y-3">
-                          {feedback.map((f, index) => (
-                            <div key={index} className="p-3 rounded-lg bg-muted/30 border-l-2 border-primary/50">
-                              <p className="font-medium text-sm text-primary mb-1">{getMemberName(f.memberId)}</p>
-                              <p className="text-sm text-muted-foreground">{f.feedback}</p>
-                            </div>
-                          ))}
-                        </div>
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Team Members</p>
+                        <p className="font-medium">{projectMembers.length}</p>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-success" />
+                    <h3 className="font-semibold text-lg">Progress in Previous Week</h3>
+                  </div>
+                  <div className="pl-4 border-l-2 border-success/30">
+                    <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                      {selectedReport.progress || 'No progress recorded'}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedReport.challenges && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-warning" />
+                      <h3 className="font-semibold text-lg">Challenges & Blockers</h3>
+                    </div>
+                    <div className="pl-4 border-l-2 border-warning/30">
+                      <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                        {selectedReport.challenges}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    <h3 className="font-semibold text-lg">Plans for Current Week</h3>
+                  </div>
+                  <div className="pl-4 border-l-2 border-primary/30">
+                    <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                      {selectedReport.nextWeek || 'No plans recorded'}
+                    </p>
+                  </div>
+                </div>
+
+                {feedback && feedback.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="font-semibold text-lg">Team Member Feedback</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {feedback.map((f, index) => (
+                          <div key={index} className="p-3 rounded-lg bg-muted/30 border-l-2 border-primary/50">
+                            <p className="font-medium text-sm text-primary mb-1">{getMemberName(f.memberId)}</p>
+                            <p className="text-sm text-muted-foreground">{f.feedback}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }
