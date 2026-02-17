@@ -351,6 +351,16 @@ export const insertAiChatIntentSchema = createInsertSchema(aiChatIntents).omit({
 export type AiChatIntent = typeof aiChatIntents.$inferSelect;
 export type InsertAiChatIntent = z.infer<typeof insertAiChatIntentSchema>;
 
+// App Settings (key-value store for system configuration)
+export const appSettings = pgTable("app_settings", {
+  key: varchar("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: varchar("updated_by"),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+
 // EOS format configuration
 export type EOSFormat = {
   includeStatus: boolean;

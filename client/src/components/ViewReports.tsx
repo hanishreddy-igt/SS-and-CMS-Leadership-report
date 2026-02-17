@@ -78,6 +78,13 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     queryKey: ['/api/reporting-week'],
     staleTime: 30000, // Cache for 30 seconds
   });
+  
+  // Check if auto-archive is enabled (admin setting)
+  const { data: autoArchiveSetting } = useQuery<{ key: string; value: string | null }>({
+    queryKey: ['/api/settings', 'auto_archive_enabled'],
+    staleTime: 60000,
+  });
+  const isAutoArchiveEnabled = autoArchiveSetting?.value !== 'false';
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({
     progress: '',
@@ -348,6 +355,9 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       // Don't run if already triggered or no reports
       if (autoArchiveTriggered.current || weeklyReports.length === 0) return;
       
+      // Skip auto-archive if disabled by admin setting
+      if (!isAutoArchiveEnabled) return;
+      
       // CRITICAL: Wait for saved AI summary and feedback data to load before running auto-archive
       // This prevents race condition where we archive before loading existing data
       if (isLoadingSavedSummary || isLoadingFeedback) return;
@@ -524,7 +534,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     };
     
     checkAndAutoArchive();
-  }, [weeklyReports, aiSummary, currentWeekStart, toast, isLoadingSavedSummary, isLoadingFeedback, peopleWithFeedback, teamSummary]);
+  }, [weeklyReports, aiSummary, currentWeekStart, toast, isLoadingSavedSummary, isLoadingFeedback, peopleWithFeedback, teamSummary, isAutoArchiveEnabled]);
 
   // Format date to UTC string
   const formatUTC = (dateString: string) => {
@@ -4230,19 +4240,31 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
           )}
 
           {/* Auto-archive schedule banner */}
-          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
-            <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
-              <p className="text-muted-foreground">
-                Reports are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
-                {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
-              </p>
+          {isAutoArchiveEnabled ? (
+            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3" data-testid="banner-auto-archive-enabled">
+              <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
+                <p className="text-muted-foreground">
+                  Reports are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
+                  {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mb-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-start gap-3" data-testid="banner-auto-archive-disabled">
+              <Info className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-orange-600 dark:text-orange-400 mb-1">Auto-Archiving Scheduler is Disabled</p>
+                <p className="text-muted-foreground">
+                  Reports will not be automatically archived. Use <span className="font-medium">Force Archive</span> or trigger the scheduler API manually to archive reports.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-6">
             {sortedLeadNames.length === 0 ? (
@@ -4753,19 +4775,31 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
           {/* Auto-archive schedule banner - only for managers and admins */}
           {permissions.canViewAllFeedback && (
-            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
-              <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
-                <p className="text-muted-foreground">
-                  Feedbacks are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
-                  {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
-                </p>
+            isAutoArchiveEnabled ? (
+              <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3" data-testid="banner-feedback-auto-archive-enabled">
+                <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
+                  <p className="text-muted-foreground">
+                    Feedbacks are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
+                    {isAutoArchiving && <span className="ml-2 text-primary">(Auto-archiving in progress...)</span>}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Next auto-archive: <span className="text-foreground">{nextWedFormatted} 00:00 UTC</span>
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mb-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-start gap-3" data-testid="banner-feedback-auto-archive-disabled">
+                <Info className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-orange-600 dark:text-orange-400 mb-1">Auto-Archiving Scheduler is Disabled</p>
+                  <p className="text-muted-foreground">
+                    Feedbacks will not be automatically archived. Use <span className="font-medium">Force Archive</span> or trigger the scheduler API manually to archive reports.
+                  </p>
+                </div>
+              </div>
+            )
           )}
 
           {(() => {

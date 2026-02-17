@@ -33,7 +33,7 @@ import type {
   AiChatIntent,
   InsertAiChatIntent,
 } from "@shared/schema";
-import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries, tasks, taskTemplates, taskActivity, aiChatIntents } from "@shared/schema";
+import { people, projects, weeklyReports, users, savedReports, currentAiSummary, projectRoles, roleRequests, feedbackEntries, tasks, taskTemplates, taskActivity, aiChatIntents, appSettings } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -165,6 +165,10 @@ export interface IStorage {
   updateAiChatIntent(id: string, updates: Partial<InsertAiChatIntent>): Promise<AiChatIntent | undefined>;
   deleteAiChatIntent(id: string): Promise<boolean>;
   seedDefaultIntents(): Promise<void>;
+
+  // App Settings operations
+  getAppSetting(key: string): Promise<string | undefined>;
+  setAppSetting(key: string, value: string, updatedBy?: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -855,6 +859,15 @@ export class MemStorage implements IStorage {
   async updateAiChatIntent(_id: string, _updates: Partial<InsertAiChatIntent>): Promise<AiChatIntent | undefined> { return undefined; }
   async deleteAiChatIntent(_id: string): Promise<boolean> { return false; }
   async seedDefaultIntents(): Promise<void> {}
+
+  // App Settings - MemStorage implementation
+  private appSettingsMap: Map<string, string> = new Map();
+  async getAppSetting(key: string): Promise<string | undefined> {
+    return this.appSettingsMap.get(key);
+  }
+  async setAppSetting(key: string, value: string, _updatedBy?: string): Promise<void> {
+    this.appSettingsMap.set(key, value);
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1784,6 +1797,21 @@ Answer questions about the dashboard functionality clearly and provide step-by-s
     for (const intent of defaults) {
       await this.createAiChatIntent(intent);
     }
+  }
+
+  // App Settings
+  async getAppSetting(key: string): Promise<string | undefined> {
+    const [setting] = await db.select().from(appSettings).where(eq(appSettings.key, key));
+    return setting?.value;
+  }
+
+  async setAppSetting(key: string, value: string, updatedBy?: string): Promise<void> {
+    await db.insert(appSettings)
+      .values({ key, value, updatedAt: new Date(), updatedBy: updatedBy || null })
+      .onConflictDoUpdate({
+        target: appSettings.key,
+        set: { value, updatedAt: new Date(), updatedBy: updatedBy || null },
+      });
   }
 }
 

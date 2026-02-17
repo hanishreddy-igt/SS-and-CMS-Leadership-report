@@ -80,6 +80,13 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
     staleTime: 30000, // Cache for 30 seconds
   });
   
+  // Check if auto-archive is enabled (admin setting)
+  const { data: autoArchiveSetting } = useQuery<{ key: string; value: string | null }>({
+    queryKey: ['/api/settings', 'auto_archive_enabled'],
+    staleTime: 60000,
+  });
+  const isAutoArchiveEnabled = autoArchiveSetting?.value !== 'false';
+  
   const [selectedLead, setSelectedLead] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [healthStatus, setHealthStatus] = useState('');
@@ -1122,18 +1129,30 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
             /* Report List View */
             <>
           {/* Auto-archive schedule banner */}
-          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
-            <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
-              <p className="text-muted-foreground">
-                Reports are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Next auto-archive: <span className="text-foreground">{getNextWednesdayUTC().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} 00:00 UTC</span>
-              </p>
+          {isAutoArchiveEnabled ? (
+            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3" data-testid="banner-submit-auto-archive-enabled">
+              <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-primary mb-1">Automatic Archive Schedule</p>
+                <p className="text-muted-foreground">
+                  Reports are automatically archived and reset every <span className="text-primary font-medium">Wednesday at 00:00 UTC</span>.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Next auto-archive: <span className="text-foreground">{getNextWednesdayUTC().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} 00:00 UTC</span>
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mb-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-start gap-3" data-testid="banner-submit-auto-archive-disabled">
+              <Info className="h-5 w-5 text-orange-500 mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-orange-600 dark:text-orange-400 mb-1">Auto-Archiving Scheduler is Disabled</p>
+                <p className="text-muted-foreground">
+                  Reports will not be automatically archived. Use <span className="font-medium">Force Archive</span> or trigger the scheduler API manually to archive reports.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-6" data-testid="section-report-status">
             {Object.keys(groupedByLead).length === 0 ? (

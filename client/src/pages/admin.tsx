@@ -34,7 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft, LayoutGrid, Check, X, Trash2, Plus, Sparkles, Save } from "lucide-react";
+import { Shield, Users, Clock, CheckCircle, XCircle, ArrowLeft, LayoutGrid, Check, X, Trash2, Plus, Sparkles, Save, Settings, Archive } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -458,6 +458,10 @@ export default function AdminPanel() {
             <Sparkles className="h-4 w-4" />
             AI Prompts
           </TabsTrigger>
+          <TabsTrigger value="settings" className="gap-2" data-testid="tab-settings">
+            <Settings className="h-4 w-4" />
+            Settings
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -880,6 +884,10 @@ export default function AdminPanel() {
           <AiPromptsManager />
         </TabsContent>
 
+        <TabsContent value="settings">
+          <AppSettingsManager />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
@@ -1043,6 +1051,88 @@ function AiPromptsManager() {
             </CardContent>
           </Card>
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AppSettingsManager() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: autoArchiveSetting, isLoading } = useQuery<{ key: string; value: string | null }>({
+    queryKey: ['/api/settings', 'auto_archive_enabled'],
+  });
+
+  const autoArchiveEnabled = autoArchiveSetting?.value !== 'false';
+
+  const toggleMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await apiRequest('PUT', '/api/settings/auto_archive_enabled', { value: enabled ? 'true' : 'false' });
+      return res.json();
+    },
+    onSuccess: (_data, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings', 'auto_archive_enabled'] });
+      toast({
+        title: enabled ? 'Auto-Archive Enabled' : 'Auto-Archive Disabled',
+        description: enabled
+          ? 'Weekly reports will be automatically archived on schedule.'
+          : 'Auto-archiving is disabled. Use Force Archive or the API to archive reports manually.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to update setting', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-muted-foreground text-sm">Loading settings...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>System Settings</CardTitle>
+        <CardDescription>
+          Configure system-wide settings for the dashboard.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-start justify-between gap-4 p-4 rounded-md border">
+          <div className="flex items-start gap-3 flex-1">
+            <Archive className="h-5 w-5 mt-0.5 text-muted-foreground" />
+            <div className="space-y-1">
+              <div className="font-medium text-sm" data-testid="text-auto-archive-label">Auto-Archive Weekly Reports</div>
+              <p className="text-xs text-muted-foreground">
+                When enabled, weekly reports will be automatically archived on Wednesday 00:00 UTC
+                if reports from the previous week are still unarchived. When disabled, reports will
+                only be archived through the Force Archive button or the scheduler API.
+              </p>
+              <Badge
+                variant="outline"
+                className={autoArchiveEnabled
+                  ? "bg-green-500/10 text-green-600 border-green-500/30"
+                  : "bg-orange-500/10 text-orange-600 border-orange-500/30"
+                }
+                data-testid="badge-auto-archive-status"
+              >
+                {autoArchiveEnabled ? "Enabled" : "Disabled"}
+              </Badge>
+            </div>
+          </div>
+          <Switch
+            data-testid="switch-auto-archive"
+            checked={autoArchiveEnabled}
+            onCheckedChange={(checked) => toggleMutation.mutate(checked)}
+            disabled={toggleMutation.isPending}
+          />
+        </div>
       </CardContent>
     </Card>
   );

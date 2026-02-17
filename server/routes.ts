@@ -2854,6 +2854,31 @@ ${formattedActivities}`;
     }
   });
 
+  // GET /api/settings/:key - Get a specific app setting
+  app.get('/api/settings/:key', isAuthenticated, async (req, res) => {
+    try {
+      const value = await storage.getAppSetting(req.params.key);
+      res.json({ key: req.params.key, value: value ?? null });
+    } catch (error: any) {
+      res.status(500).json({ message: 'Failed to get setting', error: error.message });
+    }
+  });
+
+  // PUT /api/settings/:key - Set a specific app setting (admin only)
+  app.put('/api/settings/:key', isAuthenticated, requirePermission('canManageUsers'), async (req, res) => {
+    try {
+      const { value } = req.body;
+      if (value === undefined || value === null) {
+        return res.status(400).json({ message: 'Value is required' });
+      }
+      const userEmail = (req as any).user?.email || 'unknown';
+      await storage.setAppSetting(req.params.key, String(value), userEmail);
+      res.json({ key: req.params.key, value: String(value) });
+    } catch (error: any) {
+      res.status(500).json({ message: 'Failed to save setting', error: error.message });
+    }
+  });
+
   // POST /api/scheduler/auto-archive
   // Archives weekly reports if it's the appropriate day (Wednesday or later)
   app.post('/api/scheduler/auto-archive', async (req, res) => {
@@ -2864,6 +2889,17 @@ ${formattedActivities}`;
       
       if (schedulerKey && authHeader !== schedulerKey) {
         return res.status(401).json({ message: 'Invalid scheduler key' });
+      }
+
+      // Check if auto-archive is enabled (defaults to enabled if not set)
+      const autoArchiveEnabled = await storage.getAppSetting('auto_archive_enabled');
+      if (autoArchiveEnabled === 'false') {
+        return res.json({
+          success: true,
+          message: 'Auto-archive scheduler is disabled',
+          archived: false,
+          disabled: true
+        });
       }
 
       const now = new Date();
