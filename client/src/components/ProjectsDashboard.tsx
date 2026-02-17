@@ -5226,21 +5226,13 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between gap-2">
-                              {permissions.canDeletePeople && (
-                                <Button variant="outline" size="sm" onClick={() => setDeletingMemberId(selectedMemberForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-member">
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </Button>
-                              )}
-                              <div className="flex gap-2 ml-auto">
-                                <Button variant="outline" size="sm" onClick={cancelEditMember} data-testid="button-inline-cancel-edit-member">
-                                  Cancel
-                                </Button>
-                                <Button size="sm" onClick={saveEditMember} disabled={updateMemberMutation.isPending || !editMemberValue.trim()} data-testid="button-inline-save-edit-member">
-                                  {updateMemberMutation.isPending ? 'Saving...' : 'Save'}
-                                </Button>
-                              </div>
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={cancelEditMember} data-testid="button-inline-cancel-edit-member">
+                                Cancel
+                              </Button>
+                              <Button size="sm" onClick={saveEditMember} disabled={updateMemberMutation.isPending || !editMemberValue.trim()} data-testid="button-inline-save-edit-member">
+                                {updateMemberMutation.isPending ? 'Saving...' : 'Save'}
+                              </Button>
                             </div>
                           </div>
                         ) : (
@@ -5701,21 +5693,13 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between gap-2">
-                              {permissions.canDeletePeople && (
-                                <Button variant="outline" size="sm" onClick={() => setDeletingLeadId(selectedLeadForDetail.id)} className="text-destructive hover:text-destructive" data-testid="button-inline-delete-lead">
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </Button>
-                              )}
-                              <div className="flex gap-2 ml-auto">
-                                <Button variant="outline" size="sm" onClick={cancelEditLead} data-testid="button-inline-cancel-edit-lead">
-                                  Cancel
-                                </Button>
-                                <Button size="sm" onClick={saveEditLead} disabled={updateLeadMutation.isPending || !editLeadValue.trim()} data-testid="button-inline-save-edit-lead">
-                                  {updateLeadMutation.isPending ? 'Saving...' : 'Save'}
-                                </Button>
-                              </div>
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={cancelEditLead} data-testid="button-inline-cancel-edit-lead">
+                                Cancel
+                              </Button>
+                              <Button size="sm" onClick={saveEditLead} disabled={updateLeadMutation.isPending || !editLeadValue.trim()} data-testid="button-inline-save-edit-lead">
+                                {updateLeadMutation.isPending ? 'Saving...' : 'Save'}
+                              </Button>
                             </div>
                           </div>
                         ) : (
