@@ -1189,12 +1189,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                           onClick={() => handleProjectTileClick(project)}
                         >
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="font-medium truncate">{project.name}</p>
-                              {aiDraftStatus === 'generated' && (
-                                <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" data-testid={`ai-draft-indicator-${project.id}`} />
-                              )}
-                            </div>
+                            <p className="font-medium truncate">{project.name}</p>
                             {coLeadNames && (
                               <p className="text-xs text-muted-foreground mt-1">with {coLeadNames}</p>
                             )}
@@ -1298,12 +1293,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                             onClick={() => handleProjectTileClick(project)}
                           >
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <p className="font-medium truncate">{project.name}</p>
-                                {aiDraftStatus === 'generated' && (
-                                  <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" data-testid={`ai-draft-indicator-${project.id}`} />
-                                )}
-                              </div>
+                              <p className="font-medium truncate">{project.name}</p>
                               {isCoLead && (
                                 <Badge variant="outline" className="text-xs mt-1">Co-Lead</Badge>
                               )}
