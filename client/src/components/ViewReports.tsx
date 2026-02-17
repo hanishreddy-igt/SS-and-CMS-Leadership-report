@@ -3416,7 +3416,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       <CheckCircle2 className="h-4 w-4 text-success" />
                       <h4 className="font-medium text-success">On Track ({aiSummary.portfolioHealthBreakdown.onTrack.count})</h4>
                     </div>
-                    <ul className="space-y-1 max-h-32 overflow-y-auto">
+                    <ul className="space-y-1">
                       {aiSummary.portfolioHealthBreakdown.onTrack.projects.map((project, i) => (
                         <li key={i} className="text-xs text-muted-foreground">{project}</li>
                       ))}
@@ -3427,7 +3427,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       <AlertTriangle className="h-4 w-4 text-warning" />
                       <h4 className="font-medium text-warning">Needs Attention ({aiSummary.portfolioHealthBreakdown.needsAttention.count})</h4>
                     </div>
-                    <ul className="space-y-1 max-h-32 overflow-y-auto">
+                    <ul className="space-y-1">
                       {aiSummary.portfolioHealthBreakdown.needsAttention.projects.map((project, i) => (
                         <li key={i} className="text-xs text-muted-foreground">{project}</li>
                       ))}
@@ -3438,7 +3438,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       <AlertCircle className="h-4 w-4 text-destructive" />
                       <h4 className="font-medium text-destructive">Critical ({aiSummary.portfolioHealthBreakdown.critical.count})</h4>
                     </div>
-                    <ul className="space-y-1 max-h-32 overflow-y-auto">
+                    <ul className="space-y-1">
                       {aiSummary.portfolioHealthBreakdown.critical.projects.map((project, i) => (
                         <li key={i} className="text-xs text-muted-foreground">{project}</li>
                       ))}
@@ -4905,7 +4905,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                               </AlertDialog>
                             )}
                           </div>
-                          <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
+                          <div className="p-3 bg-background/50 rounded-md">
                             <p className="text-sm whitespace-pre-wrap">{entry.feedback}</p>
                           </div>
                         </div>
@@ -4970,7 +4970,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                               </p>
                             </div>
                           </div>
-                          <div className="p-3 bg-background/50 rounded-md max-h-32 overflow-y-auto">
+                          <div className="p-3 bg-background/50 rounded-md">
                             <p className="text-sm whitespace-pre-wrap">{entry.feedback}</p>
                           </div>
                         </div>
