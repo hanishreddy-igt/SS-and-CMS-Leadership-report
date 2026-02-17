@@ -584,25 +584,22 @@ export default function HistoricalReports() {
     const healthConfig = reportAiSummary ? getOverallHealthConfig(reportAiSummary.overallHealth) : null;
 
     return (
-      <div ref={reportDetailRef}>
-      <Card className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-detail" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <Separator orientation="vertical" className="h-6" />
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <h3 className="text-xl font-bold">Weekly Report Preview</h3>
-            </div>
-            <span className="text-sm text-muted-foreground">
-              Week Ending {formatWeekEnding(selectedReport.weekEnd)}
-            </span>
+      <div ref={reportDetailRef} className="space-y-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-detail" className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <h3 className="text-xl font-bold">Weekly Report Preview</h3>
           </div>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
+          <span className="text-sm text-muted-foreground">
+            Week Ending {formatWeekEnding(selectedReport.weekEnd)}
+          </span>
+        </div>
+        <div className="space-y-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4">
               <Badge variant={isSelectedTeamReport ? 'secondary' : 'default'} className={`gap-1 ${isSelectedTeamReport ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/20 text-primary'}`}>
@@ -1131,8 +1128,7 @@ export default function HistoricalReports() {
             </div>
           )}
 
-        </CardContent>
-      </Card>
+        </div>
       </div>
     );
   };
@@ -1279,12 +1275,9 @@ export default function HistoricalReports() {
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') !== 'team' && (
-            <div className="mb-6">
-              {renderReportDetail()}
-            </div>
-          )}
-          {accountReports.length === 0 ? (
+          {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') !== 'team' ? (
+            renderReportDetail()
+          ) : accountReports.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Calendar className="h-16 w-16 mx-auto mb-4 opacity-20" />
               <p className="text-lg font-medium mb-2">No account reports archived yet</p>
@@ -1511,12 +1504,9 @@ export default function HistoricalReports() {
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') === 'team' && (
-            <div className="mb-6">
-              {renderReportDetail()}
-            </div>
-          )}
-          {teamReports.length === 0 ? (
+          {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') === 'team' ? (
+            renderReportDetail()
+          ) : teamReports.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="h-16 w-16 mx-auto mb-4 opacity-20" />
               <p className="text-lg font-medium mb-2">No team feedback reports archived yet</p>
