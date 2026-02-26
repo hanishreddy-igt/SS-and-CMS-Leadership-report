@@ -1793,77 +1793,78 @@ export function TaskRow({
             >
               <Trash2 className="h-3 w-3" />
             </Button>
-            <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Delete Task</DialogTitle>
-                  <DialogDescription>
-                    Are you sure you want to delete "{task.title}"? This action cannot be undone.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowDeleteConfirm(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => {
-                      setShowDeleteConfirm(false);
-                      onDelete(task.id);
-                    }}
-                    data-testid={`confirm-delete-${task.id}`}
-                  >
-                    Delete
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Dialog open={showNoNotesConfirm} onOpenChange={setShowNoNotesConfirm}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <StickyNote className="h-4 w-4" />
-                    No Notes Added
-                  </DialogTitle>
-                  <DialogDescription>
-                    You have not added your end-of-shift reports or the work you did on this task as notes before closing it. Do you want to add notes?
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowNoNotesConfirm(false);
-                      onUpdate(task.id, { status: 'done' });
-                    }}
-                    data-testid={`close-without-notes-${task.id}`}
-                  >
-                    No, close task
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setShowNoNotesConfirm(false);
-                      if (showDetailsToggle && onOpenDetails) {
-                        onOpenDetails(task.id);
-                      }
-                      openPanel('notes', 'notes');
-                    }}
-                    data-testid={`add-notes-before-close-${task.id}`}
-                  >
-                    Yes, add notes
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </div>
         )}
+
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Task</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{task.title}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  onDelete(task.id);
+                }}
+                data-testid={`confirm-delete-${task.id}`}
+              >
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={showNoNotesConfirm} onOpenChange={setShowNoNotesConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <StickyNote className="h-4 w-4" />
+                No Notes Added
+              </DialogTitle>
+              <DialogDescription>
+                You have not added your end-of-shift reports or the work you did on this task as notes before closing it. Do you want to add notes?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowNoNotesConfirm(false);
+                  onUpdate(task.id, { status: 'done' });
+                }}
+                data-testid={`close-without-notes-${task.id}`}
+              >
+                No, close task
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowNoNotesConfirm(false);
+                  if (showDetailsToggle && onOpenDetails) {
+                    onOpenDetails(task.id);
+                  }
+                  openPanel('notes', 'notes');
+                }}
+                data-testid={`add-notes-before-close-${task.id}`}
+              >
+                Yes, add notes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         
         {/* Line 3: Created timestamp */}
         {showDetails && (
