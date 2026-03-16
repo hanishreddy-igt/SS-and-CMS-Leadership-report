@@ -3032,18 +3032,40 @@ ${formattedActivities}`;
       const projectMap = new Map(allProjects.map(p => [p.id, p]));
       const taskMap = new Map(allTasks.map(t => [t.id, t]));
 
-      // Determine the active reporting week from existing drafts, or fall back to current calendar week
+      // Determine the active reporting week from existing drafts, or use gap-aware logic
       const existingDrafts = allReports.filter(r => r.status === 'draft');
       let weekStart: string;
       if (existingDrafts.length > 0) {
         const weekStarts = [...new Set(existingDrafts.map(r => r.weekStart))].sort();
         weekStart = weekStarts[weekStarts.length - 1]; // Use the latest week with drafts
       } else {
+        // Use gap-aware logic: advance one week at a time after last archive
         const now = new Date();
         const dayOfWeek = now.getUTCDay();
         const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
         const currentMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + mondayOffset));
-        weekStart = currentMonday.toISOString().split('T')[0];
+        const currentCalendarWeek = currentMonday.toISOString().split('T')[0];
+
+        const savedReports = await storage.getSavedReports();
+        if (savedReports.length > 0) {
+          const sortedArchives = savedReports.sort((a, b) =>
+            new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
+          );
+          const latestArchivedDate = new Date(sortedArchives[0].weekStart + 'T00:00:00Z');
+          const nextWeekAfterArchive = new Date(latestArchivedDate);
+          nextWeekAfterArchive.setUTCDate(latestArchivedDate.getUTCDate() + 7);
+          const nextWeekStart = `${nextWeekAfterArchive.getUTCFullYear()}-${String(nextWeekAfterArchive.getUTCMonth() + 1).padStart(2, '0')}-${String(nextWeekAfterArchive.getUTCDate()).padStart(2, '0')}`;
+
+          // Only advance one week at a time - don't skip to current calendar week
+          if (new Date(currentCalendarWeek + 'T00:00:00Z') > new Date(nextWeekStart + 'T00:00:00Z')) {
+            weekStart = nextWeekStart;
+            console.log(`[Scheduler] Gap-aware: Using next week after archive ${sortedArchives[0].weekStart} → ${nextWeekStart} (calendar: ${currentCalendarWeek})`);
+          } else {
+            weekStart = currentCalendarWeek;
+          }
+        } else {
+          weekStart = currentCalendarWeek;
+        }
       }
 
       const weekStartDate = new Date(weekStart + 'T00:00:00Z');
