@@ -91,7 +91,7 @@ export default function SectionLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="executive-header border-b border-white/10">
+      <header className="executive-header border-b border-border">
         <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -215,7 +215,7 @@ export default function SectionLayout({
         </div>
       </header>
 
-      <nav className="border-b border-white/10 bg-background/50 backdrop-blur-sm sticky top-0 z-40">
+      <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="md:hidden flex items-center justify-between py-2">
             <Button
@@ -285,7 +285,7 @@ export default function SectionLayout({
         {children}
       </main>
 
-      <footer className="border-t border-white/5 mt-8">
+      <footer className="border-t border-border mt-8">
         <div className="px-4 sm:px-6 lg:px-8 py-4 text-center">
           <p className="text-sm text-muted-foreground">
             SS & CMA Dashboard — <span className="text-primary">IgniteTech</span>

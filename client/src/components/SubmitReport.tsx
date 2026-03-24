@@ -839,8 +839,8 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
         </div>
       )}
 
-      <Card id="report-status-section" data-testid="card-submit-report" className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
+      <Card id="report-status-section" data-testid="card-submit-report" className="glass-card border-border">
+        <CardHeader className="border-b border-border">
           {showReportModal && modalProject ? (
             <div className="flex items-center gap-3">
               <Button
@@ -1086,7 +1086,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                     />
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/10">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border">
                     <Button 
                       data-testid="modal-button-cancel"
                       type="button"
@@ -1179,7 +1179,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                       return (
                         <div
                           key={project.id}
-                          className="flex items-center justify-between bg-muted/30 border border-white/10 rounded-lg p-4 transition-all hover:bg-muted/50 cursor-pointer hover:border-primary/30"
+                          className="flex items-center justify-between bg-muted/30 border border-border rounded-lg p-4 transition-all hover:bg-muted/50 cursor-pointer hover:border-primary/30"
                           data-testid={`status-${project.id}`}
                           onClick={() => handleProjectTileClick(project)}
                         >
@@ -1227,7 +1227,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                     {/* As Lead Section */}
                     {soleLeadProjects.length > 0 && (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <div className="flex items-center justify-between border-b border-border pb-2">
                           <h3 className="text-base font-bold uppercase tracking-wide text-muted-foreground">As Lead</h3>
                           <span className="text-sm text-muted-foreground">{soleSubmitted}/{soleLeadProjects.length} submitted</span>
                         </div>
@@ -1238,7 +1238,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                     {/* As Co-Lead Section */}
                     {coLeadProjects.length > 0 && (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <div className="flex items-center justify-between border-b border-border pb-2">
                           <h3 className="text-base font-bold uppercase tracking-wide text-muted-foreground">As Co-Lead</h3>
                           <span className="text-sm text-muted-foreground">{coSubmitted}/{coLeadProjects.length} submitted</span>
                         </div>
@@ -1269,7 +1269,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
 
                 return (
                   <div key={leadName} className="space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                    <div className="flex items-center justify-between border-b border-border pb-2">
                       <h3 className="text-base font-bold uppercase tracking-wide text-muted-foreground">{leadName}</h3>
                       <span className="text-sm text-muted-foreground">
                         {submitted}/{total} submitted
@@ -1283,7 +1283,7 @@ export default function SubmitReport({ initialLeadFilter, onLeadFilterChange }: 
                         return (
                           <div
                             key={project.id}
-                            className="flex items-center justify-between bg-muted/30 border border-white/10 rounded-lg p-4 transition-all hover:bg-muted/50 cursor-pointer hover:border-primary/30"
+                            className="flex items-center justify-between bg-muted/30 border border-border rounded-lg p-4 transition-all hover:bg-muted/50 cursor-pointer hover:border-primary/30"
                             data-testid={`status-${project.id}`}
                             onClick={() => handleProjectTileClick(project)}
                           >

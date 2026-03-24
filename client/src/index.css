@@ -4,61 +4,60 @@
 
 /* EXECUTIVE DASHBOARD - REFINED PROFESSIONAL THEME */
 :root {
-  --button-outline: rgba(255,255,255, .08);
-  --badge-outline: rgba(255,255,255, .04);
-  --opaque-button-border-intensity: 7;
-  --elevate-1: rgba(255,255,255, .03);
-  --elevate-2: rgba(255,255,255, .06);
-  --background: 220 30% 6%;
-  --foreground: 220 15% 92%;
-  --border: 220 20% 15%;
-  --card: 220 25% 10%;
-  --card-foreground: 220 15% 92%;
-  --card-border: 220 20% 15%;
-  --sidebar: 220 30% 5%;
-  --sidebar-foreground: 220 15% 92%;
-  --sidebar-border: 220 20% 15%;
-  --sidebar-primary: 200 35% 42%;
-  --sidebar-primary-foreground: 220 15% 95%;
-  --sidebar-accent: 220 25% 14%;
-  --sidebar-accent-foreground: 220 15% 92%;
-  --sidebar-ring: 200 35% 42%;
-  --popover: 220 25% 10%;
-  --popover-foreground: 220 15% 92%;
-  --popover-border: 220 20% 15%;
-  --primary: 200 35% 42%;
-  --primary-foreground: 220 15% 95%;
-  --secondary: 220 20% 16%;
-  --secondary-foreground: 220 15% 92%;
-  --muted: 220 20% 14%;
-  --muted-foreground: 220 15% 55%;
-  --accent: 200 35% 42%;
-  --accent-foreground: 220 15% 95%;
-  --destructive: 0 45% 55%;
-  --destructive-foreground: 220 15% 95%;
-  --input: 220 20% 15%;
-  --ring: 200 35% 42%;
-  --chart-1: 200 35% 50%;
-  --chart-2: 150 30% 45%;
-  --chart-3: 35 45% 50%;
-  --chart-4: 0 45% 55%;
-  --chart-5: 220 25% 50%;
+  --button-outline: rgba(0,0,0, .08);
+  --badge-outline: rgba(0,0,0, .04);
+  --opaque-button-border-intensity: -5;
+  --elevate-1: rgba(0,0,0, .04);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 220 20% 97%;
+  --foreground: 220 25% 12%;
+  --border: 220 15% 88%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 25% 12%;
+  --card-border: 220 15% 88%;
+  --sidebar: 220 20% 95%;
+  --sidebar-foreground: 220 25% 12%;
+  --sidebar-border: 220 15% 88%;
+  --sidebar-primary: 200 50% 38%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 15% 92%;
+  --sidebar-accent-foreground: 220 25% 12%;
+  --sidebar-ring: 200 50% 38%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 25% 12%;
+  --popover-border: 220 15% 88%;
+  --primary: 200 50% 38%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 15% 92%;
+  --secondary-foreground: 220 25% 18%;
+  --muted: 220 15% 94%;
+  --muted-foreground: 220 10% 42%;
+  --accent: 200 50% 38%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 55% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 220 15% 88%;
+  --ring: 200 50% 38%;
+  --chart-1: 200 50% 45%;
+  --chart-2: 150 40% 40%;
+  --chart-3: 35 55% 48%;
+  --chart-4: 0 55% 50%;
+  --chart-5: 220 30% 48%;
   --font-sans: Inter, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
   --radius: .625rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(222 47% 4% / 0.15);
-  --shadow-xs: 0px 2px 0px 0px hsl(222 47% 4% / 0.20);
-  --shadow-sm: 0px 2px 0px 0px hsl(222 47% 4% / 0.15), 0px 1px 2px -1px hsl(222 47% 4% / 0.25);
-  --shadow: 0px 2px 0px 0px hsl(222 47% 4% / 0.15), 0px 1px 2px -1px hsl(222 47% 4% / 0.25);
-  --shadow-md: 0px 2px 0px 0px hsl(222 47% 4% / 0.15), 0px 2px 4px -1px hsl(222 47% 4% / 0.30);
-  --shadow-lg: 0px 2px 0px 0px hsl(222 47% 4% / 0.15), 0px 4px 6px -1px hsl(222 47% 4% / 0.35);
-  --shadow-xl: 0px 2px 0px 0px hsl(222 47% 4% / 0.15), 0px 8px 10px -1px hsl(222 47% 4% / 0.40);
-  --shadow-2xl: 0px 2px 0px 0px hsl(222 47% 4% / 0.50);
+  --shadow-2xs: 0px 1px 2px 0px hsl(220 15% 50% / 0.06);
+  --shadow-xs: 0px 1px 3px 0px hsl(220 15% 50% / 0.08);
+  --shadow-sm: 0px 1px 2px 0px hsl(220 15% 50% / 0.06), 0px 1px 3px -1px hsl(220 15% 50% / 0.10);
+  --shadow: 0px 1px 3px 0px hsl(220 15% 50% / 0.08), 0px 2px 4px -1px hsl(220 15% 50% / 0.12);
+  --shadow-md: 0px 2px 4px 0px hsl(220 15% 50% / 0.08), 0px 4px 6px -1px hsl(220 15% 50% / 0.14);
+  --shadow-lg: 0px 4px 6px 0px hsl(220 15% 50% / 0.08), 0px 6px 10px -1px hsl(220 15% 50% / 0.16);
+  --shadow-xl: 0px 6px 10px 0px hsl(220 15% 50% / 0.10), 0px 10px 15px -1px hsl(220 15% 50% / 0.18);
+  --shadow-2xl: 0px 10px 25px 0px hsl(220 15% 50% / 0.20);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
-  /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
   --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 
@@ -159,6 +158,9 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  html.dark body {
     background-image: 
       radial-gradient(ellipse 80% 50% at 50% -20%, rgba(169, 180, 201, 0.06), transparent),
       radial-gradient(ellipse 60% 40% at 100% 100%, rgba(169, 180, 201, 0.03), transparent);
@@ -239,7 +241,11 @@
 
 /* Premium glassmorphism card */
 .glass-card {
-  @apply bg-card/50 backdrop-blur-xl border border-white/5 shadow-lg;
+  @apply bg-card/80 backdrop-blur-xl border border-border shadow-lg;
+}
+
+.dark .glass-card {
+  @apply border-white/5;
   background: linear-gradient(135deg, hsl(220 25% 10% / 0.85) 0%, hsl(220 30% 6% / 0.95) 100%);
 }
 
@@ -248,8 +254,12 @@
 }
 
 .glass-card-hover:hover {
-  @apply border-white/10 shadow-xl;
+  @apply border-border shadow-xl;
   transform: translateY(-1px);
+}
+
+.dark .glass-card-hover:hover {
+  @apply border-white/10;
 }
 
 /* Premium metric card - clean, no colored top bar */
@@ -302,7 +312,10 @@
 
 /* Executive header styling */
 .executive-header {
-  @apply relative overflow-hidden;
+  @apply relative overflow-hidden bg-card;
+}
+
+.dark .executive-header {
   background: linear-gradient(135deg, hsl(220 25% 10%) 0%, hsl(220 30% 6%) 50%, hsl(220 25% 12%) 100%);
 }
 
@@ -313,10 +326,13 @@
   left: 0;
   right: 0;
   bottom: 0;
+  pointer-events: none;
+}
+
+.dark .executive-header::before {
   background: 
     radial-gradient(ellipse 100% 100% at 0% 0%, rgba(169, 180, 201, 0.04), transparent 50%),
     radial-gradient(ellipse 80% 80% at 100% 0%, rgba(169, 180, 201, 0.02), transparent 50%);
-  pointer-events: none;
 }
 
 /* Premium tabs */
@@ -333,7 +349,11 @@
 }
 
 .premium-tab:hover:not([data-state="active"]) {
-  @apply text-foreground bg-white/5;
+  @apply text-foreground bg-muted;
+}
+
+.dark .premium-tab:hover:not([data-state="active"]) {
+  @apply bg-white/5;
 }
 
 /* Visible scrollbar styling - always shown with prominent appearance */
@@ -384,11 +404,19 @@
 
 /* Platinum highlight text - for key numbers */
 .platinum-text {
+  color: hsl(220 20% 30%);
+}
+
+.dark .platinum-text {
   color: hsl(218 24% 73%);
 }
 
 /* Subtle highlight text - for section emphasis */
 .highlight-text {
+  color: hsl(220 20% 25%);
+}
+
+.dark .highlight-text {
   color: hsl(220 15% 85%);
 }
 
@@ -436,11 +464,11 @@
 }
 
 .premium-table tbody tr {
-  @apply border-b border-white/5 transition-colors duration-150;
+  @apply border-b border-border transition-colors duration-150;
 }
 
 .premium-table tbody tr:hover {
-  @apply bg-white/5;
+  @apply bg-muted/50;
 }
 
 .premium-table td {
@@ -454,5 +482,5 @@
 
 /* Subtle divider */
 .divider-glow {
-  @apply h-px bg-gradient-to-r from-transparent via-white/10 to-transparent;
+  @apply h-px bg-gradient-to-r from-transparent via-border to-transparent;
 }

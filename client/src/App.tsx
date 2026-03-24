@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import Hub from "@/pages/hub";
 import Landing from "@/pages/landing";
 import AdminPanel from "@/pages/admin";
@@ -17,7 +18,6 @@ import AiChatPanel from "@/components/AiChatPanel";
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Show landing page for unauthenticated users
   if (isLoading || !isAuthenticated) {
     return (
       <Switch>
@@ -27,7 +27,6 @@ function Router() {
     );
   }
 
-  // Authenticated routes
   return (
     <Switch>
       <Route path="/" component={Hub} />
@@ -56,11 +55,13 @@ function AuthenticatedExtras() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-        <AuthenticatedExtras />
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+          <AuthenticatedExtras />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

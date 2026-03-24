@@ -1,11 +1,12 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { FileText, Eye, History, BarChart3, CheckCircle2, AlertTriangle, FolderKanban, Menu } from 'lucide-react';
+import { FileText, Eye, History, BarChart3, CheckCircle2, AlertTriangle, FolderKanban, Menu, Sun, Moon } from 'lucide-react';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
 import { useQuery } from '@tanstack/react-query';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/components/ThemeProvider';
 import type { Project, WeeklyReport } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
   const [location, setLocation] = useLocation();
   const permissions = usePermissions();
   const { isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { data: projects = [] } = useQuery<Project[]>({
@@ -73,7 +75,7 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
 
   return (
     <div className="min-h-screen">
-      <header className="executive-header border-b border-white/10">
+      <header className="executive-header border-b border-border">
         <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
@@ -94,6 +96,15 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                data-testid="button-theme-toggle"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
               <AppDemo onTabChange={() => {}} />
               <UserProfileDropdown />
             </div>
@@ -165,7 +176,7 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
         </div>
       </header>
 
-      <nav className="border-b border-white/10 bg-background/50 backdrop-blur-sm sticky top-0 z-40">
+      <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="md:hidden flex items-center justify-between py-3">
             <Button
@@ -211,7 +222,7 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
         {children}
       </main>
 
-      <footer className="border-t border-white/5 mt-8">
+      <footer className="border-t border-border mt-8">
         <div className="px-4 sm:px-6 lg:px-8 py-4 text-center">
           <p className="text-sm text-muted-foreground">
             SS & CMA Dashboard — <span className="text-primary">IgniteTech</span>

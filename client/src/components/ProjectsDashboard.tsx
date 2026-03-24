@@ -2131,8 +2131,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       <>
       {/* Inline Account Detail View */}
       {inlineDetailProject && (
-        <Card className="glass-card border-white/10" data-testid="inline-account-detail">
-          <CardHeader className="border-b border-white/5">
+        <Card className="glass-card border-border" data-testid="inline-account-detail">
+          <CardHeader className="border-b border-border">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -3025,8 +3025,8 @@ export default function ProjectsDashboard({ activeTab = 'contracts', shouldClear
       </div>
 
       {/* All Projects Section */}
-      <Card id="all-projects-section" className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
+      <Card id="all-projects-section" className="glass-card border-border">
+        <CardHeader className="border-b border-border">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div 
               className="cursor-pointer" 

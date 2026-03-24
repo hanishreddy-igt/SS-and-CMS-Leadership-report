@@ -3292,8 +3292,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
     <div className="space-y-8">
       {/* Leadership Summary Inline View */}
       {showLeadershipModal && (
-        <Card className="glass-card border-white/10">
-          <CardHeader className="border-b border-white/5">
+        <Card className="glass-card border-border">
+          <CardHeader className="border-b border-border">
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -3456,7 +3456,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </div>
                   <div className="space-y-3">
                     {aiSummary.immediateAttentionRequired.map((item, i) => (
-                      <div key={i} className="p-3 rounded-lg bg-background/50 border border-white/10">
+                      <div key={i} className="p-3 rounded-lg bg-background/50 border border-border">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium">{item.project}</span>
                           <Badge variant="outline" className="text-xs">{item.customer}</Badge>
@@ -3620,7 +3620,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </div>
                   <div className="space-y-3">
                     {aiSummary.recommendedLeadershipActions.map((item, i) => (
-                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-white/10">
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border">
                         <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="shrink-0 mt-0.5">
                           {item.priority}
                         </Badge>
@@ -3713,8 +3713,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
       {/* SS/CMS Team Feedback Summary Inline View */}
       {showTeamModal && (
-        <Card className="glass-card border-white/10">
-          <CardHeader className="border-b border-white/5">
+        <Card className="glass-card border-border">
+          <CardHeader className="border-b border-border">
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -3929,7 +3929,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </div>
                   <div className="space-y-3">
                     {teamSummary.retentionRisks.map((item, i) => (
-                      <div key={i} className="p-3 rounded-lg bg-background/50 border border-white/10">
+                      <div key={i} className="p-3 rounded-lg bg-background/50 border border-border">
                         <p className="text-sm text-muted-foreground">{item.indicator}</p>
                         {item.members.length > 0 && (
                           <p className="text-xs text-destructive mt-1">
@@ -3955,7 +3955,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                   </div>
                   <div className="space-y-3">
                     {teamSummary.recommendedHRActions.map((item, i) => (
-                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-white/10">
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border">
                         <Badge variant={item.priority === 'high' ? 'destructive' : 'default'} className="shrink-0 mt-0.5">
                           {item.priority}
                         </Badge>
@@ -3974,8 +3974,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
         </Card>
       )}
 
-      <Card id="weekly-reports-section" className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
+      <Card id="weekly-reports-section" className="glass-card border-border">
+        <CardHeader className="border-b border-border">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
@@ -4229,7 +4229,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
               </div>
             </div>
           ) : permissions.canGenerateAISummary && (
-            <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-white/10 flex items-center justify-between">
+            <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Sparkles className="h-4 w-4 text-primary" />
@@ -4355,10 +4355,10 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                           <Card 
                             key={report.id} 
                             data-testid={`report-${report.id}`} 
-                            className={`glass-card border-white/10 ${editingId !== report.id ? 'cursor-pointer hover:border-primary/30 transition-all' : ''}`}
+                            className={`glass-card border-border ${editingId !== report.id ? 'cursor-pointer hover:border-primary/30 transition-all' : ''}`}
                             onClick={() => handleReportClick(report)}
                           >
-                            <CardHeader className="border-b border-white/5">
+                            <CardHeader className="border-b border-border">
                               <div className="flex justify-between items-start gap-4">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -4564,7 +4564,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
 
                           {/* Team Feedback Section */}
                           {feedback && feedback.length > 0 && (
-                            <div className="space-y-2 pt-2 border-t border-white/5">
+                            <div className="space-y-2 pt-2 border-t border-border">
                               <div className="flex items-center gap-2">
                                 <Users className="h-3.5 w-3.5 text-muted-foreground" />
                                 <h4 className="font-medium text-sm">Team Member Feedback</h4>
@@ -4580,7 +4580,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                             </div>
                           )}
 
-                          <p className="text-xs text-muted-foreground pt-2 border-t border-white/5">
+                          <p className="text-xs text-muted-foreground pt-2 border-t border-border">
                             <Clock className="h-3 w-3 inline mr-1" />
                             Submitted: {new Date(report.submittedAt).toLocaleString()}
                           </p>
@@ -4652,8 +4652,8 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
       </Card>
 
       {/* SS/CMS Team Feedbacks Section */}
-      <Card className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
+      <Card className="glass-card border-border">
+        <CardHeader className="border-b border-border">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -4762,7 +4762,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                 <p className="text-xs text-blue-500 mt-2">Click to view full summary</p>
               </div>
             ) : permissions.canGenerateAISummary && (
-              <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-white/10 flex items-center justify-between">
+              <div className="mb-6 p-4 rounded-lg bg-muted/30 border border-border flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
                     <Users className="h-4 w-4 text-blue-500" />
@@ -4847,7 +4847,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       return (
                         <div 
                           key={entry.id}
-                          className="p-4 rounded-lg bg-muted/30 border border-white/5 relative group"
+                          className="p-4 rounded-lg bg-muted/30 border border-border relative group"
                           data-testid={`feedback-card-${entry.id}`}
                         >
                           <div className="flex items-center justify-between gap-2 mb-3">
@@ -4956,7 +4956,7 @@ export default function ViewReports({ externalHealthFilter, onClearExternalFilte
                       return (
                         <div 
                           key={entry.id}
-                          className="p-4 rounded-lg bg-muted/30 border border-white/5"
+                          className="p-4 rounded-lg bg-muted/30 border border-border"
                           data-testid={`feedback-entry-${entry.id}`}
                         >
                           <div className="flex items-center gap-2 mb-3">

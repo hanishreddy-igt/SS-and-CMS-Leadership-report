@@ -557,7 +557,7 @@ export default function HistoricalReports() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Card className="glass-card border-white/10">
+        <Card className="glass-card border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
@@ -1120,8 +1120,8 @@ export default function HistoricalReports() {
   return (
     <div className="space-y-6">
       {/* Section 1: Historical Account Reports */}
-      <Card className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
+      <Card className="glass-card border-border">
+        <CardHeader className="border-b border-border">
           {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') !== 'team' ? (
             <div className="flex items-center gap-3 flex-wrap">
               <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-detail" className="gap-2">
@@ -1163,7 +1163,7 @@ export default function HistoricalReports() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="end">
-                    <div className="p-3 border-b border-white/10">
+                    <div className="p-3 border-b border-border">
                       <h4 className="font-semibold text-sm flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-primary" />
                         Browse Account Reports
@@ -1226,7 +1226,7 @@ export default function HistoricalReports() {
                                               <button
                                                 key={report.id}
                                                 onClick={() => handleAccountCalendarSelect(report)}
-                                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate active-elevate-2 text-left text-sm bg-muted/30 border border-white/5"
+                                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate active-elevate-2 text-left text-sm bg-muted/30 border border-border"
                                                 data-testid={`account-calendar-week-${report.id}`}
                                               >
                                                 <div className="flex-1">
@@ -1296,7 +1296,7 @@ export default function HistoricalReports() {
                 return (
                   <Card 
                     key={report.id} 
-                    className="glass-card border-white/10 hover:border-primary/30 transition-all cursor-pointer group border-l-2 border-l-primary/50"
+                    className="glass-card border-border hover:border-primary/30 transition-all cursor-pointer group border-l-2 border-l-primary/50"
                     onClick={() => handleTileClick(report)}
                     data-testid={`historical-account-report-${report.id}`}
                   >
@@ -1373,8 +1373,8 @@ export default function HistoricalReports() {
 
       {/* Section 2: Historical Team Feedback Reports - Only visible to Admin and Manager */}
       {permissions.canViewTeamFeedbackSummary && (
-      <Card className="glass-card border-white/10">
-        <CardHeader className="border-b border-white/5">
+      <Card className="glass-card border-border">
+        <CardHeader className="border-b border-border">
           {showPdfModal && selectedReport && ((selectedReport as any).reportType || 'account') === 'team' ? (
             <div className="flex items-center gap-3 flex-wrap">
               <Button variant="ghost" size="sm" onClick={() => { setShowPdfModal(false); setSelectedReport(null); }} data-testid="button-back-historical-team-detail" className="gap-2">
@@ -1416,7 +1416,7 @@ export default function HistoricalReports() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="end">
-                    <div className="p-3 border-b border-white/10">
+                    <div className="p-3 border-b border-border">
                       <h4 className="font-semibold text-sm flex items-center gap-2">
                         <Users className="h-4 w-4 text-blue-500" />
                         Browse Team Reports
@@ -1479,7 +1479,7 @@ export default function HistoricalReports() {
                                               <button
                                                 key={report.id}
                                                 onClick={() => handleTeamCalendarSelect(report)}
-                                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate active-elevate-2 text-left text-sm bg-muted/30 border border-white/5"
+                                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover-elevate active-elevate-2 text-left text-sm bg-muted/30 border border-border"
                                                 data-testid={`team-calendar-week-${report.id}`}
                                               >
                                                 <div className="flex-1">
@@ -1540,7 +1540,7 @@ export default function HistoricalReports() {
                 return (
                   <Card 
                     key={report.id} 
-                    className="glass-card border-white/10 hover:border-blue-500/30 transition-all cursor-pointer group border-l-2 border-l-blue-500/50"
+                    className="glass-card border-border hover:border-blue-500/30 transition-all cursor-pointer group border-l-2 border-l-blue-500/50"
                     onClick={() => handleTileClick(report)}
                     data-testid={`historical-team-report-${report.id}`}
                   >
