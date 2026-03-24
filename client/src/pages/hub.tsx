@@ -95,12 +95,14 @@ export default function Hub() {
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={toggleTheme}
                 title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                 data-testid="button-theme-toggle-hub"
+                className="gap-1.5"
               >
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                <span className="text-xs">{theme === "dark" ? "Light" : "Dark"}</span>
               </Button>
               <AppDemo onTabChange={() => {}} />
               <UserProfileDropdown />
