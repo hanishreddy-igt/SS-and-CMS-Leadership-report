@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { FileText, Eye, History, BarChart3, CheckCircle2, AlertTriangle, FolderKanban, Menu, Sun, Moon } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
 import { useQuery } from '@tanstack/react-query';
@@ -96,17 +97,17 @@ export default function DashboardLayout({ children, onHealthTileClick }: Dashboa
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleTheme}
-                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                data-testid="button-theme-toggle"
-                className="gap-1.5"
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                <span className="text-xs">{theme === "dark" ? "Light" : "Dark"}</span>
-              </Button>
+              <div className="flex items-center gap-1.5" data-testid="theme-toggle-group">
+                <Sun className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Light</span>
+                <Switch
+                  checked={theme === "dark"}
+                  onCheckedChange={toggleTheme}
+                  data-testid="button-theme-toggle"
+                />
+                <span className="text-xs text-muted-foreground">Dark</span>
+                <Moon className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
               <AppDemo onTabChange={() => {}} />
               <UserProfileDropdown />
             </div>

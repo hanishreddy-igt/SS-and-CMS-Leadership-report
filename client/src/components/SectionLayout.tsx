@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { ArrowLeft, LayoutDashboard, FileText, ListTodo, Menu, BarChart3, CheckCircle2, AlertTriangle, Sun, Moon } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
@@ -140,17 +141,17 @@ export default function SectionLayout({
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleTheme}
-                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                data-testid="button-theme-toggle-section"
-                className="gap-1.5"
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                <span className="text-xs">{theme === "dark" ? "Light" : "Dark"}</span>
-              </Button>
+              <div className="flex items-center gap-1.5" data-testid="theme-toggle-group-section">
+                <Sun className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Light</span>
+                <Switch
+                  checked={theme === "dark"}
+                  onCheckedChange={toggleTheme}
+                  data-testid="button-theme-toggle-section"
+                />
+                <span className="text-xs text-muted-foreground">Dark</span>
+                <Moon className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
               <AppDemo onTabChange={() => {}} />
               <UserProfileDropdown />
             </div>
