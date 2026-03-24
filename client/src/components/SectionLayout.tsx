@@ -140,7 +140,11 @@ export default function SectionLayout({
               })}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2">
+                <AppDemo onTabChange={() => {}} />
+                <UserProfileDropdown />
+              </div>
               <div className="flex items-center gap-1.5" data-testid="theme-toggle-group-section">
                 <Sun className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">Light</span>
@@ -152,8 +156,6 @@ export default function SectionLayout({
                 <span className="text-xs text-muted-foreground">Dark</span>
                 <Moon className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
-              <AppDemo onTabChange={() => {}} />
-              <UserProfileDropdown />
             </div>
           </div>
 
