@@ -1,9 +1,11 @@
 import { useLocation } from 'wouter';
-import { LayoutDashboard, FileText, ListTodo } from 'lucide-react';
+import { LayoutDashboard, FileText, ListTodo, Sun, Moon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useTheme } from '@/components/ThemeProvider';
+import { Button } from '@/components/ui/button';
 import logoImage from '@assets/IgniteTech__Khoros_Logos-removebg-preview_1767951034958.png';
 
 interface HubCardProps {
@@ -38,6 +40,7 @@ const TASKS_ALLOWED_ROLES = ['admin', 'manager', 'lead', 'member'];
 export default function Hub() {
   const [, setLocation] = useLocation();
   const { role } = usePermissions();
+  const { theme, toggleTheme } = useTheme();
   
   // Simple role check - easy to modify
   const canAccessTasks = TASKS_ALLOWED_ROLES.includes(role);
@@ -71,7 +74,7 @@ export default function Hub() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="executive-header border-b border-white/10">
+      <header className="executive-header border-b border-border">
         <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
@@ -90,6 +93,15 @@ export default function Hub() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                data-testid="button-theme-toggle-hub"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
               <AppDemo onTabChange={() => {}} />
               <UserProfileDropdown />
             </div>
@@ -117,7 +129,7 @@ export default function Hub() {
         </div>
       </main>
 
-      <footer className="border-t border-white/5">
+      <footer className="border-t border-border">
         <div className="px-4 sm:px-6 lg:px-8 py-4 text-center">
           <p className="text-sm text-muted-foreground">
             SS & CMA Dashboard — <span className="text-primary">IgniteTech</span>

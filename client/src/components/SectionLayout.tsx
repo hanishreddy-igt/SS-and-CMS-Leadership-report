@@ -1,12 +1,13 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { ArrowLeft, LayoutDashboard, FileText, ListTodo, Menu, BarChart3, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, FileText, ListTodo, Menu, BarChart3, CheckCircle2, AlertTriangle, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserProfileDropdown } from '@/components/UserProfileDropdown';
 import AppDemo from '@/components/AppDemo';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/components/ThemeProvider';
 import type { Project, WeeklyReport } from '@shared/schema';
 import logoImage from '@assets/IgniteTech__Khoros_Logos-removebg-preview_1767951034958.png';
 
@@ -46,6 +47,7 @@ export default function SectionLayout({
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ['/api/projects'],
@@ -138,6 +140,15 @@ export default function SectionLayout({
             </div>
 
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                data-testid="button-theme-toggle-section"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
               <AppDemo onTabChange={() => {}} />
               <UserProfileDropdown />
             </div>

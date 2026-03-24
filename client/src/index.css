@@ -245,7 +245,7 @@
 }
 
 .dark .glass-card {
-  @apply border-white/5;
+  @apply border-border;
   background: linear-gradient(135deg, hsl(220 25% 10% / 0.85) 0%, hsl(220 30% 6% / 0.95) 100%);
 }
 
@@ -259,7 +259,7 @@
 }
 
 .dark .glass-card-hover:hover {
-  @apply border-white/10;
+  @apply border-border;
 }
 
 /* Premium metric card - clean, no colored top bar */
@@ -353,7 +353,7 @@
 }
 
 .dark .premium-tab:hover:not([data-state="active"]) {
-  @apply bg-white/5;
+  @apply bg-muted/50;
 }
 
 /* Visible scrollbar styling - always shown with prominent appearance */

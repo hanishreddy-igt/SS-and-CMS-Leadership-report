@@ -10,7 +10,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-white/5 backdrop-blur-xl bg-background/80 sticky top-0 z-50">
+      <header className="border-b border-border backdrop-blur-xl bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img 
@@ -29,13 +29,13 @@ export default function Landing() {
       <main className="flex-1">
         <section className="executive-header relative overflow-hidden">
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/3 rounded-full blur-3xl" />
-            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-white/2 rounded-full blur-3xl" />
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-primary/3 rounded-full blur-3xl" />
           </div>
           
           <div className="relative z-10 container mx-auto px-6 py-24 max-w-6xl">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/30 border border-border mb-6">
                 <Zap className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium text-muted-foreground">SS & CMA Dashboard</span>
               </div>
@@ -89,9 +89,9 @@ export default function Landing() {
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="glass-card border-white/5" data-testid="feature-team-management">
+              <Card className="glass-card border-border" data-testid="feature-team-management">
                 <CardHeader>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mb-4">
+                  <div className="p-3 rounded-xl bg-muted/30 border border-border w-fit mb-4">
                     <Users className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-lg">Team Management</CardTitle>
@@ -101,9 +101,9 @@ export default function Landing() {
                 </CardHeader>
               </Card>
 
-              <Card className="glass-card border-white/5" data-testid="feature-project-tracking">
+              <Card className="glass-card border-border" data-testid="feature-project-tracking">
                 <CardHeader>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mb-4">
+                  <div className="p-3 rounded-xl bg-muted/30 border border-border w-fit mb-4">
                     <FileText className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-lg">Project Tracking</CardTitle>
@@ -113,9 +113,9 @@ export default function Landing() {
                 </CardHeader>
               </Card>
 
-              <Card className="glass-card border-white/5" data-testid="feature-weekly-reports">
+              <Card className="glass-card border-border" data-testid="feature-weekly-reports">
                 <CardHeader>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mb-4">
+                  <div className="p-3 rounded-xl bg-muted/30 border border-border w-fit mb-4">
                     <BarChart className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-lg">Weekly Reports</CardTitle>
@@ -125,9 +125,9 @@ export default function Landing() {
                 </CardHeader>
               </Card>
 
-              <Card className="glass-card border-white/5" data-testid="feature-jira-integration">
+              <Card className="glass-card border-border" data-testid="feature-jira-integration">
                 <CardHeader>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mb-4">
+                  <div className="p-3 rounded-xl bg-muted/30 border border-border w-fit mb-4">
                     <Zap className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-lg">Jira Integration</CardTitle>
@@ -140,11 +140,11 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="py-20 px-6 border-t border-white/5">
+        <section className="py-20 px-6 border-t border-border">
           <div className="container mx-auto max-w-4xl">
-            <Card className="glass-card border-white/5 overflow-hidden">
+            <Card className="glass-card border-border overflow-hidden">
               <CardHeader className="text-center pb-4">
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 w-fit mx-auto mb-4">
+                <div className="p-3 rounded-xl bg-muted/30 border border-border w-fit mx-auto mb-4">
                   <Lock className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <CardTitle className="text-2xl">Secure Enterprise Access</CardTitle>
@@ -154,7 +154,7 @@ export default function Landing() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4 text-center">
-                  <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-muted/30 border border-border">
                     <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
                     <span className="font-medium">@ignitetech.com / @khoros.com</span>
                   </div>
@@ -169,7 +169,7 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-white/5 py-8">
+      <footer className="border-t border-border py-8">
         <div className="container mx-auto px-6 text-center">
           <p className="text-sm text-muted-foreground">
             SS & CMA Dashboard — IgniteTech
