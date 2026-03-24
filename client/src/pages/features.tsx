@@ -18,7 +18,7 @@ const roleColors: Record<UserRole, string> = {
   admin: "bg-red-500/20 text-red-600 border-red-500/30",
   manager: "bg-purple-500/20 text-purple-600 border-purple-500/30",
   lead: "bg-blue-500/20 text-blue-600 border-blue-500/30",
-  member: "bg-gray-500/20 text-gray-600 border-gray-500/30",
+  member: "bg-muted text-muted-foreground border-border",
 };
 
 const roleLabels: Record<UserRole, string> = {
