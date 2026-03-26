@@ -420,15 +420,21 @@ function InlineTaskInput({
   const internalInputRef = useRef<HTMLInputElement>(null);
   const inputRef = externalInputRef || internalInputRef as React.RefObject<HTMLInputElement>;
 
-  const hasTagSymbols = (text: string): boolean => {
-    return /@@|(?<![a-zA-Z0-9])@(?!@)|(?<![a-zA-Z0-9])#|(?<![a-zA-Z0-9])\$|(?<![a-zA-Z0-9])!|\/\//.test(text);
+  const usesTagSyntax = (text: string): boolean => {
+    if (/@@\w/.test(text)) return true;
+    if (/(?:^|\s)@(?!\S*\.\S+)\w/.test(text)) return true;
+    if (/#(todo|in-progress|blocked|done|inprogress|cancelled)\b/i.test(text)) return true;
+    if (/\$(normal|medium|high)\b/i.test(text)) return true;
+    if (/!(today|tomorrow|\d{1,2}\/\d{1,2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s*\d{1,2})\b/i.test(text)) return true;
+    if (/\/\/\s*\S/.test(text)) return true;
+    return false;
   };
 
   const looksLikeNaturalLanguage = (text: string): boolean => {
     if (!text.trim() || text.trim().length < 15) return false;
-    if (hasTagSymbols(text)) return false;
+    if (usesTagSyntax(text)) return false;
     const words = text.trim().split(/\s+/);
-    return words.length >= 4;
+    return words.length >= 3;
   };
 
   const isNaturalLanguage = looksLikeNaturalLanguage(value);
