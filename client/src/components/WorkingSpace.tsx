@@ -795,9 +795,10 @@ function TaskInputHelper() {
 interface AiTaskInputProps {
   onAiParsedSubmit: (parsed: AiParsedTask) => void;
   isCreating?: boolean;
+  clearSignal?: number;
 }
 
-function AiTaskInput({ onAiParsedSubmit, isCreating }: AiTaskInputProps) {
+function AiTaskInput({ onAiParsedSubmit, isCreating, clearSignal }: AiTaskInputProps) {
   const [value, setValue] = useState('');
   const [isAiParsing, setIsAiParsing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -806,6 +807,12 @@ function AiTaskInput({ onAiParsedSubmit, isCreating }: AiTaskInputProps) {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (clearSignal && clearSignal > 0) {
+      setValue('');
+    }
+  }, [clearSignal]);
 
   const handleSubmit = () => {
     const text = value.trim();
@@ -841,7 +848,6 @@ function AiTaskInput({ onAiParsedSubmit, isCreating }: AiTaskInputProps) {
         };
         setIsAiParsing(false);
         onAiParsedSubmit(sanitized);
-        setValue('');
       })
       .catch(() => {
         setIsAiParsing(false);
@@ -2250,30 +2256,39 @@ export default function WorkingSpace() {
 
   const [aiParsedTask, setAiParsedTask] = useState<AiParsedTask | null>(null);
   const [showAiReview, setShowAiReview] = useState(false);
+  const [clearSignal, setClearSignal] = useState(0);
+  const [editTitle, setEditTitle] = useState('');
+  const [editAssigneeIds, setEditAssigneeIds] = useState<string[]>([]);
+  const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
   const handleAiParsedSubmit = (parsed: AiParsedTask) => {
     setAiParsedTask(parsed);
+    setEditTitle(parsed.title);
+    setEditAssigneeIds(parsed.assigneeIds?.filter(Boolean) || []);
+    setEditProjectId(parsed.projectId || null);
     setShowAiReview(true);
   };
 
   const handleConfirmAiTask = () => {
-    if (!aiParsedTask || !aiParsedTask.title?.trim()) {
+    const title = editTitle.trim();
+    if (!title) {
       toast({ title: 'Error', description: 'Task title is required', variant: 'destructive' });
       return;
     }
     const validStatuses = ['todo', 'in-progress', 'blocked', 'done', 'cancelled'];
     const validPriorities = ['normal', 'medium', 'high'];
     const taskData: Partial<Task> = {
-      title: aiParsedTask.title.trim(),
-      status: validStatuses.includes(aiParsedTask.status) ? aiParsedTask.status : 'todo',
-      priority: validPriorities.includes(aiParsedTask.priority) ? aiParsedTask.priority : 'normal',
-      assignedTo: (aiParsedTask.assigneeIds || []).filter(id => typeof id === 'string' && id),
-      projectId: aiParsedTask.projectId || undefined,
-      dueDate: aiParsedTask.dueDate || getDefaultDueDate(),
+      title,
+      status: aiParsedTask && validStatuses.includes(aiParsedTask.status) ? aiParsedTask.status : 'todo',
+      priority: aiParsedTask && validPriorities.includes(aiParsedTask.priority) ? aiParsedTask.priority : 'normal',
+      assignedTo: editAssigneeIds.filter(id => typeof id === 'string' && id),
+      projectId: editProjectId || undefined,
+      dueDate: aiParsedTask?.dueDate || getDefaultDueDate(),
     };
     createTaskMutation.mutate(taskData);
     setShowAiReview(false);
     setAiParsedTask(null);
+    setClearSignal(s => s + 1);
   };
 
   const handleCreateTask = (title: string, parsed: ParsedTitle, parentTaskId?: string) => {
@@ -2383,6 +2398,7 @@ export default function WorkingSpace() {
           <AiTaskInput 
             onAiParsedSubmit={handleAiParsedSubmit}
             isCreating={createTaskMutation.isPending}
+            clearSignal={clearSignal}
           />
         </CardContent>
       </Card>
@@ -2532,55 +2548,85 @@ export default function WorkingSpace() {
               Review AI-Parsed Task
             </DialogTitle>
             <DialogDescription>
-              Here's what was understood from your input. Confirm or cancel.
+              Review and edit the parsed fields, then confirm to create.
             </DialogDescription>
           </DialogHeader>
           {aiParsedTask && (
             <div className="space-y-3 py-2">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Title</label>
-                <div className="text-sm font-medium" data-testid="ai-parsed-title">{aiParsedTask.title}</div>
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  data-testid="ai-parsed-title"
+                />
               </div>
 
-              {(aiParsedTask.assigneeNames?.length > 0 || (aiParsedTask.unmatchedPeople?.length ?? 0) > 0) && (
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Assigned To</label>
-                  <div className="flex items-center gap-1.5 flex-wrap" data-testid="ai-parsed-assignees">
-                    {aiParsedTask.assigneeNames?.map((name, i) => (
-                      <Badge key={i} variant="secondary" className="gap-1">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Assigned To</label>
+                <div className="flex items-center gap-1.5 flex-wrap" data-testid="ai-parsed-assignees">
+                  {editAssigneeIds.map(id => {
+                    const person = people.find(p => p.id === id);
+                    return person ? (
+                      <Badge key={id} variant="secondary" className="gap-1">
                         <User className="h-3 w-3" />
-                        {name}
+                        {person.name}
+                        <button
+                          type="button"
+                          className="ml-0.5 rounded-full hover-elevate"
+                          onClick={() => setEditAssigneeIds(prev => prev.filter(a => a !== id))}
+                          data-testid={`button-remove-assignee-${id}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </Badge>
-                    ))}
-                    {aiParsedTask.unmatchedPeople?.map((name, i) => (
-                      <Badge key={`unmatched-${i}`} variant="outline" className="gap-1 text-destructive border-destructive/30">
-                        <User className="h-3 w-3" />
-                        {name} (not found)
-                      </Badge>
-                    ))}
-                  </div>
+                    ) : null;
+                  })}
+                  {aiParsedTask.unmatchedPeople?.map((name, i) => (
+                    <Badge key={`unmatched-${i}`} variant="outline" className="gap-1 text-destructive border-destructive/30">
+                      <User className="h-3 w-3" />
+                      {name} (not found)
+                    </Badge>
+                  ))}
                 </div>
-              )}
+                <select
+                  className="w-full text-sm border rounded-md px-2 py-1.5 bg-background text-foreground"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value && !editAssigneeIds.includes(e.target.value)) {
+                      setEditAssigneeIds(prev => [...prev, e.target.value]);
+                    }
+                    e.target.value = '';
+                  }}
+                  data-testid="select-add-assignee"
+                >
+                  <option value="">Add assignee...</option>
+                  {people.filter(p => !editAssigneeIds.includes(p.id)).map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
 
-              {(aiParsedTask.projectName || (aiParsedTask.unmatchedProjects?.length ?? 0) > 0) && (
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Account</label>
-                  <div className="flex items-center gap-1.5 flex-wrap" data-testid="ai-parsed-project">
-                    {aiParsedTask.projectName && (
-                      <Badge variant="secondary" className="gap-1">
-                        <FolderKanban className="h-3 w-3" />
-                        {aiParsedTask.projectName}
-                      </Badge>
-                    )}
-                    {aiParsedTask.unmatchedProjects?.map((name, i) => (
-                      <Badge key={`unmatched-proj-${i}`} variant="outline" className="gap-1 text-destructive border-destructive/30">
-                        <FolderKanban className="h-3 w-3" />
-                        {name} (not found)
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Account</label>
+                <select
+                  className="w-full text-sm border rounded-md px-2 py-1.5 bg-background text-foreground"
+                  value={editProjectId || ''}
+                  onChange={(e) => setEditProjectId(e.target.value || null)}
+                  data-testid="select-project"
+                >
+                  <option value="">No account</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                {aiParsedTask.unmatchedProjects?.map((name, i) => (
+                  <Badge key={`unmatched-proj-${i}`} variant="outline" className="gap-1 text-destructive border-destructive/30">
+                    <FolderKanban className="h-3 w-3" />
+                    {name} (not found)
+                  </Badge>
+                ))}
+              </div>
 
               {aiParsedTask.dueDate && (
                 <div className="space-y-1">

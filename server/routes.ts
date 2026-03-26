@@ -2117,7 +2117,7 @@ Available projects/accounts (use exact IDs):
 ${JSON.stringify(projectList)}
 
 Return a JSON object with these fields:
-- "title": string - a clean, concise task title (action-oriented, remove assignee/project/date references)
+- "title": string - a SHORT, concise, action-oriented task title. Strip out the person's name, account/project name, and date references. Distill to the core action only. Examples: "Create all test cases for Meta Horizons by end of march by Hanish" → "Create test cases"; "Hanish needs to prepare renewal document for Exxon CM by March 30th" → "Prepare renewal document"; "Send quarterly report to client by Friday" → "Send quarterly report". Keep it to 3-6 words max.
 - "assigneeIds": string[] - array of matched person IDs (match by first name, last name, or full name)
 - "assigneeNames": string[] - the matched person names (for display)
 - "projectId": string|null - matched project ID (match by project name or customer name)
