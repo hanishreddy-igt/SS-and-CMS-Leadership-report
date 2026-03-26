@@ -792,6 +792,115 @@ function TaskInputHelper() {
   );
 }
 
+interface AiTaskInputProps {
+  onAiParsedSubmit: (parsed: AiParsedTask) => void;
+  isCreating?: boolean;
+}
+
+function AiTaskInput({ onAiParsedSubmit, isCreating }: AiTaskInputProps) {
+  const [value, setValue] = useState('');
+  const [isAiParsing, setIsAiParsing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSubmit = () => {
+    const text = value.trim();
+    if (!text) return;
+
+    setIsAiParsing(true);
+    fetch('/api/tasks/parse-natural-language', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ text }),
+    })
+      .then(r => {
+        if (!r.ok) throw new Error('Parse failed');
+        return r.json();
+      })
+      .then((parsed: AiParsedTask) => {
+        if (!parsed.title || typeof parsed.title !== 'string') throw new Error('Invalid response');
+        const validStatuses = ['todo', 'in-progress', 'blocked', 'done', 'cancelled'];
+        const validPriorities = ['normal', 'medium', 'high'];
+        const sanitized: AiParsedTask = {
+          title: parsed.title.trim(),
+          assigneeIds: Array.isArray(parsed.assigneeIds) ? parsed.assigneeIds.filter(id => typeof id === 'string' && id) : [],
+          assigneeNames: Array.isArray(parsed.assigneeNames) ? parsed.assigneeNames : [],
+          projectId: typeof parsed.projectId === 'string' ? parsed.projectId : null,
+          projectName: typeof parsed.projectName === 'string' ? parsed.projectName : null,
+          dueDate: typeof parsed.dueDate === 'string' ? parsed.dueDate : null,
+          priority: validPriorities.includes(parsed.priority) ? parsed.priority : 'normal',
+          status: validStatuses.includes(parsed.status) ? parsed.status : 'todo',
+          confidence: typeof parsed.confidence === 'number' ? Math.min(1, Math.max(0, parsed.confidence)) : 0.5,
+          unmatchedPeople: Array.isArray(parsed.unmatchedPeople) ? parsed.unmatchedPeople : [],
+          unmatchedProjects: Array.isArray(parsed.unmatchedProjects) ? parsed.unmatchedProjects : [],
+        };
+        setIsAiParsing(false);
+        onAiParsedSubmit(sanitized);
+        setValue('');
+      })
+      .catch(() => {
+        setIsAiParsing(false);
+        toast({ title: 'AI parsing failed', description: 'Please try again or rephrase your input.', variant: 'destructive' });
+      });
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && value.trim() && !isAiParsing) {
+      e.preventDefault();
+      handleSubmit();
+    }
+    if (e.key === 'Escape') {
+      setValue('');
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="relative flex items-center gap-2">
+        <div className="relative flex-1">
+          <Input
+            ref={inputRef}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Describe the task in plain English and press Enter..."
+            className="pr-10 text-sm"
+            disabled={isAiParsing || isCreating}
+            data-testid="ai-task-input"
+          />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            {isAiParsing ? (
+              <div className="flex items-center gap-1 text-xs text-primary">
+                <Zap className="h-3.5 w-3.5 animate-pulse" />
+              </div>
+            ) : value.trim().length > 0 ? (
+              <Zap className="h-3.5 w-3.5 text-primary" />
+            ) : (
+              <Zap className="h-3.5 w-3.5 text-muted-foreground/40" />
+            )}
+          </div>
+        </div>
+      </div>
+      {isAiParsing && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+          Understanding your request...
+        </p>
+      )}
+      {!isAiParsing && !value.trim() && (
+        <p className="text-xs text-muted-foreground">
+          e.g. "Hanish needs to prepare the renewal document for Exxon CM by March 30th"
+        </p>
+      )}
+    </div>
+  );
+}
+
 interface InlineAssigneePanelProps {
   task: Task;
   people: Person[];
@@ -2271,15 +2380,10 @@ export default function WorkingSpace() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
-          <InlineTaskInput 
-            onSubmit={(title, parsed) => handleCreateTask(title, parsed)} 
+          <AiTaskInput 
             onAiParsedSubmit={handleAiParsedSubmit}
-            placeholder="Type a task or describe it in plain English..."
-            autoFocus
-            projects={projects}
-            people={people}
+            isCreating={createTaskMutation.isPending}
           />
-          <TaskInputHelper />
         </CardContent>
       </Card>
 
