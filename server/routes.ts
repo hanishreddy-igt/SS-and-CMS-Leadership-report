@@ -2081,6 +2081,88 @@ Output valid JSON only.`;
   });
 
   // Create task
+  app.post('/api/tasks/parse-natural-language', isAuthenticated, async (req: any, res) => {
+    try {
+      const { text } = req.body;
+      if (!text || typeof text !== 'string') {
+        return res.status(400).json({ message: 'Text is required' });
+      }
+
+      const [allPeople, allProjects] = await Promise.all([
+        storage.getPeople(),
+        storage.getProjects(),
+      ]);
+
+      const peopleList = allPeople.map(p => ({ id: p.id, name: p.name }));
+      const projectList = allProjects.map(p => ({ id: p.id, name: p.name, customer: p.customer }));
+
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `You are a task parser. Extract structured task data from natural language input.
+
+Today's date is ${todayStr} (${today.toLocaleDateString('en-US', { weekday: 'long' })}).
+
+Available people (use exact IDs):
+${JSON.stringify(peopleList)}
+
+Available projects/accounts (use exact IDs):
+${JSON.stringify(projectList)}
+
+Return a JSON object with these fields:
+- "title": string - a clean, concise task title (action-oriented, remove assignee/project/date references)
+- "assigneeIds": string[] - array of matched person IDs (match by first name, last name, or full name)
+- "assigneeNames": string[] - the matched person names (for display)
+- "projectId": string|null - matched project ID (match by project name or customer name)
+- "projectName": string|null - the matched project name (for display)
+- "dueDate": string|null - ISO date string (YYYY-MM-DD). Parse "tomorrow", "next Monday", "March 30th", "by end of week", etc.
+- "priority": "normal"|"medium"|"high" - infer from urgency words like "urgent", "ASAP", "critical" = high; "important" = medium; default = normal
+- "status": "todo" - always default to todo
+- "confidence": number - 0 to 1, how confident you are in the overall parsing
+
+Be flexible with name matching - "Hanish" should match a person whose name contains "Hanish". Match projects by any part of their name or customer name (e.g., "Exxon CM" should match a project with "Exxon" in the name and customer).
+
+If you cannot match a person or project, set the ID to null but still include the name the user mentioned in a separate field:
+- "unmatchedPeople": string[] - names mentioned but not found in the people list
+- "unmatchedProjects": string[] - project/account names mentioned but not found`
+          },
+          {
+            role: "user",
+            content: text
+          }
+        ]
+      });
+
+      const raw = JSON.parse(completion.choices[0].message.content || '{}');
+      const validStatuses = ['todo', 'in-progress', 'blocked', 'done', 'cancelled'];
+      const validPriorities = ['normal', 'medium', 'high'];
+      const sanitized = {
+        title: typeof raw.title === 'string' && raw.title.trim() ? raw.title.trim() : 'Untitled Task',
+        assigneeIds: Array.isArray(raw.assigneeIds) ? raw.assigneeIds.filter((id: any) => typeof id === 'string' && id) : [],
+        assigneeNames: Array.isArray(raw.assigneeNames) ? raw.assigneeNames.filter((n: any) => typeof n === 'string') : [],
+        projectId: typeof raw.projectId === 'string' && raw.projectId ? raw.projectId : null,
+        projectName: typeof raw.projectName === 'string' ? raw.projectName : null,
+        dueDate: typeof raw.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw.dueDate) ? raw.dueDate.slice(0, 10) : null,
+        priority: validPriorities.includes(raw.priority) ? raw.priority : 'normal',
+        status: validStatuses.includes(raw.status) ? raw.status : 'todo',
+        confidence: typeof raw.confidence === 'number' ? Math.min(1, Math.max(0, raw.confidence)) : 0.5,
+        unmatchedPeople: Array.isArray(raw.unmatchedPeople) ? raw.unmatchedPeople : [],
+        unmatchedProjects: Array.isArray(raw.unmatchedProjects) ? raw.unmatchedProjects : [],
+      };
+      res.json(sanitized);
+    } catch (error: any) {
+      console.error('Error parsing natural language task:', error);
+      res.status(500).json({ message: 'Failed to parse task' });
+    }
+  });
+
   app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
       const userEmail = req.user.claims.email;

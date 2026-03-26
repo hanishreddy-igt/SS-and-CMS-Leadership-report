@@ -370,8 +370,23 @@ interface SuggestionState {
   query: string;
 }
 
+interface AiParsedTask {
+  title: string;
+  assigneeIds: string[];
+  assigneeNames: string[];
+  projectId: string | null;
+  projectName: string | null;
+  dueDate: string | null;
+  priority: string;
+  status: string;
+  confidence: number;
+  unmatchedPeople?: string[];
+  unmatchedProjects?: string[];
+}
+
 interface InlineTaskInputProps {
   onSubmit: (title: string, parsed: ParsedTitle) => void;
+  onAiParsedSubmit?: (parsed: AiParsedTask) => void;
   placeholder?: string;
   autoFocus?: boolean;
   depth?: number;
@@ -386,6 +401,7 @@ interface InlineTaskInputProps {
 
 function InlineTaskInput({ 
   onSubmit, 
+  onAiParsedSubmit,
   placeholder = "Type a task and press Enter...", 
   autoFocus = false, 
   depth = 0,
@@ -400,8 +416,22 @@ function InlineTaskInput({
   const [value, setValue] = useState('');
   const [suggestion, setSuggestion] = useState<SuggestionState>({ type: null, startIndex: 0, query: '' });
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isAiParsing, setIsAiParsing] = useState(false);
   const internalInputRef = useRef<HTMLInputElement>(null);
   const inputRef = externalInputRef || internalInputRef as React.RefObject<HTMLInputElement>;
+
+  const hasTagSymbols = (text: string): boolean => {
+    return /@@|(?<![a-zA-Z0-9])@(?!@)|(?<![a-zA-Z0-9])#|(?<![a-zA-Z0-9])\$|(?<![a-zA-Z0-9])!|\/\//.test(text);
+  };
+
+  const looksLikeNaturalLanguage = (text: string): boolean => {
+    if (!text.trim() || text.trim().length < 15) return false;
+    if (hasTagSymbols(text)) return false;
+    const words = text.trim().split(/\s+/);
+    return words.length >= 4;
+  };
+
+  const isNaturalLanguage = looksLikeNaturalLanguage(value);
 
   useEffect(() => {
     if (autoFocus && inputRef.current) {
@@ -565,10 +595,54 @@ function InlineTaskInput({
     }
 
     if (e.key === 'Enter' && value.trim()) {
-      const parsed = parseInlineTags(value.trim());
-      onSubmit(value.trim(), parsed);
-      setValue('');
-      setSuggestion({ type: null, startIndex: 0, query: '' });
+      if (isNaturalLanguage && onAiParsedSubmit) {
+        e.preventDefault();
+        setIsAiParsing(true);
+        fetch('/api/tasks/parse-natural-language', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ text: value.trim() }),
+        })
+          .then(r => {
+            if (!r.ok) throw new Error('Parse failed');
+            return r.json();
+          })
+          .then((parsed: AiParsedTask) => {
+            if (!parsed.title || typeof parsed.title !== 'string') throw new Error('Invalid response');
+            const validStatuses = ['todo', 'in-progress', 'blocked', 'done', 'cancelled'];
+            const validPriorities = ['normal', 'medium', 'high'];
+            const sanitized: AiParsedTask = {
+              title: parsed.title.trim(),
+              assigneeIds: Array.isArray(parsed.assigneeIds) ? parsed.assigneeIds.filter(id => typeof id === 'string' && id) : [],
+              assigneeNames: Array.isArray(parsed.assigneeNames) ? parsed.assigneeNames : [],
+              projectId: typeof parsed.projectId === 'string' ? parsed.projectId : null,
+              projectName: typeof parsed.projectName === 'string' ? parsed.projectName : null,
+              dueDate: typeof parsed.dueDate === 'string' ? parsed.dueDate : null,
+              priority: validPriorities.includes(parsed.priority) ? parsed.priority : 'normal',
+              status: validStatuses.includes(parsed.status) ? parsed.status : 'todo',
+              confidence: typeof parsed.confidence === 'number' ? Math.min(1, Math.max(0, parsed.confidence)) : 0.5,
+              unmatchedPeople: Array.isArray(parsed.unmatchedPeople) ? parsed.unmatchedPeople : [],
+              unmatchedProjects: Array.isArray(parsed.unmatchedProjects) ? parsed.unmatchedProjects : [],
+            };
+            setIsAiParsing(false);
+            onAiParsedSubmit(sanitized);
+            setValue('');
+            setSuggestion({ type: null, startIndex: 0, query: '' });
+          })
+          .catch(() => {
+            setIsAiParsing(false);
+            const parsed = parseInlineTags(value.trim());
+            onSubmit(value.trim(), parsed);
+            setValue('');
+            setSuggestion({ type: null, startIndex: 0, query: '' });
+          });
+      } else {
+        const parsed = parseInlineTags(value.trim());
+        onSubmit(value.trim(), parsed);
+        setValue('');
+        setSuggestion({ type: null, startIndex: 0, query: '' });
+      }
     }
     if (e.key === 'Escape') {
       if (onCancel) {
@@ -616,6 +690,7 @@ function InlineTaskInput({
           placeholder={placeholder}
           className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm h-8 px-1"
           data-testid="inline-task-input"
+          disabled={isAiParsing}
         />
         {suggestion.type && suggestions.length > 0 && (
           <div className="absolute left-0 top-full mt-1 z-50 bg-card border rounded-md shadow-lg p-1 min-w-[180px] max-h-48 overflow-auto" style={{ backgroundColor: 'hsl(var(--card))' }} data-testid="suggestion-popover">
@@ -642,6 +717,18 @@ function InlineTaskInput({
           </div>
         )}
       </div>
+      {isAiParsing && (
+        <div className="flex items-center gap-1.5 text-xs text-primary shrink-0">
+          <Zap className="h-3 w-3 animate-pulse" />
+          <span>Parsing...</span>
+        </div>
+      )}
+      {isNaturalLanguage && !isAiParsing && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+          <Zap className="h-3 w-3 text-primary" />
+          <span>AI</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -684,6 +771,16 @@ function TaskInputHelper() {
         <code className="bg-background px-2 py-1 rounded text-primary block">
           Reporting for advisory @@SKY UK @Hanish Reddy #to-do $normal !Feb 10 //Template is already in drive (URL)
         </code>
+      </div>
+      <div className="pt-2 border-t">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Zap className="h-3 w-3 text-primary" />
+          <p className="font-medium text-muted-foreground">Or just type in plain English:</p>
+        </div>
+        <code className="bg-background px-2 py-1 rounded text-primary block text-xs">
+          Hanish needs to prepare the renewal document for Exxon CM by March 30th
+        </code>
+        <p className="text-muted-foreground mt-1">AI will extract the task title, assignee, account, and due date automatically.</p>
       </div>
     </div>
   );
@@ -2036,6 +2133,34 @@ export default function WorkingSpace() {
   const myTasks = allTasks.filter(t => t.createdBy === userEmail);
   const myRootTasks = myTasks.filter(t => !t.parentTaskId);
 
+  const [aiParsedTask, setAiParsedTask] = useState<AiParsedTask | null>(null);
+  const [showAiReview, setShowAiReview] = useState(false);
+
+  const handleAiParsedSubmit = (parsed: AiParsedTask) => {
+    setAiParsedTask(parsed);
+    setShowAiReview(true);
+  };
+
+  const handleConfirmAiTask = () => {
+    if (!aiParsedTask || !aiParsedTask.title?.trim()) {
+      toast({ title: 'Error', description: 'Task title is required', variant: 'destructive' });
+      return;
+    }
+    const validStatuses = ['todo', 'in-progress', 'blocked', 'done', 'cancelled'];
+    const validPriorities = ['normal', 'medium', 'high'];
+    const taskData: Partial<Task> = {
+      title: aiParsedTask.title.trim(),
+      status: validStatuses.includes(aiParsedTask.status) ? aiParsedTask.status : 'todo',
+      priority: validPriorities.includes(aiParsedTask.priority) ? aiParsedTask.priority : 'normal',
+      assignedTo: (aiParsedTask.assigneeIds || []).filter(id => typeof id === 'string' && id),
+      projectId: aiParsedTask.projectId || undefined,
+      dueDate: aiParsedTask.dueDate || getDefaultDueDate(),
+    };
+    createTaskMutation.mutate(taskData);
+    setShowAiReview(false);
+    setAiParsedTask(null);
+  };
+
   const handleCreateTask = (title: string, parsed: ParsedTitle, parentTaskId?: string) => {
     const taskData: Partial<Task> = { 
       title: parsed.text || title, 
@@ -2142,7 +2267,8 @@ export default function WorkingSpace() {
         <CardContent className="pt-0 space-y-3">
           <InlineTaskInput 
             onSubmit={(title, parsed) => handleCreateTask(title, parsed)} 
-            placeholder="Type a task and press Enter..."
+            onAiParsedSubmit={handleAiParsedSubmit}
+            placeholder="Type a task or describe it in plain English..."
             autoFocus
             projects={projects}
             people={people}
@@ -2287,6 +2413,120 @@ export default function WorkingSpace() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={showAiReview} onOpenChange={(open) => { if (!open) { setShowAiReview(false); setAiParsedTask(null); } }}>
+        <DialogContent className="sm:max-w-md" data-testid="ai-task-review-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              Review AI-Parsed Task
+            </DialogTitle>
+            <DialogDescription>
+              Here's what was understood from your input. Confirm or cancel.
+            </DialogDescription>
+          </DialogHeader>
+          {aiParsedTask && (
+            <div className="space-y-3 py-2">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Title</label>
+                <div className="text-sm font-medium" data-testid="ai-parsed-title">{aiParsedTask.title}</div>
+              </div>
+
+              {(aiParsedTask.assigneeNames?.length > 0 || (aiParsedTask.unmatchedPeople?.length ?? 0) > 0) && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Assigned To</label>
+                  <div className="flex items-center gap-1.5 flex-wrap" data-testid="ai-parsed-assignees">
+                    {aiParsedTask.assigneeNames?.map((name, i) => (
+                      <Badge key={i} variant="secondary" className="gap-1">
+                        <User className="h-3 w-3" />
+                        {name}
+                      </Badge>
+                    ))}
+                    {aiParsedTask.unmatchedPeople?.map((name, i) => (
+                      <Badge key={`unmatched-${i}`} variant="outline" className="gap-1 text-destructive border-destructive/30">
+                        <User className="h-3 w-3" />
+                        {name} (not found)
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(aiParsedTask.projectName || (aiParsedTask.unmatchedProjects?.length ?? 0) > 0) && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Account</label>
+                  <div className="flex items-center gap-1.5 flex-wrap" data-testid="ai-parsed-project">
+                    {aiParsedTask.projectName && (
+                      <Badge variant="secondary" className="gap-1">
+                        <FolderKanban className="h-3 w-3" />
+                        {aiParsedTask.projectName}
+                      </Badge>
+                    )}
+                    {aiParsedTask.unmatchedProjects?.map((name, i) => (
+                      <Badge key={`unmatched-proj-${i}`} variant="outline" className="gap-1 text-destructive border-destructive/30">
+                        <FolderKanban className="h-3 w-3" />
+                        {name} (not found)
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {aiParsedTask.dueDate && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Due Date</label>
+                  <div className="flex items-center gap-1.5" data-testid="ai-parsed-due-date">
+                    <Badge variant="secondary" className="gap-1">
+                      <CalendarIcon className="h-3 w-3" />
+                      {(() => {
+                        const [y, m, d] = aiParsedTask.dueDate!.split('-').map(Number);
+                        return format(new Date(y, m - 1, d), 'MMM d, yyyy');
+                      })()}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 flex-wrap">
+                {aiParsedTask.priority && aiParsedTask.priority !== 'normal' && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Priority</label>
+                    <div data-testid="ai-parsed-priority">
+                      <Badge variant="secondary" className="gap-1">
+                        <span className={`h-2 w-2 rounded-full ${priorityColors[aiParsedTask.priority] || 'bg-muted'}`} />
+                        {priorityLabels[aiParsedTask.priority] || aiParsedTask.priority}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {aiParsedTask.confidence < 0.7 && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="h-3 w-3" />
+                  Low confidence parsing — please review carefully
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setShowAiReview(false); setAiParsedTask(null); }}
+              data-testid="button-cancel-ai-task"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmAiTask}
+              data-testid="button-confirm-ai-task"
+            >
+              <Check className="h-4 w-4 mr-1.5" />
+              Create Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
