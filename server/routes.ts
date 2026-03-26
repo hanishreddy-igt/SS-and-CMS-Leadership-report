@@ -2089,7 +2089,7 @@ Output valid JSON only.`;
       }
 
       const [allPeople, allProjects] = await Promise.all([
-        storage.getPeople(),
+        storage.getAllPeople(),
         storage.getProjects(),
       ]);
 
