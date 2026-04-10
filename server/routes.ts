@@ -2205,18 +2205,50 @@ If you cannot match a person or project, set the ID to null but still include th
         messages: [
           {
             role: "system",
-            content: `You are a project analyst for an enterprise services team. Analyze the tasks and their notes for the project "${project.name}" and produce a comprehensive analysis.
+            content: `You are a strategic services consultant creating a CUSTOMER-FACING value report for the project "${project.name}". This report will be shared directly with the customer to demonstrate the tangible value, impact, and ROI our team has delivered.
 
-Focus on:
-1. **Key Wins & Accomplishments**: Use SPECIFIC information from task notes to describe what was actually achieved. Reference concrete deliverables, documents, migrations, configurations, meetings, and outcomes mentioned in the notes. Do NOT use generic phrases like "tasks completed on time" — use the actual work described.
-2. **Work Quantification**: Count and categorize the types of work done (e.g., "3 migration scripts completed", "5 client meetings conducted", "2 security audits performed"). Use note content to quantify.
-3. **Team Contributions**: Highlight specific people and their notable contributions based on task assignments and notes.
-4. **Current Status & Risks**: Summarize active/blocked items and potential risks based on note content.
-5. **Timeline & Velocity**: Note completion patterns and any deadline-related observations.
+Write this as a polished, professional message that PROVES our worth. Use a confident but not arrogant tone.
+
+Structure your response as:
+
+## Value Delivered
+
+A brief executive summary (2-3 sentences) of the overall impact and value delivered. Lead with the most impressive result.
+
+## Key Accomplishments
+
+For each major accomplishment, describe:
+- WHAT was done (specific deliverable, fix, migration, configuration, etc. — pull from task notes)
+- WHY it matters to the customer (business impact: saved time, prevented issues, improved performance, reduced risk, enabled a capability)
+- Quantify wherever possible (e.g., "Identified and resolved 3 critical security vulnerabilities before they impacted production", "Completed platform migration across 4 environments in 2 weeks", "Configured 12 custom workflows reducing manual processing time")
+
+## By the Numbers
+
+A concise quantified summary. Count real work items from the notes and tasks:
+- Number of issues identified and resolved
+- Deliverables completed
+- Meetings/consultations conducted
+- Configurations, migrations, or integrations delivered
+- Any speed/turnaround metrics (how quickly things were handled)
+
+Do NOT use filler numbers. Only count what you can actually see in the data.
+
+## Proactive Value
+
+Highlight anything our team did proactively — issues caught before the customer noticed, optimizations suggested, best practices implemented, risks mitigated. This section proves we go beyond just "doing tasks."
+
+## Looking Ahead
+
+Brief forward-looking statement about active work and upcoming priorities.
 
 Project Stats: ${totalTasks} total tasks, ${completedTasks} completed, ${activeTasks} active, ${blockedTasks} blocked.
 
-Format your response in clean markdown with headers and bullet points. Be specific, data-driven, and reference actual note content. If there are no notes on tasks, mention that and provide what analysis you can from task titles, statuses, and dates.`
+CRITICAL RULES:
+- Use ONLY specific information from task notes and titles. Never fabricate or assume details.
+- Never use generic filler like "tasks completed on time" or "team worked efficiently" — be SPECIFIC about what was done.
+- Write from a "we" perspective (our team) addressing the customer.
+- If tasks have no notes, work with what you have from titles and statuses, but note that detailed notes would strengthen future reports.
+- Make every sentence prove value. This is a sales/retention document.`
           },
           {
             role: "user",

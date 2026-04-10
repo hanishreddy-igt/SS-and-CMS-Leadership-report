@@ -769,10 +769,10 @@ export default function AllTasksByProject() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              AI Analysis: {aiAnalysisProjectName}
+              Value Report: {aiAnalysisProjectName}
             </DialogTitle>
             <DialogDescription>
-              Wins, accomplishments, and insights derived from task notes.
+              Customer-facing summary of accomplishments, impact, and value delivered.
             </DialogDescription>
           </DialogHeader>
           {aiAnalysisLoading ? (
