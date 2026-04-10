@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ChevronRight, 
@@ -23,7 +24,11 @@ import {
   Filter,
   X,
   TriangleAlert,
-  StickyNote
+  StickyNote,
+  Download,
+  Sparkles,
+  Loader2,
+  Copy
 } from 'lucide-react';
 import type { Task, Project, Person } from '@shared/schema';
 import { TaskRow, ParsedTitle, parseInlineTags } from './WorkingSpace';
@@ -35,6 +40,10 @@ export default function AllTasksByProject() {
   const [accountFilters, setAccountFilters] = useState<string[]>([]);
   const [memberFilter, setMemberFilter] = useState<string>('all');
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const [aiAnalysisProjectId, setAiAnalysisProjectId] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<string>('');
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const [aiAnalysisProjectName, setAiAnalysisProjectName] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close task details when clicking outside
@@ -109,6 +118,75 @@ export default function AllTasksByProject() {
   });
 
   const userEmail = user?.email || '';
+
+  const sanitizeCsvCell = (val: string): string => {
+    let s = val.replace(/"/g, '""');
+    if (/^[=+\-@\t\r\n]/.test(s)) {
+      s = "'" + s;
+    }
+    return `"${s}"`;
+  };
+
+  const downloadProjectTasksCsv = (account: Project) => {
+    const accountTasks = allTasks.filter(t => t.projectId === account.id);
+    if (accountTasks.length === 0) {
+      toast({ title: 'No tasks', description: 'This project has no tasks to export.' });
+      return;
+    }
+    const headers = ['Title', 'Status', 'Priority', 'Assigned To', 'Due Date', 'Created', 'Notes'];
+    const rows = accountTasks.map(t => {
+      const assigneeNames = (t.assignedTo || []).map(id => {
+        const p = people.find(p => p.id === id);
+        return p?.name || id;
+      }).join('; ');
+      const noteTexts = Array.isArray(t.notes) ? (t.notes as any[]).map((n: any) => (n.content || n.text || '')).filter(Boolean).join(' | ') : '';
+      const dueDate = t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '';
+      const created = t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '';
+      return [
+        sanitizeCsvCell(t.title || ''),
+        sanitizeCsvCell(t.status || ''),
+        sanitizeCsvCell(t.priority || ''),
+        sanitizeCsvCell(assigneeNames),
+        sanitizeCsvCell(dueDate),
+        sanitizeCsvCell(created),
+        sanitizeCsvCell(noteTexts),
+      ].join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${account.name.replace(/[^a-zA-Z0-9]/g, '_')}_tasks.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'Downloaded', description: `${accountTasks.length} tasks exported for ${account.name}` });
+  };
+
+  const runAiAnalysis = async (projectId: string, projectName: string) => {
+    setAiAnalysisProjectId(projectId);
+    setAiAnalysisProjectName(projectName);
+    setAiAnalysis('');
+    setAiAnalysisLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/ai-analysis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Failed' }));
+        throw new Error(err.message || 'Analysis failed');
+      }
+      const data = await res.json();
+      setAiAnalysis(data.analysis);
+    } catch (err: any) {
+      toast({ title: 'Analysis failed', description: err.message, variant: 'destructive' });
+      setAiAnalysisProjectId(null);
+    } finally {
+      setAiAnalysisLoading(false);
+    }
+  };
 
   const handleUpdateTask = (id: string, updates: Partial<Task>) => {
     updateTaskMutation.mutate({ id, updates });
@@ -416,14 +494,34 @@ export default function AllTasksByProject() {
               
               return (
                 <Collapsible key={account.id} defaultOpen={false}>
-                  <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 rounded-lg hover-elevate text-left group">
-                    <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                    <FolderKanban className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-sm">{account.name}</span>
-                    <Badge variant="secondary" className="ml-auto text-xs">
-                      {filteredAccountTasks.length}
-                    </Badge>
-                  </CollapsibleTrigger>
+                  <div className="flex items-center gap-1 w-full">
+                    <CollapsibleTrigger className="flex items-center gap-2 flex-1 p-2 rounded-lg hover-elevate text-left group">
+                      <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                      <FolderKanban className="h-4 w-4 text-primary" />
+                      <span className="font-medium text-sm">{account.name}</span>
+                      <Badge variant="secondary" className="ml-auto text-xs">
+                        {filteredAccountTasks.length}
+                      </Badge>
+                    </CollapsibleTrigger>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => { e.stopPropagation(); downloadProjectTasksCsv(account); }}
+                      data-testid={`button-download-${account.id}`}
+                      title="Download tasks as CSV"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => { e.stopPropagation(); runAiAnalysis(account.id, account.name); }}
+                      data-testid={`button-ai-analysis-${account.id}`}
+                      title="AI Wins & Accomplishments"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <CollapsibleContent>
                     <div className="border rounded-lg mt-2 bg-card space-y-2 p-2">
                       {activeTasks.length > 0 && (
@@ -665,6 +763,58 @@ export default function AllTasksByProject() {
           </div>
         )}
       </CardContent>
+
+      <Dialog open={!!aiAnalysisProjectId} onOpenChange={(open) => { if (!open) { setAiAnalysisProjectId(null); setAiAnalysis(''); } }}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="ai-analysis-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              AI Analysis: {aiAnalysisProjectName}
+            </DialogTitle>
+            <DialogDescription>
+              Wins, accomplishments, and insights derived from task notes.
+            </DialogDescription>
+          </DialogHeader>
+          {aiAnalysisLoading ? (
+            <div className="flex items-center justify-center py-12 gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Analyzing tasks and notes...</span>
+            </div>
+          ) : aiAnalysis ? (
+            <div className="space-y-3">
+              <div className="prose prose-sm dark:prose-invert max-w-none" data-testid="ai-analysis-content">
+                {aiAnalysis.split('\n').map((line, i) => {
+                  if (line.startsWith('# ')) return <h1 key={i} className="text-lg font-bold mt-4 mb-2">{line.replace(/^# /, '')}</h1>;
+                  if (line.startsWith('## ')) return <h2 key={i} className="text-base font-semibold mt-3 mb-1.5">{line.replace(/^## /, '')}</h2>;
+                  if (line.startsWith('### ')) return <h3 key={i} className="text-sm font-semibold mt-2 mb-1">{line.replace(/^### /, '')}</h3>;
+                  if (line.startsWith('- **')) {
+                    const match = line.match(/^- \*\*(.+?)\*\*:?\s*(.*)/);
+                    if (match) return <div key={i} className="flex gap-1.5 ml-2 mb-0.5"><span className="text-sm">&#8226;</span><span className="text-sm"><strong>{match[1]}</strong>{match[2] ? `: ${match[2]}` : ''}</span></div>;
+                  }
+                  if (line.startsWith('- ')) return <div key={i} className="flex gap-1.5 ml-2 mb-0.5"><span className="text-sm">&#8226;</span><span className="text-sm">{line.replace(/^- /, '')}</span></div>;
+                  if (line.trim() === '') return <div key={i} className="h-2" />;
+                  return <p key={i} className="text-sm mb-1">{line}</p>;
+                })}
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => {
+                    navigator.clipboard.writeText(aiAnalysis);
+                    toast({ title: 'Copied', description: 'Analysis copied to clipboard' });
+                  }}
+                  data-testid="button-copy-analysis"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

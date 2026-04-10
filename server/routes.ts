@@ -2163,6 +2163,76 @@ If you cannot match a person or project, set the ID to null but still include th
     }
   });
 
+  app.post('/api/projects/:projectId/ai-analysis', isAuthenticated, async (req: any, res) => {
+    try {
+      const { projectId } = req.params;
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+
+      const tasks = await storage.getTasksByProject(projectId);
+      if (tasks.length === 0) {
+        return res.status(400).json({ message: 'No tasks found for this project' });
+      }
+
+      const allPeople = await storage.getAllPeople();
+      const peopleMap = new Map(allPeople.map(p => [p.id, p.name]));
+
+      const taskSummaries = tasks.map(t => {
+        const assigneeNames = (t.assignedTo || []).map(id => peopleMap.get(id) || id).join(', ');
+        const noteTexts = Array.isArray(t.notes) ? (t.notes as any[]).map((n: any) => n.content || n.text || '').filter(Boolean) : [];
+        return {
+          title: t.title,
+          status: t.status,
+          priority: t.priority,
+          assignees: assigneeNames,
+          createdAt: t.createdAt,
+          updatedAt: t.updatedAt,
+          dueDate: t.dueDate,
+          notes: noteTexts,
+        };
+      });
+
+      const totalTasks = tasks.length;
+      const completedTasks = tasks.filter(t => t.status === 'done').length;
+      const activeTasks = tasks.filter(t => t.status === 'todo' || t.status === 'in-progress').length;
+      const blockedTasks = tasks.filter(t => t.status === 'blocked').length;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0.3,
+        messages: [
+          {
+            role: "system",
+            content: `You are a project analyst for an enterprise services team. Analyze the tasks and their notes for the project "${project.name}" and produce a comprehensive analysis.
+
+Focus on:
+1. **Key Wins & Accomplishments**: Use SPECIFIC information from task notes to describe what was actually achieved. Reference concrete deliverables, documents, migrations, configurations, meetings, and outcomes mentioned in the notes. Do NOT use generic phrases like "tasks completed on time" — use the actual work described.
+2. **Work Quantification**: Count and categorize the types of work done (e.g., "3 migration scripts completed", "5 client meetings conducted", "2 security audits performed"). Use note content to quantify.
+3. **Team Contributions**: Highlight specific people and their notable contributions based on task assignments and notes.
+4. **Current Status & Risks**: Summarize active/blocked items and potential risks based on note content.
+5. **Timeline & Velocity**: Note completion patterns and any deadline-related observations.
+
+Project Stats: ${totalTasks} total tasks, ${completedTasks} completed, ${activeTasks} active, ${blockedTasks} blocked.
+
+Format your response in clean markdown with headers and bullet points. Be specific, data-driven, and reference actual note content. If there are no notes on tasks, mention that and provide what analysis you can from task titles, statuses, and dates.`
+          },
+          {
+            role: "user",
+            content: JSON.stringify(taskSummaries, null, 2)
+          }
+        ],
+      });
+
+      const analysis = completion.choices[0]?.message?.content || 'No analysis generated.';
+      res.json({ analysis, projectName: project.name, stats: { totalTasks, completedTasks, activeTasks, blockedTasks } });
+    } catch (error: any) {
+      console.error('Error generating AI analysis:', error);
+      res.status(500).json({ message: 'Failed to generate analysis' });
+    }
+  });
+
   app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
     try {
       const userEmail = req.user.claims.email;
