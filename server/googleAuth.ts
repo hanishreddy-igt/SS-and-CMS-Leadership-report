@@ -100,8 +100,10 @@ export async function setupAuth(app: Express) {
       // non-empty so we never compare against a hardcoded domain list — this
       // keeps the app open to every domain in the IgniteTech Workspace
       // (ignitetech.com, khoros.com, trilogy.com, devfactory.com, etc.).
+      // Pass null as the error so passport routes to failureRedirect instead
+      // of invoking the Express error handler (which crashes the process).
       if (!hd) {
-        return verified(new Error("Workspace account required."), false);
+        return verified(null, false);
       }
 
       const user: any = { email, userId };
