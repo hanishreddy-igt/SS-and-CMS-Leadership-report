@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { JiraService } from "./services/jiraService";
 import { insertPersonSchema, insertProjectSchema, insertWeeklyReportSchema, insertSavedReportSchema, insertProjectRoleSchema, insertTaskSchema, insertTaskTemplateSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./googleAuth";
 import OpenAI from "openai";
 import { createTasksFromTemplate, calculateNextOccurrence, calculateNextOccurrenceAfterTrigger } from "./scheduler-utils";
 

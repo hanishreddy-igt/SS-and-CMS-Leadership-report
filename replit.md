@@ -7,7 +7,7 @@ This project delivers a comprehensive dashboard for tracking Strategic Services 
 - Material Design approach for data-rich enterprise applications
 - Color-coded status indicators for quick visual feedback
 - Responsive design with mobile-friendly layouts
-- Secure access: Authentication required with domain restriction (@ignitetech.com and @khoros.com)
+- Secure access: Google sign-in restricted to the IgniteTech Workspace (any domain covered by the internal OAuth consent screen)
 - Jira integration for automatic project data population
 
 ## System Architecture
@@ -25,7 +25,7 @@ Key features include:
 - **AI Natural Language Q&A Chat**: A floating, stateless AI chat panel powered by OpenAI for natural language queries about dashboard data. It uses an intent-based routing system with configurable system prompts, streaming responses via SSE, and supports 7 default intents (e.g., EOD report, project status, task query).
 
 ### System Design Choices
-Authentication is handled via Google authentication (Replit Auth) restricted to specified corporate email domains, with server-side validation and PostgreSQL for session management. All API endpoints are protected by authentication middleware, except for scheduler endpoints which are intentionally unauthenticated for external automation, with optional API key protection. The development environment leverages Vite for the frontend, `tsx` for backend development, and `connect-pg-simple` for session management.
+Authentication is handled via Google OpenID Connect (direct integration, OAuth consent screen = Internal to the IgniteTech Workspace), with server-side validation and PostgreSQL for session management. All API endpoints are protected by authentication middleware, except for scheduler endpoints which are intentionally unauthenticated for external automation, with optional API key protection. The development environment leverages Vite for the frontend, `tsx` for backend development, and `connect-pg-simple` for session management.
 
 ## External Dependencies
 - **PostgreSQL**: Primary database (Neon serverless).
@@ -34,6 +34,6 @@ Authentication is handled via Google authentication (Replit Auth) restricted to 
 - **Wouter**: Routing library.
 - **TanStack Query**: Data fetching library.
 - **Passport.js**: Authentication middleware.
-- **Replit Auth (OpenID Connect)**: Google authentication provider.
+- **Google OpenID Connect**: Primary authentication provider (via `openid-client`).
 - **Jira API**: For project and user data import.
 - **OpenAI**: For AI Natural Language Q&A Chat functionality (via Replit AI Integrations).
