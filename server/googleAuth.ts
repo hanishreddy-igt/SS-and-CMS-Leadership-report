@@ -66,7 +66,7 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
-  await storage.upsertUser({
+  return await storage.upsertUser({
     id: typeof claims["sub"] === "string" ? claims["sub"] : String(claims["sub"]),
     email: typeof claims["email"] === "string" ? claims["email"] : null,
     firstName: typeof claims["given_name"] === "string" ? claims["given_name"] : null,
@@ -106,7 +106,15 @@ export async function setupAuth(app: Express) {
 
       const user: any = { email, userId };
       updateUserSession(user, tokens);
-      await upsertUser(claims);
+      const dbUser = await upsertUser(claims);
+      // Existing users keep their original DB id (preserved by upsertUser's
+      // email-first lookup), which may differ from Google's `sub`. Overwrite
+      // claims.sub with the DB id so downstream `req.user.claims.sub`
+      // lookups resolve to the correct row.
+      if (dbUser?.id) {
+        user.claims = { ...user.claims, sub: dbUser.id };
+        user.userId = dbUser.id;
+      }
       verified(null, user);
     } catch (error) {
       verified(error as Error, false);
